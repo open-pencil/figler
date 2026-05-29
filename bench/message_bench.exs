@@ -1,7 +1,10 @@
-Mix.install([
-  {:kiwi_codec, path: Path.expand("../../kiwi_codec", __DIR__)},
-  {:fig_kiwi, path: Path.expand("..", __DIR__)}
-])
+Mix.install(
+  [
+    {:kiwi_codec, path: Path.expand("../../kiwi_codec", __DIR__)},
+    {:fig_kiwi, path: Path.expand("..", __DIR__)}
+  ],
+  consolidate_protocols: false
+)
 
 guid = struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34)
 size = struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0)
