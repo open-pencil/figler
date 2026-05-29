@@ -1,0 +1,7 @@
+defmodule FigKiwi.Schema.NodeFieldMapEntry do
+  @moduledoc false
+  use KiwiCodec, kind: :message
+  field(:guid, 1, type: FigKiwi.Schema.GUID, source_name: "guid")
+  field(:field, 2, type: :uint, source_name: "field")
+  field(:last_modified_sequence_number, 3, type: :uint, source_name: "lastModifiedSequenceNumber")
+end

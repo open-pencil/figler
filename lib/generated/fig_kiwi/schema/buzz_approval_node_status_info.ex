@@ -1,0 +1,17 @@
+defmodule FigKiwi.Schema.BuzzApprovalNodeStatusInfo do
+  @moduledoc false
+  use KiwiCodec, kind: :message
+
+  field(:current_status, 1,
+    type: {:enum, FigKiwi.Schema.BuzzApprovalNodeStatus},
+    source_name: "currentStatus"
+  )
+
+  field(:was_previously_approved, 2, type: :bool, source_name: "wasPreviouslyApproved")
+
+  field(:approval_revoked_at_history, 3,
+    repeated: true,
+    type: :uint,
+    source_name: "approvalRevokedAtHistory"
+  )
+end

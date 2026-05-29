@@ -1,0 +1,8 @@
+defmodule FigKiwi.Schema.PlatformShapeProperty do
+  @moduledoc false
+  use KiwiCodec, kind: :enum
+  enum_value(:fill, 0)
+  enum_value(:stroke, 1)
+  enum_value(:text, 2)
+  enum_value(:stroke_color, 3)
+end

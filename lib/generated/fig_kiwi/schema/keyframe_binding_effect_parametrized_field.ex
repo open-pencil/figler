@@ -1,0 +1,26 @@
+defmodule FigKiwi.Schema.KeyframeBindingEffectParametrizedField do
+  @moduledoc false
+  use KiwiCodec, kind: :enum
+  enum_value(:missing, 0)
+  enum_value(:offset_x, 1)
+  enum_value(:offset_y, 2)
+  enum_value(:radius, 3)
+  enum_value(:spread, 4)
+  enum_value(:color, 5)
+  enum_value(:refraction_radius, 6)
+  enum_value(:specular_angle, 7)
+  enum_value(:specular_intensity, 8)
+  enum_value(:chromatic_aberration, 9)
+  enum_value(:splay, 10)
+  enum_value(:refraction_intensity, 11)
+  enum_value(:start_radius, 12)
+  enum_value(:start_offset_x, 13)
+  enum_value(:start_offset_y, 14)
+  enum_value(:end_offset_x, 15)
+  enum_value(:end_offset_y, 16)
+  enum_value(:noise_size_x, 17)
+  enum_value(:noise_size_y, 18)
+  enum_value(:density, 19)
+  enum_value(:effect_opacity, 20)
+  enum_value(:secondary_color, 21)
+end

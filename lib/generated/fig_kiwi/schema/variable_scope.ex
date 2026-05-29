@@ -1,0 +1,27 @@
+defmodule FigKiwi.Schema.VariableScope do
+  @moduledoc false
+  use KiwiCodec, kind: :enum
+  enum_value(:all_scopes, 0)
+  enum_value(:text_content, 1)
+  enum_value(:corner_radius, 2)
+  enum_value(:width_height, 3)
+  enum_value(:gap, 4)
+  enum_value(:all_fills, 5)
+  enum_value(:frame_fill, 6)
+  enum_value(:shape_fill, 7)
+  enum_value(:text_fill, 8)
+  enum_value(:stroke, 9)
+  enum_value(:stroke_float, 10)
+  enum_value(:effect_float, 11)
+  enum_value(:effect_color, 12)
+  enum_value(:opacity, 13)
+  enum_value(:font_style, 14)
+  enum_value(:font_family, 15)
+  enum_value(:font_size, 16)
+  enum_value(:line_height, 17)
+  enum_value(:letter_spacing, 18)
+  enum_value(:paragraph_spacing, 19)
+  enum_value(:paragraph_indent, 20)
+  enum_value(:font_variations, 21)
+  enum_value(:transform, 22)
+end

@@ -1,0 +1,7 @@
+defmodule FigKiwi.Schema.PresenterInfo do
+  @moduledoc false
+  use KiwiCodec, kind: :message
+  field(:session_id, 1, type: :uint, source_name: "sessionID")
+  field(:nomination, 2, type: FigKiwi.Schema.PresenterNomination, source_name: "nomination")
+  field(:is_reconnected, 3, type: :bool, source_name: "isReconnected")
+end

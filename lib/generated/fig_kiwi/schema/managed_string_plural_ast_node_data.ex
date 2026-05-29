@@ -1,0 +1,11 @@
+defmodule FigKiwi.Schema.ManagedStringPluralAstNodeData do
+  @moduledoc false
+  use KiwiCodec, kind: :message
+  field(:identifier, 1, type: :string, source_name: "identifier")
+
+  field(:conditions, 2,
+    repeated: true,
+    type: FigKiwi.Schema.ManagedStringPluralTypeMapEntry,
+    source_name: "conditions"
+  )
+end
