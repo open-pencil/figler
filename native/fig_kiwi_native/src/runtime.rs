@@ -108,6 +108,19 @@ impl<'a> Decoder<'a> {
         Ok(f32::from_bits(bits.rotate_left(23)))
     }
 
+    pub fn read_byte_array<'b>(&mut self, env: Env<'b>) -> NifResult<Term<'b>> {
+        let len = self.read_var_uint()? as usize;
+        if self.index + len > self.data.len() {
+            return Err(Error::Term(Box::new("unexpected eof")));
+        }
+
+        let bytes = &self.data[self.index..self.index + len];
+        self.index += len;
+        let mut binary = rustler::NewBinary::new(env, len);
+        binary.as_mut_slice().copy_from_slice(bytes);
+        Ok(Term::from(binary))
+    }
+
     pub fn read_string(&mut self) -> NifResult<String> {
         let start = self.index;
         let offset = memchr::memchr(0, &self.data[start..])

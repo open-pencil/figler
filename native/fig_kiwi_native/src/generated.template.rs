@@ -1,5 +1,5 @@
 use rustler::types::atom::Atom;
-use rustler::{Binary, Env, NifResult, Term};
+use rustler::{Binary, Env, Error, NifResult, Term};
 
 use crate::runtime::Decoder;
 
