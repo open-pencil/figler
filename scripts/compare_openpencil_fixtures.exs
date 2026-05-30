@@ -86,24 +86,28 @@ defmodule FigKiwi.FixtureCompare do
           stderr_to_stdout: true
         )
 
-      {elapsed, message} =
-        :timer.tc(fn ->
-          fixture
-          |> read_canvas!()
-          |> FigKiwi.Container.decode()
-          |> Map.fetch!(:data)
-          |> FigKiwi.decode_message()
-        end)
+      data = fixture |> read_canvas!() |> FigKiwi.Container.decode() |> Map.fetch!(:data)
+
+      {elapsed, message} = :timer.tc(fn -> FigKiwi.decode_message(data) end)
+      {native_elapsed, native_message} = :timer.tc(fn -> FigKiwi.Native.decode_message(data) end)
 
       elixir_summary = summary(fixture, message)
       js_summary = File.read!(js_summary_path)
 
-      if elixir_summary == js_summary do
-        IO.puts("ok\t#{Path.basename(fixture)}\t#{Float.round(elapsed / 1_000_000, 3)}s")
-      else
-        IO.puts("mismatch\t#{fixture}")
-        diff(js_summary, elixir_summary)
-        System.halt(1)
+      cond do
+        message != native_message ->
+          IO.puts("native mismatch\t#{fixture}")
+          System.halt(1)
+
+        elixir_summary == js_summary ->
+          IO.puts(
+            "ok\t#{Path.basename(fixture)}\telixir=#{Float.round(elapsed / 1_000_000, 3)}s\tnative=#{Float.round(native_elapsed / 1_000_000, 3)}s"
+          )
+
+        true ->
+          IO.puts("mismatch\t#{fixture}")
+          diff(js_summary, elixir_summary)
+          System.halt(1)
       end
     after
       File.rm_rf!(tmp_dir)

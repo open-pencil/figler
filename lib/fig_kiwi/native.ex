@@ -11,4 +11,5 @@ defmodule FigKiwi.Native do
   def decode_parent_index(_binary), do: :erlang.nif_error(:nif_not_loaded)
   def decode_image(_binary), do: :erlang.nif_error(:nif_not_loaded)
   def decode_node_change(_binary), do: :erlang.nif_error(:nif_not_loaded)
+  def decode_message(_binary), do: :erlang.nif_error(:nif_not_loaded)
 end

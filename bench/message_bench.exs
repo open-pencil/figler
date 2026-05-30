@@ -31,6 +31,7 @@ runtime_binary = KiwiCodec.Runtime.encode(schema, "Message", runtime_message)
 jobs = %{
   "static encode" => fn -> FigKiwi.encode_message(message) end,
   "static decode" => fn -> FigKiwi.decode_message(static_binary) end,
+  "native decode" => fn -> FigKiwi.Native.decode_message(static_binary) end,
   "runtime encode" => fn -> KiwiCodec.Runtime.encode(schema, "Message", runtime_message) end,
   "runtime decode" => fn -> KiwiCodec.Runtime.decode(schema, "Message", runtime_binary) end
 }

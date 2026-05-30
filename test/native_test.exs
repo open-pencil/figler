@@ -23,8 +23,23 @@ defmodule FigKiwi.NativeTest do
         size: vector
       )
 
+    message =
+      struct(FigKiwi.Schema.Message,
+        type: :node_changes,
+        session_id: 12,
+        node_changes: [node_change]
+      )
+
+    partial_message = struct(FigKiwi.Schema.Message, session_id: 12)
+    unknown_enum_message = struct(FigKiwi.Schema.Message, type: 999)
+
     assert FigKiwi.Native.decode_image(KiwiCodec.encode(image)) == image
     assert FigKiwi.Native.decode_image(KiwiCodec.encode(partial_image)) == partial_image
     assert FigKiwi.Native.decode_node_change(KiwiCodec.encode(node_change)) == node_change
+    assert FigKiwi.Native.decode_message(KiwiCodec.encode(message)) == message
+    assert FigKiwi.Native.decode_message(KiwiCodec.encode(partial_message)) == partial_message
+
+    assert FigKiwi.Native.decode_message(KiwiCodec.encode(unknown_enum_message)) ==
+             unknown_enum_message
   end
 end
