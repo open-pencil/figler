@@ -33,7 +33,17 @@ defmodule FigKiwi.Container do
   end
 
   @spec inflate(binary()) :: binary()
-  defdelegate inflate(data), to: KiwiCodec.Container
+  def inflate(<<0x28, 0xB5, 0x2F, 0xFD, _rest::binary>> = data) do
+    case :ezstd.decompress(data) do
+      decompressed when is_binary(decompressed) ->
+        decompressed
+
+      {:error, reason} ->
+        raise KiwiCodec.DecodeError, message: "cannot decompress zstd chunk: #{inspect(reason)}"
+    end
+  end
+
+  def inflate(data), do: KiwiCodec.Container.inflate(data)
 
   @spec deflate(iodata()) :: binary()
   defdelegate deflate(data), to: KiwiCodec.Container

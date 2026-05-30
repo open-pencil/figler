@@ -14,4 +14,13 @@ defmodule FigKiwi.ContainerTest do
     assert KiwiCodec.Schema.definition(decoded.schema, "Message")
     assert decoded.data == <<1, 1, 0>>
   end
+
+  test "decodes zstd-compressed data chunks" do
+    schema_binary = FigKiwi.schema() |> SchemaBinary.encode() |> FigKiwi.Container.deflate()
+    data_binary = :ezstd.compress(<<1, 1, 0>>)
+
+    decoded = FigKiwi.Container.decode(FigKiwi.Container.build([schema_binary, data_binary]))
+
+    assert decoded.data == <<1, 1, 0>>
+  end
 end

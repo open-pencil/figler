@@ -87,7 +87,13 @@ defmodule FigKiwi.FixtureCompare do
         )
 
       {elapsed, message} =
-        :timer.tc(fn -> raw_path |> File.read!() |> FigKiwi.decode_message() end)
+        :timer.tc(fn ->
+          fixture
+          |> read_canvas!()
+          |> FigKiwi.Container.decode()
+          |> Map.fetch!(:data)
+          |> FigKiwi.decode_message()
+        end)
 
       elixir_summary = summary(fixture, message)
       js_summary = File.read!(js_summary_path)
@@ -135,6 +141,17 @@ defmodule FigKiwi.FixtureCompare do
       name = to_string(name)
       String.starts_with?(name, "images/") and name != "images/"
     end)
+  end
+
+  defp read_canvas!(fixture) do
+    {:ok, files} = :zip.extract(String.to_charlist(fixture), [:memory])
+
+    files
+    |> Enum.find(fn {name, _data} -> to_string(name) in ["canvas.fig", "canvas"] end)
+    |> case do
+      {_name, data} -> data
+      nil -> raise "no canvas.fig entry in #{fixture}"
+    end
   end
 
   defp node_line(prefix, index, node) do
