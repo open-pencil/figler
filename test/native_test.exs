@@ -5,7 +5,10 @@ defmodule FigKiwi.NativeTest do
     guid = struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34)
     vector = struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0)
 
+    parent_index = struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!")
+
     assert FigKiwi.Native.decode_guid(KiwiCodec.encode(guid)) == guid
     assert FigKiwi.Native.decode_vector(KiwiCodec.encode(vector)) == vector
+    assert FigKiwi.Native.decode_parent_index(KiwiCodec.encode(parent_index)) == parent_index
   end
 end

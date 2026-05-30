@@ -86,6 +86,10 @@ impl<'a> Decoder<'a> {
         })
     }
 
+    pub fn read_var_float<'b>(&mut self, env: Env<'b>) -> NifResult<Term<'b>> {
+        Ok(self.read_var_float_value()?.encode_float(env))
+    }
+
     pub fn read_var_float_value(&mut self) -> NifResult<f32> {
         let first = self.read_byte()?;
         if first == 0 {
