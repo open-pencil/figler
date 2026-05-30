@@ -49,6 +49,7 @@ defmodule FigKiwi.MixProject do
     [
       {:kiwi_codec, "~> 0.1.0", path: "../kiwi_codec"},
       {:ezstd, "~> 1.2"},
+      {:rustler, "~> 0.38"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false},
@@ -62,7 +63,7 @@ defmodule FigKiwi.MixProject do
     [
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
-      files: ["lib", "priv", "mix.exs", "README.md", "CHANGELOG.md", "LICENSE*"]
+      files: ["lib", "native", "priv", "mix.exs", "README.md", "CHANGELOG.md", "LICENSE*"]
     ]
   end
 

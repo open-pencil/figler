@@ -1,0 +1,14 @@
+[package]
+name = "fig_kiwi_native"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "fig_kiwi_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+memchr = "2"
+rustler = "0.38"
+simdutf8 = "0.1"
