@@ -121,16 +121,19 @@ impl<'a> Decoder<'a> {
         Ok(Term::from(binary))
     }
 
-    pub fn read_string(&mut self) -> NifResult<String> {
+    pub fn read_string<'b>(&mut self, env: Env<'b>) -> NifResult<Term<'b>> {
         let start = self.index;
         let offset = memchr::memchr(0, &self.data[start..])
             .ok_or_else(|| Error::Term(Box::new("unterminated string")))?;
         let end = start + offset;
         let bytes = &self.data[start..end];
         self.index = end + 1;
-        simdutf8::basic::from_utf8(bytes)
-            .map(|value| value.to_owned())
-            .map_err(|_| Error::Term(Box::new("invalid utf-8")))
+
+        simdutf8::basic::from_utf8(bytes).map_err(|_| Error::Term(Box::new("invalid utf-8")))?;
+
+        let mut binary = rustler::NewBinary::new(env, bytes.len());
+        binary.as_mut_slice().copy_from_slice(bytes);
+        Ok(Term::from(binary))
     }
 
     pub fn read_repeated<T, F>(&mut self, mut read: F) -> NifResult<Vec<T>>
