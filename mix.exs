@@ -8,14 +8,11 @@ defmodule FigKiwi.MixProject do
     [
       app: :fig_kiwi,
       version: @version,
-      elixir: "~> 1.15",
+      elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       description: "Figma Kiwi schema helpers for Elixir",
       aliases: aliases(),
-      dialyzer: [
-        plt_file: {:no_warn, "_build/dev/dialyxir_plt.plt"},
-        plt_add_apps: [:mix]
-      ],
+      dialyzer: [plt_add_apps: [:mix], flags: [:no_opaque]],
       package: package(),
       docs: docs(),
       deps: deps()
@@ -47,7 +44,7 @@ defmodule FigKiwi.MixProject do
 
   defp deps do
     [
-      {:kiwi_codec, "~> 0.1.0", path: "../kiwi_codec"},
+      kiwi_codec_dep(),
       {:ezstd, "~> 1.2"},
       {:rustler, "~> 0.38"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -57,6 +54,14 @@ defmodule FigKiwi.MixProject do
       {:reach, "~> 2.6", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
+  end
+
+  defp kiwi_codec_dep do
+    if File.dir?("../kiwi_codec") do
+      {:kiwi_codec, "~> 0.1.0", path: "../kiwi_codec"}
+    else
+      {:kiwi_codec, github: "dannote/kiwi_codec", branch: "master"}
+    end
   end
 
   defp package do
