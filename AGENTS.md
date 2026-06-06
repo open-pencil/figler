@@ -9,6 +9,8 @@ mix deps.get
 mix ci
 ```
 
+GitHub CI uses the shared `elixir-vibe/actions/.github/workflows/elixir-rustler-ci.yml` workflow for Rustler setup and Cargo caching.
+
 ## Scope
 
 - Keep the Figma `.kiwi` schema and Figma-specific container helpers here.
