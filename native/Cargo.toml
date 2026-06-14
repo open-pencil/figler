@@ -9,6 +9,9 @@ name = "fig_kiwi_native"
 crate-type = ["cdylib"]
 
 [dependencies]
+markup5ever = "0.39"
 memchr = "2"
 rustler = "0.38"
+servo-allocator = { version = "0.3", features = ["use-system-allocator"] }
+servo-xpath = "0.3"
 simdutf8 = "0.1"

@@ -44,26 +44,7 @@ defmodule FigKiwi.NativeTest do
   end
 
   test "decodes scene summary without materializing schema structs" do
-    guid = struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 0)
-
-    message =
-      struct(FigKiwi.Schema.Message,
-        type: :node_changes,
-        session_id: 0,
-        node_changes: [
-          struct(FigKiwi.Schema.NodeChange,
-            guid: guid,
-            type: :document,
-            name: "Document"
-          ),
-          struct(FigKiwi.Schema.NodeChange,
-            guid: struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 1),
-            parent_index: struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!"),
-            type: :canvas,
-            name: "Page 1"
-          )
-        ]
-      )
+    message = scene_message()
 
     assert FigKiwi.Native.decode_scene_summary(KiwiCodec.encode(message)) == %{
              node_count: 2,
@@ -71,5 +52,42 @@ defmodule FigKiwi.NativeTest do
              root_count: 1,
              type_counts: [{"canvas", 1}, {"document", 1}]
            }
+  end
+
+  test "queries projected scene index with XPath" do
+    assert FigKiwi.Native.query_scene_xpath(
+             KiwiCodec.encode(scene_message()),
+             "//canvas[@name='Page 1']"
+           ) == [
+             %{
+               guid: "0:1",
+               node_type: "canvas",
+               name: "Page 1",
+               parent_guid: "0:0",
+               position: "!"
+             }
+           ]
+  end
+
+  defp scene_message do
+    guid = struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 0)
+
+    struct(FigKiwi.Schema.Message,
+      type: :node_changes,
+      session_id: 0,
+      node_changes: [
+        struct(FigKiwi.Schema.NodeChange,
+          guid: guid,
+          type: :document,
+          name: "Document"
+        ),
+        struct(FigKiwi.Schema.NodeChange,
+          guid: struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 1),
+          parent_index: struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!"),
+          type: :canvas,
+          name: "Page 1"
+        )
+      ]
+    )
   end
 end

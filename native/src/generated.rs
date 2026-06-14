@@ -31077,6 +31077,14 @@ pub struct SceneSummary {
     root_count: usize,
     type_counts: Vec<(String, usize)>,
 }
+#[derive(rustler::NifMap)]
+pub struct SceneQueryNode {
+    guid: String,
+    node_type: String,
+    name: Option<String>,
+    parent_guid: Option<String>,
+    position: Option<String>,
+}
 fn scene_node_type_name(value: u32) -> &'static str {
     match value {
         0 => "none",
@@ -46694,6 +46702,2692 @@ fn skip_playback_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     decoder.read_var_uint()?;
     Ok(())
 }
+mod scene_xpath_runtime {
+    use super::*;
+    use std::cmp::Ordering;
+    use std::rc::Rc;
+    use markup5ever::{ns, LocalName, Namespace, Prefix};
+    use servo_xpath::{
+        Attribute, Document, Dom, Element, NamespaceResolver, Node,
+        ProcessingInstruction, Value,
+    };
+    #[derive(Clone, Debug)]
+    struct SceneNodeRecord {
+        guid: String,
+        node_type: String,
+        name: Option<String>,
+        parent_guid: Option<String>,
+        position: Option<String>,
+        parent: Option<usize>,
+        children: Vec<usize>,
+    }
+    #[derive(Debug)]
+    struct SceneIndex {
+        nodes: Vec<SceneNodeRecord>,
+        roots: Vec<usize>,
+        preorder: Vec<usize>,
+        ranks: Vec<usize>,
+    }
+    #[derive(Clone, Debug, Eq, PartialEq, std::hash::Hash)]
+    enum SceneHandleKind {
+        Document,
+        Element(usize),
+        Attribute { owner: usize, index: usize },
+    }
+    #[derive(Clone, Debug)]
+    struct SceneHandle {
+        scene: Rc<SceneIndex>,
+        kind: SceneHandleKind,
+    }
+    impl PartialEq for SceneHandle {
+        fn eq(&self, other: &Self) -> bool {
+            Rc::ptr_eq(&self.scene, &other.scene) && self.kind == other.kind
+        }
+    }
+    impl Eq for SceneHandle {}
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct SceneElement(SceneHandle);
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct SceneAttribute(SceneHandle);
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct SceneProcessingInstruction;
+    #[derive(Clone, Debug)]
+    struct SceneDocument(Rc<SceneIndex>);
+    impl PartialEq for SceneDocument {
+        fn eq(&self, other: &Self) -> bool {
+            Rc::ptr_eq(&self.0, &other.0)
+        }
+    }
+    impl Eq for SceneDocument {}
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    struct SceneNamespaceResolver;
+    struct SceneDom;
+    impl SceneNodeRecord {
+        fn attrs(&self) -> Vec<(&'static str, &str)> {
+            let mut attrs = vec![
+                ("guid", self.guid.as_str()), ("type", self.node_type.as_str())
+            ];
+            if let Some(value) = self.name.as_deref() {
+                attrs.push(("name", value));
+            }
+            if let Some(value) = self.parent_guid.as_deref() {
+                attrs.push(("parent_guid", value));
+            }
+            if let Some(value) = self.position.as_deref() {
+                attrs.push(("position", value));
+            }
+            attrs
+        }
+        fn attr(&self, index: usize) -> Option<(&'static str, &str)> {
+            self.attrs().get(index).copied()
+        }
+        fn attr_count(&self) -> usize {
+            self.attrs().len()
+        }
+    }
+    impl SceneIndex {
+        fn new(mut nodes: Vec<SceneNodeRecord>) -> Self {
+            let by_guid = nodes
+                .iter()
+                .enumerate()
+                .map(|(index, node)| (node.guid.clone(), index))
+                .collect::<std::collections::HashMap<_, _>>();
+            let mut roots = Vec::new();
+            for index in 0..nodes.len() {
+                let parent = nodes[index]
+                    .parent_guid
+                    .as_ref()
+                    .and_then(|guid| by_guid.get(guid).copied());
+                nodes[index].parent = parent;
+                if let Some(parent) = parent {
+                    nodes[parent].children.push(index);
+                } else {
+                    roots.push(index);
+                }
+            }
+            for index in 0..nodes.len() {
+                let mut children = std::mem::take(&mut nodes[index].children);
+                children
+                    .sort_by(|left, right| {
+                        nodes[*left]
+                            .position
+                            .cmp(&nodes[*right].position)
+                            .then_with(|| nodes[*left].guid.cmp(&nodes[*right].guid))
+                    });
+                nodes[index].children = children;
+            }
+            roots.sort_by(|left, right| nodes[*left].guid.cmp(&nodes[*right].guid));
+            let mut preorder = Vec::with_capacity(nodes.len());
+            for root in roots.iter().copied() {
+                Self::push_preorder(&nodes, root, &mut preorder);
+            }
+            let mut ranks = vec![0; nodes.len()];
+            for (rank, index) in preorder.iter().copied().enumerate() {
+                ranks[index] = rank;
+            }
+            Self {
+                nodes,
+                roots,
+                preorder,
+                ranks,
+            }
+        }
+        fn push_preorder(nodes: &[SceneNodeRecord], index: usize, out: &mut Vec<usize>) {
+            out.push(index);
+            for child in nodes[index].children.iter().copied() {
+                Self::push_preorder(nodes, child, out);
+            }
+        }
+        fn children_of(&self, handle: &SceneHandleKind) -> Vec<usize> {
+            match handle {
+                SceneHandleKind::Document => self.roots.clone(),
+                SceneHandleKind::Element(index) => self.nodes[*index].children.clone(),
+                SceneHandleKind::Attribute { .. } => Vec::new(),
+            }
+        }
+        fn descendants_of(&self, handle: &SceneHandleKind) -> Vec<usize> {
+            let mut out = Vec::new();
+            match handle {
+                SceneHandleKind::Document => {
+                    for root in self.roots.iter().copied() {
+                        Self::push_preorder(&self.nodes, root, &mut out);
+                    }
+                }
+                SceneHandleKind::Element(index) => {
+                    Self::push_preorder(&self.nodes, *index, &mut out)
+                }
+                SceneHandleKind::Attribute { .. } => {}
+            }
+            out
+        }
+        fn siblings_before(&self, index: usize) -> Vec<usize> {
+            let siblings = self
+                .nodes[index]
+                .parent
+                .map(|parent| self.nodes[parent].children.as_slice())
+                .unwrap_or(self.roots.as_slice());
+            siblings.iter().copied().take_while(|sibling| *sibling != index).collect()
+        }
+        fn siblings_after(&self, index: usize) -> Vec<usize> {
+            let siblings = self
+                .nodes[index]
+                .parent
+                .map(|parent| self.nodes[parent].children.as_slice())
+                .unwrap_or(self.roots.as_slice());
+            siblings
+                .iter()
+                .copied()
+                .skip_while(|sibling| *sibling != index)
+                .skip(1)
+                .collect()
+        }
+    }
+    impl SceneHandle {
+        fn document(scene: Rc<SceneIndex>) -> Self {
+            Self {
+                scene,
+                kind: SceneHandleKind::Document,
+            }
+        }
+        fn element(scene: Rc<SceneIndex>, index: usize) -> Self {
+            Self {
+                scene,
+                kind: SceneHandleKind::Element(index),
+            }
+        }
+        fn attribute(scene: Rc<SceneIndex>, owner: usize, index: usize) -> Self {
+            Self {
+                scene,
+                kind: SceneHandleKind::Attribute {
+                    owner,
+                    index,
+                },
+            }
+        }
+        fn element_index(&self) -> Option<usize> {
+            match self.kind {
+                SceneHandleKind::Element(index) => Some(index),
+                _ => None,
+            }
+        }
+    }
+    impl NamespaceResolver for SceneNamespaceResolver {
+        type Context = ();
+        fn resolve_namespace_prefix(
+            &self,
+            _cx: &mut (),
+            _prefix: &str,
+        ) -> Option<String> {
+            None
+        }
+    }
+    impl Dom for SceneDom {
+        type Context = ();
+        type Node = SceneHandle;
+        type NamespaceResolver = SceneNamespaceResolver;
+    }
+    impl Node for SceneHandle {
+        type Context = ();
+        type ProcessingInstruction = SceneProcessingInstruction;
+        type Document = SceneDocument;
+        type Attribute = SceneAttribute;
+        type Element = SceneElement;
+        type Opaque = SceneHandleKind;
+        fn is_comment(&self) -> bool {
+            false
+        }
+        fn is_text(&self) -> bool {
+            false
+        }
+        fn text_content(&self) -> String {
+            match self.kind {
+                SceneHandleKind::Document => String::new(),
+                SceneHandleKind::Element(index) => {
+                    self.scene.nodes[index].name.clone().unwrap_or_default()
+                }
+                SceneHandleKind::Attribute { owner, index } => {
+                    self.scene
+                        .nodes[owner]
+                        .attr(index)
+                        .map(|(_, value)| value.to_owned())
+                        .unwrap_or_default()
+                }
+            }
+        }
+        fn language(&self) -> Option<String> {
+            None
+        }
+        fn parent(&self) -> Option<Self> {
+            match self.kind {
+                SceneHandleKind::Document => None,
+                SceneHandleKind::Element(index) => {
+                    self.scene
+                        .nodes[index]
+                        .parent
+                        .map(|parent| Self::element(self.scene.clone(), parent))
+                        .or_else(|| Some(Self::document(self.scene.clone())))
+                }
+                SceneHandleKind::Attribute { owner, .. } => {
+                    Some(Self::element(self.scene.clone(), owner))
+                }
+            }
+        }
+        fn children(&self) -> impl Iterator<Item = Self> {
+            let scene = self.scene.clone();
+            self.scene
+                .children_of(&self.kind)
+                .into_iter()
+                .map(move |index| Self::element(scene.clone(), index))
+        }
+        fn compare_tree_order(&self, other: &Self) -> Ordering {
+            fn rank(handle: &SceneHandle) -> usize {
+                match handle.kind {
+                    SceneHandleKind::Document => 0,
+                    SceneHandleKind::Element(index) => handle.scene.ranks[index] + 1,
+                    SceneHandleKind::Attribute { owner, index } => {
+                        handle.scene.ranks[owner] + 1_000_000_000 + index
+                    }
+                }
+            }
+            rank(self).cmp(&rank(other))
+        }
+        fn traverse_preorder(&self) -> impl Iterator<Item = Self> {
+            let scene = self.scene.clone();
+            let mut handles = Vec::new();
+            if matches!(self.kind, SceneHandleKind::Document) {
+                handles.push(Self::document(scene.clone()));
+            }
+            handles
+                .extend(
+                    self
+                        .scene
+                        .descendants_of(&self.kind)
+                        .into_iter()
+                        .map(move |index| Self::element(scene.clone(), index)),
+                );
+            handles.into_iter()
+        }
+        fn inclusive_ancestors(&self) -> impl Iterator<Item = Self> {
+            let mut ancestors = Vec::new();
+            let mut current = Some(self.clone());
+            while let Some(node) = current {
+                current = node.parent();
+                ancestors.push(node);
+            }
+            ancestors.into_iter()
+        }
+        fn preceding_nodes(&self) -> impl Iterator<Item = Self> {
+            let scene = self.scene.clone();
+            let ancestors = self
+                .inclusive_ancestors()
+                .filter_map(|node| node.element_index())
+                .collect::<Vec<_>>();
+            let cutoff = self
+                .element_index()
+                .map(|index| self.scene.ranks[index])
+                .unwrap_or(0);
+            let indexes = self
+                .scene
+                .preorder
+                .iter()
+                .copied()
+                .take(cutoff)
+                .filter(|index| !ancestors.contains(index))
+                .collect::<Vec<_>>();
+            indexes.into_iter().map(move |index| Self::element(scene.clone(), index))
+        }
+        fn following_nodes(&self) -> impl Iterator<Item = Self> {
+            let scene = self.scene.clone();
+            let descendants = self.scene.descendants_of(&self.kind);
+            let start = descendants
+                .last()
+                .map(|index| self.scene.ranks[*index] + 1)
+                .unwrap_or(0);
+            let indexes = self
+                .scene
+                .preorder
+                .iter()
+                .copied()
+                .skip(start)
+                .collect::<Vec<_>>();
+            indexes.into_iter().map(move |index| Self::element(scene.clone(), index))
+        }
+        fn preceding_siblings(&self) -> impl Iterator<Item = Self> {
+            let scene = self.scene.clone();
+            let indexes = self
+                .element_index()
+                .map(|index| self.scene.siblings_before(index))
+                .unwrap_or_default();
+            indexes.into_iter().map(move |index| Self::element(scene.clone(), index))
+        }
+        fn following_siblings(&self) -> impl Iterator<Item = Self> {
+            let scene = self.scene.clone();
+            let indexes = self
+                .element_index()
+                .map(|index| self.scene.siblings_after(index))
+                .unwrap_or_default();
+            indexes.into_iter().map(move |index| Self::element(scene.clone(), index))
+        }
+        fn owner_document(&self) -> Self::Document {
+            SceneDocument(self.scene.clone())
+        }
+        fn to_opaque(&self) -> Self::Opaque {
+            self.kind.clone()
+        }
+        fn as_processing_instruction(&self) -> Option<Self::ProcessingInstruction> {
+            None
+        }
+        fn as_attribute(&self) -> Option<Self::Attribute> {
+            matches!(self.kind, SceneHandleKind::Attribute { .. })
+                .then(|| SceneAttribute(self.clone()))
+        }
+        fn as_element(&self) -> Option<Self::Element> {
+            matches!(self.kind, SceneHandleKind::Element(_))
+                .then(|| SceneElement(self.clone()))
+        }
+        fn get_root_node(&self) -> Self {
+            Self::document(self.scene.clone())
+        }
+    }
+    impl ProcessingInstruction for SceneProcessingInstruction {
+        fn target(&self) -> String {
+            String::new()
+        }
+    }
+    impl Document for SceneDocument {
+        type Node = SceneHandle;
+        fn get_elements_with_id(
+            &self,
+            id: &str,
+        ) -> impl Iterator<Item = <Self::Node as Node>::Element> {
+            let scene = self.0.clone();
+            let indexes = scene
+                .preorder
+                .iter()
+                .copied()
+                .filter(|index| scene.nodes[*index].guid == id)
+                .collect::<Vec<_>>();
+            indexes
+                .into_iter()
+                .map(move |index| SceneElement(
+                    SceneHandle::element(scene.clone(), index),
+                ))
+        }
+    }
+    impl Element for SceneElement {
+        type Context = ();
+        type Node = SceneHandle;
+        type Attribute = SceneAttribute;
+        fn as_node(&self) -> Self::Node {
+            self.0.clone()
+        }
+        fn prefix(&self) -> Option<Prefix> {
+            None
+        }
+        fn namespace(&self) -> Namespace {
+            ns!()
+        }
+        fn local_name(&self) -> LocalName {
+            let SceneHandleKind::Element(index) = self.0.kind else { unreachable!() };
+            LocalName::from(self.0.scene.nodes[index].node_type.as_str())
+        }
+        fn attributes(&self, _cx: &mut ()) -> impl Iterator<Item = Self::Attribute> {
+            let SceneHandleKind::Element(owner) = self.0.kind else { unreachable!() };
+            let scene = self.0.scene.clone();
+            let count = self.0.scene.nodes[owner].attr_count();
+            (0..count)
+                .map(move |index| SceneAttribute(
+                    SceneHandle::attribute(scene.clone(), owner, index),
+                ))
+        }
+        fn is_html_element_in_html_document(&self) -> bool {
+            false
+        }
+    }
+    impl Attribute for SceneAttribute {
+        type Node = SceneHandle;
+        fn as_node(&self) -> Self::Node {
+            self.0.clone()
+        }
+        fn prefix(&self) -> Option<Prefix> {
+            None
+        }
+        fn namespace(&self) -> Namespace {
+            ns!()
+        }
+        fn local_name(&self) -> LocalName {
+            let SceneHandleKind::Attribute { owner, index } = self.0.kind else {
+                unreachable!()
+            };
+            LocalName::from(
+                self.0.scene.nodes[owner].attr(index).map(|(name, _)| name).unwrap_or(""),
+            )
+        }
+    }
+    fn read_guid_value(decoder: &mut Decoder<'_>) -> NifResult<String> {
+        let session_id = decoder.read_var_uint()?;
+        let local_id = decoder.read_var_uint()?;
+        Ok(format!("{}:{}", session_id, local_id))
+    }
+    fn read_parent_index_value(
+        decoder: &mut Decoder<'_>,
+    ) -> NifResult<(String, String)> {
+        let guid = read_guid_value(decoder)?;
+        let position = decoder.read_string_value()?;
+        Ok((guid, position))
+    }
+    fn scene_query_node(index: &SceneIndex, node_index: usize) -> SceneQueryNode {
+        let node = &index.nodes[node_index];
+        SceneQueryNode {
+            guid: node.guid.clone(),
+            node_type: node.node_type.clone(),
+            name: node.name.clone(),
+            parent_guid: node.parent_guid.clone(),
+            position: node.position.clone(),
+        }
+    }
+    pub fn query_scene_xpath_value<'a>(
+        env: Env<'a>,
+        bytes: Binary<'a>,
+        xpath: String,
+    ) -> NifResult<Term<'a>> {
+        let mut decoder = Decoder::new(bytes.as_slice());
+        let mut nodes = Vec::new();
+        decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
+        decoder.finish()?;
+        let index = Rc::new(SceneIndex::new(nodes));
+        let root = SceneHandle::document(index.clone());
+        let mut cx = ();
+        let expression = servo_xpath::parse::<
+            SceneNamespaceResolver,
+        >(&mut cx, &xpath, None, false)
+            .map_err(|error| Error::Term(
+                Box::new(format!("invalid XPath: {:?}", error)),
+            ))?;
+        let value = servo_xpath::evaluate_parsed_xpath::<
+            SceneDom,
+        >(&mut cx, &expression, root)
+            .map_err(|error| Error::Term(
+                Box::new(format!("XPath evaluation failed: {:?}", error)),
+            ))?;
+        let matched = match value {
+            Value::NodeSet(node_set) => {
+                node_set
+                    .into_iter()
+                    .filter_map(|handle| match handle.kind {
+                        SceneHandleKind::Element(node_index) => {
+                            Some(scene_query_node(&index, node_index))
+                        }
+                        SceneHandleKind::Attribute { owner, .. } => {
+                            Some(scene_query_node(&index, owner))
+                        }
+                        SceneHandleKind::Document => None,
+                    })
+                    .collect::<Vec<_>>()
+            }
+            _ => Vec::new(),
+        };
+        Ok(matched.encode(env))
+    }
+    fn decode_scene_index_message_from_decoder(
+        decoder: &mut Decoder<'_>,
+        nodes: &mut Vec<SceneNodeRecord>,
+    ) -> NifResult<()> {
+        loop {
+            match decoder.read_var_uint()? {
+                0 => break,
+                1 => {
+                    skip_message_type_from_decoder(decoder)?;
+                }
+                2 => {
+                    decoder.read_var_uint()?;
+                }
+                42 => {
+                    decoder.skip_string()?;
+                }
+                3 => {
+                    decoder.read_var_uint()?;
+                }
+                37 => {
+                    decoder.read_bool()?;
+                }
+                5 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_user_change_from_decoder(decoder)?;
+                    }
+                }
+                32 => {
+                    skip_interactive_slide_element_change_from_decoder(decoder)?;
+                }
+                36 => {
+                    skip_node_status_change_from_decoder(decoder)?;
+                }
+                44 => {
+                    skip_buzz_approval_change_from_decoder(decoder)?;
+                }
+                6 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_blob_from_decoder(decoder)?;
+                    }
+                }
+                30 => {
+                    decoder.read_var_uint()?;
+                }
+                7 => {
+                    decoder.skip_string()?;
+                }
+                8 => {
+                    skip_access_from_decoder(decoder)?;
+                }
+                9 => {
+                    decoder.skip_string()?;
+                }
+                10 => {
+                    skip_style_set_type_from_decoder(decoder)?;
+                }
+                11 => {
+                    skip_style_set_content_type_from_decoder(decoder)?;
+                }
+                12 => {
+                    decoder.read_var_int()?;
+                }
+                13 => {
+                    skip_vector_from_decoder(decoder)?;
+                }
+                14 => {
+                    decoder.skip_string()?;
+                }
+                15 => {
+                    decoder.skip_string()?;
+                }
+                16 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_scene_graph_query_from_decoder(decoder)?;
+                    }
+                }
+                17 => {
+                    skip_node_changes_metadata_from_decoder(decoder)?;
+                }
+                18 => {
+                    decoder.read_var_uint()?;
+                }
+                19 => {
+                    decoder.read_bool()?;
+                }
+                20 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                21 => {
+                    decoder.read_bool()?;
+                }
+                22 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_message_from_decoder(decoder)?;
+                    }
+                }
+                23 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_message_from_decoder(decoder)?;
+                    }
+                }
+                24 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_client_broadcast_from_decoder(decoder)?;
+                    }
+                }
+                25 => {
+                    decoder.read_var_uint()?;
+                }
+                26 => {
+                    decoder.skip_string()?;
+                }
+                27 => {
+                    skip_editor_type_from_decoder(decoder)?;
+                }
+                28 => {
+                    decoder.skip_string()?;
+                }
+                29 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_guid_from_decoder(decoder)?;
+                    }
+                }
+                31 => {
+                    decoder.read_bool()?;
+                }
+                33 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_clipboard_selection_region_from_decoder(decoder)?;
+                    }
+                }
+                34 => {
+                    skip_encoded_offsets_index_from_decoder(decoder)?;
+                }
+                35 => {
+                    decoder.read_bool()?;
+                }
+                38 => {
+                    decoder.read_var_uint64()?;
+                }
+                39 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_annotation_category_from_decoder(decoder)?;
+                    }
+                }
+                40 => {
+                    skip_client_rendered_metadata_from_decoder(decoder)?;
+                }
+                41 => {
+                    skip_paste_asset_type_from_decoder(decoder)?;
+                }
+                43 => {
+                    skip_object_animation_list_from_decoder(decoder)?;
+                }
+                45 => {
+                    skip_scene_graph_query_mode_from_decoder(decoder)?;
+                }
+                4 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    nodes.reserve(len);
+                    for _ in 0..len {
+                        nodes
+                            .push(decode_scene_index_node_change_from_decoder(decoder)?);
+                    }
+                }
+                field => {
+                    return Err(
+                        Error::Term(
+                            Box::new(
+                                format!(
+                                    "unknown field {} while decoding scene index", field
+                                ),
+                            ),
+                        ),
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+    fn decode_scene_index_node_change_from_decoder(
+        decoder: &mut Decoder<'_>,
+    ) -> NifResult<SceneNodeRecord> {
+        let mut guid = None;
+        let mut node_type = None;
+        let mut name = None;
+        let mut parent_guid = None;
+        let mut position = None;
+        loop {
+            match decoder.read_var_uint()? {
+                0 => break,
+                1 => guid = Some(read_guid_value(decoder)?),
+                3 => {
+                    let (parent, pos) = read_parent_index_value(decoder)?;
+                    parent_guid = Some(parent);
+                    position = Some(pos);
+                }
+                4 => {
+                    node_type = Some(
+                        scene_node_type_name(decoder.read_var_uint()?).to_string(),
+                    );
+                }
+                5 => name = Some(decoder.read_string_value()?),
+                53 => {
+                    decoder.read_var_uint()?;
+                }
+                2 => {
+                    skip_node_phase_from_decoder(decoder)?;
+                }
+                54 => {
+                    decoder.read_var_uint()?;
+                }
+                55 => {
+                    decoder.read_var_uint()?;
+                }
+                56 => {
+                    decoder.read_var_uint()?;
+                }
+                57 => {
+                    decoder.read_var_uint()?;
+                }
+                174 => {
+                    decoder.read_bool()?;
+                }
+                318 => {
+                    decoder.skip_string()?;
+                }
+                256 => {
+                    skip_library_move_info_from_decoder(decoder)?;
+                }
+                281 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_library_move_history_item_from_decoder(decoder)?;
+                    }
+                }
+                319 => {
+                    decoder.skip_string()?;
+                }
+                383 => {
+                    skip_asset_id_map_from_decoder(decoder)?;
+                }
+                49 => {
+                    decoder.read_var_uint()?;
+                }
+                101 => {
+                    decoder.read_var_uint()?;
+                }
+                157 => {
+                    decoder.read_bool()?;
+                }
+                161 => {
+                    decoder.read_bool()?;
+                }
+                376 => {
+                    decoder.read_bool()?;
+                }
+                163 => {
+                    skip_style_type_from_decoder(decoder)?;
+                }
+                191 => {
+                    decoder.skip_string()?;
+                }
+                171 => {
+                    decoder.skip_string()?;
+                }
+                399 => {
+                    decoder.skip_string()?;
+                }
+                320 => {
+                    decoder.skip_string()?;
+                }
+                345 => {
+                    skip_shared_style_master_data_from_decoder(decoder)?;
+                }
+                348 => {
+                    skip_shared_style_master_data_from_decoder(decoder)?;
+                }
+                176 => {
+                    decoder.read_bool()?;
+                }
+                177 => {
+                    decoder.read_bool()?;
+                }
+                172 => {
+                    skip_shared_style_master_data_from_decoder(decoder)?;
+                }
+                173 => {
+                    skip_shared_style_reference_from_decoder(decoder)?;
+                }
+                158 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                162 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                167 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                168 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                169 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                170 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                185 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                332 => {
+                    skip_style_id_from_decoder(decoder)?;
+                }
+                333 => {
+                    skip_style_id_from_decoder(decoder)?;
+                }
+                334 => {
+                    skip_style_id_from_decoder(decoder)?;
+                }
+                335 => {
+                    skip_style_id_from_decoder(decoder)?;
+                }
+                336 => {
+                    skip_style_id_from_decoder(decoder)?;
+                }
+                580 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_style_animation_from_decoder(decoder)?;
+                    }
+                }
+                193 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_paint_from_decoder(decoder)?;
+                    }
+                }
+                194 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                225 => {
+                    decoder.read_bool()?;
+                }
+                238 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_state_group_property_value_order_from_decoder(decoder)?;
+                    }
+                }
+                581 => {
+                    skip_partial_paste_annotation_from_decoder(decoder)?;
+                }
+                122 => {
+                    skip_shared_symbol_reference_from_decoder(decoder)?;
+                }
+                123 => {
+                    decoder.read_bool()?;
+                }
+                124 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_guid_path_mapping_from_decoder(decoder)?;
+                    }
+                }
+                126 => {
+                    decoder.skip_string()?;
+                }
+                152 => {
+                    skip_shared_component_master_data_from_decoder(decoder)?;
+                }
+                144 => {
+                    decoder.skip_string()?;
+                }
+                164 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_guid_path_mapping_from_decoder(decoder)?;
+                    }
+                }
+                228 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_guid_path_mapping_from_decoder(decoder)?;
+                    }
+                }
+                214 => {
+                    decoder.skip_string()?;
+                }
+                395 => {
+                    decoder.skip_string()?;
+                }
+                215 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                216 => {
+                    decoder.skip_string()?;
+                }
+                217 => {
+                    decoder.read_bool()?;
+                }
+                218 => {
+                    decoder.skip_string()?;
+                }
+                252 => {
+                    decoder.skip_string()?;
+                }
+                266 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_component_prop_def_from_decoder(decoder)?;
+                    }
+                }
+                267 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_component_prop_ref_from_decoder(decoder)?;
+                    }
+                }
+                483 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_variant_prop_spec_from_decoder(decoder)?;
+                    }
+                }
+                113 => {
+                    skip_symbol_data_from_decoder(decoder)?;
+                }
+                114 => {
+                    decoder.read_var_uint()?;
+                }
+                125 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_node_change_from_decoder(decoder)?;
+                    }
+                }
+                394 => {
+                    decoder.read_bool()?;
+                }
+                143 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                268 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_component_prop_assignment_from_decoder(decoder)?;
+                    }
+                }
+                305 => {
+                    decoder.read_bool()?;
+                }
+                248 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_instance_override_stash_from_decoder(decoder)?;
+                    }
+                }
+                250 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_instance_override_stash_v2_from_decoder(decoder)?;
+                    }
+                }
+                111 => {
+                    skip_guid_path_from_decoder(decoder)?;
+                }
+                112 => {
+                    decoder.read_var_uint()?;
+                }
+                321 => {
+                    decoder.read_var_int()?;
+                }
+                382 => {
+                    skip_module_type_from_decoder(decoder)?;
+                }
+                463 => {
+                    decoder.read_bool()?;
+                }
+                495 => {
+                    decoder.read_bool()?;
+                }
+                21 => {
+                    decoder.read_var_float_value()?;
+                }
+                73 => {
+                    decoder.read_var_uint()?;
+                }
+                22 => {
+                    decoder.read_var_float_value()?;
+                }
+                74 => {
+                    decoder.read_var_uint()?;
+                }
+                23 => {
+                    decoder.read_var_float_value()?;
+                }
+                75 => {
+                    decoder.read_var_uint()?;
+                }
+                32 => {
+                    skip_text_align_horizontal_from_decoder(decoder)?;
+                }
+                84 => {
+                    decoder.read_var_uint()?;
+                }
+                33 => {
+                    skip_text_align_vertical_from_decoder(decoder)?;
+                }
+                85 => {
+                    decoder.read_var_uint()?;
+                }
+                34 => {
+                    skip_text_case_from_decoder(decoder)?;
+                }
+                86 => {
+                    decoder.read_var_uint()?;
+                }
+                35 => {
+                    skip_text_decoration_from_decoder(decoder)?;
+                }
+                87 => {
+                    decoder.read_var_uint()?;
+                }
+                40 => {
+                    skip_number_from_decoder(decoder)?;
+                }
+                92 => {
+                    decoder.read_var_uint()?;
+                }
+                41 => {
+                    skip_font_name_from_decoder(decoder)?;
+                }
+                93 => {
+                    decoder.read_var_uint()?;
+                }
+                42 => {
+                    skip_text_data_from_decoder(decoder)?;
+                }
+                94 => {
+                    decoder.read_var_uint()?;
+                }
+                359 => {
+                    skip_derived_text_data_from_decoder(decoder)?;
+                }
+                127 => {
+                    decoder.read_bool()?;
+                }
+                128 => {
+                    decoder.read_bool()?;
+                }
+                129 => {
+                    decoder.read_bool()?;
+                }
+                130 => {
+                    decoder.read_bool()?;
+                }
+                131 => {
+                    decoder.read_bool()?;
+                }
+                132 => {
+                    decoder.read_bool()?;
+                }
+                133 => {
+                    skip_font_variant_numeric_figure_from_decoder(decoder)?;
+                }
+                134 => {
+                    skip_font_variant_numeric_spacing_from_decoder(decoder)?;
+                }
+                135 => {
+                    skip_font_variant_numeric_fraction_from_decoder(decoder)?;
+                }
+                136 => {
+                    skip_font_variant_caps_from_decoder(decoder)?;
+                }
+                137 => {
+                    skip_font_variant_position_from_decoder(decoder)?;
+                }
+                165 => {
+                    skip_number_from_decoder(decoder)?;
+                }
+                202 => {
+                    decoder.skip_string()?;
+                }
+                322 => {
+                    skip_leading_trim_from_decoder(decoder)?;
+                }
+                337 => {
+                    decoder.read_bool()?;
+                }
+                339 => {
+                    decoder.read_bool()?;
+                }
+                550 => {
+                    decoder.read_bool()?;
+                }
+                351 => {
+                    decoder.read_var_int()?;
+                }
+                417 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_responsive_text_style_variant_from_decoder(decoder)?;
+                    }
+                }
+                352 => {
+                    skip_section_status_from_decoder(decoder)?;
+                }
+                355 => {
+                    skip_section_status_info_from_decoder(decoder)?;
+                }
+                203 => {
+                    decoder.read_var_uint()?;
+                }
+                396 => {
+                    decoder.read_var_uint()?;
+                }
+                205 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_open_type_feature_from_decoder(decoder)?;
+                    }
+                }
+                206 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_open_type_feature_from_decoder(decoder)?;
+                    }
+                }
+                223 => {
+                    skip_hyperlink_from_decoder(decoder)?;
+                }
+                340 => {
+                    skip_mention_from_decoder(decoder)?;
+                }
+                260 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_font_variation_from_decoder(decoder)?;
+                    }
+                }
+                279 => {
+                    decoder.read_var_uint()?;
+                }
+                280 => {
+                    skip_text_truncation_from_decoder(decoder)?;
+                }
+                292 => {
+                    decoder.read_bool()?;
+                }
+                391 => {
+                    skip_emoji_image_set_from_decoder(decoder)?;
+                }
+                392 => {
+                    decoder.skip_string()?;
+                }
+                6 => {
+                    decoder.read_bool()?;
+                }
+                58 => {
+                    decoder.read_var_uint()?;
+                }
+                7 => {
+                    decoder.read_bool()?;
+                }
+                59 => {
+                    decoder.read_var_uint()?;
+                }
+                434 => {
+                    skip_lock_mode_from_decoder(decoder)?;
+                }
+                8 => {
+                    decoder.read_var_float_value()?;
+                }
+                60 => {
+                    decoder.read_var_uint()?;
+                }
+                9 => {
+                    skip_blend_mode_from_decoder(decoder)?;
+                }
+                61 => {
+                    decoder.read_var_uint()?;
+                }
+                11 => {
+                    skip_vector_from_decoder(decoder)?;
+                }
+                63 => {
+                    decoder.read_var_uint()?;
+                }
+                12 => {
+                    skip_matrix_from_decoder(decoder)?;
+                }
+                64 => {
+                    decoder.read_var_uint()?;
+                }
+                13 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        decoder.read_var_float_value()?;
+                    }
+                }
+                65 => {
+                    decoder.read_var_uint()?;
+                }
+                16 => {
+                    decoder.read_bool()?;
+                }
+                68 => {
+                    decoder.read_var_uint()?;
+                }
+                424 => {
+                    skip_vector_from_decoder(decoder)?;
+                }
+                18 => {
+                    decoder.read_bool()?;
+                }
+                70 => {
+                    decoder.read_var_uint()?;
+                }
+                317 => {
+                    skip_mask_type_from_decoder(decoder)?;
+                }
+                19 => {
+                    decoder.read_var_float_value()?;
+                }
+                71 => {
+                    decoder.read_var_uint()?;
+                }
+                20 => {
+                    decoder.read_var_float_value()?;
+                }
+                72 => {
+                    decoder.read_var_uint()?;
+                }
+                26 => {
+                    decoder.read_var_float_value()?;
+                }
+                78 => {
+                    decoder.read_var_uint()?;
+                }
+                29 => {
+                    skip_stroke_align_from_decoder(decoder)?;
+                }
+                81 => {
+                    decoder.read_var_uint()?;
+                }
+                30 => {
+                    skip_stroke_cap_from_decoder(decoder)?;
+                }
+                82 => {
+                    decoder.read_var_uint()?;
+                }
+                497 => {
+                    skip_number_from_decoder(decoder)?;
+                }
+                31 => {
+                    skip_stroke_join_from_decoder(decoder)?;
+                }
+                83 => {
+                    decoder.read_var_uint()?;
+                }
+                38 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_paint_from_decoder(decoder)?;
+                    }
+                }
+                90 => {
+                    decoder.read_var_uint()?;
+                }
+                39 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_paint_from_decoder(decoder)?;
+                    }
+                }
+                91 => {
+                    decoder.read_var_uint()?;
+                }
+                43 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_effect_from_decoder(decoder)?;
+                    }
+                }
+                95 => {
+                    decoder.read_var_uint()?;
+                }
+                50 => {
+                    skip_color_from_decoder(decoder)?;
+                }
+                102 => {
+                    decoder.read_var_uint()?;
+                }
+                51 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_path_from_decoder(decoder)?;
+                    }
+                }
+                103 => {
+                    decoder.read_var_uint()?;
+                }
+                52 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_path_from_decoder(decoder)?;
+                    }
+                }
+                104 => {
+                    decoder.read_var_uint()?;
+                }
+                564 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_path_from_decoder(decoder)?;
+                    }
+                }
+                411 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_paint_from_decoder(decoder)?;
+                    }
+                }
+                412 => {
+                    decoder.read_bool()?;
+                }
+                413 => {
+                    skip_number_from_decoder(decoder)?;
+                }
+                415 => {
+                    skip_number_from_decoder(decoder)?;
+                }
+                416 => {
+                    skip_text_decoration_style_from_decoder(decoder)?;
+                }
+                455 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_transform_modifier_from_decoder(decoder)?;
+                    }
+                }
+                570 => {
+                    skip_transform3d_from_decoder(decoder)?;
+                }
+                571 => {
+                    skip_stroke_data_from_decoder(decoder)?;
+                }
+                572 => {
+                    skip_scene3d_from_decoder(decoder)?;
+                }
+                587 => {
+                    skip_transform_origin_from_decoder(decoder)?;
+                }
+                145 => {
+                    decoder.read_var_float_value()?;
+                }
+                146 => {
+                    decoder.read_var_float_value()?;
+                }
+                147 => {
+                    decoder.read_var_float_value()?;
+                }
+                148 => {
+                    decoder.read_var_float_value()?;
+                }
+                149 => {
+                    decoder.read_bool()?;
+                }
+                150 => {
+                    decoder.read_bool()?;
+                }
+                151 => {
+                    decoder.read_bool()?;
+                }
+                423 => {
+                    skip_optional_vector_from_decoder(decoder)?;
+                }
+                258 => {
+                    decoder.read_bool()?;
+                }
+                287 => {
+                    decoder.read_bool()?;
+                }
+                288 => {
+                    decoder.read_bool()?;
+                }
+                289 => {
+                    decoder.read_bool()?;
+                }
+                290 => {
+                    decoder.read_bool()?;
+                }
+                294 => {
+                    decoder.read_bool()?;
+                }
+                295 => {
+                    decoder.read_var_float_value()?;
+                }
+                296 => {
+                    decoder.read_var_float_value()?;
+                }
+                297 => {
+                    decoder.read_var_float_value()?;
+                }
+                298 => {
+                    decoder.read_var_float_value()?;
+                }
+                299 => {
+                    decoder.read_bool()?;
+                }
+                28 => {
+                    skip_constraint_type_from_decoder(decoder)?;
+                }
+                80 => {
+                    decoder.read_var_uint()?;
+                }
+                105 => {
+                    skip_stack_mode_from_decoder(decoder)?;
+                }
+                106 => {
+                    decoder.read_var_uint()?;
+                }
+                107 => {
+                    decoder.read_var_float_value()?;
+                }
+                108 => {
+                    decoder.read_var_uint()?;
+                }
+                109 => {
+                    decoder.read_var_float_value()?;
+                }
+                110 => {
+                    decoder.read_var_uint()?;
+                }
+                120 => {
+                    skip_stack_counter_align_from_decoder(decoder)?;
+                }
+                121 => {
+                    skip_stack_justify_from_decoder(decoder)?;
+                }
+                208 => {
+                    skip_stack_align_from_decoder(decoder)?;
+                }
+                209 => {
+                    decoder.read_var_float_value()?;
+                }
+                210 => {
+                    decoder.read_var_float_value()?;
+                }
+                211 => {
+                    skip_stack_size_from_decoder(decoder)?;
+                }
+                212 => {
+                    skip_stack_size_from_decoder(decoder)?;
+                }
+                229 => {
+                    skip_stack_size_from_decoder(decoder)?;
+                }
+                230 => {
+                    skip_stack_justify_from_decoder(decoder)?;
+                }
+                231 => {
+                    skip_stack_align_from_decoder(decoder)?;
+                }
+                232 => {
+                    decoder.read_var_float_value()?;
+                }
+                233 => {
+                    decoder.read_var_float_value()?;
+                }
+                234 => {
+                    decoder.read_var_float_value()?;
+                }
+                236 => {
+                    skip_stack_counter_align_from_decoder(decoder)?;
+                }
+                269 => {
+                    skip_stack_positioning_from_decoder(decoder)?;
+                }
+                271 => {
+                    decoder.read_bool()?;
+                }
+                323 => {
+                    skip_stack_wrap_from_decoder(decoder)?;
+                }
+                324 => {
+                    decoder.read_var_float_value()?;
+                }
+                325 => {
+                    skip_optional_vector_from_decoder(decoder)?;
+                }
+                326 => {
+                    skip_optional_vector_from_decoder(decoder)?;
+                }
+                343 => {
+                    skip_stack_counter_align_content_from_decoder(decoder)?;
+                }
+                406 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        decoder.read_var_int()?;
+                    }
+                }
+                574 => {
+                    decoder.read_var_uint()?;
+                }
+                435 => {
+                    skip_guid_position_map_from_decoder(decoder)?;
+                }
+                436 => {
+                    skip_guid_position_map_from_decoder(decoder)?;
+                }
+                437 => {
+                    decoder.read_var_float_value()?;
+                }
+                438 => {
+                    decoder.read_var_float_value()?;
+                }
+                439 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                440 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                441 => {
+                    decoder.read_var_uint()?;
+                }
+                442 => {
+                    decoder.read_var_uint()?;
+                }
+                474 => {
+                    skip_guid_grid_track_size_map_from_decoder(decoder)?;
+                }
+                475 => {
+                    skip_guid_grid_track_size_map_from_decoder(decoder)?;
+                }
+                476 => {
+                    skip_grid_child_align_from_decoder(decoder)?;
+                }
+                477 => {
+                    skip_grid_child_align_from_decoder(decoder)?;
+                }
+                555 => {
+                    skip_grid_auto_tracks_from_decoder(decoder)?;
+                }
+                556 => {
+                    decoder.read_bool()?;
+                }
+                344 => {
+                    decoder.read_bool()?;
+                }
+                139 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                140 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                141 => {
+                    skip_color_from_decoder(decoder)?;
+                }
+                153 => {
+                    skip_transition_info_from_decoder(decoder)?;
+                }
+                154 => {
+                    skip_transition_type_from_decoder(decoder)?;
+                }
+                155 => {
+                    decoder.read_var_float_value()?;
+                }
+                156 => {
+                    skip_easing_type_from_decoder(decoder)?;
+                }
+                181 => {
+                    decoder.read_bool()?;
+                }
+                182 => {
+                    skip_connection_type_from_decoder(decoder)?;
+                }
+                183 => {
+                    decoder.skip_string()?;
+                }
+                184 => {
+                    skip_prototype_device_from_decoder(decoder)?;
+                }
+                187 => {
+                    skip_interaction_type_from_decoder(decoder)?;
+                }
+                188 => {
+                    decoder.read_var_float_value()?;
+                }
+                189 => {
+                    decoder.read_bool()?;
+                }
+                190 => {
+                    decoder.read_var_float_value()?;
+                }
+                192 => {
+                    decoder.read_bool()?;
+                }
+                207 => {
+                    decoder.read_bool()?;
+                }
+                226 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_prototype_interaction_from_decoder(decoder)?;
+                    }
+                }
+                426 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_prototype_interaction_from_decoder(decoder)?;
+                    }
+                }
+                249 => {
+                    skip_prototype_starting_point_from_decoder(decoder)?;
+                }
+                204 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_plugin_data_from_decoder(decoder)?;
+                    }
+                }
+                219 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_plugin_relaunch_data_from_decoder(decoder)?;
+                    }
+                }
+                242 => {
+                    skip_connector_endpoint_from_decoder(decoder)?;
+                }
+                243 => {
+                    skip_connector_endpoint_from_decoder(decoder)?;
+                }
+                244 => {
+                    skip_connector_line_style_from_decoder(decoder)?;
+                }
+                245 => {
+                    skip_stroke_cap_from_decoder(decoder)?;
+                }
+                246 => {
+                    skip_stroke_cap_from_decoder(decoder)?;
+                }
+                253 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_connector_control_point_from_decoder(decoder)?;
+                    }
+                }
+                479 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_connector_control_point_from_decoder(decoder)?;
+                    }
+                }
+                255 => {
+                    skip_connector_text_midpoint_from_decoder(decoder)?;
+                }
+                373 => {
+                    skip_connector_type_from_decoder(decoder)?;
+                }
+                533 => {
+                    decoder.read_var_int()?;
+                }
+                369 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_annotation_from_decoder(decoder)?;
+                    }
+                }
+                384 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_annotation_measurement_from_decoder(decoder)?;
+                    }
+                }
+                453 => {
+                    skip_annotation_categories_from_decoder(decoder)?;
+                }
+                241 => {
+                    skip_shape_with_text_type_from_decoder(decoder)?;
+                }
+                247 => {
+                    decoder.read_var_float_value()?;
+                }
+                530 => {
+                    decoder.read_bool()?;
+                }
+                254 => {
+                    skip_derived_immutable_frame_data_from_decoder(decoder)?;
+                }
+                338 => {
+                    skip_multiplayer_field_version_from_decoder(decoder)?;
+                }
+                240 => {
+                    skip_node_generation_data_from_decoder(decoder)?;
+                }
+                491 => {
+                    skip_jsx_data_from_decoder(decoder)?;
+                }
+                492 => {
+                    skip_derived_jsx_data_from_decoder(decoder)?;
+                }
+                493 => {
+                    decoder.skip_string()?;
+                }
+                259 => {
+                    skip_code_block_language_from_decoder(decoder)?;
+                }
+                433 => {
+                    skip_code_block_theme_from_decoder(decoder)?;
+                }
+                278 => {
+                    skip_link_preview_data_from_decoder(decoder)?;
+                }
+                282 => {
+                    decoder.read_bool()?;
+                }
+                283 => {
+                    decoder.read_bool()?;
+                }
+                300 => {
+                    skip_video_playback_from_decoder(decoder)?;
+                }
+                301 => {
+                    skip_stamp_data_from_decoder(decoder)?;
+                }
+                370 => {
+                    skip_section_preset_info_from_decoder(decoder)?;
+                }
+                409 => {
+                    skip_platform_shape_definition_from_decoder(decoder)?;
+                }
+                273 => {
+                    skip_multiplayer_map_from_decoder(decoder)?;
+                }
+                274 => {
+                    decoder.read_var_uint()?;
+                }
+                275 => {
+                    skip_widget_derived_subtree_cursor_from_decoder(decoder)?;
+                }
+                276 => {
+                    skip_widget_pointer_from_decoder(decoder)?;
+                }
+                285 => {
+                    skip_widget_input_behavior_from_decoder(decoder)?;
+                }
+                286 => {
+                    decoder.skip_string()?;
+                }
+                291 => {
+                    skip_widget_hover_style_from_decoder(decoder)?;
+                }
+                293 => {
+                    decoder.read_bool()?;
+                }
+                360 => {
+                    decoder.read_bool()?;
+                }
+                262 => {
+                    skip_widget_metadata_from_decoder(decoder)?;
+                }
+                263 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_widget_event_from_decoder(decoder)?;
+                    }
+                }
+                265 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_widget_property_menu_item_from_decoder(decoder)?;
+                    }
+                }
+                401 => {
+                    skip_widget_input_text_node_type_from_decoder(decoder)?;
+                }
+                489 => {
+                    skip_multiplayer_map_from_decoder(decoder)?;
+                }
+                308 => {
+                    skip_table_row_column_position_map_from_decoder(decoder)?;
+                }
+                309 => {
+                    skip_table_row_column_position_map_from_decoder(decoder)?;
+                }
+                310 => {
+                    skip_table_row_column_size_map_from_decoder(decoder)?;
+                }
+                311 => {
+                    skip_table_row_column_size_map_from_decoder(decoder)?;
+                }
+                538 => {
+                    skip_table_merged_cell_map_from_decoder(decoder)?;
+                }
+                371 => {
+                    skip_multiplayer_map_from_decoder(decoder)?;
+                }
+                372 => {
+                    skip_multiplayer_map_from_decoder(decoder)?;
+                }
+                402 => {
+                    skip_flapp_type_from_decoder(decoder)?;
+                }
+                486 => {
+                    decoder.read_bool()?;
+                }
+                389 => {
+                    decoder.skip_string()?;
+                }
+                410 => {
+                    decoder.read_bool()?;
+                }
+                573 => {
+                    skip_multiplayer_map_from_decoder(decoder)?;
+                }
+                379 => {
+                    skip_theme_id_from_decoder(decoder)?;
+                }
+                381 => {
+                    skip_slide_theme_data_from_decoder(decoder)?;
+                }
+                390 => {
+                    skip_slide_theme_map_from_decoder(decoder)?;
+                }
+                393 => {
+                    decoder.skip_string()?;
+                }
+                443 => {
+                    skip_slide_number_from_decoder(decoder)?;
+                }
+                456 => {
+                    decoder.skip_string()?;
+                }
+                363 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                362 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                364 => {
+                    decoder.skip_string()?;
+                }
+                366 => {
+                    skip_diagram_layout_rule_type_from_decoder(decoder)?;
+                }
+                367 => {
+                    skip_diagram_parent_index_from_decoder(decoder)?;
+                }
+                368 => {
+                    skip_diagram_layout_paused_from_decoder(decoder)?;
+                }
+                380 => {
+                    decoder.read_bool()?;
+                }
+                251 => {
+                    skip_internal_enum_for_test_from_decoder(decoder)?;
+                }
+                257 => {
+                    skip_internal_data_for_test_from_decoder(decoder)?;
+                }
+                14 => {
+                    decoder.read_bool()?;
+                }
+                66 => {
+                    decoder.read_var_uint()?;
+                }
+                15 => {
+                    decoder.read_bool()?;
+                }
+                67 => {
+                    decoder.read_var_uint()?;
+                }
+                17 => {
+                    decoder.read_bool()?;
+                }
+                69 => {
+                    decoder.read_var_uint()?;
+                }
+                25 => {
+                    decoder.read_var_float_value()?;
+                }
+                77 => {
+                    decoder.read_var_uint()?;
+                }
+                27 => {
+                    decoder.read_var_float_value()?;
+                }
+                79 => {
+                    decoder.read_var_uint()?;
+                }
+                37 => {
+                    skip_constraint_type_from_decoder(decoder)?;
+                }
+                89 => {
+                    decoder.read_var_uint()?;
+                }
+                45 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_export_settings_from_decoder(decoder)?;
+                    }
+                }
+                97 => {
+                    decoder.read_var_uint()?;
+                }
+                46 => {
+                    skip_text_auto_resize_from_decoder(decoder)?;
+                }
+                98 => {
+                    decoder.read_var_uint()?;
+                }
+                47 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_layout_grid_from_decoder(decoder)?;
+                    }
+                }
+                99 => {
+                    decoder.read_var_uint()?;
+                }
+                115 => {
+                    decoder.read_bool()?;
+                }
+                116 => {
+                    decoder.read_var_uint()?;
+                }
+                117 => {
+                    decoder.read_bool()?;
+                }
+                118 => {
+                    decoder.read_var_uint()?;
+                }
+                36 => {
+                    skip_boolean_operation_from_decoder(decoder)?;
+                }
+                88 => {
+                    decoder.read_var_uint()?;
+                }
+                44 => {
+                    skip_vector_mirror_from_decoder(decoder)?;
+                }
+                96 => {
+                    decoder.read_var_uint()?;
+                }
+                10 => {
+                    decoder.read_var_uint()?;
+                }
+                62 => {
+                    decoder.read_var_uint()?;
+                }
+                24 => {
+                    decoder.read_var_float_value()?;
+                }
+                76 => {
+                    decoder.read_var_uint()?;
+                }
+                195 => {
+                    skip_arc_data_from_decoder(decoder)?;
+                }
+                48 => {
+                    skip_vector_data_from_decoder(decoder)?;
+                }
+                100 => {
+                    decoder.read_var_uint()?;
+                }
+                425 => {
+                    decoder.read_var_uint()?;
+                }
+                432 => {
+                    skip_text_path_start_from_decoder(decoder)?;
+                }
+                119 => {
+                    decoder.read_bool()?;
+                }
+                138 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_guide_from_decoder(decoder)?;
+                    }
+                }
+                142 => {
+                    decoder.read_bool()?;
+                }
+                159 => {
+                    skip_scroll_direction_from_decoder(decoder)?;
+                }
+                160 => {
+                    decoder.read_var_float_value()?;
+                }
+                166 => {
+                    skip_vector_from_decoder(decoder)?;
+                }
+                175 => {
+                    decoder.read_bool()?;
+                }
+                178 => {
+                    skip_scroll_contracted_state_from_decoder(decoder)?;
+                }
+                179 => {
+                    skip_vector_from_decoder(decoder)?;
+                }
+                180 => {
+                    decoder.skip_string()?;
+                }
+                186 => {
+                    skip_scroll_behavior_from_decoder(decoder)?;
+                }
+                196 => {
+                    decoder.read_var_int()?;
+                }
+                197 => {
+                    skip_navigation_type_from_decoder(decoder)?;
+                }
+                198 => {
+                    skip_overlay_position_type_from_decoder(decoder)?;
+                }
+                199 => {
+                    skip_vector_from_decoder(decoder)?;
+                }
+                200 => {
+                    skip_overlay_background_interaction_from_decoder(decoder)?;
+                }
+                201 => {
+                    skip_overlay_background_appearance_from_decoder(decoder)?;
+                }
+                213 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                220 => {
+                    decoder.read_bool()?;
+                }
+                221 => {
+                    skip_stack_size_from_decoder(decoder)?;
+                }
+                222 => {
+                    decoder.read_bool()?;
+                }
+                224 => {
+                    skip_key_trigger_from_decoder(decoder)?;
+                }
+                227 => {
+                    decoder.skip_string()?;
+                }
+                235 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_guid_from_decoder(decoder)?;
+                    }
+                }
+                237 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_symbol_link_from_decoder(decoder)?;
+                    }
+                }
+                239 => {
+                    skip_text_list_data_from_decoder(decoder)?;
+                }
+                261 => {
+                    decoder.read_bool()?;
+                }
+                264 => {
+                    decoder.read_var_float_value()?;
+                }
+                270 => {
+                    skip_embed_data_from_decoder(decoder)?;
+                }
+                272 => {
+                    skip_rich_media_data_from_decoder(decoder)?;
+                }
+                277 => {
+                    skip_multiplayer_map_from_decoder(decoder)?;
+                }
+                284 => {
+                    decoder.read_bool()?;
+                }
+                302 => {
+                    skip_html_tag_from_decoder(decoder)?;
+                }
+                303 => {
+                    skip_aria_role_from_decoder(decoder)?;
+                }
+                357 => {
+                    skip_aria_attributes_map_from_decoder(decoder)?;
+                }
+                304 => {
+                    decoder.skip_string()?;
+                }
+                490 => {
+                    decoder.read_bool()?;
+                }
+                306 => {
+                    skip_variable_data_from_decoder(decoder)?;
+                }
+                307 => {
+                    skip_variable_data_map_from_decoder(decoder)?;
+                }
+                316 => {
+                    skip_variable_mode_by_set_map_from_decoder(decoder)?;
+                }
+                312 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_variable_set_mode_from_decoder(decoder)?;
+                    }
+                }
+                313 => {
+                    skip_variable_set_id_from_decoder(decoder)?;
+                }
+                314 => {
+                    skip_variable_resolved_data_type_from_decoder(decoder)?;
+                }
+                315 => {
+                    skip_variable_data_values_from_decoder(decoder)?;
+                }
+                350 => {
+                    decoder.skip_string()?;
+                }
+                566 => {
+                    skip_variable_timing_display_unit_from_decoder(decoder)?;
+                }
+                353 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_variable_scope_from_decoder(decoder)?;
+                    }
+                }
+                445 => {
+                    skip_variable_data_map_from_decoder(decoder)?;
+                }
+                358 => {
+                    skip_code_syntax_map_from_decoder(decoder)?;
+                }
+                388 => {
+                    skip_paste_source_from_decoder(decoder)?;
+                }
+                397 => {
+                    skip_editor_type_from_decoder(decoder)?;
+                }
+                446 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                482 => {
+                    decoder.read_var_uint64()?;
+                }
+                447 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_variable_width_point_from_decoder(decoder)?;
+                    }
+                }
+                448 => {
+                    skip_dynamic_stroke_settings_from_decoder(decoder)?;
+                }
+                449 => {
+                    skip_scatter_stroke_settings_from_decoder(decoder)?;
+                }
+                450 => {
+                    skip_stretch_stroke_settings_from_decoder(decoder)?;
+                }
+                488 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_matrix_from_decoder(decoder)?;
+                    }
+                }
+                452 => {
+                    skip_brush_type_from_decoder(decoder)?;
+                }
+                542 => {
+                    skip_optional_vector_from_decoder(decoder)?;
+                }
+                554 => {
+                    decoder.read_var_float_value()?;
+                }
+                377 => {
+                    skip_variable_set_id_from_decoder(decoder)?;
+                }
+                464 => {
+                    skip_variable_id_from_decoder(decoder)?;
+                }
+                378 => {
+                    skip_variable_id_or_variable_override_id_from_decoder(decoder)?;
+                }
+                385 => {
+                    decoder.read_bool()?;
+                }
+                386 => {
+                    decoder.skip_string()?;
+                }
+                517 => {
+                    skip_inherited_variables_data_from_decoder(decoder)?;
+                }
+                361 => {
+                    skip_handoff_status_map_from_decoder(decoder)?;
+                }
+                327 => {
+                    skip_agenda_position_map_from_decoder(decoder)?;
+                }
+                328 => {
+                    skip_agenda_metadata_map_from_decoder(decoder)?;
+                }
+                329 => {
+                    skip_migration_status_from_decoder(decoder)?;
+                }
+                330 => {
+                    decoder.read_bool()?;
+                }
+                331 => {
+                    skip_edit_info_from_decoder(decoder)?;
+                }
+                341 => {
+                    skip_color_profile_from_decoder(decoder)?;
+                }
+                342 => {
+                    skip_symbol_id_from_decoder(decoder)?;
+                }
+                346 => {
+                    skip_child_reading_direction_from_decoder(decoder)?;
+                }
+                347 => {
+                    decoder.skip_string()?;
+                }
+                349 => {
+                    skip_document_color_profile_from_decoder(decoder)?;
+                }
+                354 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_developer_related_link_from_decoder(decoder)?;
+                    }
+                }
+                356 => {
+                    decoder.skip_string()?;
+                }
+                365 => {
+                    skip_edit_scope_info_from_decoder(decoder)?;
+                }
+                374 => {
+                    skip_semantic_weight_from_decoder(decoder)?;
+                }
+                375 => {
+                    skip_semantic_italic_from_decoder(decoder)?;
+                }
+                403 => {
+                    decoder.read_bool()?;
+                }
+                387 => {
+                    decoder.read_bool()?;
+                }
+                500 => {
+                    skip_derived_breakpoint_data_from_decoder(decoder)?;
+                }
+                398 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                458 => {
+                    decoder.read_bool()?;
+                }
+                457 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                462 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                501 => {
+                    decoder.read_var_float_value()?;
+                }
+                522 => {
+                    decoder.read_bool()?;
+                }
+                400 => {
+                    skip_responsive_set_settings_from_decoder(decoder)?;
+                }
+                404 => {
+                    skip_node_behaviors_from_decoder(decoder)?;
+                }
+                414 => {
+                    decoder.skip_string()?;
+                }
+                534 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_collaborative_text_op_id_from_decoder(decoder)?;
+                    }
+                }
+                444 => {
+                    skip_collaborative_plain_text_from_decoder(decoder)?;
+                }
+                427 => {
+                    skip_code_library_id_from_decoder(decoder)?;
+                }
+                467 => {
+                    skip_imported_code_files_from_decoder(decoder)?;
+                }
+                468 => {
+                    skip_canvas_node_id_from_decoder(decoder)?;
+                }
+                498 => {
+                    decoder.read_bool()?;
+                }
+                502 => {
+                    decoder.skip_string()?;
+                }
+                503 => {
+                    decoder.read_var_uint()?;
+                }
+                504 => {
+                    decoder.skip_string()?;
+                }
+                515 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        decoder.skip_string()?;
+                    }
+                }
+                524 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_used_make_library_from_decoder(decoder)?;
+                    }
+                }
+                518 => {
+                    decoder.skip_string()?;
+                }
+                520 => {
+                    decoder.read_bool()?;
+                }
+                551 => {
+                    decoder.read_bool()?;
+                }
+                531 => {
+                    skip_prototype_device_from_decoder(decoder)?;
+                }
+                525 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_code_example_from_decoder(decoder)?;
+                    }
+                }
+                428 => {
+                    skip_code_file_id_from_decoder(decoder)?;
+                }
+                430 => {
+                    decoder.skip_string()?;
+                }
+                547 => {
+                    decoder.skip_string()?;
+                }
+                429 => {
+                    skip_code_component_id_from_decoder(decoder)?;
+                }
+                487 => {
+                    decoder.read_bool()?;
+                }
+                431 => {
+                    skip_code_snapshot_state_from_decoder(decoder)?;
+                }
+                451 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_node_chat_message_from_decoder(decoder)?;
+                    }
+                }
+                485 => {
+                    skip_node_chat_compression_state_from_decoder(decoder)?;
+                }
+                496 => {
+                    skip_ai_chat_thread_from_decoder(decoder)?;
+                }
+                484 => {
+                    decoder.skip_string()?;
+                }
+                459 => {
+                    skip_code_snapshot_from_decoder(decoder)?;
+                }
+                589 => {
+                    skip_code_snapshot_layers_from_decoder(decoder)?;
+                }
+                480 => {
+                    decoder.read_var_uint()?;
+                }
+                465 => {
+                    decoder.read_bool()?;
+                }
+                469 => {
+                    decoder.read_bool()?;
+                }
+                470 => {
+                    decoder.read_bool()?;
+                }
+                471 => {
+                    decoder.read_bool()?;
+                }
+                481 => {
+                    skip_canvas_node_id_from_decoder(decoder)?;
+                }
+                473 => {
+                    skip_image_import_map_from_decoder(decoder)?;
+                }
+                516 => {
+                    skip_code_object_type_from_decoder(decoder)?;
+                }
+                472 => {
+                    decoder.skip_string()?;
+                }
+                478 => {
+                    skip_code_behavior_data_from_decoder(decoder)?;
+                }
+                519 => {
+                    decoder.read_var_uint()?;
+                }
+                527 => {
+                    decoder.read_bool()?;
+                }
+                532 => {
+                    skip_code_embed_info_from_decoder(decoder)?;
+                }
+                546 => {
+                    decoder.read_bool()?;
+                }
+                558 => {
+                    skip_code_source_info_from_decoder(decoder)?;
+                }
+                536 => {
+                    decoder.skip_string()?;
+                }
+                537 => {
+                    decoder.skip_byte_array()?;
+                }
+                419 => {
+                    skip_cms_selector_from_decoder(decoder)?;
+                }
+                420 => {
+                    skip_cms_consumption_map_from_decoder(decoder)?;
+                }
+                460 => {
+                    skip_cms_rich_text_style_map_from_decoder(decoder)?;
+                }
+                539 => {
+                    skip_symbol_id_from_decoder(decoder)?;
+                }
+                540 => {
+                    skip_repeater_cms_override_data_from_decoder(decoder)?;
+                }
+                549 => {
+                    skip_repeater_symbol_override_data_from_decoder(decoder)?;
+                }
+                541 => {
+                    skip_repeater_override_data_from_decoder(decoder)?;
+                }
+                405 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        decoder.read_var_uint()?;
+                    }
+                }
+                408 => {
+                    decoder.skip_string()?;
+                }
+                407 => {
+                    skip_first_draft_data_from_decoder(decoder)?;
+                }
+                418 => {
+                    skip_first_draft_kit_element_data_from_decoder(decoder)?;
+                }
+                421 => {
+                    skip_cooper_revert_data_from_decoder(decoder)?;
+                }
+                461 => {
+                    skip_cooper_template_data_from_decoder(decoder)?;
+                }
+                528 => {
+                    skip_buzz_approval_requests_from_decoder(decoder)?;
+                }
+                529 => {
+                    skip_buzz_approval_node_status_info_from_decoder(decoder)?;
+                }
+                422 => {
+                    skip_hub_file_attribution_from_decoder(decoder)?;
+                }
+                454 => {
+                    skip_managed_string_data_from_decoder(decoder)?;
+                }
+                466 => {
+                    skip_thumbnail_info_from_decoder(decoder)?;
+                }
+                494 => {
+                    skip_ai_canvas_prompt_from_decoder(decoder)?;
+                }
+                499 => {
+                    skip_canvas_node_id_from_decoder(decoder)?;
+                }
+                548 => {
+                    decoder.skip_string()?;
+                }
+                523 => {
+                    skip_trss_transform2_d_from_decoder(decoder)?;
+                }
+                506 => {
+                    decoder.read_var_int64()?;
+                }
+                507 => {
+                    skip_keyframe_value_data_from_decoder(decoder)?;
+                }
+                586 => {
+                    skip_variable_data_from_decoder(decoder)?;
+                }
+                505 => {
+                    skip_interpolation_type_from_decoder(decoder)?;
+                }
+                508 => {
+                    skip_bezier_handles_from_decoder(decoder)?;
+                }
+                535 => {
+                    skip_easing_data_from_decoder(decoder)?;
+                }
+                509 => {
+                    skip_keyframe_operation_from_decoder(decoder)?;
+                }
+                510 => {
+                    skip_timeline_position_type_from_decoder(decoder)?;
+                }
+                545 => {
+                    decoder.read_bool()?;
+                }
+                511 => {
+                    skip_guid_from_decoder(decoder)?;
+                }
+                512 => {
+                    decoder.read_var_uint64()?;
+                }
+                513 => {
+                    decoder.read_var_int64()?;
+                }
+                543 => {
+                    decoder.read_bool()?;
+                }
+                514 => {
+                    skip_playback_style_from_decoder(decoder)?;
+                }
+                552 => {
+                    skip_timeline_definitions_map_from_decoder(decoder)?;
+                }
+                553 => {
+                    skip_timeline_assignments_map_from_decoder(decoder)?;
+                }
+                521 => {
+                    skip_animation_presets_from_decoder(decoder)?;
+                }
+                582 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_style_id_for_animation_from_decoder(decoder)?;
+                    }
+                }
+                583 => {
+                    skip_animation_preset_id_from_decoder(decoder)?;
+                }
+                568 => {
+                    skip_tools_from_decoder(decoder)?;
+                }
+                569 => {
+                    skip_custom_effects_from_decoder(decoder)?;
+                }
+                526 => {
+                    skip_transition_override_data_from_decoder(decoder)?;
+                }
+                544 => {
+                    decoder.read_bool()?;
+                }
+                557 => {
+                    skip_source_control_config_from_decoder(decoder)?;
+                }
+                559 => {
+                    skip_spec_block_type_from_decoder(decoder)?;
+                }
+                560 => {
+                    skip_collaborative_plain_text_from_decoder(decoder)?;
+                }
+                561 => {
+                    decoder.skip_string()?;
+                }
+                562 => {
+                    decoder.skip_string()?;
+                }
+                563 => {
+                    decoder.read_var_int()?;
+                }
+                575 => {
+                    decoder.skip_string()?;
+                }
+                576 => {
+                    decoder.read_var_int()?;
+                }
+                577 => {
+                    decoder.read_var_int()?;
+                }
+                578 => {
+                    skip_table_row_column_size_map_from_decoder(decoder)?;
+                }
+                579 => {
+                    skip_table_row_column_size_map_from_decoder(decoder)?;
+                }
+                590 => {
+                    decoder.skip_string()?;
+                }
+                565 => {
+                    decoder.read_bool()?;
+                }
+                584 => {
+                    decoder.skip_string()?;
+                }
+                585 => {
+                    decoder.read_var_int()?;
+                }
+                567 => {
+                    decoder.read_bool()?;
+                }
+                588 => {
+                    skip_custom_tool_artifact_ref_from_decoder(decoder)?;
+                }
+                field => {
+                    return Err(
+                        Error::Term(
+                            Box::new(
+                                format!(
+                                    "unknown field {} while decoding scene index node", field
+                                ),
+                            ),
+                        ),
+                    );
+                }
+            }
+        }
+        Ok(SceneNodeRecord {
+            guid: guid.unwrap_or_default(),
+            node_type: node_type.unwrap_or_else(|| "unknown".to_string()),
+            name,
+            parent_guid,
+            position,
+            parent: None,
+            children: Vec::new(),
+        })
+    }
+}
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
     let mut decoder = Decoder::new(bytes.as_slice());
@@ -46719,6 +49413,14 @@ pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Te
         }
             .encode(env),
     )
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn query_scene_xpath<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    xpath: String,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
 }
 fn decode_scene_message_from_decoder(
     decoder: &mut Decoder<'_>,

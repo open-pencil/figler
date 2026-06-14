@@ -151,6 +151,13 @@ impl<'a> Decoder<'a> {
         self.read_string_bytes().map(|_| ())
     }
 
+    pub fn read_string_value(&mut self) -> NifResult<String> {
+        let bytes = self.read_string_bytes()?;
+        Ok(std::str::from_utf8(bytes)
+            .map_err(|_| Error::Term(Box::new("invalid utf-8")))?
+            .to_owned())
+    }
+
     fn read_string_bytes(&mut self) -> NifResult<&'a [u8]> {
         let start = self.index;
         let offset = memchr::memchr(0, &self.data[start..])

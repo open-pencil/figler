@@ -31,6 +31,16 @@ chunks = Enum.map(parsed.chunks, &FigKiwi.Container.inflate/1)
 decoded = FigKiwi.Container.decode(binary)
 ```
 
+Projected native scene queries avoid materializing the full generated schema tree. They accept raw Kiwi `Message` payloads, `canvas.fig` containers, or `.fig` ZIPs containing `canvas.fig`:
+
+```elixir
+summary = FigKiwi.Scene.summary(fig_binary)
+canvases = FigKiwi.Scene.query(fig_binary, "//canvas")
+named_text = FigKiwi.Scene.query(fig_binary, "//text[contains(@name, 'Hello')]")
+```
+
+Projected XPath nodes expose `@guid`, `@type`, `@name`, `@parent_guid`, and `@position`.
+
 ## Updating generated schema modules
 
 ```sh
@@ -44,6 +54,9 @@ mix ci
 
 ```sh
 elixir bench/message_bench.exs
+
+FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
+  mix fig_kiwi.bench.fixtures
 ```
 
 ## Development
