@@ -42,5 +42,5 @@ fn make_struct<'a>(
     }
 }
 
-kiwi_codegen::definitions!();
-kiwi_codegen::entrypoints!();
+__rq_definitions!();
+__rq_entrypoints!();

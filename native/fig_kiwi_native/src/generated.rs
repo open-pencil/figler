@@ -1,7 +1,7 @@
-use crate::runtime::Decoder;
 use rustler::types::atom::Atom;
 use rustler::{Binary, Encoder, Env, Error, NifResult, Term};
 use std::sync::OnceLock;
+use crate::runtime::Decoder;
 fn cached_atom(env: Env<'_>, cache: &'static OnceLock<Atom>, name: &str) -> Atom {
     *cache.get_or_init(|| Atom::from_str(env, name).unwrap())
 }
@@ -10,14 +10,15 @@ fn cached_struct_keys(
     cache: &'static OnceLock<Vec<rustler::wrapper::NIF_TERM>>,
     fields: &[&str],
 ) -> &'static [rustler::wrapper::NIF_TERM] {
-    cache.get_or_init(|| {
-        let mut keys = Vec::with_capacity(fields.len() + 1);
-        keys.push(rustler::types::atom::__struct__().as_c_arg());
-        for field in fields {
-            keys.push(Atom::from_str(env, field).unwrap().as_c_arg());
-        }
-        keys
-    })
+    cache
+        .get_or_init(|| {
+            let mut keys = Vec::with_capacity(fields.len() + 1);
+            keys.push(rustler::types::atom::__struct__().as_c_arg());
+            for field in fields {
+                keys.push(Atom::from_str(env, field).unwrap().as_c_arg());
+            }
+            keys
+        })
 }
 fn default_values(module: Atom, len: usize) -> Vec<rustler::wrapper::NIF_TERM> {
     let mut values = vec![rustler::types::atom::nil().as_c_arg(); len + 1];
@@ -143,7 +144,10 @@ fn decode_message_type_from_decoder<'a>(
         value => Ok((value as i64).encode(env)),
     }
 }
-fn decode_axis_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_axis_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     match decoder.read_var_uint()? {
         0 => {
             static ATOM_0: OnceLock<Atom> = OnceLock::new();
@@ -156,7 +160,10 @@ fn decode_axis_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
         value => Ok((value as i64).encode(env)),
     }
 }
-fn decode_access_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_access_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     match decoder.read_var_uint()? {
         0 => {
             static ATOM_0: OnceLock<Atom> = OnceLock::new();
@@ -1961,7 +1968,10 @@ fn decode_scroll_contracted_state_from_decoder<'a>(
         value => Ok((value as i64).encode(env)),
     }
 }
-fn decode_guid_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_guid_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GUID");
@@ -1974,7 +1984,10 @@ fn decode_guid_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
-fn decode_color_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_color_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Color");
@@ -1991,7 +2004,10 @@ fn decode_color_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
-fn decode_vector_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_vector_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Vector");
@@ -2004,7 +2020,10 @@ fn decode_vector_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
-fn decode_rect_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_rect_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Rect");
@@ -2043,8 +2062,16 @@ fn decode_color_stop_var_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorStopVar");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["color", "color_var", "position"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ColorStopVar",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["color", "color_var", "position"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -2062,16 +2089,24 @@ fn decode_color_stop_var_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ColorStopVar",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ColorStopVar", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_matrix_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_matrix_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Matrix");
@@ -2102,7 +2137,11 @@ fn decode_parent_index_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ParentIndex");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ParentIndex",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "position"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -2112,7 +2151,10 @@ fn decode_parent_index_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
-fn decode_number_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_number_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Number");
@@ -2357,7 +2399,11 @@ fn decode_code_source_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeSourceInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeSourceInfo",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -2399,10 +2445,15 @@ fn decode_code_source_info_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeSourceInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeSourceInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -2494,10 +2545,16 @@ fn decode_custom_tool_artifact_ref_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CustomToolArtifactRef",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CustomToolArtifactRef",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -3453,7 +3510,11 @@ fn decode_export_constraint_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ExportConstraint");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ExportConstraint",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["type", "value"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -3469,7 +3530,11 @@ fn decode_guid_mapping_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GUIDMapping");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.GUIDMapping",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["from", "to"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -3479,7 +3544,10 @@ fn decode_guid_mapping_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
-fn decode_blob_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_blob_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Blob");
@@ -3490,7 +3558,10 @@ fn decode_blob_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
-fn decode_image_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_image_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Image");
@@ -3512,16 +3583,20 @@ fn decode_image_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Image",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Image", field)),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_video_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_video_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Video");
@@ -3539,10 +3614,11 @@ fn decode_video_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Video",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Video", field)),
+                    ),
+                );
             }
         }
     }
@@ -3554,7 +3630,11 @@ fn decode_paste_source_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PasteSource");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PasteSource",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["src_file", "src_node"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -3569,10 +3649,13 @@ fn decode_paste_source_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PasteSource",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding PasteSource", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -3584,7 +3667,11 @@ fn decode_filter_color_adjust_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FilterColorAdjust");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.FilterColorAdjust",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -3691,16 +3778,24 @@ fn decode_paint_filter_message_from_decoder<'a>(
                 values[10] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PaintFilterMessage",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PaintFilterMessage", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_paint_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_paint_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Paint");
@@ -3776,7 +3871,10 @@ fn decode_paint_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
             }
             6 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_color_stop_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_color_stop_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[6] = value.encode(env).as_c_arg();
             }
             7 => {
@@ -3853,7 +3951,10 @@ fn decode_paint_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
             }
             23 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_color_stop_var_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_color_stop_var_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[25] = value.encode(env).as_c_arg();
             }
             24 => {
@@ -3913,16 +4014,19 @@ fn decode_paint_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
                 values[39] = value.encode(env).as_c_arg();
             }
             40 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_component_prop_assignment_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_component_prop_assignment_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[40] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Paint",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Paint", field)),
+                    ),
+                );
             }
         }
     }
@@ -3994,17 +4098,15 @@ fn decode_font_meta_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FontMetaData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.FontMetaData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "key",
-            "font_line_height",
-            "font_digest",
-            "font_style",
-            "font_weight",
-        ],
+        &["key", "font_line_height", "font_digest", "font_style", "font_weight"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -4031,10 +4133,15 @@ fn decode_font_meta_data_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding FontMetaData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding FontMetaData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4046,8 +4153,16 @@ fn decode_font_variation_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FontVariation");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["axis_tag", "axis_name", "value"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.FontVariation",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["axis_tag", "axis_name", "value"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -4065,10 +4180,15 @@ fn decode_font_variation_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding FontVariation",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding FontVariation", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4120,12 +4240,18 @@ fn decode_text_data_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             12 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_text_line_data_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_text_line_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[4] = value.encode(env).as_c_arg();
             }
             8 => {
@@ -4133,8 +4259,11 @@ fn decode_text_data_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             10 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_font_name_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_font_name_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[6] = value.encode(env).as_c_arg();
             }
             17 => {
@@ -4146,33 +4275,48 @@ fn decode_text_data_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             5 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_baseline_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_baseline_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[9] = value.encode(env).as_c_arg();
             }
             6 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_glyph_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_glyph_from_decoder(env, decoder))?;
                 values[10] = value.encode(env).as_c_arg();
             }
             7 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_decoration_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_decoration_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[11] = value.encode(env).as_c_arg();
             }
             16 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_blockquote_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_blockquote_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[12] = value.encode(env).as_c_arg();
             }
             9 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_font_meta_data_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_font_meta_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[13] = value.encode(env).as_c_arg();
             }
             11 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_hyperlink_box_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_hyperlink_box_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[14] = value.encode(env).as_c_arg();
             }
             13 => {
@@ -4184,25 +4328,34 @@ fn decode_text_data_from_decoder<'a>(
                 values[16] = value.encode(env).as_c_arg();
             }
             15 => {
-                let value = decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
+                let value = decoder
+                    .read_repeated(|decoder| decoder.read_var_float(env))?;
                 values[17] = value.encode(env).as_c_arg();
             }
             18 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_mention_box_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_mention_box_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[18] = value.encode(env).as_c_arg();
             }
             19 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_derived_text_line_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_derived_text_line_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[19] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TextData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding TextData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4214,7 +4367,11 @@ fn decode_derived_text_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.DerivedTextData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.DerivedTextData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -4242,33 +4399,48 @@ fn decode_derived_text_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_baseline_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_baseline_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_glyph_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_glyph_from_decoder(env, decoder))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_decoration_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_decoration_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_blockquote_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_blockquote_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[5] = value.encode(env).as_c_arg();
             }
             6 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_font_meta_data_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_font_meta_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[6] = value.encode(env).as_c_arg();
             }
             7 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_hyperlink_box_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_hyperlink_box_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[7] = value.encode(env).as_c_arg();
             }
             8 => {
@@ -4280,25 +4452,36 @@ fn decode_derived_text_data_from_decoder<'a>(
                 values[9] = value.encode(env).as_c_arg();
             }
             10 => {
-                let value = decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
+                let value = decoder
+                    .read_repeated(|decoder| decoder.read_var_float(env))?;
                 values[10] = value.encode(env).as_c_arg();
             }
             11 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_mention_box_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_mention_box_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[11] = value.encode(env).as_c_arg();
             }
             12 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_derived_text_line_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_derived_text_line_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[12] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding DerivedTextData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding DerivedTextData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4310,18 +4493,15 @@ fn decode_hyperlink_box_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.HyperlinkBox");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.HyperlinkBox",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "bounds",
-            "url",
-            "guid",
-            "cms_target",
-            "open_in_new_tab",
-            "hyperlink_id",
-        ],
+        &["bounds", "url", "guid", "cms_target", "open_in_new_tab", "hyperlink_id"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -4352,10 +4532,15 @@ fn decode_hyperlink_box_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding HyperlinkBox",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding HyperlinkBox", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4371,13 +4556,7 @@ fn decode_mention_box_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "bounds",
-            "start_index",
-            "end_index",
-            "is_valid",
-            "mention_key",
-        ],
+        &["bounds", "start_index", "end_index", "is_valid", "mention_key"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -4404,10 +4583,13 @@ fn decode_mention_box_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding MentionBox",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding MentionBox", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4471,16 +4653,22 @@ fn decode_baseline_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Baseline",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Baseline", field),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_glyph_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_glyph_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Glyph");
@@ -4540,10 +4728,11 @@ fn decode_glyph_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
                 values[9] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Glyph",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Glyph", field)),
+                    ),
+                );
             }
         }
     }
@@ -4562,8 +4751,8 @@ fn decode_decoration_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_rect_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_rect_from_decoder(env, decoder))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -4571,10 +4760,13 @@ fn decode_decoration_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Decoration",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Decoration", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4609,10 +4801,13 @@ fn decode_blockquote_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Blockquote",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Blockquote", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4628,11 +4823,7 @@ fn decode_vector_data_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "vector_network_blob",
-            "normalized_size",
-            "style_override_table",
-        ],
+        &["vector_network_blob", "normalized_size", "style_override_table"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -4648,14 +4839,20 @@ fn decode_vector_data_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VectorData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding VectorData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4667,7 +4864,11 @@ fn decode_text_path_start_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TextPathStart");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TextPathStart",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["t_value", "forward"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -4682,10 +4883,15 @@ fn decode_text_path_start_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TextPathStart",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TextPathStart", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4704,15 +4910,18 @@ fn decode_guid_path_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GUIDPath",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding GUIDPath", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4740,7 +4949,10 @@ fn decode_symbol_data_from_decoder<'a>(
             }
             2 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -4748,10 +4960,13 @@ fn decode_symbol_data_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SymbolData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding SymbolData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4763,7 +4978,11 @@ fn decode_guid_path_mapping_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GUIDPathMapping");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.GUIDPathMapping",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["id", "path"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -4778,10 +4997,15 @@ fn decode_guid_path_mapping_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GUIDPathMapping",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding GUIDPathMapping", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4805,14 +5029,23 @@ fn decode_derived_breakpoint_data_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding DerivedBreakpointData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding DerivedBreakpointData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4832,11 +5065,7 @@ fn decode_node_generation_data_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "overrides",
-            "use_fine_grained_syncing",
-            "diff_only_removals",
-        ],
+        &["overrides", "use_fine_grained_syncing", "diff_only_removals"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -4844,7 +5073,10 @@ fn decode_node_generation_data_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -4853,14 +5085,22 @@ fn decode_node_generation_data_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeGenerationData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeGenerationData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4884,7 +5124,10 @@ fn decode_derived_immutable_frame_data_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -4892,10 +5135,16 @@ fn decode_derived_immutable_frame_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding DerivedImmutableFrameData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding DerivedImmutableFrameData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4915,14 +5164,20 @@ fn decode_jsx_data_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding JsxData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding JsxData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4934,7 +5189,11 @@ fn decode_derived_jsx_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.DerivedJsxData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.DerivedJsxData",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["overrides"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -4942,14 +5201,22 @@ fn decode_derived_jsx_data_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding DerivedJsxData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding DerivedJsxData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4969,14 +5236,20 @@ fn decode_asset_id_map_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_asset_id_entry_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_asset_id_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AssetIdMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding AssetIdMap", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -4988,7 +5261,11 @@ fn decode_asset_id_entry_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AssetIdEntry");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AssetIdEntry",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["asset_key", "asset_id"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -5003,10 +5280,15 @@ fn decode_asset_id_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AssetIdEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AssetIdEntry", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5033,10 +5315,13 @@ fn decode_asset_ref_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AssetRef",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding AssetRef", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5095,10 +5380,13 @@ fn decode_asset_id_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AssetId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding AssetId", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5110,7 +5398,11 @@ fn decode_state_group_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StateGroupId");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.StateGroupId",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "asset_ref"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -5125,10 +5417,15 @@ fn decode_state_group_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StateGroupId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding StateGroupId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5155,10 +5452,13 @@ fn decode_style_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StyleId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding StyleId", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5185,10 +5485,13 @@ fn decode_symbol_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SymbolId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding SymbolId", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5215,10 +5518,13 @@ fn decode_variable_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableID",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding VariableID", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5249,10 +5555,15 @@ fn decode_variable_override_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableOverrideId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableOverrideId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5264,7 +5575,11 @@ fn decode_variable_set_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableSetID");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariableSetID",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "asset_ref"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -5279,10 +5594,15 @@ fn decode_variable_set_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableSetID",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableSetID", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5309,10 +5629,13 @@ fn decode_theme_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ThemeID",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding ThemeID", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5324,7 +5647,11 @@ fn decode_code_library_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeLibraryId");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeLibraryId",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "asset_ref"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -5339,10 +5666,15 @@ fn decode_code_library_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeLibraryId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeLibraryId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5369,10 +5701,13 @@ fn decode_code_file_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeFileId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding CodeFileId", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5384,7 +5719,11 @@ fn decode_code_component_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeComponentId");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeComponentId",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "asset_ref"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -5399,10 +5738,15 @@ fn decode_code_component_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeComponentId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeComponentId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5414,8 +5758,16 @@ fn decode_canvas_node_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CanvasNodeId");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "symbol_id", "state_group_id"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CanvasNodeId",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["guid", "symbol_id", "state_group_id"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -5433,10 +5785,15 @@ fn decode_canvas_node_id_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CanvasNodeId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CanvasNodeId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5449,7 +5806,11 @@ fn decode_index_range_from_decoder<'a>(
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.IndexRange");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["start_index", "end_index_exclusive"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["start_index", "end_index_exclusive"],
+    );
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_var_uint()?;
@@ -5523,22 +5884,32 @@ fn decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_op_id_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_op_id_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CollaborativeTextStrippedOpRunWithIDs",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CollaborativeTextStrippedOpRunWithIDs",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5571,7 +5942,10 @@ fn decode_collaborative_text_stripped_op_run_with_loc_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_collaborative_text_op_type_from_decoder(env, decoder)?;
+                let value = decode_collaborative_text_op_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -5591,10 +5965,16 @@ fn decode_collaborative_text_stripped_op_run_with_loc_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CollaborativeTextStrippedOpRunWithLoc",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CollaborativeTextStrippedOpRunWithLoc",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5634,13 +6014,18 @@ fn decode_collaborative_text_op_run_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_op_id_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decode_collaborative_text_op_type_from_decoder(env, decoder)?;
+                let value = decode_collaborative_text_op_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
@@ -5656,9 +6041,11 @@ fn decode_collaborative_text_op_run_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             7 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_op_id_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[7] = value.encode(env).as_c_arg();
             }
             8 => {
@@ -5666,10 +6053,16 @@ fn decode_collaborative_text_op_run_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CollaborativeTextOpRun",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CollaborativeTextOpRun",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5701,15 +6094,19 @@ fn decode_collaborative_plain_text_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_stripped_op_run_with_loc_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_stripped_op_run_with_loc_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -5717,16 +6114,24 @@ fn decode_collaborative_plain_text_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_op_run_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_op_run_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CollaborativePlainText",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CollaborativePlainText",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5746,13 +6151,7 @@ fn decode_collaborative_text_selection_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "node",
-            "field",
-            "selected_range",
-            "caret_at_front",
-            "text_version",
-        ],
+        &["node", "field", "selected_range", "caret_at_front", "text_version"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -5775,16 +6174,24 @@ fn decode_collaborative_text_selection_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_op_id_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CollaborativeTextSelection",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CollaborativeTextSelection",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5847,10 +6254,16 @@ fn decode_responsive_text_style_variant_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ResponsiveTextStyleVariant",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ResponsiveTextStyleVariant",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5890,7 +6303,11 @@ fn decode_slide_theme_props_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SlideThemeProps");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SlideThemeProps",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -5918,8 +6335,11 @@ fn decode_slide_theme_props_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_style_id_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_style_id_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
@@ -5943,10 +6363,15 @@ fn decode_slide_theme_props_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SlideThemeProps",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SlideThemeProps", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -5958,23 +6383,34 @@ fn decode_slide_theme_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SlideThemeMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SlideThemeMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_slide_theme_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_slide_theme_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SlideThemeMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SlideThemeMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6005,10 +6441,15 @@ fn decode_slide_theme_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SlideThemeMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SlideThemeMapEntry", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6058,7 +6499,10 @@ fn decode_shared_symbol_reference_from_decoder<'a>(
             }
             4 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
@@ -6067,7 +6511,10 @@ fn decode_shared_symbol_reference_from_decoder<'a>(
             }
             6 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_guid_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_guid_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[6] = value.encode(env).as_c_arg();
             }
             7 => {
@@ -6076,7 +6523,10 @@ fn decode_shared_symbol_reference_from_decoder<'a>(
             }
             8 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[8] = value.encode(env).as_c_arg();
             }
             9 => {
@@ -6084,10 +6534,16 @@ fn decode_shared_symbol_reference_from_decoder<'a>(
                 values[9] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SharedSymbolReference",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SharedSymbolReference",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6107,11 +6563,7 @@ fn decode_shared_component_master_data_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "component_key",
-            "publishing_guid_path_to_team_library_guid",
-            "is_unflattened",
-        ],
+        &["component_key", "publishing_guid_path_to_team_library_guid", "is_unflattened"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -6123,7 +6575,10 @@ fn decode_shared_component_master_data_from_decoder<'a>(
             }
             2 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -6131,10 +6586,16 @@ fn decode_shared_component_master_data_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SharedComponentMasterData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SharedComponentMasterData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6154,11 +6615,7 @@ fn decode_instance_override_stash_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "override_path_of_swapped_instance",
-            "component_key",
-            "overrides",
-        ],
+        &["override_path_of_swapped_instance", "component_key", "overrides"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -6174,14 +6631,23 @@ fn decode_instance_override_stash_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InstanceOverrideStash",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding InstanceOverrideStash",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6201,11 +6667,7 @@ fn decode_instance_override_stash_v2_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "override_path_of_swapped_instance",
-            "local_symbol_id",
-            "overrides",
-        ],
+        &["override_path_of_swapped_instance", "local_symbol_id", "overrides"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -6221,14 +6683,23 @@ fn decode_instance_override_stash_v2_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InstanceOverrideStashV2",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding InstanceOverrideStashV2",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6255,10 +6726,16 @@ fn decode_imported_code_file_entry_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ImportedCodeFileEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ImportedCodeFileEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6270,23 +6747,34 @@ fn decode_imported_code_files_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ImportedCodeFiles");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ImportedCodeFiles",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_imported_code_file_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_imported_code_file_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ImportedCodeFiles",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ImportedCodeFiles", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6376,7 +6864,10 @@ fn decode_effect_axis_from_decoder<'a>(
         value => Ok((value as i64).encode(env)),
     }
 }
-fn decode_effect_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_effect_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Effect");
@@ -6618,9 +7109,11 @@ fn decode_effect_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
                 values[43] = value.encode(env).as_c_arg();
             }
             44 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_component_prop_assignment_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_component_prop_assignment_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[44] = value.encode(env).as_c_arg();
             }
             45 => {
@@ -6668,10 +7161,13 @@ fn decode_effect_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
                 values[55] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Effect",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Effect", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6703,7 +7199,11 @@ fn decode_transform_modifier_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TransformModifier");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TransformModifier",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -6765,10 +7265,15 @@ fn decode_transform_modifier_from_decoder<'a>(
                 values[10] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransformModifier",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransformModifier", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6805,8 +7310,22 @@ fn decode_matrix4f_from_decoder<'a>(
         env,
         &STRUCT_KEYS,
         &[
-            "m00", "m01", "m02", "m03", "m10", "m11", "m12", "m13", "m20", "m21", "m22", "m23",
-            "m30", "m31", "m32", "m33",
+            "m00",
+            "m01",
+            "m02",
+            "m03",
+            "m10",
+            "m11",
+            "m12",
+            "m13",
+            "m20",
+            "m21",
+            "m22",
+            "m23",
+            "m30",
+            "m31",
+            "m32",
+            "m33",
         ],
     );
     let mut values = Vec::with_capacity(keys.len());
@@ -6859,13 +7378,7 @@ fn decode_fixed_order_transform3d_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "perspective",
-            "translate_z",
-            "rotate_x",
-            "rotate_y",
-            "rotate_z",
-        ],
+        &["perspective", "translate_z", "rotate_x", "rotate_y", "rotate_z"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -6892,10 +7405,16 @@ fn decode_fixed_order_transform3d_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding FixedOrderTransform3d",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding FixedOrderTransform3d",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6943,7 +7462,11 @@ fn decode_transform_fn_value_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TransformFnValue");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TransformFnValue",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -6970,10 +7493,15 @@ fn decode_transform_fn_value_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransformFnValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransformFnValue", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -6985,7 +7513,11 @@ fn decode_transform_fn_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TransformFn");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TransformFn",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["type", "value"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -7000,10 +7532,13 @@ fn decode_transform_fn_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransformFn",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding TransformFn", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7035,14 +7570,23 @@ fn decode_transform_schema_value_from_decoder<'a>(
             }
             2 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_transform_fn_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_transform_fn_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransformSchemaValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransformSchemaValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7054,8 +7598,16 @@ fn decode_transform3d_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Transform3d");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["type", "value", "backface_hidden"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.Transform3d",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["type", "value", "backface_hidden"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -7073,10 +7625,13 @@ fn decode_transform3d_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Transform3d",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Transform3d", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7088,7 +7643,11 @@ fn decode_number_vector2_d_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NumberVector2D");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.NumberVector2D",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["x", "y"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -7098,7 +7657,10 @@ fn decode_number_vector2_d_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
-fn decode_scene3d_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_scene3d_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Scene3d");
@@ -7124,10 +7686,13 @@ fn decode_scene3d_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Scene3d",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Scene3d", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7139,7 +7704,11 @@ fn decode_transform_origin_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TransformOrigin");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TransformOrigin",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["x", "y"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -7154,10 +7723,15 @@ fn decode_transform_origin_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransformOrigin",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransformOrigin", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7169,7 +7743,11 @@ fn decode_transition_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TransitionInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TransitionInfo",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["type", "duration"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -7184,10 +7762,15 @@ fn decode_transition_info_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransitionInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransitionInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7239,7 +7822,11 @@ fn decode_prototype_device_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PrototypeDevice");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PrototypeDevice",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -7266,10 +7853,15 @@ fn decode_prototype_device_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PrototypeDevice",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PrototypeDevice", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7358,7 +7950,11 @@ fn decode_overlay_background_appearance_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.OverlayBackgroundAppearance",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["background_type", "background_color"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["background_type", "background_color"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -7372,10 +7968,16 @@ fn decode_overlay_background_appearance_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding OverlayBackgroundAppearance",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding OverlayBackgroundAppearance",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7459,7 +8061,11 @@ fn decode_export_settings_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ExportSettings");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ExportSettings",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -7546,10 +8152,15 @@ fn decode_export_settings_from_decoder<'a>(
                 values[15] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ExportSettings",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ExportSettings", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7654,16 +8265,22 @@ fn decode_layout_grid_from_decoder<'a>(
                 values[13] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding LayoutGrid",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding LayoutGrid", field),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_guide_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_guide_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Guide");
@@ -7685,16 +8302,20 @@ fn decode_guide_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Guide",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Guide", field)),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_path_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_path_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Path");
@@ -7720,10 +8341,11 @@ fn decode_path_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Path",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Path", field)),
+                    ),
+                );
             }
         }
     }
@@ -7812,7 +8434,11 @@ fn decode_dynamic_stroke_settings_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.DynamicStrokeSettings",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["frequency", "wiggle", "smoothen"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["frequency", "wiggle", "smoothen"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -7830,10 +8456,16 @@ fn decode_dynamic_stroke_settings_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding DynamicStrokeSettings",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding DynamicStrokeSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7880,10 +8512,16 @@ fn decode_scatter_stroke_settings_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ScatterStrokeSettings",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ScatterStrokeSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7910,10 +8548,16 @@ fn decode_stretch_stroke_settings_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StretchStrokeSettings",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding StretchStrokeSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -7932,8 +8576,8 @@ fn decode_stroke_data_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_stroke_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_stroke_from_decoder(env, decoder))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -7941,16 +8585,22 @@ fn decode_stroke_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StrokeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding StrokeData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_stroke_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_stroke_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Stroke");
@@ -7991,8 +8641,8 @@ fn decode_stroke_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
@@ -8020,7 +8670,8 @@ fn decode_stroke_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
                 values[10] = value.encode(env).as_c_arg();
             }
             11 => {
-                let value = decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
+                let value = decoder
+                    .read_repeated(|decoder| decoder.read_var_float(env))?;
                 values[11] = value.encode(env).as_c_arg();
             }
             12 => {
@@ -8036,10 +8687,13 @@ fn decode_stroke_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
                 values[14] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Stroke",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Stroke", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8082,10 +8736,15 @@ fn decode_variable_width_point_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableWidthPoint",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableWidthPoint", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8116,10 +8775,16 @@ fn decode_shared_style_reference_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SharedStyleReference",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SharedStyleReference",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8158,10 +8823,16 @@ fn decode_shared_style_master_data_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SharedStyleMasterData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SharedStyleMasterData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8178,7 +8849,10 @@ fn decode_scroll_behavior_from_decoder<'a>(
         }
         1 => {
             static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "fixed_when_child_of_scrolling_frame").encode(env))
+            Ok(
+                cached_atom(env, &ATOM_1, "fixed_when_child_of_scrolling_frame")
+                    .encode(env),
+            )
         }
         2 => {
             static ATOM_2: OnceLock<Atom> = OnceLock::new();
@@ -8216,10 +8890,13 @@ fn decode_arc_data_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ArcData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding ArcData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8232,7 +8909,11 @@ fn decode_symbol_link_from_decoder<'a>(
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SymbolLink");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["uri", "display_name", "display_text"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["uri", "display_name", "display_text"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -8250,10 +8931,13 @@ fn decode_symbol_link_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SymbolLink",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding SymbolLink", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8284,10 +8968,13 @@ fn decode_plugin_data_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PluginData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding PluginData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8307,13 +8994,7 @@ fn decode_plugin_relaunch_data_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "plugin_id",
-            "message",
-            "command",
-            "is_deleted",
-            "custom_tool_id",
-        ],
+        &["plugin_id", "message", "command", "is_deleted", "custom_tool_id"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -8340,10 +9021,15 @@ fn decode_plugin_relaunch_data_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PluginRelaunchData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PluginRelaunchData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8374,10 +9060,16 @@ fn decode_multiplayer_field_version_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding MultiplayerFieldVersion",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding MultiplayerFieldVersion",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8437,16 +9129,15 @@ fn decode_connector_endpoint_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ConnectorEndpoint");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ConnectorEndpoint",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "endpoint_node_id",
-            "position",
-            "magnet",
-            "relative_position",
-        ],
+        &["endpoint_node_id", "position", "magnet", "relative_position"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -8469,10 +9160,15 @@ fn decode_connector_endpoint_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ConnectorEndpoint",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ConnectorEndpoint", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8503,10 +9199,16 @@ fn decode_connector_control_point_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ConnectorControlPoint",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ConnectorControlPoint",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8559,7 +9261,11 @@ fn decode_connector_text_midpoint_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.ConnectorTextMidpoint",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["section", "offset", "off_axis_offset"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["section", "offset", "off_axis_offset"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -8577,10 +9283,16 @@ fn decode_connector_text_midpoint_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ConnectorTextMidpoint",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ConnectorTextMidpoint",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8783,10 +9495,15 @@ fn decode_annotation_property_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnnotationProperty",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnnotationProperty", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8875,7 +9592,11 @@ fn decode_annotation_category_custom_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.AnnotationCategoryCustom",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["color", "custom_color", "label"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["color", "custom_color", "label"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -8893,10 +9614,16 @@ fn decode_annotation_category_custom_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnnotationCategoryCustom",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnnotationCategoryCustom",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8923,18 +9650,29 @@ fn decode_annotation_category_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_annotation_category_preset_from_decoder(env, decoder)?;
+                let value = decode_annotation_category_preset_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decode_annotation_category_custom_from_decoder(env, decoder)?;
+                let value = decode_annotation_category_custom_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnnotationCategory",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnnotationCategory", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8961,16 +9699,24 @@ fn decode_annotation_categories_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_annotation_category_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_annotation_category_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnnotationCategories",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnnotationCategories",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -8997,9 +9743,11 @@ fn decode_annotation_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_annotation_property_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_annotation_property_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -9011,10 +9759,13 @@ fn decode_annotation_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Annotation",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Annotation", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9087,7 +9838,10 @@ fn decode_annotation_measurement_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
-                let value = decode_annotation_measurement_node_side_from_decoder(env, decoder)?;
+                let value = decode_annotation_measurement_node_side_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
@@ -9111,10 +9865,16 @@ fn decode_annotation_measurement_from_decoder<'a>(
                 values[9] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnnotationMeasurement",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnnotationMeasurement",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9126,7 +9886,11 @@ fn decode_library_move_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.LibraryMoveInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.LibraryMoveInfo",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["old_key", "paste_file_key"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -9141,10 +9905,15 @@ fn decode_library_move_info_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding LibraryMoveInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding LibraryMoveInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9179,10 +9948,16 @@ fn decode_library_move_history_item_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding LibraryMoveHistoryItem",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding LibraryMoveHistoryItem",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9225,10 +10000,16 @@ fn decode_developer_related_link_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding DeveloperRelatedLink",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding DeveloperRelatedLink",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9240,7 +10021,11 @@ fn decode_widget_pointer_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.WidgetPointer");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.WidgetPointer",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["node_id"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -9251,10 +10036,15 @@ fn decode_widget_pointer_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding WidgetPointer",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding WidgetPointer", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9270,12 +10060,7 @@ fn decode_edit_info_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "timestamp_iso8601",
-            "user_id",
-            "last_edited_at",
-            "created_at",
-        ],
+        &["timestamp_iso8601", "user_id", "last_edited_at", "created_at"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -9298,10 +10083,13 @@ fn decode_edit_info_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EditInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding EditInfo", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9417,7 +10205,11 @@ fn decode_section_status_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SectionStatusInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SectionStatusInfo",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -9454,10 +10246,15 @@ fn decode_section_status_info_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SectionStatusInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SectionStatusInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9516,15 +10313,21 @@ fn decode_buzz_approval_request_info_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             7 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding BuzzApprovalRequestInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding BuzzApprovalRequestInfo",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9547,16 +10350,24 @@ fn decode_buzz_approval_requests_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_buzz_approval_request_info_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_buzz_approval_request_info_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding BuzzApprovalRequests",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding BuzzApprovalRequests",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9600,11 +10411,7 @@ fn decode_buzz_approval_node_status_info_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "current_status",
-            "was_previously_approved",
-            "approval_revoked_at_history",
-        ],
+        &["current_status", "was_previously_approved", "approval_revoked_at_history"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -9623,10 +10430,16 @@ fn decode_buzz_approval_node_status_info_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding BuzzApprovalNodeStatusInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding BuzzApprovalNodeStatusInfo",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -9638,17 +10451,15 @@ fn decode_code_embed_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeEmbedInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeEmbedInfo",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "url",
-            "src_url",
-            "title",
-            "thumbnail_image_hash",
-            "is_published_site",
-        ],
+        &["url", "src_url", "title", "thumbnail_image_hash", "is_published_site"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -9675,10 +10486,15 @@ fn decode_code_embed_info_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeEmbedInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeEmbedInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -10360,9 +11176,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[13] = value.encode(env).as_c_arg();
             }
             281 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_library_move_history_item_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_library_move_history_item_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[14] = value.encode(env).as_c_arg();
             }
             319 => {
@@ -10487,12 +11305,15 @@ fn decode_node_change_from_decoder<'a>(
             }
             580 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_style_animation_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_style_animation_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[45] = value.encode(env).as_c_arg();
             }
             193 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
                 values[46] = value.encode(env).as_c_arg();
             }
             194 => {
@@ -10504,9 +11325,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[48] = value.encode(env).as_c_arg();
             }
             238 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_state_group_property_value_order_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_state_group_property_value_order_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[49] = value.encode(env).as_c_arg();
             }
             581 => {
@@ -10523,7 +11346,10 @@ fn decode_node_change_from_decoder<'a>(
             }
             124 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[53] = value.encode(env).as_c_arg();
             }
             126 => {
@@ -10531,7 +11357,10 @@ fn decode_node_change_from_decoder<'a>(
                 values[54] = value.encode(env).as_c_arg();
             }
             152 => {
-                let value = decode_shared_component_master_data_from_decoder(env, decoder)?;
+                let value = decode_shared_component_master_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[55] = value.encode(env).as_c_arg();
             }
             144 => {
@@ -10540,12 +11369,18 @@ fn decode_node_change_from_decoder<'a>(
             }
             164 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[57] = value.encode(env).as_c_arg();
             }
             228 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_guid_path_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[58] = value.encode(env).as_c_arg();
             }
             214 => {
@@ -10577,20 +11412,27 @@ fn decode_node_change_from_decoder<'a>(
                 values[65] = value.encode(env).as_c_arg();
             }
             266 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_component_prop_def_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_component_prop_def_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[66] = value.encode(env).as_c_arg();
             }
             267 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_component_prop_ref_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_component_prop_ref_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[67] = value.encode(env).as_c_arg();
             }
             483 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_variant_prop_spec_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_variant_prop_spec_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[68] = value.encode(env).as_c_arg();
             }
             113 => {
@@ -10603,7 +11445,10 @@ fn decode_node_change_from_decoder<'a>(
             }
             125 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[71] = value.encode(env).as_c_arg();
             }
             394 => {
@@ -10615,9 +11460,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[73] = value.encode(env).as_c_arg();
             }
             268 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_component_prop_assignment_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_component_prop_assignment_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[74] = value.encode(env).as_c_arg();
             }
             305 => {
@@ -10625,15 +11472,19 @@ fn decode_node_change_from_decoder<'a>(
                 values[75] = value.encode(env).as_c_arg();
             }
             248 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_instance_override_stash_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_instance_override_stash_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[76] = value.encode(env).as_c_arg();
             }
             250 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_instance_override_stash_v2_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_instance_override_stash_v2_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[77] = value.encode(env).as_c_arg();
             }
             111 => {
@@ -10769,15 +11620,24 @@ fn decode_node_change_from_decoder<'a>(
                 values[110] = value.encode(env).as_c_arg();
             }
             133 => {
-                let value = decode_font_variant_numeric_figure_from_decoder(env, decoder)?;
+                let value = decode_font_variant_numeric_figure_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[111] = value.encode(env).as_c_arg();
             }
             134 => {
-                let value = decode_font_variant_numeric_spacing_from_decoder(env, decoder)?;
+                let value = decode_font_variant_numeric_spacing_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[112] = value.encode(env).as_c_arg();
             }
             135 => {
-                let value = decode_font_variant_numeric_fraction_from_decoder(env, decoder)?;
+                let value = decode_font_variant_numeric_fraction_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[113] = value.encode(env).as_c_arg();
             }
             136 => {
@@ -10817,9 +11677,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[122] = value.encode(env).as_c_arg();
             }
             417 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_responsive_text_style_variant_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_responsive_text_style_variant_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[123] = value.encode(env).as_c_arg();
             }
             352 => {
@@ -10840,12 +11702,18 @@ fn decode_node_change_from_decoder<'a>(
             }
             205 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_open_type_feature_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_open_type_feature_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[128] = value.encode(env).as_c_arg();
             }
             206 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_open_type_feature_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_open_type_feature_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[129] = value.encode(env).as_c_arg();
             }
             223 => {
@@ -10858,7 +11726,10 @@ fn decode_node_change_from_decoder<'a>(
             }
             260 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_font_variation_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_font_variation_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[132] = value.encode(env).as_c_arg();
             }
             279 => {
@@ -10934,7 +11805,8 @@ fn decode_node_change_from_decoder<'a>(
                 values[150] = value.encode(env).as_c_arg();
             }
             13 => {
-                let value = decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
+                let value = decoder
+                    .read_repeated(|decoder| decoder.read_var_float(env))?;
                 values[151] = value.encode(env).as_c_arg();
             }
             65 => {
@@ -11018,8 +11890,8 @@ fn decode_node_change_from_decoder<'a>(
                 values[171] = value.encode(env).as_c_arg();
             }
             38 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
                 values[172] = value.encode(env).as_c_arg();
             }
             90 => {
@@ -11027,8 +11899,8 @@ fn decode_node_change_from_decoder<'a>(
                 values[173] = value.encode(env).as_c_arg();
             }
             39 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
                 values[174] = value.encode(env).as_c_arg();
             }
             91 => {
@@ -11036,8 +11908,8 @@ fn decode_node_change_from_decoder<'a>(
                 values[175] = value.encode(env).as_c_arg();
             }
             43 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_effect_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_effect_from_decoder(env, decoder))?;
                 values[176] = value.encode(env).as_c_arg();
             }
             95 => {
@@ -11053,8 +11925,8 @@ fn decode_node_change_from_decoder<'a>(
                 values[179] = value.encode(env).as_c_arg();
             }
             51 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
                 values[180] = value.encode(env).as_c_arg();
             }
             103 => {
@@ -11062,8 +11934,8 @@ fn decode_node_change_from_decoder<'a>(
                 values[181] = value.encode(env).as_c_arg();
             }
             52 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
                 values[182] = value.encode(env).as_c_arg();
             }
             104 => {
@@ -11071,13 +11943,13 @@ fn decode_node_change_from_decoder<'a>(
                 values[183] = value.encode(env).as_c_arg();
             }
             564 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
                 values[184] = value.encode(env).as_c_arg();
             }
             411 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
                 values[185] = value.encode(env).as_c_arg();
             }
             412 => {
@@ -11097,9 +11969,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[189] = value.encode(env).as_c_arg();
             }
             455 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_transform_modifier_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_transform_modifier_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[190] = value.encode(env).as_c_arg();
             }
             570 => {
@@ -11307,7 +12181,10 @@ fn decode_node_change_from_decoder<'a>(
                 values[241] = value.encode(env).as_c_arg();
             }
             343 => {
-                let value = decode_stack_counter_align_content_from_decoder(env, decoder)?;
+                let value = decode_stack_counter_align_content_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[242] = value.encode(env).as_c_arg();
             }
             406 => {
@@ -11447,15 +12324,19 @@ fn decode_node_change_from_decoder<'a>(
                 values[276] = value.encode(env).as_c_arg();
             }
             226 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_prototype_interaction_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_prototype_interaction_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[277] = value.encode(env).as_c_arg();
             }
             426 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_prototype_interaction_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_prototype_interaction_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[278] = value.encode(env).as_c_arg();
             }
             249 => {
@@ -11464,13 +12345,18 @@ fn decode_node_change_from_decoder<'a>(
             }
             204 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_plugin_data_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_plugin_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[280] = value.encode(env).as_c_arg();
             }
             219 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_plugin_relaunch_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_plugin_relaunch_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[281] = value.encode(env).as_c_arg();
             }
             242 => {
@@ -11494,15 +12380,19 @@ fn decode_node_change_from_decoder<'a>(
                 values[286] = value.encode(env).as_c_arg();
             }
             253 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_connector_control_point_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_connector_control_point_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[287] = value.encode(env).as_c_arg();
             }
             479 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_connector_control_point_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_connector_control_point_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[288] = value.encode(env).as_c_arg();
             }
             255 => {
@@ -11519,13 +12409,18 @@ fn decode_node_change_from_decoder<'a>(
             }
             369 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_annotation_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_annotation_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[292] = value.encode(env).as_c_arg();
             }
             384 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_annotation_measurement_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_annotation_measurement_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[293] = value.encode(env).as_c_arg();
             }
             453 => {
@@ -11545,7 +12440,10 @@ fn decode_node_change_from_decoder<'a>(
                 values[297] = value.encode(env).as_c_arg();
             }
             254 => {
-                let value = decode_derived_immutable_frame_data_from_decoder(env, decoder)?;
+                let value = decode_derived_immutable_frame_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[298] = value.encode(env).as_c_arg();
             }
             338 => {
@@ -11613,7 +12511,10 @@ fn decode_node_change_from_decoder<'a>(
                 values[314] = value.encode(env).as_c_arg();
             }
             275 => {
-                let value = decode_widget_derived_subtree_cursor_from_decoder(env, decoder)?;
+                let value = decode_widget_derived_subtree_cursor_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[315] = value.encode(env).as_c_arg();
             }
             276 => {
@@ -11646,17 +12547,25 @@ fn decode_node_change_from_decoder<'a>(
             }
             263 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_widget_event_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_widget_event_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[323] = value.encode(env).as_c_arg();
             }
             265 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_widget_property_menu_item_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_widget_property_menu_item_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[324] = value.encode(env).as_c_arg();
             }
             401 => {
-                let value = decode_widget_input_text_node_type_from_decoder(env, decoder)?;
+                let value = decode_widget_input_text_node_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[325] = value.encode(env).as_c_arg();
             }
             489 => {
@@ -11664,11 +12573,17 @@ fn decode_node_change_from_decoder<'a>(
                 values[326] = value.encode(env).as_c_arg();
             }
             308 => {
-                let value = decode_table_row_column_position_map_from_decoder(env, decoder)?;
+                let value = decode_table_row_column_position_map_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[327] = value.encode(env).as_c_arg();
             }
             309 => {
-                let value = decode_table_row_column_position_map_from_decoder(env, decoder)?;
+                let value = decode_table_row_column_position_map_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[328] = value.encode(env).as_c_arg();
             }
             310 => {
@@ -11821,7 +12736,10 @@ fn decode_node_change_from_decoder<'a>(
             }
             45 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_export_settings_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_export_settings_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[366] = value.encode(env).as_c_arg();
             }
             97 => {
@@ -11838,7 +12756,10 @@ fn decode_node_change_from_decoder<'a>(
             }
             47 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_layout_grid_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_layout_grid_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[370] = value.encode(env).as_c_arg();
             }
             99 => {
@@ -11918,8 +12839,8 @@ fn decode_node_change_from_decoder<'a>(
                 values[389] = value.encode(env).as_c_arg();
             }
             138 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guide_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guide_from_decoder(env, decoder))?;
                 values[390] = value.encode(env).as_c_arg();
             }
             142 => {
@@ -11975,11 +12896,17 @@ fn decode_node_change_from_decoder<'a>(
                 values[403] = value.encode(env).as_c_arg();
             }
             200 => {
-                let value = decode_overlay_background_interaction_from_decoder(env, decoder)?;
+                let value = decode_overlay_background_interaction_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[404] = value.encode(env).as_c_arg();
             }
             201 => {
-                let value = decode_overlay_background_appearance_from_decoder(env, decoder)?;
+                let value = decode_overlay_background_appearance_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[405] = value.encode(env).as_c_arg();
             }
             213 => {
@@ -12007,13 +12934,16 @@ fn decode_node_change_from_decoder<'a>(
                 values[411] = value.encode(env).as_c_arg();
             }
             235 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[412] = value.encode(env).as_c_arg();
             }
             237 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_symbol_link_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_symbol_link_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[413] = value.encode(env).as_c_arg();
             }
             239 => {
@@ -12078,7 +13008,10 @@ fn decode_node_change_from_decoder<'a>(
             }
             312 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_variable_set_mode_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_variable_set_mode_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[429] = value.encode(env).as_c_arg();
             }
             313 => {
@@ -12086,7 +13019,10 @@ fn decode_node_change_from_decoder<'a>(
                 values[430] = value.encode(env).as_c_arg();
             }
             314 => {
-                let value = decode_variable_resolved_data_type_from_decoder(env, decoder)?;
+                let value = decode_variable_resolved_data_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[431] = value.encode(env).as_c_arg();
             }
             315 => {
@@ -12098,12 +13034,18 @@ fn decode_node_change_from_decoder<'a>(
                 values[433] = value.encode(env).as_c_arg();
             }
             566 => {
-                let value = decode_variable_timing_display_unit_from_decoder(env, decoder)?;
+                let value = decode_variable_timing_display_unit_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[434] = value.encode(env).as_c_arg();
             }
             353 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_variable_scope_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_variable_scope_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[435] = value.encode(env).as_c_arg();
             }
             445 => {
@@ -12131,9 +13073,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[441] = value.encode(env).as_c_arg();
             }
             447 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_variable_width_point_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_variable_width_point_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[442] = value.encode(env).as_c_arg();
             }
             448 => {
@@ -12149,8 +13093,8 @@ fn decode_node_change_from_decoder<'a>(
                 values[445] = value.encode(env).as_c_arg();
             }
             488 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_matrix_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_matrix_from_decoder(env, decoder))?;
                 values[446] = value.encode(env).as_c_arg();
             }
             452 => {
@@ -12174,7 +13118,10 @@ fn decode_node_change_from_decoder<'a>(
                 values[451] = value.encode(env).as_c_arg();
             }
             378 => {
-                let value = decode_variable_id_or_variable_override_id_from_decoder(env, decoder)?;
+                let value = decode_variable_id_or_variable_override_id_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[452] = value.encode(env).as_c_arg();
             }
             385 => {
@@ -12234,9 +13181,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[466] = value.encode(env).as_c_arg();
             }
             354 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_developer_related_link_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_developer_related_link_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[467] = value.encode(env).as_c_arg();
             }
             356 => {
@@ -12304,9 +13253,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[483] = value.encode(env).as_c_arg();
             }
             534 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_collaborative_text_op_id_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[484] = value.encode(env).as_c_arg();
             }
             444 => {
@@ -12347,7 +13298,10 @@ fn decode_node_change_from_decoder<'a>(
             }
             524 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_used_make_library_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_used_make_library_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[494] = value.encode(env).as_c_arg();
             }
             518 => {
@@ -12368,7 +13322,10 @@ fn decode_node_change_from_decoder<'a>(
             }
             525 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_code_example_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_code_example_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[499] = value.encode(env).as_c_arg();
             }
             428 => {
@@ -12397,11 +13354,17 @@ fn decode_node_change_from_decoder<'a>(
             }
             451 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_chat_message_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_chat_message_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[506] = value.encode(env).as_c_arg();
             }
             485 => {
-                let value = decode_node_chat_compression_state_from_decoder(env, decoder)?;
+                let value = decode_node_chat_compression_state_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[507] = value.encode(env).as_c_arg();
             }
             496 => {
@@ -12505,11 +13468,17 @@ fn decode_node_change_from_decoder<'a>(
                 values[532] = value.encode(env).as_c_arg();
             }
             540 => {
-                let value = decode_repeater_cms_override_data_from_decoder(env, decoder)?;
+                let value = decode_repeater_cms_override_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[533] = value.encode(env).as_c_arg();
             }
             549 => {
-                let value = decode_repeater_symbol_override_data_from_decoder(env, decoder)?;
+                let value = decode_repeater_symbol_override_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[534] = value.encode(env).as_c_arg();
             }
             541 => {
@@ -12529,7 +13498,10 @@ fn decode_node_change_from_decoder<'a>(
                 values[538] = value.encode(env).as_c_arg();
             }
             418 => {
-                let value = decode_first_draft_kit_element_data_from_decoder(env, decoder)?;
+                let value = decode_first_draft_kit_element_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[539] = value.encode(env).as_c_arg();
             }
             421 => {
@@ -12545,7 +13517,10 @@ fn decode_node_change_from_decoder<'a>(
                 values[542] = value.encode(env).as_c_arg();
             }
             529 => {
-                let value = decode_buzz_approval_node_status_info_from_decoder(env, decoder)?;
+                let value = decode_buzz_approval_node_status_info_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[543] = value.encode(env).as_c_arg();
             }
             422 => {
@@ -12645,9 +13620,11 @@ fn decode_node_change_from_decoder<'a>(
                 values[567] = value.encode(env).as_c_arg();
             }
             582 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_style_id_for_animation_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_style_id_for_animation_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[568] = value.encode(env).as_c_arg();
             }
             583 => {
@@ -12739,10 +13716,13 @@ fn decode_node_change_from_decoder<'a>(
                 values[590] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeChange",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding NodeChange", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -12775,7 +13755,11 @@ fn decode_git_repo_ref_from_decoder<'a>(
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GitRepoRef");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["provider", "git_repo", "git_ref"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["provider", "git_repo", "git_ref"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -12793,10 +13777,13 @@ fn decode_git_repo_ref_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GitRepoRef",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding GitRepoRef", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -12827,10 +13814,15 @@ fn decode_source_control_config_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SourceControlConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SourceControlConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -12842,7 +13834,11 @@ fn decode_code_snapshot_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeSnapshot");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeSnapshot",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -12869,8 +13865,8 @@ fn decode_code_snapshot_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             1 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -12890,10 +13886,15 @@ fn decode_code_snapshot_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeSnapshot",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeSnapshot", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -12905,7 +13906,11 @@ fn decode_code_output_layer_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeOutputLayer");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeOutputLayer",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["node"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -12916,10 +13921,15 @@ fn decode_code_output_layer_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeOutputLayer",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeOutputLayer", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -12936,7 +13946,11 @@ fn decode_code_snapshot_layers_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.CodeSnapshotLayers",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["state", "invalidated_at", "layers"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["state", "invalidated_at", "layers"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -12951,14 +13965,22 @@ fn decode_code_snapshot_layers_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_code_output_layer_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_code_output_layer_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeSnapshotLayers",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeSnapshotLayers", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -12970,7 +13992,11 @@ fn decode_code_behavior_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeBehaviorData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeBehaviorData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -13001,10 +14027,15 @@ fn decode_code_behavior_data_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeBehaviorData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeBehaviorData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13016,8 +14047,16 @@ fn decode_code_example_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeExample");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["example_name", "code_export_name"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeExample",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["example_name", "code_export_name"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -13031,10 +14070,13 @@ fn decode_code_example_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeExample",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding CodeExample", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13046,7 +14088,11 @@ fn decode_used_make_library_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.UsedMakeLibrary");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.UsedMakeLibrary",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["make_library_id"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -13057,10 +14103,15 @@ fn decode_used_make_library_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding UsedMakeLibrary",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding UsedMakeLibrary", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13072,7 +14123,11 @@ fn decode_cookie_banner_text_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CookieBannerText");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CookieBannerText",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -13174,10 +14229,15 @@ fn decode_cookie_banner_text_from_decoder<'a>(
                 values[18] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CookieBannerText",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CookieBannerText", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13220,7 +14280,10 @@ fn decode_cookie_banner_settings_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_cookie_banner_component_type_from_decoder(env, decoder)?;
+                let value = decode_cookie_banner_component_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -13260,10 +14323,16 @@ fn decode_cookie_banner_settings_from_decoder<'a>(
                 values[11] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CookieBannerSettings",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CookieBannerSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13468,10 +14537,16 @@ fn decode_responsive_set_settings_from_decoder<'a>(
                 values[21] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ResponsiveSetSettings",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ResponsiveSetSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13499,7 +14574,11 @@ fn decode_cms_selector_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CMSSelector");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CMSSelector",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -13519,7 +14598,10 @@ fn decode_cms_selector_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_cms_selector_sort_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_cms_selector_sort_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
@@ -13527,10 +14609,13 @@ fn decode_cms_selector_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSSelector",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding CMSSelector", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13542,27 +14627,41 @@ fn decode_cms_filter_critera_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CMSFilterCritera");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CMSFilterCritera",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["match_type", "filters"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_cms_filter_criteria_match_type_from_decoder(env, decoder)?;
+                let value = decode_cms_filter_criteria_match_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_cms_selector_filter_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_cms_selector_filter_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSFilterCritera",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSFilterCritera", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13590,7 +14689,11 @@ fn decode_cms_selector_filter_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CMSSelectorFilter");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CMSSelectorFilter",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -13605,7 +14708,10 @@ fn decode_cms_selector_filter_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_cms_selector_filter_operator_from_decoder(env, decoder)?;
+                let value = decode_cms_selector_filter_operator_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -13613,10 +14719,15 @@ fn decode_cms_selector_filter_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSSelectorFilter",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSSelectorFilter", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13640,7 +14751,11 @@ fn decode_cms_selector_sort_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CMSSelectorSort");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CMSSelectorSort",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["cms_field_id", "order_by"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -13655,10 +14770,15 @@ fn decode_cms_selector_sort_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSSelectorSort",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSSelectorSort", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13686,23 +14806,34 @@ fn decode_cms_consumption_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CMSConsumptionMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CMSConsumptionMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_cms_consumption_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_cms_consumption_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSConsumptionMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSConsumptionMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13719,7 +14850,11 @@ fn decode_cms_consumption_map_entry_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.CMSConsumptionMapEntry",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["consumption_field", "cms_field_id"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["consumption_field", "cms_field_id"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -13733,10 +14868,16 @@ fn decode_cms_consumption_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSConsumptionMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSConsumptionMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13775,16 +14916,23 @@ fn decode_cms_rich_text_style_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_cms_rich_text_style_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_cms_rich_text_style_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSRichTextStyleMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSRichTextStyleMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13801,7 +14949,11 @@ fn decode_cms_rich_text_style_entry_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.CMSRichTextStyleEntry",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["style_class", "text_descriptor"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["style_class", "text_descriptor"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -13815,10 +14967,16 @@ fn decode_cms_rich_text_style_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSRichTextStyleEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSRichTextStyleEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13879,7 +15037,11 @@ fn decode_cms_rich_text_descriptor_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.CMSRichTextDescriptor",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["text_style_id", "font_name_variants"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["text_style_id", "font_name_variants"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -13889,15 +15051,24 @@ fn decode_cms_rich_text_descriptor_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_font_name_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_font_name_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSRichTextDescriptor",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSRichTextDescriptor",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13921,14 +15092,23 @@ fn decode_repeater_cms_override_data_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding RepeaterCmsOverrideData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding RepeaterCmsOverrideData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13952,14 +15132,23 @@ fn decode_repeater_override_data_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding RepeaterOverrideData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding RepeaterOverrideData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -13982,16 +15171,24 @@ fn decode_repeater_symbol_override_data_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_repeater_position_overrides_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_repeater_position_overrides_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding RepeaterSymbolOverrideData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding RepeaterSymbolOverrideData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14019,14 +15216,23 @@ fn decode_repeater_position_overrides_from_decoder<'a>(
             }
             2 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding RepeaterPositionOverrides",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding RepeaterPositionOverrides",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14049,16 +15255,24 @@ fn decode_inherited_variables_data_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_inherited_variable_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_inherited_variable_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InheritedVariablesData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding InheritedVariablesData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14085,10 +15299,16 @@ fn decode_inherited_variable_entry_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InheritedVariableEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding InheritedVariableEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14119,10 +15339,15 @@ fn decode_hub_file_attribution_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding HubFileAttribution",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding HubFileAttribution", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14134,7 +15359,11 @@ fn decode_managed_string_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ManagedStringData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ManagedStringData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -14161,14 +15390,22 @@ fn decode_managed_string_data_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
-                let value = decode_managed_string_content_schema_from_decoder(env, decoder)?;
+                let value = decode_managed_string_content_schema_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14216,7 +15453,11 @@ fn decode_managed_string_node_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ManagedStringNode");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ManagedStringNode",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -14237,28 +15478,43 @@ fn decode_managed_string_node_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_managed_string_text_node_data_from_decoder(env, decoder)?;
+                let value = decode_managed_string_text_node_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value =
-                    decode_managed_string_concatenate_ast_node_data_from_decoder(env, decoder)?;
+                let value = decode_managed_string_concatenate_ast_node_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
-                let value = decode_managed_string_plural_ast_node_data_from_decoder(env, decoder)?;
+                let value = decode_managed_string_plural_ast_node_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
-                let value =
-                    decode_managed_string_placeholder_ast_node_data_from_decoder(env, decoder)?;
+                let value = decode_managed_string_placeholder_ast_node_data_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringNode",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringNode", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14285,10 +15541,16 @@ fn decode_managed_string_text_node_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringTextNodeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringTextNodeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14311,16 +15573,24 @@ fn decode_managed_string_concatenate_ast_node_data_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_managed_string_node_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_managed_string_node_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringConcatenateAstNodeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringConcatenateAstNodeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14379,16 +15649,24 @@ fn decode_managed_string_plural_ast_node_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_managed_string_plural_type_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_managed_string_plural_type_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringPluralAstNodeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringPluralAstNodeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14411,7 +15689,10 @@ fn decode_managed_string_plural_type_map_entry_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_managed_string_plural_type_from_decoder(env, decoder)?;
+                let value = decode_managed_string_plural_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -14419,10 +15700,16 @@ fn decode_managed_string_plural_type_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringPluralTypeMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringPluralTypeMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14477,7 +15764,10 @@ fn decode_managed_string_placeholder_ast_node_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_managed_string_format_type_from_decoder(env, decoder)?;
+                let value = decode_managed_string_format_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -14485,10 +15775,16 @@ fn decode_managed_string_placeholder_ast_node_data_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringPlaceholderAstNodeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringPlaceholderAstNodeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14500,7 +15796,11 @@ fn decode_cooper_revert_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CooperRevertData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CooperRevertData",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["original_values"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -14511,10 +15811,15 @@ fn decode_cooper_revert_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CooperRevertData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CooperRevertData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14526,7 +15831,11 @@ fn decode_video_playback_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VideoPlayback");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VideoPlayback",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -14568,10 +15877,15 @@ fn decode_video_playback_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VideoPlayback",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VideoPlayback", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14655,7 +15969,11 @@ fn decode_widget_hover_style_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.WidgetHoverStyle");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.WidgetHoverStyle",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -14673,13 +15991,13 @@ fn decode_widget_hover_style_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -14699,10 +16017,15 @@ fn decode_widget_hover_style_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding WidgetHoverStyle",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding WidgetHoverStyle", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14733,10 +16056,16 @@ fn decode_widget_derived_subtree_cursor_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding WidgetDerivedSubtreeCursor",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding WidgetDerivedSubtreeCursor",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14748,23 +16077,34 @@ fn decode_multiplayer_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.MultiplayerMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.MultiplayerMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_multiplayer_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_multiplayer_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding MultiplayerMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding MultiplayerMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14795,10 +16135,15 @@ fn decode_multiplayer_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding MultiplayerMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding MultiplayerMapEntry", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14810,23 +16155,34 @@ fn decode_variable_data_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableDataMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariableDataMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_variable_data_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_variable_data_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableDataMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableDataMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14865,10 +16221,16 @@ fn decode_variable_data_map_entry_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableDataMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableDataMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -14937,19 +16299,31 @@ fn decode_variable_field_from_decoder<'a>(
         }
         14 => {
             static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "rectangle_top_left_corner_radius").encode(env))
+            Ok(
+                cached_atom(env, &ATOM_14, "rectangle_top_left_corner_radius")
+                    .encode(env),
+            )
         }
         15 => {
             static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "rectangle_top_right_corner_radius").encode(env))
+            Ok(
+                cached_atom(env, &ATOM_15, "rectangle_top_right_corner_radius")
+                    .encode(env),
+            )
         }
         16 => {
             static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "rectangle_bottom_left_corner_radius").encode(env))
+            Ok(
+                cached_atom(env, &ATOM_16, "rectangle_bottom_left_corner_radius")
+                    .encode(env),
+            )
         }
         17 => {
             static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "rectangle_bottom_right_corner_radius").encode(env))
+            Ok(
+                cached_atom(env, &ATOM_17, "rectangle_bottom_right_corner_radius")
+                    .encode(env),
+            )
         }
         18 => {
             static ATOM_18: OnceLock<Atom> = OnceLock::new();
@@ -15163,16 +16537,24 @@ fn decode_variable_mode_by_set_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_variable_mode_by_set_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_variable_mode_by_set_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableModeBySetMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableModeBySetMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15192,11 +16574,7 @@ fn decode_variable_mode_by_set_map_entry_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "variable_set_id",
-            "variable_mode_id",
-            "variable_set_extension_id",
-        ],
+        &["variable_set_id", "variable_mode_id", "variable_set_extension_id"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -15215,10 +16593,16 @@ fn decode_variable_mode_by_set_map_entry_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableModeBySetMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableModeBySetMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15230,23 +16614,34 @@ fn decode_code_syntax_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeSyntaxMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeSyntaxMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_code_syntax_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_code_syntax_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeSyntaxMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeSyntaxMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15277,10 +16672,15 @@ fn decode_code_syntax_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeSyntaxMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeSyntaxMapEntry", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15303,16 +16703,23 @@ fn decode_table_merged_cell_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_table_merged_cell_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_table_merged_cell_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TableMergedCellMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TableMergedCellMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15355,10 +16762,16 @@ fn decode_table_merged_cell_map_entry_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TableMergedCellMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TableMergedCellMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15381,16 +16794,24 @@ fn decode_table_row_column_position_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_table_row_column_position_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_table_row_column_position_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TableRowColumnPositionMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TableRowColumnPositionMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15421,10 +16842,16 @@ fn decode_table_row_column_position_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TableRowColumnPositionMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TableRowColumnPositionMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15436,23 +16863,34 @@ fn decode_guid_position_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GUIDPositionMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.GUIDPositionMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_guid_position_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_position_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GUIDPositionMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding GUIDPositionMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15483,10 +16921,16 @@ fn decode_guid_position_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GUIDPositionMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding GUIDPositionMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15509,16 +16953,24 @@ fn decode_guid_grid_track_size_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_guid_grid_track_size_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_grid_track_size_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GUIDGridTrackSizeMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding GUIDGridTrackSizeMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15549,10 +17001,16 @@ fn decode_guid_grid_track_size_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GUIDGridTrackSizeMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding GUIDGridTrackSizeMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15575,16 +17033,23 @@ fn decode_object_animation_list_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_object_animation_list_item_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_object_animation_list_item_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ObjectAnimationList",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ObjectAnimationList", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15615,10 +17080,16 @@ fn decode_object_animation_list_item_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ObjectAnimationListItem",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ObjectAnimationListItem",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15630,25 +17101,40 @@ fn decode_grid_track_size_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GridTrackSize");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.GridTrackSize",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["min_sizing", "max_sizing"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_grid_track_sizing_function_from_decoder(env, decoder)?;
+                let value = decode_grid_track_sizing_function_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_grid_track_sizing_function_from_decoder(env, decoder)?;
+                let value = decode_grid_track_sizing_function_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GridTrackSize",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding GridTrackSize", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15679,10 +17165,16 @@ fn decode_grid_track_sizing_function_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GridTrackSizingFunction",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding GridTrackSizingFunction",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15725,16 +17217,24 @@ fn decode_table_row_column_size_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_table_row_column_size_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_table_row_column_size_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TableRowColumnSizeMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TableRowColumnSizeMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15765,10 +17265,16 @@ fn decode_table_row_column_size_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TableRowColumnSizeMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TableRowColumnSizeMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15780,23 +17286,34 @@ fn decode_agenda_position_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgendaPositionMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AgendaPositionMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_agenda_position_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_agenda_position_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgendaPositionMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AgendaPositionMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15827,10 +17344,16 @@ fn decode_agenda_position_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgendaPositionMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AgendaPositionMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15858,23 +17381,34 @@ fn decode_agenda_metadata_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgendaMetadataMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AgendaMetadataMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_agenda_metadata_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_agenda_metadata_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgendaMetadataMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AgendaMetadataMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15905,10 +17439,16 @@ fn decode_agenda_metadata_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgendaMetadataMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AgendaMetadataMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15920,18 +17460,15 @@ fn decode_agenda_metadata_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgendaMetadata");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AgendaMetadata",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "name",
-            "type",
-            "target_node_id",
-            "timer_info",
-            "vote_info",
-            "music_info",
-        ],
+        &["name", "type", "target_node_id", "timer_info", "vote_info", "music_info"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -15962,10 +17499,15 @@ fn decode_agenda_metadata_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgendaMetadata",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AgendaMetadata", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -15977,7 +17519,11 @@ fn decode_agenda_timer_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgendaTimerInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AgendaTimerInfo",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["timer_length"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -15988,10 +17534,15 @@ fn decode_agenda_timer_info_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgendaTimerInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AgendaTimerInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16003,7 +17554,11 @@ fn decode_agenda_vote_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgendaVoteInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AgendaVoteInfo",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["vote_count"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -16014,10 +17569,15 @@ fn decode_agenda_vote_info_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgendaVoteInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AgendaVoteInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16029,7 +17589,11 @@ fn decode_agenda_music_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgendaMusicInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AgendaMusicInfo",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["song_id", "start_time_ms"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -16044,10 +17608,15 @@ fn decode_agenda_music_info_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgendaMusicInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AgendaMusicInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16111,7 +17680,11 @@ fn decode_component_prop_ref_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ComponentPropRef");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ComponentPropRef",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -16148,10 +17721,15 @@ fn decode_component_prop_ref_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ComponentPropRef",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ComponentPropRef", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16222,10 +17800,16 @@ fn decode_component_prop_assignment_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ComponentPropAssignment",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ComponentPropAssignment",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16237,7 +17821,11 @@ fn decode_component_prop_def_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ComponentPropDef");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ComponentPropDef",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -16290,7 +17878,10 @@ fn decode_component_prop_def_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             8 => {
-                let value = decode_component_prop_preferred_values_from_decoder(env, decoder)?;
+                let value = decode_component_prop_preferred_values_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[8] = value.encode(env).as_c_arg();
             }
             9 => {
@@ -16314,10 +17905,15 @@ fn decode_component_prop_def_from_decoder<'a>(
                 values[13] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ComponentPropDef",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ComponentPropDef", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16405,10 +18001,15 @@ fn decode_component_prop_value_from_decoder<'a>(
                 values[12] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ComponentPropValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ComponentPropValue", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16420,16 +18021,15 @@ fn decode_timeline_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TimelineData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TimelineData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "duration_us",
-            "default_timeline",
-            "parent_timeline_def_id",
-            "playback_style",
-        ],
+        &["duration_us", "default_timeline", "parent_timeline_def_id", "playback_style"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -16452,10 +18052,15 @@ fn decode_timeline_data_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TimelineData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TimelineData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16478,16 +18083,24 @@ fn decode_timeline_definitions_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_timeline_definitions_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_timeline_definitions_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TimelineDefinitionsMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TimelineDefinitionsMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16518,10 +18131,16 @@ fn decode_timeline_definitions_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TimelineDefinitionsMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TimelineDefinitionsMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16556,10 +18175,16 @@ fn decode_timeline_assignment_key_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TimelineAssignmentKey",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TimelineAssignmentKey",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16590,10 +18215,15 @@ fn decode_timeline_binding_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TimelineBindingData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TimelineBindingData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16616,16 +18246,24 @@ fn decode_timeline_assignments_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_timeline_assignments_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_timeline_assignments_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TimelineAssignmentsMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TimelineAssignmentsMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16656,10 +18294,16 @@ fn decode_timeline_assignments_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TimelineAssignmentsMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TimelineAssignmentsMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16766,16 +18410,24 @@ fn decode_component_prop_preferred_values_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_instance_swap_preferred_value_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_instance_swap_preferred_value_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ComponentPropPreferredValues",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ComponentPropPreferredValues",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16787,7 +18439,11 @@ fn decode_parameter_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ParameterConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ParameterConfig",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -16864,10 +18520,15 @@ fn decode_parameter_config_from_decoder<'a>(
                 values[13] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ParameterConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ParameterConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16903,7 +18564,11 @@ fn decode_input_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.InputConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.InputConfig",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["unit", "min", "max"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -16922,10 +18587,13 @@ fn decode_input_config_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InputConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding InputConfig", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16937,7 +18605,11 @@ fn decode_slider_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SliderConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SliderConfig",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["min", "max", "step", "unit"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -16960,10 +18632,15 @@ fn decode_slider_config_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SliderConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SliderConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -16995,7 +18672,11 @@ fn decode_point_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PointConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PointConfig",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["mode", "unit"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17010,16 +18691,22 @@ fn decode_point_config_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PointConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding PointConfig", field),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_line_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_line_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Line");
@@ -17037,10 +18724,11 @@ fn decode_line_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Line",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Line", field)),
+                    ),
+                );
             }
         }
     }
@@ -17067,16 +18755,22 @@ fn decode_line_config_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding LineConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding LineConfig", field),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_circle_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_circle_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Circle");
@@ -17094,10 +18788,13 @@ fn decode_circle_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Circle",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Circle", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17109,17 +18806,15 @@ fn decode_point_radius_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PointRadiusConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PointRadiusConfig",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "mode",
-            "position_unit",
-            "radius_unit",
-            "min_radius",
-            "max_radius",
-        ],
+        &["mode", "position_unit", "radius_unit", "min_radius", "max_radius"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17146,10 +18841,15 @@ fn decode_point_radius_config_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PointRadiusConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PointRadiusConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17184,10 +18884,13 @@ fn decode_rotation3_d_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Rotation3D",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Rotation3D", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17199,7 +18902,11 @@ fn decode_rotation3_d_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Rotation3DConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.Rotation3DConfig",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["mode"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17210,10 +18917,15 @@ fn decode_rotation3_d_config_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Rotation3DConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding Rotation3DConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17225,7 +18937,11 @@ fn decode_circle_point_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CirclePoint");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CirclePoint",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["center", "radius", "angle"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17244,10 +18960,13 @@ fn decode_circle_point_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CirclePoint",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding CirclePoint", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17259,17 +18978,15 @@ fn decode_circle_point_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CirclePointConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CirclePointConfig",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "mode",
-            "position_unit",
-            "radius_unit",
-            "min_radius",
-            "max_radius",
-        ],
+        &["mode", "position_unit", "radius_unit", "min_radius", "max_radius"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17296,10 +19013,15 @@ fn decode_circle_point_config_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CirclePointConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CirclePointConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17326,10 +19048,13 @@ fn decode_color_point_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ColorPoint",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding ColorPoint", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17341,7 +19066,11 @@ fn decode_color_point_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorPointConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ColorPointConfig",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["mode", "unit"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17356,10 +19085,15 @@ fn decode_color_point_config_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ColorPointConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ColorPointConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17379,14 +19113,20 @@ fn decode_gradient_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_gradient_stop_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_gradient_stop_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Gradient",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Gradient", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17398,7 +19138,11 @@ fn decode_gradient_stop_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GradientStop");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.GradientStop",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["position", "color"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17413,10 +19157,15 @@ fn decode_gradient_stop_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding GradientStop",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding GradientStop", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17428,7 +19177,11 @@ fn decode_select_option_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SelectOption");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SelectOption",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["value", "label"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17443,10 +19196,15 @@ fn decode_select_option_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SelectOption",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SelectOption", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17458,7 +19216,11 @@ fn decode_select_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SelectConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SelectConfig",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["options"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17466,14 +19228,22 @@ fn decode_select_config_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_select_option_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_select_option_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SelectConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SelectConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17485,7 +19255,11 @@ fn decode_color_array_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorArrayConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ColorArrayConfig",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["min_length", "max_length"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17500,10 +19274,15 @@ fn decode_color_array_config_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ColorArrayConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ColorArrayConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17515,7 +19294,11 @@ fn decode_slot_prop_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SlotPropConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SlotPropConfig",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -17552,10 +19335,15 @@ fn decode_slot_prop_config_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SlotPropConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SlotPropConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17567,7 +19355,11 @@ fn decode_number_prop_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NumberPropConfig");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.NumberPropConfig",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["control", "min", "max", "step"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -17590,10 +19382,15 @@ fn decode_number_prop_config_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NumberPropConfig",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NumberPropConfig", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17616,7 +19413,10 @@ fn decode_instance_swap_preferred_value_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_instance_swap_preferred_value_type_from_decoder(env, decoder)?;
+                let value = decode_instance_swap_preferred_value_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -17624,10 +19424,16 @@ fn decode_instance_swap_preferred_value_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InstanceSwapPreferredValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding InstanceSwapPreferredValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17703,7 +19509,11 @@ fn decode_widget_metadata_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.WidgetMetadata");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.WidgetMetadata",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -17740,10 +19550,15 @@ fn decode_widget_metadata_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding WidgetMetadata",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding WidgetMetadata", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17810,10 +19625,16 @@ fn decode_widget_property_menu_selector_option_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding WidgetPropertyMenuSelectorOption",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding WidgetPropertyMenuSelectorOption",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -17874,7 +19695,10 @@ fn decode_widget_property_menu_item_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decode_widget_property_menu_item_type_from_decoder(env, decoder)?;
+                let value = decode_widget_property_menu_item_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
@@ -17882,9 +19706,11 @@ fn decode_widget_property_menu_item_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_widget_property_menu_selector_option_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_widget_property_menu_selector_option_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[5] = value.encode(env).as_c_arg();
             }
             6 => {
@@ -17904,10 +19730,16 @@ fn decode_widget_property_menu_item_from_decoder<'a>(
                 values[9] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding WidgetPropertyMenuItem",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding WidgetPropertyMenuItem",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18150,10 +19982,15 @@ fn decode_internal_data_for_test_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InternalDataForTest",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding InternalDataForTest", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18184,10 +20021,16 @@ fn decode_state_group_property_value_order_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StateGroupPropertyValueOrder",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding StateGroupPropertyValueOrder",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18250,10 +20093,16 @@ fn decode_partial_paste_annotation_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PartialPasteAnnotation",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PartialPasteAnnotation",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18265,7 +20114,11 @@ fn decode_variant_prop_spec_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariantPropSpec");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariantPropSpec",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["prop_def_id", "value"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -18280,10 +20133,15 @@ fn decode_variant_prop_spec_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariantPropSpec",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariantPropSpec", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18295,7 +20153,11 @@ fn decode_text_list_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TextListData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TextListData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -18322,10 +20184,15 @@ fn decode_text_list_data_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TextListData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TextListData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18361,7 +20228,11 @@ fn decode_text_line_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TextLineData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TextLineData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -18423,10 +20294,15 @@ fn decode_text_line_data_from_decoder<'a>(
                 values[10] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TextLineData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TextLineData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18453,10 +20329,15 @@ fn decode_derived_text_line_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding DerivedTextLineData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding DerivedTextLineData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18556,13 +20437,7 @@ fn decode_prototype_interaction_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "id",
-            "event",
-            "actions",
-            "is_deleted",
-            "state_management_version",
-        ],
+        &["id", "event", "actions", "is_deleted", "state_management_version"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -18578,7 +20453,10 @@ fn decode_prototype_interaction_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_prototype_action_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_prototype_action_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
@@ -18590,10 +20468,16 @@ fn decode_prototype_interaction_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PrototypeInteraction",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PrototypeInteraction",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18605,7 +20489,11 @@ fn decode_prototype_event_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PrototypeEvent");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PrototypeEvent",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -18652,10 +20540,15 @@ fn decode_prototype_event_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PrototypeEvent",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PrototypeEvent", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18686,10 +20579,16 @@ fn decode_prototype_variable_target_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PrototypeVariableTarget",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PrototypeVariableTarget",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18713,7 +20612,10 @@ fn decode_conditional_actions_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_prototype_action_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_prototype_action_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -18721,10 +20623,15 @@ fn decode_conditional_actions_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ConditionalActions",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ConditionalActions", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -18736,7 +20643,11 @@ fn decode_prototype_action_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PrototypeAction");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PrototypeAction",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -18830,7 +20741,8 @@ fn decode_prototype_action_from_decoder<'a>(
                 values[10] = value.encode(env).as_c_arg();
             }
             12 => {
-                let value = decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
+                let value = decoder
+                    .read_repeated(|decoder| decoder.read_var_float(env))?;
                 values[11] = value.encode(env).as_c_arg();
             }
             13 => {
@@ -18903,13 +20815,18 @@ fn decode_prototype_action_from_decoder<'a>(
             }
             23 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_variable_data_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_variable_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[29] = value.encode(env).as_c_arg();
             }
             24 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_conditional_actions_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_conditional_actions_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[30] = value.encode(env).as_c_arg();
             }
             27 => {
@@ -18961,10 +20878,15 @@ fn decode_prototype_action_from_decoder<'a>(
                 values[42] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PrototypeAction",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PrototypeAction", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19024,7 +20946,11 @@ fn decode_animation_state_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AnimationState");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AnimationState",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["opacity", "transform"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -19039,10 +20965,15 @@ fn decode_animation_state_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnimationState",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnimationState", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19059,7 +20990,11 @@ fn decode_prototype_starting_point_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.PrototypeStartingPoint",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["name", "description", "position"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["name", "description", "position"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -19077,10 +21012,16 @@ fn decode_prototype_starting_point_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PrototypeStartingPoint",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PrototypeStartingPoint",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19135,10 +21076,13 @@ fn decode_key_trigger_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding KeyTrigger",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding KeyTrigger", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19177,10 +21121,13 @@ fn decode_hyperlink_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Hyperlink",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Hyperlink", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19192,7 +21139,11 @@ fn decode_cms_item_page_target_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CMSItemPageTarget");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CMSItemPageTarget",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -19215,10 +21166,15 @@ fn decode_cms_item_page_target_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSItemPageTarget",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CMSItemPageTarget", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19244,7 +21200,10 @@ fn decode_mention_source_from_decoder<'a>(
         value => Ok((value as i64).encode(env)),
     }
 }
-fn decode_mention_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_mention_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Mention");
@@ -19299,10 +21258,13 @@ fn decode_mention_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[8] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Mention",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Mention", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19396,10 +21358,13 @@ fn decode_embed_data_from_decoder<'a>(
                 values[14] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EmbedData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding EmbedData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19434,10 +21399,13 @@ fn decode_stamp_data_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StampData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding StampData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19449,7 +21417,11 @@ fn decode_link_preview_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.LinkPreviewData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.LinkPreviewData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -19501,10 +21473,15 @@ fn decode_link_preview_data_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding LinkPreviewData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding LinkPreviewData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19520,12 +21497,7 @@ fn decode_viewport_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "canvas_space_bounds",
-            "pixel_preview",
-            "pixel_density",
-            "canvas_guid",
-        ],
+        &["canvas_space_bounds", "pixel_preview", "pixel_density", "canvas_guid"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -19548,16 +21520,22 @@ fn decode_viewport_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Viewport",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Viewport", field),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_mouse_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_mouse_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Mouse");
@@ -19597,16 +21575,20 @@ fn decode_mouse_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Mouse",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Mouse", field)),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_click_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_click_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Click");
@@ -19625,7 +21607,11 @@ fn decode_scroll_position_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ScrollPosition");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ScrollPosition",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["node", "scroll_offset"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -19641,7 +21627,11 @@ fn decode_triggered_overlay_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TriggeredOverlay");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TriggeredOverlay",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -19704,10 +21694,16 @@ fn decode_triggered_overlay_data_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TriggeredOverlayData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TriggeredOverlayData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19755,10 +21751,16 @@ fn decode_triggered_set_variable_action_data_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TriggeredSetVariableActionData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TriggeredSetVariableActionData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19806,10 +21808,16 @@ fn decode_triggered_set_variable_mode_action_data_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TriggeredSetVariableModeActionData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TriggeredSetVariableModeActionData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19862,10 +21870,16 @@ fn decode_video_state_change_data_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VideoStateChangeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VideoStateChangeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19896,10 +21910,16 @@ fn decode_embedded_prototype_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EmbeddedPrototypeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding EmbeddedPrototypeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -19911,7 +21931,11 @@ fn decode_presented_state_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PresentedState");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PresentedState",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["base_screen_id", "overlays"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -19922,16 +21946,23 @@ fn decode_presented_state_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_triggered_overlay_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_triggered_overlay_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PresentedState",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PresentedState", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20010,10 +22041,16 @@ fn decode_top_level_playback_change_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TopLevelPlaybackChange",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TopLevelPlaybackChange",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20066,10 +22103,15 @@ fn decode_instance_state_change_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InstanceStateChange",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding InstanceStateChange", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20104,10 +22146,13 @@ fn decode_text_cursor_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TextCursor",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding TextCursor", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20119,7 +22164,11 @@ fn decode_text_selection_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TextSelection");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TextSelection",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -20138,8 +22187,8 @@ fn decode_text_selection_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_rect_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_rect_from_decoder(env, decoder))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -20167,10 +22216,15 @@ fn decode_text_selection_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TextSelection",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TextSelection", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20207,7 +22261,11 @@ fn decode_playback_change_keyframe_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.PlaybackChangeKeyframe",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["phase", "progress", "timestamp"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["phase", "progress", "timestamp"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -20225,10 +22283,16 @@ fn decode_playback_change_keyframe_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PlaybackChangeKeyframe",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PlaybackChangeKeyframe",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20240,7 +22304,11 @@ fn decode_state_mapping_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StateMapping");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.StateMapping",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -20272,10 +22340,15 @@ fn decode_state_mapping_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StateMapping",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding StateMapping", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20287,7 +22360,11 @@ fn decode_scroll_mapping_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ScrollMapping");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ScrollMapping",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -20310,10 +22387,15 @@ fn decode_scroll_mapping_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ScrollMapping",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ScrollMapping", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20325,7 +22407,11 @@ fn decode_playback_update_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PlaybackUpdate");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PlaybackUpdate",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -20353,7 +22439,10 @@ fn decode_playback_update_from_decoder<'a>(
             }
             3 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_scroll_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_scroll_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
@@ -20370,14 +22459,22 @@ fn decode_playback_update_from_decoder<'a>(
             }
             7 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_state_mapping_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_state_mapping_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PlaybackUpdate",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PlaybackUpdate", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20389,7 +22486,11 @@ fn decode_chat_message_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ChatMessage");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ChatMessage",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["text", "previous_text"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -20404,10 +22505,13 @@ fn decode_chat_message_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ChatMessage",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding ChatMessage", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20419,7 +22523,11 @@ fn decode_voice_metadata_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VoiceMetadata");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VoiceMetadata",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["connected_call_id"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -20430,10 +22538,15 @@ fn decode_voice_metadata_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VoiceMetadata",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VoiceMetadata", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20445,7 +22558,11 @@ fn decode_april_fun_cursor_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AprilFunCursor");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AprilFunCursor",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["id", "trail_enabled"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -20460,10 +22577,15 @@ fn decode_april_fun_cursor_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AprilFunCursor",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AprilFunCursor", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20475,7 +22597,11 @@ fn decode_april_fun_fig_pal_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AprilFunFigPal");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AprilFunFigPal",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["customization", "name"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -20490,10 +22616,15 @@ fn decode_april_fun_fig_pal_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AprilFunFigPal",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AprilFunFigPal", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20574,7 +22705,11 @@ fn decode_agent_info_from_decoder<'a>(
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgentInfo");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["name", "logo", "oauth_client_id"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["name", "logo", "oauth_client_id"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -20592,10 +22727,13 @@ fn decode_agent_info_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AgentInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding AgentInfo", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20697,8 +22835,8 @@ fn decode_user_change_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             8 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[9] = value.encode(env).as_c_arg();
             }
             9 => {
@@ -20710,18 +22848,24 @@ fn decode_user_change_from_decoder<'a>(
                 values[11] = value.encode(env).as_c_arg();
             }
             11 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_click_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_click_from_decoder(env, decoder))?;
                 values[12] = value.encode(env).as_c_arg();
             }
             12 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_scroll_position_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_scroll_position_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[13] = value.encode(env).as_c_arg();
             }
             13 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_triggered_overlay_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_triggered_overlay_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[14] = value.encode(env).as_c_arg();
             }
             14 => {
@@ -20741,14 +22885,19 @@ fn decode_user_change_from_decoder<'a>(
                 values[18] = value.encode(env).as_c_arg();
             }
             17 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_triggered_overlay_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_triggered_overlay_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[19] = value.encode(env).as_c_arg();
             }
             18 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_playback_update_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_playback_update_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[20] = value.encode(env).as_c_arg();
             }
             19 => {
@@ -20768,9 +22917,11 @@ fn decode_user_change_from_decoder<'a>(
                 values[24] = value.encode(env).as_c_arg();
             }
             23 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_instance_state_change_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_instance_state_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[25] = value.encode(env).as_c_arg();
             }
             24 => {
@@ -20794,15 +22945,19 @@ fn decode_user_change_from_decoder<'a>(
                 values[30] = value.encode(env).as_c_arg();
             }
             29 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_triggered_set_variable_action_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_triggered_set_variable_action_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[31] = value.encode(env).as_c_arg();
             }
             30 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_video_state_change_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_video_state_change_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[32] = value.encode(env).as_c_arg();
             }
             31 => {
@@ -20814,9 +22969,11 @@ fn decode_user_change_from_decoder<'a>(
                 values[34] = value.encode(env).as_c_arg();
             }
             33 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_triggered_set_variable_mode_action_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_triggered_set_variable_mode_action_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[35] = value.encode(env).as_c_arg();
             }
             34 => {
@@ -20824,9 +22981,11 @@ fn decode_user_change_from_decoder<'a>(
                 values[36] = value.encode(env).as_c_arg();
             }
             35 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_embedded_prototype_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_embedded_prototype_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[37] = value.encode(env).as_c_arg();
             }
             36 => {
@@ -20834,8 +22993,8 @@ fn decode_user_change_from_decoder<'a>(
                 values[38] = value.encode(env).as_c_arg();
             }
             43 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[39] = value.encode(env).as_c_arg();
             }
             37 => {
@@ -20847,7 +23006,10 @@ fn decode_user_change_from_decoder<'a>(
                 values[41] = value.encode(env).as_c_arg();
             }
             40 => {
-                let value = decode_collaborative_text_selection_from_decoder(env, decoder)?;
+                let value = decode_collaborative_text_selection_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[42] = value.encode(env).as_c_arg();
             }
             41 => {
@@ -20855,13 +23017,18 @@ fn decode_user_change_from_decoder<'a>(
                 values[43] = value.encode(env).as_c_arg();
             }
             42 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_node_chat_exchange_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_node_chat_exchange_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[44] = value.encode(env).as_c_arg();
             }
             45 => {
-                let value = decode_design_full_page_view_state_from_decoder(env, decoder)?;
+                let value = decode_design_full_page_view_state_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[45] = value.encode(env).as_c_arg();
             }
             46 => {
@@ -20869,10 +23036,13 @@ fn decode_user_change_from_decoder<'a>(
                 values[46] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding UserChange",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding UserChange", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20915,10 +23085,16 @@ fn decode_interactive_slide_element_change_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding InteractiveSlideElementChange",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding InteractiveSlideElementChange",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20930,15 +23106,19 @@ fn decode_node_status_change_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NodeStatusChange");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.NodeStatusChange",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["node_ids", "status_info"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -20946,10 +23126,15 @@ fn decode_node_status_change_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeStatusChange",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeStatusChange", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -20980,10 +23165,16 @@ fn decode_buzz_approval_asset_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding BuzzApprovalAssetEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding BuzzApprovalAssetEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21010,9 +23201,11 @@ fn decode_buzz_approval_change_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_buzz_approval_asset_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_buzz_approval_asset_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -21024,10 +23217,15 @@ fn decode_buzz_approval_change_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding BuzzApprovalChange",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding BuzzApprovalChange", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21075,8 +23273,16 @@ fn decode_scene_graph_query_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SceneGraphQuery");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["starting_node", "depth", "behavior"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SceneGraphQuery",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["starting_node", "depth", "behavior"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -21090,14 +23296,22 @@ fn decode_scene_graph_query_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decode_scene_graph_query_behavior_from_decoder(env, decoder)?;
+                let value = decode_scene_graph_query_behavior_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SceneGraphQuery",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SceneGraphQuery", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21124,10 +23338,15 @@ fn decode_node_changes_metadata_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeChangesMetadata",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeChangesMetadata", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21139,7 +23358,11 @@ fn decode_cursor_reaction_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CursorReaction");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CursorReaction",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["image_url"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -21150,10 +23373,15 @@ fn decode_cursor_reaction_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CursorReaction",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CursorReaction", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21217,10 +23445,13 @@ fn decode_timer_info_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TimerInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding TimerInfo", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21269,10 +23500,13 @@ fn decode_music_info_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding MusicInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding MusicInfo", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21303,10 +23537,15 @@ fn decode_presenter_nomination_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PresenterNomination",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PresenterNomination", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21318,7 +23557,11 @@ fn decode_presenter_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PresenterInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PresenterInfo",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -21341,10 +23584,15 @@ fn decode_presenter_info_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PresenterInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PresenterInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21356,7 +23604,11 @@ fn decode_client_broadcast_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ClientBroadcast");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ClientBroadcast",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -21398,10 +23650,15 @@ fn decode_client_broadcast_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ClientBroadcast",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ClientBroadcast", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21423,7 +23680,10 @@ fn decode_paste_asset_type_from_decoder<'a>(
         value => Ok((value as i64).encode(env)),
     }
 }
-fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_message_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Message");
@@ -21504,16 +23764,25 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
             }
             4 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[6] = value.encode(env).as_c_arg();
             }
             5 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_user_change_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_user_change_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[7] = value.encode(env).as_c_arg();
             }
             32 => {
-                let value = decode_interactive_slide_element_change_from_decoder(env, decoder)?;
+                let value = decode_interactive_slide_element_change_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[8] = value.encode(env).as_c_arg();
             }
             36 => {
@@ -21525,8 +23794,8 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[10] = value.encode(env).as_c_arg();
             }
             6 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_blob_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_blob_from_decoder(env, decoder))?;
                 values[11] = value.encode(env).as_c_arg();
             }
             30 => {
@@ -21571,7 +23840,10 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
             }
             16 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_scene_graph_query_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_scene_graph_query_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[22] = value.encode(env).as_c_arg();
             }
             17 => {
@@ -21595,18 +23867,21 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[27] = value.encode(env).as_c_arg();
             }
             22 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_message_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_message_from_decoder(env, decoder))?;
                 values[28] = value.encode(env).as_c_arg();
             }
             23 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_message_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_message_from_decoder(env, decoder))?;
                 values[29] = value.encode(env).as_c_arg();
             }
             24 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_client_broadcast_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_client_broadcast_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[30] = value.encode(env).as_c_arg();
             }
             25 => {
@@ -21626,8 +23901,8 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[34] = value.encode(env).as_c_arg();
             }
             29 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[35] = value.encode(env).as_c_arg();
             }
             31 => {
@@ -21635,9 +23910,11 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[36] = value.encode(env).as_c_arg();
             }
             33 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_clipboard_selection_region_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_clipboard_selection_region_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[37] = value.encode(env).as_c_arg();
             }
             34 => {
@@ -21653,9 +23930,11 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[40] = value.encode(env).as_c_arg();
             }
             39 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_annotation_category_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_annotation_category_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[41] = value.encode(env).as_c_arg();
             }
             40 => {
@@ -21675,10 +23954,13 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[45] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Message",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Message", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21722,16 +24004,23 @@ fn decode_encoded_offsets_index_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_guid_and_encoded_offset_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_and_encoded_offset_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EncodedOffsetsIndex",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding EncodedOffsetsIndex", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -21779,7 +24068,11 @@ fn decode_rich_media_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.RichMediaData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.RichMediaData",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["media_hash", "rich_media_type"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -21794,10 +24087,15 @@ fn decode_rich_media_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding RichMediaData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding RichMediaData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22049,7 +24347,11 @@ fn decode_variable_any_value_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableAnyValue");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariableAnyValue",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -22166,7 +24468,10 @@ fn decode_variable_any_value_from_decoder<'a>(
                 values[19] = value.encode(env).as_c_arg();
             }
             20 => {
-                let value = decode_keyframe_track_parameter_value_from_decoder(env, decoder)?;
+                let value = decode_keyframe_track_parameter_value_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[20] = value.encode(env).as_c_arg();
             }
             21 => {
@@ -22206,10 +24511,15 @@ fn decode_variable_any_value_from_decoder<'a>(
                 values[29] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableAnyValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableAnyValue", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22325,14 +24635,20 @@ fn decode_expression_from_decoder<'a>(
             }
             2 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_variable_data_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_variable_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Expression",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding Expression", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22344,7 +24660,11 @@ fn decode_variable_map_value_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableMapValue");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariableMapValue",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["key", "value", "guid_key"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22363,10 +24683,15 @@ fn decode_variable_map_value_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableMapValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableMapValue", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22378,23 +24703,32 @@ fn decode_variable_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariableMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["values"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_variable_map_value_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_variable_map_value_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding VariableMap", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22414,14 +24748,20 @@ fn decode_color_array_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_variable_data_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_variable_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ColorArray",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding ColorArray", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22433,7 +24773,11 @@ fn decode_variable_font_style_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableFontStyle");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariableFontStyle",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -22456,10 +24800,15 @@ fn decode_variable_font_style_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableFontStyle",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableFontStyle", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22522,10 +24871,15 @@ fn decode_image_parameter_value_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ImageParameterValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ImageParameterValue", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22537,7 +24891,11 @@ fn decode_thumbnail_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ThumbnailInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ThumbnailInfo",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["node_id", "thumbnail_version"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22552,10 +24910,15 @@ fn decode_thumbnail_info_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ThumbnailInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ThumbnailInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22567,7 +24930,11 @@ fn decode_ai_canvas_prompt_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AiCanvasPrompt");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AiCanvasPrompt",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -22586,15 +24953,20 @@ fn decode_ai_canvas_prompt_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AiCanvasPrompt",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AiCanvasPrompt", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22606,7 +24978,11 @@ fn decode_node_field_alias_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NodeFieldAlias");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.NodeFieldAlias",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -22629,10 +25005,15 @@ fn decode_node_field_alias_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeFieldAlias",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeFieldAlias", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22687,10 +25068,13 @@ fn decode_cms_alias_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CMSAlias",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding CMSAlias", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22702,7 +25086,11 @@ fn decode_js_runtime_alias_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.JsRuntimeAlias");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.JsRuntimeAlias",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["lookup_key"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22713,10 +25101,15 @@ fn decode_js_runtime_alias_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding JsRuntimeAlias",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding JsRuntimeAlias", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22728,7 +25121,11 @@ fn decode_prop_ref_value_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PropRefValue");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PropRefValue",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["def_id"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22739,10 +25136,15 @@ fn decode_prop_ref_value_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PropRefValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PropRefValue", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22754,7 +25156,11 @@ fn decode_managed_string_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ManagedStringId");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ManagedStringId",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "asset_ref"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22769,10 +25175,15 @@ fn decode_managed_string_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22803,10 +25214,16 @@ fn decode_managed_string_placeholder_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringPlaceholderMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringPlaceholderMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22818,7 +25235,11 @@ fn decode_slot_content_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SlotContentId");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SlotContentId",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22829,10 +25250,15 @@ fn decode_slot_content_id_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SlotContentId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SlotContentId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22863,16 +25289,23 @@ fn decode_managed_string_alias_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_managed_string_placeholder_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_managed_string_placeholder_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManagedStringAlias",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManagedStringAlias", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22884,7 +25317,11 @@ fn decode_keyframe_track_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.KeyframeTrackId");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.KeyframeTrackId",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "asset_ref"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22899,10 +25336,15 @@ fn decode_keyframe_track_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding KeyframeTrackId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding KeyframeTrackId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22914,7 +25356,11 @@ fn decode_animation_preset_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AnimationPresetId");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AnimationPresetId",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "asset_ref"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22929,16 +25375,24 @@ fn decode_animation_preset_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnimationPresetId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnimationPresetId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_tool_id_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_tool_id_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ToolId");
@@ -22956,10 +25410,13 @@ fn decode_tool_id_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ToolId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding ToolId", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -22971,7 +25428,11 @@ fn decode_custom_effect_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CustomEffectId");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CustomEffectId",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "asset_ref"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -22986,10 +25447,15 @@ fn decode_custom_effect_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CustomEffectId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CustomEffectId", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23001,7 +25467,11 @@ fn decode_trss_transform2_d_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TRSSTransform2D");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.TRSSTransform2D",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -23028,10 +25498,15 @@ fn decode_trss_transform2_d_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TRSSTransform2D",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TRSSTransform2D", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23043,7 +25518,11 @@ fn decode_variable_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariableData",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -23062,14 +25541,22 @@ fn decode_variable_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decode_variable_resolved_data_type_from_decoder(env, decoder)?;
+                let value = decode_variable_resolved_data_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23081,17 +25568,15 @@ fn decode_variable_set_mode_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableSetMode");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.VariableSetMode",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "id",
-            "name",
-            "sort_position",
-            "parent_variable_set_id",
-            "parent_mode_id",
-        ],
+        &["id", "name", "sort_position", "parent_variable_set_id", "parent_mode_id"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23118,10 +25603,15 @@ fn decode_variable_set_mode_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableSetMode",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableSetMode", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23144,16 +25634,23 @@ fn decode_variable_data_values_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_variable_data_values_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_variable_data_values_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableDataValues",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableDataValues", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23184,10 +25681,16 @@ fn decode_variable_data_values_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableDataValuesEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableDataValuesEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23299,16 +25802,15 @@ fn decode_keyframe_any_value_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.KeyframeAnyValue");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.KeyframeAnyValue",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "float_value",
-            "color_value",
-            "text_data_value",
-            "vector_value",
-        ],
+        &["float_value", "color_value", "text_data_value", "vector_value"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23331,10 +25833,15 @@ fn decode_keyframe_any_value_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding KeyframeAnyValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding KeyframeAnyValue", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23374,7 +25881,11 @@ fn decode_keyframe_value_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.KeyframeValueData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.KeyframeValueData",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["value", "value_type"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23389,10 +25900,15 @@ fn decode_keyframe_value_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding KeyframeValueData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding KeyframeValueData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23429,7 +25945,11 @@ fn decode_manual_keyframe_track_parameter_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.ManualKeyframeTrackParameter",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["keyframe_track_id", "timeline_def_id"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["keyframe_track_id", "timeline_def_id"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -23443,10 +25963,16 @@ fn decode_manual_keyframe_track_parameter_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ManualKeyframeTrackParameter",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ManualKeyframeTrackParameter",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23466,11 +25992,7 @@ fn decode_animation_preset_keyframe_track_parameter_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "animation_preset_id",
-            "keyframe_track_id",
-            "timeline_def_id",
-        ],
+        &["animation_preset_id", "keyframe_track_id", "timeline_def_id"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23489,10 +26011,16 @@ fn decode_animation_preset_keyframe_track_parameter_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnimationPresetKeyframeTrackParameter",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnimationPresetKeyframeTrackParameter",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23519,12 +26047,17 @@ fn decode_keyframe_track_any_parameter_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_manual_keyframe_track_parameter_from_decoder(env, decoder)?;
+                let value = decode_manual_keyframe_track_parameter_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value =
-                    decode_animation_preset_keyframe_track_parameter_from_decoder(env, decoder)?;
+                let value = decode_animation_preset_keyframe_track_parameter_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -23532,10 +26065,16 @@ fn decode_keyframe_track_any_parameter_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding KeyframeTrackAnyParameter",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding KeyframeTrackAnyParameter",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23558,18 +26097,30 @@ fn decode_keyframe_track_parameter_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_keyframe_track_any_parameter_from_decoder(env, decoder)?;
+                let value = decode_keyframe_track_any_parameter_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_keyframe_track_parameter_type_from_decoder(env, decoder)?;
+                let value = decode_keyframe_track_parameter_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding KeyframeTrackParameter",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding KeyframeTrackParameter",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23592,16 +26143,24 @@ fn decode_keyframe_track_parameter_value_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_keyframe_track_parameter_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_keyframe_track_parameter_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding KeyframeTrackParameterValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding KeyframeTrackParameterValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23613,23 +26172,34 @@ fn decode_animation_presets_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AnimationPresets");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AnimationPresets",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["presets"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_animation_preset_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_animation_preset_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnimationPresets",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnimationPresets", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23664,10 +26234,15 @@ fn decode_animation_preset_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AnimationPresetData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AnimationPresetData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23679,7 +26254,11 @@ fn decode_style_animation_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StyleAnimation");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.StyleAnimation",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["animation_preset_id"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23690,10 +26269,15 @@ fn decode_style_animation_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StyleAnimation",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding StyleAnimation", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23713,12 +26297,7 @@ fn decode_style_id_for_animation_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "id",
-            "timeline_def_id",
-            "animation_style_id",
-            "timeline_offset",
-        ],
+        &["id", "timeline_def_id", "animation_style_id", "timeline_offset"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23741,16 +26320,24 @@ fn decode_style_id_for_animation_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding StyleIdForAnimation",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding StyleIdForAnimation", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
     make_struct(env, keys, &values)
 }
-fn decode_tools_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn decode_tools_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Tools");
@@ -23760,15 +26347,19 @@ fn decode_tools_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_tool_data_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_tool_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding Tools",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while decoding Tools", field)),
+                    ),
+                );
             }
         }
     }
@@ -23784,11 +26375,7 @@ fn decode_tool_data_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "tool_id",
-            "backing_code_component_id",
-            "component_prop_assignments",
-        ],
+        &["tool_id", "backing_code_component_id", "component_prop_assignments"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23803,16 +26390,21 @@ fn decode_tool_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_component_prop_assignment_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_component_prop_assignment_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ToolData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding ToolData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23824,23 +26416,34 @@ fn decode_custom_effects_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CustomEffects");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CustomEffects",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["custom_effects"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_custom_effect_data_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_custom_effect_data_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CustomEffects",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CustomEffects", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23852,7 +26455,11 @@ fn decode_custom_effect_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CustomEffectData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CustomEffectData",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["custom_effect_id"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23863,10 +26470,15 @@ fn decode_custom_effect_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CustomEffectData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CustomEffectData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23878,7 +26490,11 @@ fn decode_spring_params_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SpringParams");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SpringParams",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["stiffness", "damping", "mass"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -23897,10 +26513,15 @@ fn decode_spring_params_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SpringParams",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SpringParams", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23917,7 +26538,11 @@ fn decode_transition_easing_any_value_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.TransitionEasingAnyValue",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["spring_easing", "bezier_easing"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["spring_easing", "bezier_easing"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -23931,10 +26556,16 @@ fn decode_transition_easing_any_value_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransitionEasingAnyValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransitionEasingAnyValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -23957,14 +26588,20 @@ fn decode_easing_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_transition_easing_any_value_from_decoder(env, decoder)?;
+                let value = decode_transition_easing_any_value_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EasingData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding EasingData", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -24034,8 +26671,8 @@ fn decode_transition_override_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             9 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[9] = value.encode(env).as_c_arg();
             }
             10 => {
@@ -24043,10 +26680,15 @@ fn decode_transition_override_from_decoder<'a>(
                 values[10] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransitionOverride",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransitionOverride", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -24069,20 +26711,31 @@ fn decode_transition_override_data_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_transition_override_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_transition_override_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_transition_override_prop_map_from_decoder(env, decoder)?;
+                let value = decode_transition_override_prop_map_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransitionOverrideData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransitionOverrideData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -24170,8 +26823,10 @@ fn decode_transition_override_binding_location_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decode_transition_override_binding_top_level_field_from_decoder(env, decoder)?;
+                let value = decode_transition_override_binding_top_level_field_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -24187,10 +26842,16 @@ fn decode_transition_override_binding_location_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransitionOverrideBindingLocation",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransitionOverrideBindingLocation",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -24318,8 +26979,10 @@ fn decode_node_contents_keyframe_binding_location_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value =
-                    decode_transition_override_binding_top_level_field_from_decoder(env, decoder)?;
+                let value = decode_transition_override_binding_top_level_field_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -24331,15 +26994,23 @@ fn decode_node_contents_keyframe_binding_location_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
-                let value =
-                    decode_keyframe_binding_effect_parametrized_field_from_decoder(env, decoder)?;
+                let value = decode_keyframe_binding_effect_parametrized_field_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeContentsKeyframeBindingLocation",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeContentsKeyframeBindingLocation",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -24362,16 +27033,24 @@ fn decode_transition_override_prop_map_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_transition_override_prop_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_transition_override_prop_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransitionOverridePropMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransitionOverridePropMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -24391,12 +27070,7 @@ fn decode_transition_override_prop_map_entry_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "prop",
-            "overrides",
-            "binding_location",
-            "node_contents_binding_location",
-        ],
+        &["prop", "overrides", "binding_location", "node_contents_binding_location"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -24407,25 +27081,38 @@ fn decode_transition_override_prop_map_entry_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_transition_override_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_transition_override_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decode_transition_override_binding_location_from_decoder(env, decoder)?;
+                let value = decode_transition_override_binding_location_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
-                let value =
-                    decode_node_contents_keyframe_binding_location_from_decoder(env, decoder)?;
+                let value = decode_node_contents_keyframe_binding_location_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding TransitionOverridePropMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding TransitionOverridePropMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -24457,7 +27144,11 @@ fn decode_optional_vector_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.OptionalVector");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.OptionalVector",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["value"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -24468,10 +27159,15 @@ fn decode_optional_vector_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding OptionalVector",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding OptionalVector", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25191,7 +27887,11 @@ fn decode_migration_status_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.MigrationStatus");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.MigrationStatus",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["dsd_cleanup"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -25202,10 +27902,15 @@ fn decode_migration_status_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding MigrationStatus",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding MigrationStatus", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25281,13 +27986,7 @@ fn decode_aria_attribute_any_value_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "bool_value",
-            "string_value",
-            "float_value",
-            "int_value",
-            "string_array_value",
-        ],
+        &["bool_value", "string_value", "float_value", "int_value", "string_array_value"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -25314,10 +28013,16 @@ fn decode_aria_attribute_any_value_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ARIAAttributeAnyValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ARIAAttributeAnyValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25357,7 +28062,11 @@ fn decode_aria_attribute_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ARIAAttributeData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ARIAAttributeData",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["type", "value"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -25372,10 +28081,15 @@ fn decode_aria_attribute_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ARIAAttributeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ARIAAttributeData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25387,23 +28101,34 @@ fn decode_aria_attributes_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ARIAAttributesMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ARIAAttributesMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_aria_attributes_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_aria_attributes_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ARIAAttributesMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ARIAAttributesMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25434,10 +28159,16 @@ fn decode_aria_attributes_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ARIAAttributesMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ARIAAttributesMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25468,10 +28199,16 @@ fn decode_handoff_status_map_entry_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding HandoffStatusMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding HandoffStatusMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25483,23 +28220,34 @@ fn decode_handoff_status_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.HandoffStatusMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.HandoffStatusMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["entries"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_handoff_status_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_handoff_status_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding HandoffStatusMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding HandoffStatusMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25511,28 +28259,46 @@ fn decode_edit_scope_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EditScopeInfo");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["edit_scope_stacks", "snapshots"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.EditScopeInfo",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["edit_scope_stacks", "snapshots"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_edit_scope_stack_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_edit_scope_stack_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_edit_scope_snapshot_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_edit_scope_snapshot_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EditScopeInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding EditScopeInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25544,15 +28310,26 @@ fn decode_edit_scope_snapshot_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EditScopeSnapshot");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["frames", "node_change_field_numbers"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.EditScopeSnapshot",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["frames", "node_change_field_numbers"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_edit_scope_stack_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_edit_scope_stack_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -25560,10 +28337,15 @@ fn decode_edit_scope_snapshot_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EditScopeSnapshot",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding EditScopeSnapshot", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25575,7 +28357,11 @@ fn decode_edit_scope_stack_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EditScopeStack");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.EditScopeStack",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["stack"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -25583,14 +28369,22 @@ fn decode_edit_scope_stack_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_edit_scope_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_edit_scope_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EditScopeStack",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding EditScopeStack", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25621,10 +28415,13 @@ fn decode_edit_scope_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding EditScope",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding EditScope", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25732,7 +28529,11 @@ fn decode_section_preset_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SectionPresetInfo");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SectionPresetInfo",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -25759,10 +28560,15 @@ fn decode_section_preset_info_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SectionPresetInfo",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SectionPresetInfo", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25799,8 +28605,8 @@ fn decode_clipboard_selection_region_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -25812,14 +28618,23 @@ fn decode_clipboard_selection_region_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             5 => {
-                let value = decode_selection_region_focus_type_from_decoder(env, decoder)?;
+                let value = decode_selection_region_focus_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ClipboardSelectionRegion",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ClipboardSelectionRegion",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25851,7 +28666,11 @@ fn decode_first_draft_kit_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FirstDraftKit");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.FirstDraftKit",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["key", "type"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -25866,10 +28685,15 @@ fn decode_first_draft_kit_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding FirstDraftKit",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding FirstDraftKit", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25881,7 +28705,11 @@ fn decode_first_draft_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FirstDraftData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.FirstDraftData",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["generation_id", "kit"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -25896,10 +28724,15 @@ fn decode_first_draft_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding FirstDraftData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding FirstDraftData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -25942,14 +28775,23 @@ fn decode_first_draft_kit_element_data_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_first_draft_kit_element_type_from_decoder(env, decoder)?;
+                let value = decode_first_draft_kit_element_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding FirstDraftKitElementData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding FirstDraftKitElementData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26020,15 +28862,24 @@ fn decode_platform_shape_property_map_entry_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value =
-                    decoder.read_repeated(|decoder| decode_guid_path_from_decoder(env, decoder))?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_guid_path_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PlatformShapePropertyMapEntry",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PlatformShapePropertyMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26055,13 +28906,18 @@ fn decode_platform_shape_definition_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_platform_shape_property_map_entry_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_platform_shape_property_map_entry_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_platform_shape_behavior_type_from_decoder(env, decoder)?;
+                let value = decode_platform_shape_behavior_type_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -26069,10 +28925,16 @@ fn decode_platform_shape_definition_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PlatformShapeDefinition",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PlatformShapeDefinition",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26084,7 +28946,11 @@ fn decode_node_behaviors_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NodeBehaviors");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.NodeBehaviors",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -26143,14 +29009,22 @@ fn decode_node_behaviors_from_decoder<'a>(
             }
             10 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_code_behavior_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_code_behavior_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[10] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeBehaviors",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeBehaviors", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26188,7 +29062,8 @@ fn decode_behavior_transition_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
+                let value = decoder
+                    .read_repeated(|decoder| decoder.read_var_float(env))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -26208,10 +29083,15 @@ fn decode_behavior_transition_from_decoder<'a>(
                 values[6] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding BehaviorTransition",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding BehaviorTransition", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26271,7 +29151,11 @@ fn decode_appear_behavior_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AppearBehavior");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AppearBehavior",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -26333,10 +29217,15 @@ fn decode_appear_behavior_from_decoder<'a>(
                 values[10] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AppearBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AppearBehavior", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26348,8 +29237,16 @@ fn decode_hover_behavior_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.HoverBehavior");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["transition", "state", "is_deleted"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.HoverBehavior",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["transition", "state", "is_deleted"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -26367,10 +29264,15 @@ fn decode_hover_behavior_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding HoverBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding HoverBehavior", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26382,8 +29284,16 @@ fn decode_press_behavior_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PressBehavior");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["transition", "state", "is_deleted"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.PressBehavior",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["transition", "state", "is_deleted"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -26401,10 +29311,15 @@ fn decode_press_behavior_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding PressBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding PressBehavior", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26416,8 +29331,16 @@ fn decode_focus_behavior_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FocusBehavior");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["transition", "state", "is_deleted"]);
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.FocusBehavior",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["transition", "state", "is_deleted"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -26435,10 +29358,15 @@ fn decode_focus_behavior_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding FocusBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding FocusBehavior", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26458,13 +29386,7 @@ fn decode_scroll_parallax_behavior_from_decoder<'a>(
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "axis",
-            "speed",
-            "relative_to_page",
-            "speed_var",
-            "is_deleted",
-        ],
+        &["axis", "speed", "relative_to_page", "speed_var", "is_deleted"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -26491,10 +29413,16 @@ fn decode_scroll_parallax_behavior_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ScrollParallaxBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ScrollParallaxBehavior",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26551,7 +29479,10 @@ fn decode_scroll_transform_behavior_from_decoder<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                let value = decode_scroll_transform_behavior_trigger_from_decoder(env, decoder)?;
+                let value = decode_scroll_transform_behavior_trigger_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
@@ -26587,10 +29518,16 @@ fn decode_scroll_transform_behavior_from_decoder<'a>(
                 values[9] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ScrollTransformBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ScrollTransformBehavior",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26602,7 +29539,11 @@ fn decode_cursor_behavior_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CursorBehavior");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CursorBehavior",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -26629,10 +29570,15 @@ fn decode_cursor_behavior_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CursorBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CursorBehavior", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26644,7 +29590,11 @@ fn decode_marquee_behavior_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.MarqueeBehavior");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.MarqueeBehavior",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -26691,10 +29641,15 @@ fn decode_marquee_behavior_from_decoder<'a>(
                 values[7] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding MarqueeBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding MarqueeBehavior", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26706,15 +29661,15 @@ fn decode_code_behavior_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeBehavior");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.CodeBehavior",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "code_component_id",
-            "component_prop_assignments",
-            "is_deleted",
-        ],
+        &["code_component_id", "component_prop_assignments", "is_deleted"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -26725,9 +29680,11 @@ fn decode_code_behavior_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_component_prop_assignment_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_component_prop_assignment_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -26735,10 +29692,15 @@ fn decode_code_behavior_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CodeBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CodeBehavior", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26786,10 +29748,16 @@ fn decode_client_rendered_metadata_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ClientRenderedMetadata",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ClientRenderedMetadata",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26817,7 +29785,11 @@ fn decode_link_behavior_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.LinkBehavior");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.LinkBehavior",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -26844,10 +29816,15 @@ fn decode_link_behavior_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding LinkBehavior",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding LinkBehavior", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26864,7 +29841,11 @@ fn decode_variable_id_or_variable_override_id_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.VariableIdOrVariableOverrideId",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["variable_id", "variable_override_id"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["variable_id", "variable_override_id"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -26878,10 +29859,16 @@ fn decode_variable_id_or_variable_override_id_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding VariableIdOrVariableOverrideId",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding VariableIdOrVariableOverrideId",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26893,7 +29880,11 @@ fn decode_slide_theme_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SlideThemeData");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.SlideThemeData",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["theme_id", "version"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -26908,10 +29899,15 @@ fn decode_slide_theme_data_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding SlideThemeData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding SlideThemeData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -26979,7 +29975,11 @@ fn decode_node_chat_message_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NodeChatMessage");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.NodeChatMessage",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -27019,15 +30019,19 @@ fn decode_node_chat_message_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             6 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_node_chat_tool_call_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_node_chat_tool_call_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[6] = value.encode(env).as_c_arg();
             }
             7 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_node_chat_tool_result_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_node_chat_tool_result_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[7] = value.encode(env).as_c_arg();
             }
             8 => {
@@ -27035,10 +30039,15 @@ fn decode_node_chat_message_from_decoder<'a>(
                 values[8] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeChatMessage",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeChatMessage", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27050,7 +30059,11 @@ fn decode_node_chat_tool_call_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NodeChatToolCall");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.NodeChatToolCall",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -27073,10 +30086,15 @@ fn decode_node_chat_tool_call_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeChatToolCall",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeChatToolCall", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27115,10 +30133,15 @@ fn decode_node_chat_tool_result_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeChatToolResult",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeChatToolResult", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27130,7 +30153,11 @@ fn decode_node_chat_exchange_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NodeChatExchange");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.NodeChatExchange",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
@@ -27146,7 +30173,10 @@ fn decode_node_chat_exchange_from_decoder<'a>(
             }
             2 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_node_chat_message_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_node_chat_message_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
@@ -27155,14 +30185,22 @@ fn decode_node_chat_exchange_from_decoder<'a>(
             }
             4 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_file_update_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_file_update_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeChatExchange",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeChatExchange", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27193,10 +30231,16 @@ fn decode_node_chat_compression_state_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding NodeChatCompressionState",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding NodeChatCompressionState",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27209,7 +30253,11 @@ fn decode_file_update_from_decoder<'a>(
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FileUpdate");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["name", "contents", "is_deleted"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["name", "contents", "is_deleted"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -27227,10 +30275,13 @@ fn decode_file_update_from_decoder<'a>(
                 values[3] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding FileUpdate",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding FileUpdate", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27242,7 +30293,11 @@ fn decode_ai_chat_content_part_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AIChatContentPart");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AIChatContentPart",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["type", "value"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -27253,14 +30308,22 @@ fn decode_ai_chat_content_part_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             2 => {
-                let value = decode_ai_chat_content_part_any_value_from_decoder(env, decoder)?;
+                let value = decode_ai_chat_content_part_any_value_from_decoder(
+                    env,
+                    decoder,
+                )?;
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AIChatContentPart",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AIChatContentPart", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27297,7 +30360,11 @@ fn decode_ai_chat_content_part_any_value_from_decoder<'a>(
         &MODULE_ATOM,
         "Elixir.FigKiwi.Schema.AIChatContentPartAnyValue",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["text_value", "selected_node_ids"]);
+    let keys = cached_struct_keys(
+        env,
+        &STRUCT_KEYS,
+        &["text_value", "selected_node_ids"],
+    );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
         match decoder.read_var_uint()? {
@@ -27311,10 +30378,16 @@ fn decode_ai_chat_content_part_any_value_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AIChatContentPartAnyValue",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AIChatContentPartAnyValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27350,17 +30423,15 @@ fn decode_ai_chat_message_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AIChatMessage");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AIChatMessage",
+    );
     let keys = cached_struct_keys(
         env,
         &STRUCT_KEYS,
-        &[
-            "created_at_ms",
-            "role",
-            "content",
-            "client_id",
-            "created_at_ms64",
-        ],
+        &["created_at_ms", "role", "content", "client_id", "created_at_ms64"],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -27375,9 +30446,11 @@ fn decode_ai_chat_message_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             3 => {
-                let value = decoder.read_repeated(|decoder| {
-                    decode_ai_chat_content_part_from_decoder(env, decoder)
-                })?;
+                let value = decoder
+                    .read_repeated(|decoder| decode_ai_chat_content_part_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[3] = value.encode(env).as_c_arg();
             }
             4 => {
@@ -27389,10 +30462,15 @@ fn decode_ai_chat_message_from_decoder<'a>(
                 values[5] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AIChatMessage",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AIChatMessage", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27404,7 +30482,11 @@ fn decode_ai_chat_thread_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AIChatThread");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.AIChatThread",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["messages"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -27412,14 +30494,22 @@ fn decode_ai_chat_thread_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_ai_chat_message_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_ai_chat_message_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding AIChatThread",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding AIChatThread", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27660,7 +30750,10 @@ fn decode_cooper_template_type_from_decoder<'a>(
         }
         58 => {
             static ATOM_57: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_57, "google_mobile_leaderboard_banner_ad").encode(env))
+            Ok(
+                cached_atom(env, &ATOM_57, "google_mobile_leaderboard_banner_ad")
+                    .encode(env),
+            )
         }
         59 => {
             static ATOM_58: OnceLock<Atom> = OnceLock::new();
@@ -27714,10 +30807,15 @@ fn decode_cooper_template_data_from_decoder<'a>(
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding CooperTemplateData",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding CooperTemplateData", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27729,7 +30827,11 @@ fn decode_image_import_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ImageImportMap");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ImageImportMap",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["imports"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -27737,14 +30839,22 @@ fn decode_image_import_map_from_decoder<'a>(
             0 => break,
             1 => {
                 let value = decoder
-                    .read_repeated(|decoder| decode_image_import_from_decoder(env, decoder))?;
+                    .read_repeated(|decoder| decode_image_import_from_decoder(
+                        env,
+                        decoder,
+                    ))?;
                 values[1] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ImageImportMap",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding ImageImportMap", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27756,7 +30866,11 @@ fn decode_image_import_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ImageImport");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ImageImport",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["name", "image"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -27771,10 +30885,13 @@ fn decode_image_import_from_decoder<'a>(
                 values[2] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding ImageImport",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding ImageImport", field),
+                        ),
+                    ),
+                );
             }
         }
     }
@@ -27806,7 +30923,11 @@ fn decode_bezier_handles_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.BezierHandles");
+    let module_atom = cached_atom(
+        env,
+        &MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.BezierHandles",
+    );
     let keys = cached_struct_keys(env, &STRUCT_KEYS, &["p1x", "p1y", "p2x", "p2y"]);
     let mut values = default_values(module_atom, keys.len() - 1);
     loop {
@@ -27829,10 +30950,15 @@ fn decode_bezier_handles_from_decoder<'a>(
                 values[4] = value.encode(env).as_c_arg();
             }
             field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while decoding BezierHandles",
-                    field
-                ))));
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding BezierHandles", field
+                            ),
+                        ),
+                    ),
+                );
             }
         }
     }
