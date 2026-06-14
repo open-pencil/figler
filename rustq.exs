@@ -2,7 +2,7 @@ use RustQ.Config
 
 require_file "lib/fig_kiwi/native_scene_generator.ex"
 
-generate "native", "native/fig_kiwi_native/src/generated.rs" do
+generate "native", "native/src/generated.rs" do
   schema =
     "priv/schema/fig.kiwi"
     |> File.read!()
@@ -21,7 +21,7 @@ generate "native", "native/fig_kiwi_native/src/generated.rs" do
         decode_message: "Message"
       ],
       module_prefix: "FigKiwi.Schema",
-      template: "native/fig_kiwi_native/src/generated.template.rs",
+      template: "native/src/generated.template.rs",
       extra_splices: [scene_index: FigKiwi.NativeSceneGenerator.render(schema)]
     )
   )

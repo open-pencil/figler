@@ -52,18 +52,18 @@ defmodule FigKiwi.MixProject do
   end
 
   defp rust_fmt(args) do
-    rust_cmd(["fmt", "--manifest-path", "native/fig_kiwi_native/Cargo.toml"] ++ args)
+    rust_cmd(["fmt", "--manifest-path", "native/Cargo.toml"] ++ args)
   end
 
   defp rust_check(_args) do
-    rust_cmd(["check", "--manifest-path", "native/fig_kiwi_native/Cargo.toml"])
+    rust_cmd(["check", "--manifest-path", "native/Cargo.toml"])
   end
 
   defp rust_clippy(_args) do
     rust_cmd([
       "clippy",
       "--manifest-path",
-      "native/fig_kiwi_native/Cargo.toml",
+      "native/Cargo.toml",
       "--",
       "-D",
       "warnings"
