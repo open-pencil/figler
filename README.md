@@ -34,16 +34,21 @@ decoded = FigKiwi.Container.decode(binary)
 Projected native scene queries avoid materializing the full generated schema tree. They accept raw Kiwi `Message` payloads, `canvas.fig` containers, or `.fig` ZIPs containing `canvas.fig`:
 
 ```elixir
-summary = FigKiwi.Scene.summary(fig_binary)
-canvases = FigKiwi.Scene.query(fig_binary, "//canvas")
-named_text = FigKiwi.Scene.query(fig_binary, "//text[contains(@name, 'Hello')]")
+alias FigKiwi.Scene
 
-index = FigKiwi.Scene.index(fig_binary)
-canvases = FigKiwi.Scene.query(index, "//canvas")
-frames = FigKiwi.Scene.query(index, "//frame")
+summary = Scene.summary(fig_binary)
+canvases = Scene.query(fig_binary, "//canvas")
+named_text = Scene.query(fig_binary, "//text[contains(@name, 'Hello')]")
+
+index = Scene.index(fig_binary)
+canvases = Scene.pages(index)
+node = Scene.node(index, "0:123")
+children = Scene.children(index, "0:123")
+frames = Scene.find(index, type: :frame, name_contains: "Card")
+tree = Scene.tree(index, depth: 3)
 ```
 
-Projected XPath nodes expose `@guid`, `@type`, `@name`, `@parent_guid`, and `@position`. Build a reusable scene index when running multiple XPath queries over the same file.
+Projected XPath nodes are returned as `%FigKiwi.Scene.Node{}` structs and expose `@guid`, `@type`, `@name`, `@parent_guid`, and `@position` to XPath. Summaries are returned as `%FigKiwi.Scene.Summary{}` structs. Use `Scene.query/2` for raw XPath and build a reusable scene index when running multiple queries over the same file.
 
 ## Updating generated schema modules
 

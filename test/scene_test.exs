@@ -2,10 +2,12 @@ defmodule FigKiwi.SceneTest do
   use ExUnit.Case, async: true
 
   alias FigKiwi.Scene
+  alias FigKiwi.Scene.Node
+  alias FigKiwi.Scene.Summary
   alias KiwiCodec.Schema.Binary, as: SchemaBinary
 
   test "summarizes raw message payloads" do
-    assert Scene.summary(message_payload()) == %{
+    assert Scene.summary(message_payload()) == %Summary{
              node_count: 2,
              parented_count: 1,
              root_count: 1,
@@ -24,6 +26,19 @@ defmodule FigKiwi.SceneTest do
     assert Scene.query(index, "//*[@parent_guid='0:0']") == [scene_canvas()]
   end
 
+  test "navigates projected scene indexes" do
+    index = Scene.index(message_payload())
+
+    assert Scene.pages(index) == [scene_canvas()]
+    assert Scene.node(index, "0:1") == scene_canvas()
+    assert Scene.children(index, "0:0") == [scene_canvas()]
+    assert Scene.find(index, type: :canvas, name_contains: "Page") == [scene_canvas()]
+
+    assert Scene.tree(index, depth: 1) == [
+             %Node{scene_document() | children: [%Node{scene_canvas() | children: []}]}
+           ]
+  end
+
   test "accepts canvas.fig containers" do
     assert Scene.summary(canvas_container()) == Scene.summary(message_payload())
   end
@@ -32,8 +47,18 @@ defmodule FigKiwi.SceneTest do
     assert Scene.query(fig_zip(), "//*[@parent_guid='0:0']") == [scene_canvas()]
   end
 
+  defp scene_document do
+    %Node{
+      guid: "0:0",
+      node_type: "document",
+      name: "Document",
+      parent_guid: nil,
+      position: nil
+    }
+  end
+
   defp scene_canvas do
-    %{
+    %Node{
       guid: "0:1",
       node_type: "canvas",
       name: "Page 1",
