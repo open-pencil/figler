@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use rustler::types::atom::Atom;
 use rustler::{Binary, Encoder, Env, Error, NifResult, Term};
 use std::sync::OnceLock;
@@ -31068,4 +31069,17805 @@ pub fn decode_message<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>
     let term = decode_message_from_decoder(env, &mut decoder)?;
     decoder.finish()?;
     Ok(term)
+}
+#[derive(rustler::NifMap)]
+pub struct SceneSummary {
+    node_count: usize,
+    parented_count: usize,
+    root_count: usize,
+    type_counts: Vec<(String, usize)>,
+}
+fn scene_node_type_name(value: u32) -> &'static str {
+    match value {
+        0 => "none",
+        1 => "document",
+        2 => "canvas",
+        3 => "group",
+        4 => "frame",
+        5 => "boolean_operation",
+        6 => "vector",
+        7 => "star",
+        8 => "line",
+        9 => "ellipse",
+        10 => "rectangle",
+        11 => "regular_polygon",
+        12 => "rounded_rectangle",
+        13 => "text",
+        14 => "slice",
+        15 => "symbol",
+        16 => "instance",
+        17 => "sticky",
+        18 => "shape_with_text",
+        19 => "connector",
+        20 => "code_block",
+        21 => "widget",
+        22 => "stamp",
+        23 => "media",
+        24 => "highlight",
+        25 => "section",
+        26 => "section_overlay",
+        27 => "washi_tape",
+        28 => "variable",
+        29 => "table",
+        30 => "table_cell",
+        31 => "variable_set",
+        32 => "slide",
+        33 => "assisted_layout",
+        34 => "interactive_slide_element",
+        35 => "variable_override",
+        36 => "module",
+        37 => "slide_grid",
+        38 => "slide_row",
+        39 => "responsive_set",
+        40 => "code_component",
+        41 => "text_path",
+        42 => "code_instance",
+        43 => "code_library",
+        44 => "code_file",
+        45 => "code_layer",
+        46 => "brush",
+        47 => "managed_string",
+        48 => "transform",
+        49 => "cms_rich_text",
+        50 => "repeater",
+        51 => "jsx",
+        52 => "embedded_prototype",
+        53 => "react_fiber",
+        54 => "responsive_node_set",
+        55 => "webpage",
+        56 => "keyframe",
+        57 => "keyframe_track",
+        58 => "animation_preset_instance",
+        59 => "code_embed",
+        60 => "binary_file",
+        61 => "spec_block",
+        62 => "tool_instance",
+        63 => "custom_effect_instance",
+        64 => "native_code_layer_instance",
+        _ => "unknown",
+    }
+}
+fn skip_message_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_axis_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_access_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_node_phase_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_winding_rule_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_node_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_shape_with_text_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_blend_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_paint_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_image_scale_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_effect_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_text_case_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_text_decoration_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_text_decoration_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_leading_trim_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_number_units_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_constraint_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stroke_align_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stroke_cap_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stroke_join_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_boolean_operation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_text_align_horizontal_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_text_align_vertical_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_mouse_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_vector_mirror_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_dash_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_image_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_export_constraint_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_layout_grid_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_layout_grid_pattern_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_text_auto_resize_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_text_truncation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_style_set_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_style_set_content_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stack_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stack_align_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stack_counter_align_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stack_justify_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_grid_child_align_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_grid_auto_tracks_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stack_size_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stack_positioning_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stack_wrap_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_stack_counter_align_content_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_connection_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_interaction_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_transition_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_easing_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_scroll_direction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_scroll_contracted_state_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_guid_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_color_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_vector_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_rect_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_color_stop_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    skip_color_from_decoder(decoder)?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_color_stop_var_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ColorStopVar", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_matrix_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_parent_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    skip_guid_from_decoder(decoder)?;
+    decoder.skip_string()?;
+    Ok(())
+}
+fn skip_number_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_float_value()?;
+    skip_number_units_from_decoder(decoder)?;
+    Ok(())
+}
+fn skip_font_name_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.skip_string()?;
+    decoder.skip_string()?;
+    decoder.skip_string()?;
+    Ok(())
+}
+fn skip_font_variant_numeric_figure_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_font_variant_numeric_spacing_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_font_variant_numeric_fraction_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_font_variant_caps_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_font_variant_position_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_semantic_weight_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_semantic_italic_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_code_snapshot_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_snapshot_capture_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_code_source_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_snapshot_capture_mode_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeSourceInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_object_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_custom_tool_artifact_ref_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CustomToolArtifactRef",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_lock_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_open_type_feature_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_export_constraint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    skip_export_constraint_type_from_decoder(decoder)?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_guid_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    skip_guid_from_decoder(decoder)?;
+    skip_guid_from_decoder(decoder)?;
+    Ok(())
+}
+fn skip_blob_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.skip_byte_array()?;
+    Ok(())
+}
+fn skip_image_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_byte_array()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Image", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_video_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_byte_array()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Video", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_paste_source_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping PasteSource", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_filter_color_adjust_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_paint_filter_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            6 => {
+                decoder.read_var_float_value()?;
+            }
+            7 => {
+                decoder.read_var_float_value()?;
+            }
+            8 => {
+                decoder.read_var_float_value()?;
+            }
+            9 => {
+                decoder.read_var_float_value()?;
+            }
+            10 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PaintFilterMessage", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_paint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_paint_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                skip_blend_mode_from_decoder(decoder)?;
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_color_stop_from_decoder(decoder)?;
+                }
+            }
+            7 => {
+                skip_matrix_from_decoder(decoder)?;
+            }
+            8 => {
+                skip_image_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_image_from_decoder(decoder)?;
+            }
+            16 => {
+                skip_image_from_decoder(decoder)?;
+            }
+            17 => {
+                decoder.read_var_uint()?;
+            }
+            10 => {
+                skip_image_scale_mode_from_decoder(decoder)?;
+            }
+            22 => {
+                decoder.read_bool()?;
+            }
+            11 => {
+                decoder.read_var_float_value()?;
+            }
+            12 => {
+                decoder.read_var_float_value()?;
+            }
+            13 => {
+                skip_filter_color_adjust_from_decoder(decoder)?;
+            }
+            14 => {
+                skip_paint_filter_message_from_decoder(decoder)?;
+            }
+            15 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            18 => {
+                skip_video_from_decoder(decoder)?;
+            }
+            19 => {
+                decoder.read_var_uint()?;
+            }
+            20 => {
+                decoder.read_var_uint()?;
+            }
+            38 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            21 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            31 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            23 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_color_stop_var_from_decoder(decoder)?;
+                }
+            }
+            24 => {
+                decoder.skip_string()?;
+            }
+            25 => {
+                decoder.skip_byte_array()?;
+            }
+            26 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            27 => {
+                decoder.read_var_float_value()?;
+            }
+            37 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            28 => {
+                skip_pattern_tile_type_from_decoder(decoder)?;
+            }
+            29 => {
+                skip_pattern_alignment_from_decoder(decoder)?;
+            }
+            30 => {
+                skip_pattern_alignment_from_decoder(decoder)?;
+            }
+            32 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            33 => {
+                decoder.skip_string()?;
+            }
+            34 => {
+                skip_noise_type_from_decoder(decoder)?;
+            }
+            35 => {
+                decoder.read_var_float_value()?;
+            }
+            36 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            39 => {
+                skip_code_component_id_from_decoder(decoder)?;
+            }
+            40 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_assignment_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Paint", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_noise_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_pattern_tile_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_pattern_alignment_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_font_meta_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_font_name_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.skip_byte_array()?;
+            }
+            4 => {
+                skip_font_style_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_var_int()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping FontMetaData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_font_variation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping FontVariation", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_text_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            12 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_text_line_data_from_decoder(decoder)?;
+                }
+            }
+            8 => {
+                decoder.read_var_uint()?;
+            }
+            10 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_font_name_from_decoder(decoder)?;
+                }
+            }
+            17 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_baseline_from_decoder(decoder)?;
+                }
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_glyph_from_decoder(decoder)?;
+                }
+            }
+            7 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_decoration_from_decoder(decoder)?;
+                }
+            }
+            16 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_blockquote_from_decoder(decoder)?;
+                }
+            }
+            9 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_font_meta_data_from_decoder(decoder)?;
+                }
+            }
+            11 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_hyperlink_box_from_decoder(decoder)?;
+                }
+            }
+            13 => {
+                decoder.read_var_int()?;
+            }
+            14 => {
+                decoder.read_var_float_value()?;
+            }
+            15 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_float_value()?;
+                }
+            }
+            18 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_mention_box_from_decoder(decoder)?;
+                }
+            }
+            19 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_derived_text_line_data_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping TextData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_derived_text_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_baseline_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_glyph_from_decoder(decoder)?;
+                }
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_decoration_from_decoder(decoder)?;
+                }
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_blockquote_from_decoder(decoder)?;
+                }
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_font_meta_data_from_decoder(decoder)?;
+                }
+            }
+            7 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_hyperlink_box_from_decoder(decoder)?;
+                }
+            }
+            8 => {
+                decoder.read_var_int()?;
+            }
+            9 => {
+                decoder.read_var_float_value()?;
+            }
+            10 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_float_value()?;
+                }
+            }
+            11 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_mention_box_from_decoder(decoder)?;
+                }
+            }
+            12 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_derived_text_line_data_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping DerivedTextData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_hyperlink_box_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_rect_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_cms_item_page_target_from_decoder(decoder)?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                decoder.read_var_int()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping HyperlinkBox", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_mention_box_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_rect_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping MentionBox", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_baseline_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            7 => {
+                decoder.read_var_float_value()?;
+            }
+            8 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            6 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Baseline", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_glyph_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            6 => {
+                decoder.read_var_float_value()?;
+            }
+            7 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            8 => {
+                skip_emoji_image_set_from_decoder(decoder)?;
+            }
+            9 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Glyph", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_decoration_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_rect_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Decoration", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_blockquote_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_rect_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_rect_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Blockquote", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_vector_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping VectorData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_text_path_start_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TextPathStart", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_guid_path_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping GUIDPath", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_symbol_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping SymbolData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_guid_path_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping GUIDPathMapping", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_derived_breakpoint_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping DerivedBreakpointData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_generation_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeGenerationData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_derived_immutable_frame_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping DerivedImmutableFrameData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_jsx_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping JsxData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_derived_jsx_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping DerivedJsxData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_asset_id_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_asset_id_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping AssetIdMap", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_asset_id_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_asset_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AssetIdEntry", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_asset_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping AssetRef", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_asset_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_state_group_id_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_symbol_id_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_variable_id_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping AssetId", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_state_group_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping StateGroupId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_style_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping StyleId", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_symbol_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping SymbolId", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping VariableID", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_override_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableOverrideId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableSetID", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_module_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ModuleId", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_responsive_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ResponsiveSetId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_webpage_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping WebpageId", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_theme_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ThemeID", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_library_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeLibraryId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_file_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping CodeFileId", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_component_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeComponentId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_canvas_node_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_symbol_id_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_state_group_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CanvasNodeId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_index_range_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_collaborative_text_op_id_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_collaborative_text_op_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_collaborative_text_op_id_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_op_id_from_decoder(decoder)?;
+                }
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_op_id_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CollaborativeTextStrippedOpRunWithIDs",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_collaborative_text_stripped_op_run_with_loc_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_collaborative_text_op_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_index_range_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                skip_index_range_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_index_range_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CollaborativeTextStrippedOpRunWithLoc",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_collaborative_text_op_run_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_collaborative_text_op_id_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_op_id_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                skip_collaborative_text_op_type_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_index_range_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            6 => {
+                decoder.skip_string()?;
+            }
+            7 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_op_id_from_decoder(decoder)?;
+                }
+            }
+            8 => {
+                skip_index_range_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CollaborativeTextOpRun",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_collaborative_plain_text_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder(
+                        decoder,
+                    )?;
+                }
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_stripped_op_run_with_loc_from_decoder(
+                        decoder,
+                    )?;
+                }
+            }
+            3 => {
+                decoder.skip_byte_array()?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_op_run_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CollaborativePlainText",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_collaborative_text_selection_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                skip_index_range_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_op_id_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CollaborativeTextSelection",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_responsive_text_style_variant_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            7 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ResponsiveTextStyleVariant",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_flapp_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_slide_theme_props_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_style_id_from_decoder(decoder)?;
+                }
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            6 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            7 => {
+                decoder.read_var_uint()?;
+            }
+            8 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SlideThemeProps", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_slide_theme_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_slide_theme_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SlideThemeMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_slide_theme_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_theme_id_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_slide_theme_props_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SlideThemeMapEntry", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_shared_symbol_reference_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            5 => {
+                decoder.skip_byte_array()?;
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_mapping_from_decoder(decoder)?;
+                }
+            }
+            7 => {
+                decoder.skip_string()?;
+            }
+            8 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            9 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SharedSymbolReference",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_shared_component_master_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SharedComponentMasterData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_instance_override_stash_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping InstanceOverrideStash",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_instance_override_stash_v2_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping InstanceOverrideStashV2",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_imported_code_file_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_code_file_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ImportedCodeFileEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_imported_code_files_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_imported_code_file_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ImportedCodeFiles", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_blur_op_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_repeat_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_unit_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_repeat_order_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_effect_axis_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_effect_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_effect_type_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            6 => {
+                skip_blend_mode_from_decoder(decoder)?;
+            }
+            7 => {
+                decoder.read_var_float_value()?;
+            }
+            8 => {
+                decoder.read_bool()?;
+            }
+            9 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            11 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            12 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            13 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            14 => {
+                decoder.read_var_uint()?;
+            }
+            15 => {
+                skip_repeat_type_from_decoder(decoder)?;
+            }
+            16 => {
+                skip_effect_axis_from_decoder(decoder)?;
+            }
+            17 => {
+                skip_unit_type_from_decoder(decoder)?;
+            }
+            18 => {
+                skip_repeat_order_from_decoder(decoder)?;
+            }
+            19 => {
+                skip_blur_op_type_from_decoder(decoder)?;
+            }
+            20 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            28 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            21 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            24 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            22 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            29 => {
+                decoder.read_var_uint()?;
+            }
+            23 => {
+                decoder.read_bool()?;
+            }
+            25 => {
+                decoder.read_var_float_value()?;
+            }
+            26 => {
+                skip_noise_type_from_decoder(decoder)?;
+            }
+            27 => {
+                decoder.read_var_float_value()?;
+            }
+            30 => {
+                decoder.read_var_float_value()?;
+            }
+            31 => {
+                decoder.read_var_float_value()?;
+            }
+            32 => {
+                decoder.read_var_float_value()?;
+            }
+            33 => {
+                decoder.read_var_float_value()?;
+            }
+            34 => {
+                decoder.read_var_float_value()?;
+            }
+            35 => {
+                decoder.read_var_float_value()?;
+            }
+            36 => {
+                decoder.read_var_float_value()?;
+            }
+            37 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            38 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            39 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            40 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            41 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            42 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            43 => {
+                skip_code_component_id_from_decoder(decoder)?;
+            }
+            44 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_assignment_from_decoder(decoder)?;
+                }
+            }
+            45 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            46 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            47 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            48 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            49 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            50 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            51 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            52 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            53 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            54 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            55 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Effect", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transform_modifier_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_transform_modifier_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_transform_modifier_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                decoder.read_var_uint()?;
+            }
+            5 => {
+                skip_repeat_type_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_effect_axis_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_unit_type_from_decoder(decoder)?;
+            }
+            8 => {
+                skip_repeat_order_from_decoder(decoder)?;
+            }
+            9 => {
+                decoder.read_var_float_value()?;
+            }
+            10 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransformModifier", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transform_schema_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_matrix4f_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_fixed_order_transform3d_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping FixedOrderTransform3d",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transform_fn_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_transform_fn_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_matrix4f_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransformFnValue", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transform_fn_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_transform_fn_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_transform_fn_value_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping TransformFn", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transform_schema_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_fixed_order_transform3d_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_transform_fn_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransformSchemaValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transform3d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_transform_schema_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_transform_schema_value_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Transform3d", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_number_vector2_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    skip_number_from_decoder(decoder)?;
+    skip_number_from_decoder(decoder)?;
+    Ok(())
+}
+fn skip_scene3d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                skip_number_vector2_d_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Scene3d", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transform_origin_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransformOrigin", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transition_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_transition_type_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransitionInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_prototype_device_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_device_rotation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_prototype_device_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_prototype_device_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_device_rotation_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PrototypeDevice", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_overlay_position_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_overlay_background_interaction_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_overlay_background_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_overlay_background_appearance_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_overlay_background_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping OverlayBackgroundAppearance",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_navigation_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_export_color_profile_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_export_background_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_export_settings_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_image_type_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_export_constraint_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                skip_export_svgid_mode_from_decoder(decoder)?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            7 => {
+                decoder.read_bool()?;
+            }
+            8 => {
+                decoder.read_bool()?;
+            }
+            9 => {
+                decoder.read_bool()?;
+            }
+            10 => {
+                skip_export_color_profile_from_decoder(decoder)?;
+            }
+            11 => {
+                decoder.read_var_float_value()?;
+            }
+            12 => {
+                decoder.read_bool()?;
+            }
+            13 => {
+                decoder.read_var_int()?;
+            }
+            14 => {
+                decoder.read_var_int()?;
+            }
+            15 => {
+                skip_export_background_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ExportSettings", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_export_svgid_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_layout_grid_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_layout_grid_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_axis_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                decoder.read_var_int()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            6 => {
+                decoder.read_var_float_value()?;
+            }
+            7 => {
+                decoder.read_var_float_value()?;
+            }
+            8 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_layout_grid_pattern_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            11 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            12 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            13 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping LayoutGrid", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_guide_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_axis_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Guide", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_path_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_winding_rule_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Path", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_style_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_brush_orientation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_brush_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_dynamic_stroke_settings_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping DynamicStrokeSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_scatter_stroke_settings_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ScatterStrokeSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_stretch_stroke_settings_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_brush_orientation_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping StretchStrokeSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_stroke_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_stroke_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping StrokeData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_stroke_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_int()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            5 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_stroke_align_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_stroke_cap_from_decoder(decoder)?;
+            }
+            8 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_stroke_join_from_decoder(decoder)?;
+            }
+            10 => {
+                decoder.read_var_float_value()?;
+            }
+            11 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_float_value()?;
+                }
+            }
+            12 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            13 => {
+                decoder.read_var_float_value()?;
+            }
+            14 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Stroke", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_width_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_int()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableWidthPoint", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_shared_style_reference_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SharedStyleReference",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_shared_style_master_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SharedStyleMasterData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_scroll_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_arc_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ArcData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_symbol_link_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping SymbolLink", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_plugin_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping PluginData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_plugin_relaunch_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                skip_code_component_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PluginRelaunchData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_multiplayer_field_version_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping MultiplayerFieldVersion",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_connector_magnet_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_connector_endpoint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_connector_magnet_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ConnectorEndpoint", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_connector_control_point_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ConnectorControlPoint",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_connector_text_section_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_connector_off_axis_offset_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_connector_text_midpoint_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_connector_text_section_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                skip_connector_off_axis_offset_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ConnectorTextMidpoint",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_connector_line_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_connector_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_annotation_property_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_annotation_property_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_annotation_property_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnnotationProperty", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_annotation_category_preset_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_annotation_category_color_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_annotation_category_custom_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_annotation_category_color_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnnotationCategoryCustom",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_annotation_category_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_annotation_category_preset_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_annotation_category_custom_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnnotationCategory", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_annotation_categories_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_annotation_category_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnnotationCategories",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_annotation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_annotation_property_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Annotation", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_annotation_measurement_node_side_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_annotation_measurement_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_annotation_measurement_node_side_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            6 => {
+                decoder.read_var_float_value()?;
+            }
+            7 => {
+                decoder.read_var_float_value()?;
+            }
+            8 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            9 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnnotationMeasurement",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_library_move_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping LibraryMoveInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_library_move_history_item_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping LibraryMoveHistoryItem",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_developer_related_link_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping DeveloperRelatedLink",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_widget_pointer_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping WidgetPointer", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_edit_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping EditInfo", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_editor_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_mask_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_module_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_section_status_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_section_status_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_section_status_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                skip_section_status_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SectionStatusInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_buzz_approval_request_info_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.skip_string()?;
+                }
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.skip_string()?;
+            }
+            7 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping BuzzApprovalRequestInfo",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_buzz_approval_requests_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_buzz_approval_request_info_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping BuzzApprovalRequests",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_buzz_approval_node_status_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_buzz_approval_node_status_info_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_buzz_approval_node_status_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping BuzzApprovalNodeStatusInfo",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_embed_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeEmbedInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_timing_display_unit_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_node_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            53 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_node_phase_from_decoder(decoder)?;
+            }
+            54 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                skip_parent_index_from_decoder(decoder)?;
+            }
+            55 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                skip_node_type_from_decoder(decoder)?;
+            }
+            56 => {
+                decoder.read_var_uint()?;
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            57 => {
+                decoder.read_var_uint()?;
+            }
+            174 => {
+                decoder.read_bool()?;
+            }
+            318 => {
+                decoder.skip_string()?;
+            }
+            256 => {
+                skip_library_move_info_from_decoder(decoder)?;
+            }
+            281 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_library_move_history_item_from_decoder(decoder)?;
+                }
+            }
+            319 => {
+                decoder.skip_string()?;
+            }
+            383 => {
+                skip_asset_id_map_from_decoder(decoder)?;
+            }
+            49 => {
+                decoder.read_var_uint()?;
+            }
+            101 => {
+                decoder.read_var_uint()?;
+            }
+            157 => {
+                decoder.read_bool()?;
+            }
+            161 => {
+                decoder.read_bool()?;
+            }
+            376 => {
+                decoder.read_bool()?;
+            }
+            163 => {
+                skip_style_type_from_decoder(decoder)?;
+            }
+            191 => {
+                decoder.skip_string()?;
+            }
+            171 => {
+                decoder.skip_string()?;
+            }
+            399 => {
+                decoder.skip_string()?;
+            }
+            320 => {
+                decoder.skip_string()?;
+            }
+            345 => {
+                skip_shared_style_master_data_from_decoder(decoder)?;
+            }
+            348 => {
+                skip_shared_style_master_data_from_decoder(decoder)?;
+            }
+            176 => {
+                decoder.read_bool()?;
+            }
+            177 => {
+                decoder.read_bool()?;
+            }
+            172 => {
+                skip_shared_style_master_data_from_decoder(decoder)?;
+            }
+            173 => {
+                skip_shared_style_reference_from_decoder(decoder)?;
+            }
+            158 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            162 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            167 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            168 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            169 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            170 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            185 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            332 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            333 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            334 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            335 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            336 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            580 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_style_animation_from_decoder(decoder)?;
+                }
+            }
+            193 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            194 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            225 => {
+                decoder.read_bool()?;
+            }
+            238 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_state_group_property_value_order_from_decoder(decoder)?;
+                }
+            }
+            581 => {
+                skip_partial_paste_annotation_from_decoder(decoder)?;
+            }
+            122 => {
+                skip_shared_symbol_reference_from_decoder(decoder)?;
+            }
+            123 => {
+                decoder.read_bool()?;
+            }
+            124 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            126 => {
+                decoder.skip_string()?;
+            }
+            152 => {
+                skip_shared_component_master_data_from_decoder(decoder)?;
+            }
+            144 => {
+                decoder.skip_string()?;
+            }
+            164 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            228 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            214 => {
+                decoder.skip_string()?;
+            }
+            395 => {
+                decoder.skip_string()?;
+            }
+            215 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            216 => {
+                decoder.skip_string()?;
+            }
+            217 => {
+                decoder.read_bool()?;
+            }
+            218 => {
+                decoder.skip_string()?;
+            }
+            252 => {
+                decoder.skip_string()?;
+            }
+            266 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_def_from_decoder(decoder)?;
+                }
+            }
+            267 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_ref_from_decoder(decoder)?;
+                }
+            }
+            483 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variant_prop_spec_from_decoder(decoder)?;
+                }
+            }
+            113 => {
+                skip_symbol_data_from_decoder(decoder)?;
+            }
+            114 => {
+                decoder.read_var_uint()?;
+            }
+            125 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            394 => {
+                decoder.read_bool()?;
+            }
+            143 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            268 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_assignment_from_decoder(decoder)?;
+                }
+            }
+            305 => {
+                decoder.read_bool()?;
+            }
+            248 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_instance_override_stash_from_decoder(decoder)?;
+                }
+            }
+            250 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_instance_override_stash_v2_from_decoder(decoder)?;
+                }
+            }
+            111 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            112 => {
+                decoder.read_var_uint()?;
+            }
+            321 => {
+                decoder.read_var_int()?;
+            }
+            382 => {
+                skip_module_type_from_decoder(decoder)?;
+            }
+            463 => {
+                decoder.read_bool()?;
+            }
+            495 => {
+                decoder.read_bool()?;
+            }
+            21 => {
+                decoder.read_var_float_value()?;
+            }
+            73 => {
+                decoder.read_var_uint()?;
+            }
+            22 => {
+                decoder.read_var_float_value()?;
+            }
+            74 => {
+                decoder.read_var_uint()?;
+            }
+            23 => {
+                decoder.read_var_float_value()?;
+            }
+            75 => {
+                decoder.read_var_uint()?;
+            }
+            32 => {
+                skip_text_align_horizontal_from_decoder(decoder)?;
+            }
+            84 => {
+                decoder.read_var_uint()?;
+            }
+            33 => {
+                skip_text_align_vertical_from_decoder(decoder)?;
+            }
+            85 => {
+                decoder.read_var_uint()?;
+            }
+            34 => {
+                skip_text_case_from_decoder(decoder)?;
+            }
+            86 => {
+                decoder.read_var_uint()?;
+            }
+            35 => {
+                skip_text_decoration_from_decoder(decoder)?;
+            }
+            87 => {
+                decoder.read_var_uint()?;
+            }
+            40 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            92 => {
+                decoder.read_var_uint()?;
+            }
+            41 => {
+                skip_font_name_from_decoder(decoder)?;
+            }
+            93 => {
+                decoder.read_var_uint()?;
+            }
+            42 => {
+                skip_text_data_from_decoder(decoder)?;
+            }
+            94 => {
+                decoder.read_var_uint()?;
+            }
+            359 => {
+                skip_derived_text_data_from_decoder(decoder)?;
+            }
+            127 => {
+                decoder.read_bool()?;
+            }
+            128 => {
+                decoder.read_bool()?;
+            }
+            129 => {
+                decoder.read_bool()?;
+            }
+            130 => {
+                decoder.read_bool()?;
+            }
+            131 => {
+                decoder.read_bool()?;
+            }
+            132 => {
+                decoder.read_bool()?;
+            }
+            133 => {
+                skip_font_variant_numeric_figure_from_decoder(decoder)?;
+            }
+            134 => {
+                skip_font_variant_numeric_spacing_from_decoder(decoder)?;
+            }
+            135 => {
+                skip_font_variant_numeric_fraction_from_decoder(decoder)?;
+            }
+            136 => {
+                skip_font_variant_caps_from_decoder(decoder)?;
+            }
+            137 => {
+                skip_font_variant_position_from_decoder(decoder)?;
+            }
+            165 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            202 => {
+                decoder.skip_string()?;
+            }
+            322 => {
+                skip_leading_trim_from_decoder(decoder)?;
+            }
+            337 => {
+                decoder.read_bool()?;
+            }
+            339 => {
+                decoder.read_bool()?;
+            }
+            550 => {
+                decoder.read_bool()?;
+            }
+            351 => {
+                decoder.read_var_int()?;
+            }
+            417 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_responsive_text_style_variant_from_decoder(decoder)?;
+                }
+            }
+            352 => {
+                skip_section_status_from_decoder(decoder)?;
+            }
+            355 => {
+                skip_section_status_info_from_decoder(decoder)?;
+            }
+            203 => {
+                decoder.read_var_uint()?;
+            }
+            396 => {
+                decoder.read_var_uint()?;
+            }
+            205 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_open_type_feature_from_decoder(decoder)?;
+                }
+            }
+            206 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_open_type_feature_from_decoder(decoder)?;
+                }
+            }
+            223 => {
+                skip_hyperlink_from_decoder(decoder)?;
+            }
+            340 => {
+                skip_mention_from_decoder(decoder)?;
+            }
+            260 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_font_variation_from_decoder(decoder)?;
+                }
+            }
+            279 => {
+                decoder.read_var_uint()?;
+            }
+            280 => {
+                skip_text_truncation_from_decoder(decoder)?;
+            }
+            292 => {
+                decoder.read_bool()?;
+            }
+            391 => {
+                skip_emoji_image_set_from_decoder(decoder)?;
+            }
+            392 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            58 => {
+                decoder.read_var_uint()?;
+            }
+            7 => {
+                decoder.read_bool()?;
+            }
+            59 => {
+                decoder.read_var_uint()?;
+            }
+            434 => {
+                skip_lock_mode_from_decoder(decoder)?;
+            }
+            8 => {
+                decoder.read_var_float_value()?;
+            }
+            60 => {
+                decoder.read_var_uint()?;
+            }
+            9 => {
+                skip_blend_mode_from_decoder(decoder)?;
+            }
+            61 => {
+                decoder.read_var_uint()?;
+            }
+            11 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            63 => {
+                decoder.read_var_uint()?;
+            }
+            12 => {
+                skip_matrix_from_decoder(decoder)?;
+            }
+            64 => {
+                decoder.read_var_uint()?;
+            }
+            13 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_float_value()?;
+                }
+            }
+            65 => {
+                decoder.read_var_uint()?;
+            }
+            16 => {
+                decoder.read_bool()?;
+            }
+            68 => {
+                decoder.read_var_uint()?;
+            }
+            424 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            18 => {
+                decoder.read_bool()?;
+            }
+            70 => {
+                decoder.read_var_uint()?;
+            }
+            317 => {
+                skip_mask_type_from_decoder(decoder)?;
+            }
+            19 => {
+                decoder.read_var_float_value()?;
+            }
+            71 => {
+                decoder.read_var_uint()?;
+            }
+            20 => {
+                decoder.read_var_float_value()?;
+            }
+            72 => {
+                decoder.read_var_uint()?;
+            }
+            26 => {
+                decoder.read_var_float_value()?;
+            }
+            78 => {
+                decoder.read_var_uint()?;
+            }
+            29 => {
+                skip_stroke_align_from_decoder(decoder)?;
+            }
+            81 => {
+                decoder.read_var_uint()?;
+            }
+            30 => {
+                skip_stroke_cap_from_decoder(decoder)?;
+            }
+            82 => {
+                decoder.read_var_uint()?;
+            }
+            497 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            31 => {
+                skip_stroke_join_from_decoder(decoder)?;
+            }
+            83 => {
+                decoder.read_var_uint()?;
+            }
+            38 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            90 => {
+                decoder.read_var_uint()?;
+            }
+            39 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            91 => {
+                decoder.read_var_uint()?;
+            }
+            43 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_effect_from_decoder(decoder)?;
+                }
+            }
+            95 => {
+                decoder.read_var_uint()?;
+            }
+            50 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            102 => {
+                decoder.read_var_uint()?;
+            }
+            51 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_path_from_decoder(decoder)?;
+                }
+            }
+            103 => {
+                decoder.read_var_uint()?;
+            }
+            52 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_path_from_decoder(decoder)?;
+                }
+            }
+            104 => {
+                decoder.read_var_uint()?;
+            }
+            564 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_path_from_decoder(decoder)?;
+                }
+            }
+            411 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            412 => {
+                decoder.read_bool()?;
+            }
+            413 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            415 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            416 => {
+                skip_text_decoration_style_from_decoder(decoder)?;
+            }
+            455 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_transform_modifier_from_decoder(decoder)?;
+                }
+            }
+            570 => {
+                skip_transform3d_from_decoder(decoder)?;
+            }
+            571 => {
+                skip_stroke_data_from_decoder(decoder)?;
+            }
+            572 => {
+                skip_scene3d_from_decoder(decoder)?;
+            }
+            587 => {
+                skip_transform_origin_from_decoder(decoder)?;
+            }
+            145 => {
+                decoder.read_var_float_value()?;
+            }
+            146 => {
+                decoder.read_var_float_value()?;
+            }
+            147 => {
+                decoder.read_var_float_value()?;
+            }
+            148 => {
+                decoder.read_var_float_value()?;
+            }
+            149 => {
+                decoder.read_bool()?;
+            }
+            150 => {
+                decoder.read_bool()?;
+            }
+            151 => {
+                decoder.read_bool()?;
+            }
+            423 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            258 => {
+                decoder.read_bool()?;
+            }
+            287 => {
+                decoder.read_bool()?;
+            }
+            288 => {
+                decoder.read_bool()?;
+            }
+            289 => {
+                decoder.read_bool()?;
+            }
+            290 => {
+                decoder.read_bool()?;
+            }
+            294 => {
+                decoder.read_bool()?;
+            }
+            295 => {
+                decoder.read_var_float_value()?;
+            }
+            296 => {
+                decoder.read_var_float_value()?;
+            }
+            297 => {
+                decoder.read_var_float_value()?;
+            }
+            298 => {
+                decoder.read_var_float_value()?;
+            }
+            299 => {
+                decoder.read_bool()?;
+            }
+            28 => {
+                skip_constraint_type_from_decoder(decoder)?;
+            }
+            80 => {
+                decoder.read_var_uint()?;
+            }
+            105 => {
+                skip_stack_mode_from_decoder(decoder)?;
+            }
+            106 => {
+                decoder.read_var_uint()?;
+            }
+            107 => {
+                decoder.read_var_float_value()?;
+            }
+            108 => {
+                decoder.read_var_uint()?;
+            }
+            109 => {
+                decoder.read_var_float_value()?;
+            }
+            110 => {
+                decoder.read_var_uint()?;
+            }
+            120 => {
+                skip_stack_counter_align_from_decoder(decoder)?;
+            }
+            121 => {
+                skip_stack_justify_from_decoder(decoder)?;
+            }
+            208 => {
+                skip_stack_align_from_decoder(decoder)?;
+            }
+            209 => {
+                decoder.read_var_float_value()?;
+            }
+            210 => {
+                decoder.read_var_float_value()?;
+            }
+            211 => {
+                skip_stack_size_from_decoder(decoder)?;
+            }
+            212 => {
+                skip_stack_size_from_decoder(decoder)?;
+            }
+            229 => {
+                skip_stack_size_from_decoder(decoder)?;
+            }
+            230 => {
+                skip_stack_justify_from_decoder(decoder)?;
+            }
+            231 => {
+                skip_stack_align_from_decoder(decoder)?;
+            }
+            232 => {
+                decoder.read_var_float_value()?;
+            }
+            233 => {
+                decoder.read_var_float_value()?;
+            }
+            234 => {
+                decoder.read_var_float_value()?;
+            }
+            236 => {
+                skip_stack_counter_align_from_decoder(decoder)?;
+            }
+            269 => {
+                skip_stack_positioning_from_decoder(decoder)?;
+            }
+            271 => {
+                decoder.read_bool()?;
+            }
+            323 => {
+                skip_stack_wrap_from_decoder(decoder)?;
+            }
+            324 => {
+                decoder.read_var_float_value()?;
+            }
+            325 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            326 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            343 => {
+                skip_stack_counter_align_content_from_decoder(decoder)?;
+            }
+            406 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_int()?;
+                }
+            }
+            574 => {
+                decoder.read_var_uint()?;
+            }
+            435 => {
+                skip_guid_position_map_from_decoder(decoder)?;
+            }
+            436 => {
+                skip_guid_position_map_from_decoder(decoder)?;
+            }
+            437 => {
+                decoder.read_var_float_value()?;
+            }
+            438 => {
+                decoder.read_var_float_value()?;
+            }
+            439 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            440 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            441 => {
+                decoder.read_var_uint()?;
+            }
+            442 => {
+                decoder.read_var_uint()?;
+            }
+            474 => {
+                skip_guid_grid_track_size_map_from_decoder(decoder)?;
+            }
+            475 => {
+                skip_guid_grid_track_size_map_from_decoder(decoder)?;
+            }
+            476 => {
+                skip_grid_child_align_from_decoder(decoder)?;
+            }
+            477 => {
+                skip_grid_child_align_from_decoder(decoder)?;
+            }
+            555 => {
+                skip_grid_auto_tracks_from_decoder(decoder)?;
+            }
+            556 => {
+                decoder.read_bool()?;
+            }
+            344 => {
+                decoder.read_bool()?;
+            }
+            139 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            140 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            141 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            153 => {
+                skip_transition_info_from_decoder(decoder)?;
+            }
+            154 => {
+                skip_transition_type_from_decoder(decoder)?;
+            }
+            155 => {
+                decoder.read_var_float_value()?;
+            }
+            156 => {
+                skip_easing_type_from_decoder(decoder)?;
+            }
+            181 => {
+                decoder.read_bool()?;
+            }
+            182 => {
+                skip_connection_type_from_decoder(decoder)?;
+            }
+            183 => {
+                decoder.skip_string()?;
+            }
+            184 => {
+                skip_prototype_device_from_decoder(decoder)?;
+            }
+            187 => {
+                skip_interaction_type_from_decoder(decoder)?;
+            }
+            188 => {
+                decoder.read_var_float_value()?;
+            }
+            189 => {
+                decoder.read_bool()?;
+            }
+            190 => {
+                decoder.read_var_float_value()?;
+            }
+            192 => {
+                decoder.read_bool()?;
+            }
+            207 => {
+                decoder.read_bool()?;
+            }
+            226 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_prototype_interaction_from_decoder(decoder)?;
+                }
+            }
+            426 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_prototype_interaction_from_decoder(decoder)?;
+                }
+            }
+            249 => {
+                skip_prototype_starting_point_from_decoder(decoder)?;
+            }
+            204 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_plugin_data_from_decoder(decoder)?;
+                }
+            }
+            219 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_plugin_relaunch_data_from_decoder(decoder)?;
+                }
+            }
+            242 => {
+                skip_connector_endpoint_from_decoder(decoder)?;
+            }
+            243 => {
+                skip_connector_endpoint_from_decoder(decoder)?;
+            }
+            244 => {
+                skip_connector_line_style_from_decoder(decoder)?;
+            }
+            245 => {
+                skip_stroke_cap_from_decoder(decoder)?;
+            }
+            246 => {
+                skip_stroke_cap_from_decoder(decoder)?;
+            }
+            253 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_connector_control_point_from_decoder(decoder)?;
+                }
+            }
+            479 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_connector_control_point_from_decoder(decoder)?;
+                }
+            }
+            255 => {
+                skip_connector_text_midpoint_from_decoder(decoder)?;
+            }
+            373 => {
+                skip_connector_type_from_decoder(decoder)?;
+            }
+            533 => {
+                decoder.read_var_int()?;
+            }
+            369 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_annotation_from_decoder(decoder)?;
+                }
+            }
+            384 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_annotation_measurement_from_decoder(decoder)?;
+                }
+            }
+            453 => {
+                skip_annotation_categories_from_decoder(decoder)?;
+            }
+            241 => {
+                skip_shape_with_text_type_from_decoder(decoder)?;
+            }
+            247 => {
+                decoder.read_var_float_value()?;
+            }
+            530 => {
+                decoder.read_bool()?;
+            }
+            254 => {
+                skip_derived_immutable_frame_data_from_decoder(decoder)?;
+            }
+            338 => {
+                skip_multiplayer_field_version_from_decoder(decoder)?;
+            }
+            240 => {
+                skip_node_generation_data_from_decoder(decoder)?;
+            }
+            491 => {
+                skip_jsx_data_from_decoder(decoder)?;
+            }
+            492 => {
+                skip_derived_jsx_data_from_decoder(decoder)?;
+            }
+            493 => {
+                decoder.skip_string()?;
+            }
+            259 => {
+                skip_code_block_language_from_decoder(decoder)?;
+            }
+            433 => {
+                skip_code_block_theme_from_decoder(decoder)?;
+            }
+            278 => {
+                skip_link_preview_data_from_decoder(decoder)?;
+            }
+            282 => {
+                decoder.read_bool()?;
+            }
+            283 => {
+                decoder.read_bool()?;
+            }
+            300 => {
+                skip_video_playback_from_decoder(decoder)?;
+            }
+            301 => {
+                skip_stamp_data_from_decoder(decoder)?;
+            }
+            370 => {
+                skip_section_preset_info_from_decoder(decoder)?;
+            }
+            409 => {
+                skip_platform_shape_definition_from_decoder(decoder)?;
+            }
+            273 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            274 => {
+                decoder.read_var_uint()?;
+            }
+            275 => {
+                skip_widget_derived_subtree_cursor_from_decoder(decoder)?;
+            }
+            276 => {
+                skip_widget_pointer_from_decoder(decoder)?;
+            }
+            285 => {
+                skip_widget_input_behavior_from_decoder(decoder)?;
+            }
+            286 => {
+                decoder.skip_string()?;
+            }
+            291 => {
+                skip_widget_hover_style_from_decoder(decoder)?;
+            }
+            293 => {
+                decoder.read_bool()?;
+            }
+            360 => {
+                decoder.read_bool()?;
+            }
+            262 => {
+                skip_widget_metadata_from_decoder(decoder)?;
+            }
+            263 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_widget_event_from_decoder(decoder)?;
+                }
+            }
+            265 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_widget_property_menu_item_from_decoder(decoder)?;
+                }
+            }
+            401 => {
+                skip_widget_input_text_node_type_from_decoder(decoder)?;
+            }
+            489 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            308 => {
+                skip_table_row_column_position_map_from_decoder(decoder)?;
+            }
+            309 => {
+                skip_table_row_column_position_map_from_decoder(decoder)?;
+            }
+            310 => {
+                skip_table_row_column_size_map_from_decoder(decoder)?;
+            }
+            311 => {
+                skip_table_row_column_size_map_from_decoder(decoder)?;
+            }
+            538 => {
+                skip_table_merged_cell_map_from_decoder(decoder)?;
+            }
+            371 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            372 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            402 => {
+                skip_flapp_type_from_decoder(decoder)?;
+            }
+            486 => {
+                decoder.read_bool()?;
+            }
+            389 => {
+                decoder.skip_string()?;
+            }
+            410 => {
+                decoder.read_bool()?;
+            }
+            573 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            379 => {
+                skip_theme_id_from_decoder(decoder)?;
+            }
+            381 => {
+                skip_slide_theme_data_from_decoder(decoder)?;
+            }
+            390 => {
+                skip_slide_theme_map_from_decoder(decoder)?;
+            }
+            393 => {
+                decoder.skip_string()?;
+            }
+            443 => {
+                skip_slide_number_from_decoder(decoder)?;
+            }
+            456 => {
+                decoder.skip_string()?;
+            }
+            363 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            362 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            364 => {
+                decoder.skip_string()?;
+            }
+            366 => {
+                skip_diagram_layout_rule_type_from_decoder(decoder)?;
+            }
+            367 => {
+                skip_diagram_parent_index_from_decoder(decoder)?;
+            }
+            368 => {
+                skip_diagram_layout_paused_from_decoder(decoder)?;
+            }
+            380 => {
+                decoder.read_bool()?;
+            }
+            251 => {
+                skip_internal_enum_for_test_from_decoder(decoder)?;
+            }
+            257 => {
+                skip_internal_data_for_test_from_decoder(decoder)?;
+            }
+            14 => {
+                decoder.read_bool()?;
+            }
+            66 => {
+                decoder.read_var_uint()?;
+            }
+            15 => {
+                decoder.read_bool()?;
+            }
+            67 => {
+                decoder.read_var_uint()?;
+            }
+            17 => {
+                decoder.read_bool()?;
+            }
+            69 => {
+                decoder.read_var_uint()?;
+            }
+            25 => {
+                decoder.read_var_float_value()?;
+            }
+            77 => {
+                decoder.read_var_uint()?;
+            }
+            27 => {
+                decoder.read_var_float_value()?;
+            }
+            79 => {
+                decoder.read_var_uint()?;
+            }
+            37 => {
+                skip_constraint_type_from_decoder(decoder)?;
+            }
+            89 => {
+                decoder.read_var_uint()?;
+            }
+            45 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_export_settings_from_decoder(decoder)?;
+                }
+            }
+            97 => {
+                decoder.read_var_uint()?;
+            }
+            46 => {
+                skip_text_auto_resize_from_decoder(decoder)?;
+            }
+            98 => {
+                decoder.read_var_uint()?;
+            }
+            47 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_layout_grid_from_decoder(decoder)?;
+                }
+            }
+            99 => {
+                decoder.read_var_uint()?;
+            }
+            115 => {
+                decoder.read_bool()?;
+            }
+            116 => {
+                decoder.read_var_uint()?;
+            }
+            117 => {
+                decoder.read_bool()?;
+            }
+            118 => {
+                decoder.read_var_uint()?;
+            }
+            36 => {
+                skip_boolean_operation_from_decoder(decoder)?;
+            }
+            88 => {
+                decoder.read_var_uint()?;
+            }
+            44 => {
+                skip_vector_mirror_from_decoder(decoder)?;
+            }
+            96 => {
+                decoder.read_var_uint()?;
+            }
+            10 => {
+                decoder.read_var_uint()?;
+            }
+            62 => {
+                decoder.read_var_uint()?;
+            }
+            24 => {
+                decoder.read_var_float_value()?;
+            }
+            76 => {
+                decoder.read_var_uint()?;
+            }
+            195 => {
+                skip_arc_data_from_decoder(decoder)?;
+            }
+            48 => {
+                skip_vector_data_from_decoder(decoder)?;
+            }
+            100 => {
+                decoder.read_var_uint()?;
+            }
+            425 => {
+                decoder.read_var_uint()?;
+            }
+            432 => {
+                skip_text_path_start_from_decoder(decoder)?;
+            }
+            119 => {
+                decoder.read_bool()?;
+            }
+            138 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guide_from_decoder(decoder)?;
+                }
+            }
+            142 => {
+                decoder.read_bool()?;
+            }
+            159 => {
+                skip_scroll_direction_from_decoder(decoder)?;
+            }
+            160 => {
+                decoder.read_var_float_value()?;
+            }
+            166 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            175 => {
+                decoder.read_bool()?;
+            }
+            178 => {
+                skip_scroll_contracted_state_from_decoder(decoder)?;
+            }
+            179 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            180 => {
+                decoder.skip_string()?;
+            }
+            186 => {
+                skip_scroll_behavior_from_decoder(decoder)?;
+            }
+            196 => {
+                decoder.read_var_int()?;
+            }
+            197 => {
+                skip_navigation_type_from_decoder(decoder)?;
+            }
+            198 => {
+                skip_overlay_position_type_from_decoder(decoder)?;
+            }
+            199 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            200 => {
+                skip_overlay_background_interaction_from_decoder(decoder)?;
+            }
+            201 => {
+                skip_overlay_background_appearance_from_decoder(decoder)?;
+            }
+            213 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            220 => {
+                decoder.read_bool()?;
+            }
+            221 => {
+                skip_stack_size_from_decoder(decoder)?;
+            }
+            222 => {
+                decoder.read_bool()?;
+            }
+            224 => {
+                skip_key_trigger_from_decoder(decoder)?;
+            }
+            227 => {
+                decoder.skip_string()?;
+            }
+            235 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            237 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_symbol_link_from_decoder(decoder)?;
+                }
+            }
+            239 => {
+                skip_text_list_data_from_decoder(decoder)?;
+            }
+            261 => {
+                decoder.read_bool()?;
+            }
+            264 => {
+                decoder.read_var_float_value()?;
+            }
+            270 => {
+                skip_embed_data_from_decoder(decoder)?;
+            }
+            272 => {
+                skip_rich_media_data_from_decoder(decoder)?;
+            }
+            277 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            284 => {
+                decoder.read_bool()?;
+            }
+            302 => {
+                skip_html_tag_from_decoder(decoder)?;
+            }
+            303 => {
+                skip_aria_role_from_decoder(decoder)?;
+            }
+            357 => {
+                skip_aria_attributes_map_from_decoder(decoder)?;
+            }
+            304 => {
+                decoder.skip_string()?;
+            }
+            490 => {
+                decoder.read_bool()?;
+            }
+            306 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            307 => {
+                skip_variable_data_map_from_decoder(decoder)?;
+            }
+            316 => {
+                skip_variable_mode_by_set_map_from_decoder(decoder)?;
+            }
+            312 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_set_mode_from_decoder(decoder)?;
+                }
+            }
+            313 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            314 => {
+                skip_variable_resolved_data_type_from_decoder(decoder)?;
+            }
+            315 => {
+                skip_variable_data_values_from_decoder(decoder)?;
+            }
+            350 => {
+                decoder.skip_string()?;
+            }
+            566 => {
+                skip_variable_timing_display_unit_from_decoder(decoder)?;
+            }
+            353 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_scope_from_decoder(decoder)?;
+                }
+            }
+            445 => {
+                skip_variable_data_map_from_decoder(decoder)?;
+            }
+            358 => {
+                skip_code_syntax_map_from_decoder(decoder)?;
+            }
+            388 => {
+                skip_paste_source_from_decoder(decoder)?;
+            }
+            397 => {
+                skip_editor_type_from_decoder(decoder)?;
+            }
+            446 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            482 => {
+                decoder.read_var_uint64()?;
+            }
+            447 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_width_point_from_decoder(decoder)?;
+                }
+            }
+            448 => {
+                skip_dynamic_stroke_settings_from_decoder(decoder)?;
+            }
+            449 => {
+                skip_scatter_stroke_settings_from_decoder(decoder)?;
+            }
+            450 => {
+                skip_stretch_stroke_settings_from_decoder(decoder)?;
+            }
+            488 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_matrix_from_decoder(decoder)?;
+                }
+            }
+            452 => {
+                skip_brush_type_from_decoder(decoder)?;
+            }
+            542 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            554 => {
+                decoder.read_var_float_value()?;
+            }
+            377 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            464 => {
+                skip_variable_id_from_decoder(decoder)?;
+            }
+            378 => {
+                skip_variable_id_or_variable_override_id_from_decoder(decoder)?;
+            }
+            385 => {
+                decoder.read_bool()?;
+            }
+            386 => {
+                decoder.skip_string()?;
+            }
+            517 => {
+                skip_inherited_variables_data_from_decoder(decoder)?;
+            }
+            361 => {
+                skip_handoff_status_map_from_decoder(decoder)?;
+            }
+            327 => {
+                skip_agenda_position_map_from_decoder(decoder)?;
+            }
+            328 => {
+                skip_agenda_metadata_map_from_decoder(decoder)?;
+            }
+            329 => {
+                skip_migration_status_from_decoder(decoder)?;
+            }
+            330 => {
+                decoder.read_bool()?;
+            }
+            331 => {
+                skip_edit_info_from_decoder(decoder)?;
+            }
+            341 => {
+                skip_color_profile_from_decoder(decoder)?;
+            }
+            342 => {
+                skip_symbol_id_from_decoder(decoder)?;
+            }
+            346 => {
+                skip_child_reading_direction_from_decoder(decoder)?;
+            }
+            347 => {
+                decoder.skip_string()?;
+            }
+            349 => {
+                skip_document_color_profile_from_decoder(decoder)?;
+            }
+            354 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_developer_related_link_from_decoder(decoder)?;
+                }
+            }
+            356 => {
+                decoder.skip_string()?;
+            }
+            365 => {
+                skip_edit_scope_info_from_decoder(decoder)?;
+            }
+            374 => {
+                skip_semantic_weight_from_decoder(decoder)?;
+            }
+            375 => {
+                skip_semantic_italic_from_decoder(decoder)?;
+            }
+            403 => {
+                decoder.read_bool()?;
+            }
+            387 => {
+                decoder.read_bool()?;
+            }
+            500 => {
+                skip_derived_breakpoint_data_from_decoder(decoder)?;
+            }
+            398 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            458 => {
+                decoder.read_bool()?;
+            }
+            457 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            462 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            501 => {
+                decoder.read_var_float_value()?;
+            }
+            522 => {
+                decoder.read_bool()?;
+            }
+            400 => {
+                skip_responsive_set_settings_from_decoder(decoder)?;
+            }
+            404 => {
+                skip_node_behaviors_from_decoder(decoder)?;
+            }
+            414 => {
+                decoder.skip_string()?;
+            }
+            534 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_op_id_from_decoder(decoder)?;
+                }
+            }
+            444 => {
+                skip_collaborative_plain_text_from_decoder(decoder)?;
+            }
+            427 => {
+                skip_code_library_id_from_decoder(decoder)?;
+            }
+            467 => {
+                skip_imported_code_files_from_decoder(decoder)?;
+            }
+            468 => {
+                skip_canvas_node_id_from_decoder(decoder)?;
+            }
+            498 => {
+                decoder.read_bool()?;
+            }
+            502 => {
+                decoder.skip_string()?;
+            }
+            503 => {
+                decoder.read_var_uint()?;
+            }
+            504 => {
+                decoder.skip_string()?;
+            }
+            515 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.skip_string()?;
+                }
+            }
+            524 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_used_make_library_from_decoder(decoder)?;
+                }
+            }
+            518 => {
+                decoder.skip_string()?;
+            }
+            520 => {
+                decoder.read_bool()?;
+            }
+            551 => {
+                decoder.read_bool()?;
+            }
+            531 => {
+                skip_prototype_device_from_decoder(decoder)?;
+            }
+            525 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_code_example_from_decoder(decoder)?;
+                }
+            }
+            428 => {
+                skip_code_file_id_from_decoder(decoder)?;
+            }
+            430 => {
+                decoder.skip_string()?;
+            }
+            547 => {
+                decoder.skip_string()?;
+            }
+            429 => {
+                skip_code_component_id_from_decoder(decoder)?;
+            }
+            487 => {
+                decoder.read_bool()?;
+            }
+            431 => {
+                skip_code_snapshot_state_from_decoder(decoder)?;
+            }
+            451 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_chat_message_from_decoder(decoder)?;
+                }
+            }
+            485 => {
+                skip_node_chat_compression_state_from_decoder(decoder)?;
+            }
+            496 => {
+                skip_ai_chat_thread_from_decoder(decoder)?;
+            }
+            484 => {
+                decoder.skip_string()?;
+            }
+            459 => {
+                skip_code_snapshot_from_decoder(decoder)?;
+            }
+            589 => {
+                skip_code_snapshot_layers_from_decoder(decoder)?;
+            }
+            480 => {
+                decoder.read_var_uint()?;
+            }
+            465 => {
+                decoder.read_bool()?;
+            }
+            469 => {
+                decoder.read_bool()?;
+            }
+            470 => {
+                decoder.read_bool()?;
+            }
+            471 => {
+                decoder.read_bool()?;
+            }
+            481 => {
+                skip_canvas_node_id_from_decoder(decoder)?;
+            }
+            473 => {
+                skip_image_import_map_from_decoder(decoder)?;
+            }
+            516 => {
+                skip_code_object_type_from_decoder(decoder)?;
+            }
+            472 => {
+                decoder.skip_string()?;
+            }
+            478 => {
+                skip_code_behavior_data_from_decoder(decoder)?;
+            }
+            519 => {
+                decoder.read_var_uint()?;
+            }
+            527 => {
+                decoder.read_bool()?;
+            }
+            532 => {
+                skip_code_embed_info_from_decoder(decoder)?;
+            }
+            546 => {
+                decoder.read_bool()?;
+            }
+            558 => {
+                skip_code_source_info_from_decoder(decoder)?;
+            }
+            536 => {
+                decoder.skip_string()?;
+            }
+            537 => {
+                decoder.skip_byte_array()?;
+            }
+            419 => {
+                skip_cms_selector_from_decoder(decoder)?;
+            }
+            420 => {
+                skip_cms_consumption_map_from_decoder(decoder)?;
+            }
+            460 => {
+                skip_cms_rich_text_style_map_from_decoder(decoder)?;
+            }
+            539 => {
+                skip_symbol_id_from_decoder(decoder)?;
+            }
+            540 => {
+                skip_repeater_cms_override_data_from_decoder(decoder)?;
+            }
+            549 => {
+                skip_repeater_symbol_override_data_from_decoder(decoder)?;
+            }
+            541 => {
+                skip_repeater_override_data_from_decoder(decoder)?;
+            }
+            405 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            408 => {
+                decoder.skip_string()?;
+            }
+            407 => {
+                skip_first_draft_data_from_decoder(decoder)?;
+            }
+            418 => {
+                skip_first_draft_kit_element_data_from_decoder(decoder)?;
+            }
+            421 => {
+                skip_cooper_revert_data_from_decoder(decoder)?;
+            }
+            461 => {
+                skip_cooper_template_data_from_decoder(decoder)?;
+            }
+            528 => {
+                skip_buzz_approval_requests_from_decoder(decoder)?;
+            }
+            529 => {
+                skip_buzz_approval_node_status_info_from_decoder(decoder)?;
+            }
+            422 => {
+                skip_hub_file_attribution_from_decoder(decoder)?;
+            }
+            454 => {
+                skip_managed_string_data_from_decoder(decoder)?;
+            }
+            466 => {
+                skip_thumbnail_info_from_decoder(decoder)?;
+            }
+            494 => {
+                skip_ai_canvas_prompt_from_decoder(decoder)?;
+            }
+            499 => {
+                skip_canvas_node_id_from_decoder(decoder)?;
+            }
+            548 => {
+                decoder.skip_string()?;
+            }
+            523 => {
+                skip_trss_transform2_d_from_decoder(decoder)?;
+            }
+            506 => {
+                decoder.read_var_int64()?;
+            }
+            507 => {
+                skip_keyframe_value_data_from_decoder(decoder)?;
+            }
+            586 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            505 => {
+                skip_interpolation_type_from_decoder(decoder)?;
+            }
+            508 => {
+                skip_bezier_handles_from_decoder(decoder)?;
+            }
+            535 => {
+                skip_easing_data_from_decoder(decoder)?;
+            }
+            509 => {
+                skip_keyframe_operation_from_decoder(decoder)?;
+            }
+            510 => {
+                skip_timeline_position_type_from_decoder(decoder)?;
+            }
+            545 => {
+                decoder.read_bool()?;
+            }
+            511 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            512 => {
+                decoder.read_var_uint64()?;
+            }
+            513 => {
+                decoder.read_var_int64()?;
+            }
+            543 => {
+                decoder.read_bool()?;
+            }
+            514 => {
+                skip_playback_style_from_decoder(decoder)?;
+            }
+            552 => {
+                skip_timeline_definitions_map_from_decoder(decoder)?;
+            }
+            553 => {
+                skip_timeline_assignments_map_from_decoder(decoder)?;
+            }
+            521 => {
+                skip_animation_presets_from_decoder(decoder)?;
+            }
+            582 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_style_id_for_animation_from_decoder(decoder)?;
+                }
+            }
+            583 => {
+                skip_animation_preset_id_from_decoder(decoder)?;
+            }
+            568 => {
+                skip_tools_from_decoder(decoder)?;
+            }
+            569 => {
+                skip_custom_effects_from_decoder(decoder)?;
+            }
+            526 => {
+                skip_transition_override_data_from_decoder(decoder)?;
+            }
+            544 => {
+                decoder.read_bool()?;
+            }
+            557 => {
+                skip_source_control_config_from_decoder(decoder)?;
+            }
+            559 => {
+                skip_spec_block_type_from_decoder(decoder)?;
+            }
+            560 => {
+                skip_collaborative_plain_text_from_decoder(decoder)?;
+            }
+            561 => {
+                decoder.skip_string()?;
+            }
+            562 => {
+                decoder.skip_string()?;
+            }
+            563 => {
+                decoder.read_var_int()?;
+            }
+            575 => {
+                decoder.skip_string()?;
+            }
+            576 => {
+                decoder.read_var_int()?;
+            }
+            577 => {
+                decoder.read_var_int()?;
+            }
+            578 => {
+                skip_table_row_column_size_map_from_decoder(decoder)?;
+            }
+            579 => {
+                skip_table_row_column_size_map_from_decoder(decoder)?;
+            }
+            590 => {
+                decoder.skip_string()?;
+            }
+            565 => {
+                decoder.read_bool()?;
+            }
+            584 => {
+                decoder.skip_string()?;
+            }
+            585 => {
+                decoder.read_var_int()?;
+            }
+            567 => {
+                decoder.read_bool()?;
+            }
+            588 => {
+                skip_custom_tool_artifact_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping NodeChange", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_git_repo_ref_provider_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_git_repo_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_git_repo_ref_provider_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping GitRepoRef", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_source_control_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_git_repo_ref_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_git_repo_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SourceControlConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_snapshot_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            6 => {
+                skip_code_snapshot_state_from_decoder(decoder)?;
+            }
+            7 => {
+                decoder.read_var_uint()?;
+            }
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeSnapshot", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_output_layer_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeOutputLayer", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_snapshot_layers_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_code_snapshot_state_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_code_output_layer_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeSnapshotLayers", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_behavior_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.skip_string()?;
+                }
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeBehaviorData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_example_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping CodeExample", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_used_make_library_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping UsedMakeLibrary", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cookie_banner_text_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.skip_string()?;
+            }
+            7 => {
+                decoder.skip_string()?;
+            }
+            8 => {
+                decoder.skip_string()?;
+            }
+            9 => {
+                decoder.skip_string()?;
+            }
+            10 => {
+                decoder.skip_string()?;
+            }
+            11 => {
+                decoder.skip_string()?;
+            }
+            12 => {
+                decoder.skip_string()?;
+            }
+            13 => {
+                decoder.skip_string()?;
+            }
+            14 => {
+                decoder.skip_string()?;
+            }
+            15 => {
+                decoder.skip_string()?;
+            }
+            16 => {
+                decoder.skip_string()?;
+            }
+            17 => {
+                decoder.skip_string()?;
+            }
+            18 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CookieBannerText", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cookie_banner_settings_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                skip_cookie_banner_component_type_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_cookie_x_alignment_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_cookie_y_alignment_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_cookie_x_alignment_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_cookie_y_alignment_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_trigger_component_type_from_decoder(decoder)?;
+            }
+            8 => {
+                decoder.skip_string()?;
+            }
+            9 => {
+                skip_cookie_banner_text_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            11 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CookieBannerSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cookie_banner_component_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_trigger_component_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cookie_x_alignment_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cookie_y_alignment_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_responsive_set_settings_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                skip_responsive_scaling_mode_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            6 => {
+                decoder.read_var_float_value()?;
+            }
+            7 => {
+                decoder.read_var_float_value()?;
+            }
+            8 => {
+                decoder.skip_string()?;
+            }
+            9 => {
+                decoder.skip_string()?;
+            }
+            10 => {
+                decoder.skip_string()?;
+            }
+            11 => {
+                decoder.skip_string()?;
+            }
+            12 => {
+                decoder.read_bool()?;
+            }
+            13 => {
+                decoder.skip_string()?;
+            }
+            14 => {
+                decoder.skip_string()?;
+            }
+            15 => {
+                decoder.skip_string()?;
+            }
+            16 => {
+                decoder.skip_string()?;
+            }
+            17 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            18 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            19 => {
+                decoder.read_bool()?;
+            }
+            20 => {
+                decoder.read_bool()?;
+            }
+            21 => {
+                skip_cookie_banner_settings_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ResponsiveSetSettings",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_responsive_scaling_mode_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cms_selector_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_cms_filter_critera_from_decoder(decoder)?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_cms_selector_sort_from_decoder(decoder)?;
+                }
+            }
+            4 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping CMSSelector", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_filter_critera_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_cms_filter_criteria_match_type_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_cms_selector_filter_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSFilterCritera", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_filter_criteria_match_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cms_selector_filter_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_cms_selector_filter_operator_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSSelectorFilter", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_selector_filter_operator_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cms_selector_sort_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_cms_field_order_by_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSSelectorSort", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_field_order_by_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cms_consumption_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_cms_consumption_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSConsumptionMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_consumption_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_cms_consumption_field_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSConsumptionMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_consumption_field_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cms_rich_text_style_map_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_cms_rich_text_style_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSRichTextStyleMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_rich_text_style_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_cms_rich_text_style_class_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_cms_rich_text_descriptor_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSRichTextStyleEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_rich_text_style_class_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cms_rich_text_descriptor_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_font_name_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSRichTextDescriptor",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_repeater_cms_override_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping RepeaterCmsOverrideData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_repeater_override_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping RepeaterOverrideData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_repeater_symbol_override_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_repeater_position_overrides_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping RepeaterSymbolOverrideData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_repeater_position_overrides_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_parent_index_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping RepeaterPositionOverrides",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_inherited_variables_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_inherited_variable_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping InheritedVariablesData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_inherited_variable_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping InheritedVariableEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_hub_file_attribution_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping HubFileAttribution", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_managed_string_node_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_managed_string_content_schema_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_content_schema_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_managed_string_node_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_managed_string_node_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_managed_string_node_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_managed_string_text_node_data_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_managed_string_concatenate_ast_node_data_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_managed_string_plural_ast_node_data_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_managed_string_placeholder_ast_node_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringNode", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_text_node_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringTextNodeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_concatenate_ast_node_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_managed_string_node_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringConcatenateAstNodeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_plural_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_managed_string_plural_ast_node_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_managed_string_plural_type_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringPluralAstNodeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_plural_type_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_managed_string_plural_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_managed_string_node_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringPluralTypeMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_format_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_managed_string_placeholder_ast_node_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_managed_string_format_type_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringPlaceholderAstNodeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cooper_revert_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CooperRevertData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_video_playback_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            6 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VideoPlayback", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_media_action_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_animation_timeline_action_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_widget_hover_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping WidgetHoverStyle", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_widget_derived_subtree_cursor_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping WidgetDerivedSubtreeCursor",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_multiplayer_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_multiplayer_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping MultiplayerMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_multiplayer_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping MultiplayerMapEntry", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_data_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_data_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableDataMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_data_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_field_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableDataMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_field_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_variable_mode_by_set_map_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_mode_by_set_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableModeBySetMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_mode_by_set_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableModeBySetMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_syntax_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_code_syntax_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeSyntaxMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_syntax_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_code_syntax_platform_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeSyntaxMapEntry", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_table_merged_cell_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_table_merged_cell_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TableMergedCellMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_table_merged_cell_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_var_int()?;
+            }
+            4 => {
+                decoder.read_var_int()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TableMergedCellMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_table_row_column_position_map_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_table_row_column_position_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TableRowColumnPositionMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_table_row_column_position_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TableRowColumnPositionMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_guid_position_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_position_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping GUIDPositionMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_guid_position_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping GUIDPositionMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_guid_grid_track_size_map_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_grid_track_size_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping GUIDGridTrackSizeMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_guid_grid_track_size_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_grid_track_size_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping GUIDGridTrackSizeMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_object_animation_list_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_object_animation_list_item_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ObjectAnimationList", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_object_animation_list_item_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_prototype_action_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ObjectAnimationListItem",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_grid_track_size_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_grid_track_sizing_function_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_grid_track_sizing_function_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping GridTrackSize", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_grid_track_sizing_function_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_grid_track_sizing_type_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping GridTrackSizingFunction",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_grid_track_sizing_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_table_row_column_size_map_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_table_row_column_size_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TableRowColumnSizeMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_table_row_column_size_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TableRowColumnSizeMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_agenda_position_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_agenda_position_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AgendaPositionMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_agenda_position_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AgendaPositionMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_agenda_item_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_agenda_metadata_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_agenda_metadata_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AgendaMetadataMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_agenda_metadata_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_agenda_metadata_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AgendaMetadataMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_agenda_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_agenda_item_type_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_agenda_timer_info_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_agenda_vote_info_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_agenda_music_info_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AgendaMetadata", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_agenda_timer_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AgendaTimerInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_agenda_vote_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AgendaVoteInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_agenda_music_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AgendaMusicInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_diagram_layout_rule_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_diagram_parent_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    skip_guid_from_decoder(decoder)?;
+    decoder.skip_string()?;
+    Ok(())
+}
+fn skip_diagram_layout_paused_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_component_prop_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_component_prop_node_field_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ComponentPropRef", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_component_prop_node_field_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_component_prop_assignment_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_component_prop_value_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_derived_text_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ComponentPropAssignment",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_component_prop_def_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                skip_component_prop_value_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_component_prop_type_from_decoder(decoder)?;
+            }
+            7 => {
+                decoder.read_bool()?;
+            }
+            8 => {
+                skip_component_prop_preferred_values_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_parameter_config_from_decoder(decoder)?;
+            }
+            11 => {
+                decoder.skip_string()?;
+            }
+            12 => {
+                skip_slot_prop_config_from_decoder(decoder)?;
+            }
+            13 => {
+                skip_color_array_config_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ComponentPropDef", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_component_prop_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                skip_text_data_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                skip_easing_data_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_line_from_decoder(decoder)?;
+            }
+            8 => {
+                skip_circle_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_rotation3_d_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_circle_point_from_decoder(decoder)?;
+            }
+            11 => {
+                skip_gradient_from_decoder(decoder)?;
+            }
+            12 => {
+                skip_color_point_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ComponentPropValue", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_timeline_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint64()?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_playback_style_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TimelineData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_timeline_definitions_map_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_timeline_definitions_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TimelineDefinitionsMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_timeline_definitions_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_timeline_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TimelineDefinitionsMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_timeline_assignment_key_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TimelineAssignmentKey",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_timeline_binding_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_int64()?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TimelineBindingData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_timeline_assignments_map_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_timeline_assignments_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TimelineAssignmentsMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_timeline_assignments_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_timeline_assignment_key_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_timeline_binding_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TimelineAssignmentsMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_component_prop_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_component_prop_preferred_values_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.skip_string()?;
+                }
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_instance_swap_preferred_value_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ComponentPropPreferredValues",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_parameter_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_number_prop_config_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_parameter_config_control_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_slider_config_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_input_config_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_select_config_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_point_config_from_decoder(decoder)?;
+            }
+            8 => {
+                skip_line_config_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_point_radius_config_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_rotation3_d_config_from_decoder(decoder)?;
+            }
+            11 => {
+                skip_circle_point_config_from_decoder(decoder)?;
+            }
+            12 => {
+                skip_color_point_config_from_decoder(decoder)?;
+            }
+            13 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ParameterConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_parameter_config_control_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_input_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping InputConfig", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_slider_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SliderConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_point_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_point_mode_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_number_units_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping PointConfig", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_line_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Line", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_line_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_point_mode_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_number_units_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping LineConfig", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_circle_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Circle", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_point_radius_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_point_mode_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_number_units_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_number_units_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PointRadiusConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_rotation3_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Rotation3D", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_rotation3_d_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_point_mode_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping Rotation3DConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_circle_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping CirclePoint", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_circle_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_point_mode_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_number_units_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_number_units_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CirclePointConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_color_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ColorPoint", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_color_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_point_mode_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_number_units_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ColorPointConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_gradient_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_gradient_stop_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Gradient", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_gradient_stop_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping GradientStop", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_select_option_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SelectOption", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_select_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_select_option_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SelectConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_color_array_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ColorArrayConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_slot_prop_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                decoder.read_var_uint()?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SlotPropConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_number_prop_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_parameter_config_control_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NumberPropConfig", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_instance_swap_preferred_value_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_instance_swap_preferred_value_type_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping InstanceSwapPreferredValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_instance_swap_preferred_value_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_widget_event_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_widget_input_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_widget_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping WidgetMetadata", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_widget_property_menu_item_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_widget_property_menu_selector_option_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping WidgetPropertyMenuSelectorOption",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_widget_input_text_node_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_widget_property_menu_item_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                skip_widget_property_menu_item_type_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_widget_property_menu_selector_option_from_decoder(decoder)?;
+                }
+            }
+            6 => {
+                decoder.skip_string()?;
+            }
+            7 => {
+                decoder.read_bool()?;
+            }
+            8 => {
+                decoder.skip_string()?;
+            }
+            9 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping WidgetPropertyMenuItem",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_block_language_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_code_block_theme_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_spec_block_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_internal_enum_for_test_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_internal_data_for_test_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_int()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping InternalDataForTest", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_state_group_property_value_order_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.skip_string()?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping StateGroupPropertyValueOrder",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_backfill_error_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_partial_paste_annotation_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                decoder.read_var_uint64()?;
+            }
+            3 => {
+                skip_backfill_error_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PartialPasteAnnotation",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variant_prop_spec_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariantPropSpec", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_text_list_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_int()?;
+            }
+            2 => {
+                skip_bullet_type_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_var_int()?;
+            }
+            4 => {
+                decoder.read_var_int()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TextListData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_bullet_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_text_line_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_line_type_from_decoder(decoder)?;
+            }
+            10 => {
+                decoder.read_var_int()?;
+            }
+            2 => {
+                decoder.read_var_int()?;
+            }
+            9 => {
+                skip_source_directionality_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_directionality_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_directionality_intent_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_var_int()?;
+            }
+            6 => {
+                decoder.read_var_int()?;
+            }
+            7 => {
+                decoder.read_var_int()?;
+            }
+            8 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TextLineData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_derived_text_line_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_directionality_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping DerivedTextLineData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_line_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_source_directionality_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_directionality_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_directionality_intent_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_prototype_interaction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_prototype_event_from_decoder(decoder)?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_prototype_action_from_decoder(decoder)?;
+                }
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                decoder.read_var_int()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PrototypeInteraction",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_prototype_event_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_interaction_type_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                skip_key_trigger_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.read_var_float_value()?;
+            }
+            7 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PrototypeEvent", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_prototype_variable_target_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_id_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_node_field_alias_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PrototypeVariableTarget",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_conditional_actions_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_prototype_action_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ConditionalActions", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_prototype_action_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_transition_type_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                skip_easing_type_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            7 => {
+                skip_connection_type_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_navigation_type_from_decoder(decoder)?;
+            }
+            11 => {
+                decoder.read_bool()?;
+            }
+            12 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_float_value()?;
+                }
+            }
+            13 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            25 => {
+                decoder.read_bool()?;
+            }
+            26 => {
+                decoder.read_bool()?;
+            }
+            42 => {
+                decoder.read_bool()?;
+            }
+            8 => {
+                decoder.skip_string()?;
+            }
+            18 => {
+                decoder.read_bool()?;
+            }
+            34 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            35 => {
+                skip_cms_item_page_target_from_decoder(decoder)?;
+            }
+            14 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            15 => {
+                skip_variable_any_value_from_decoder(decoder)?;
+            }
+            19 => {
+                skip_prototype_variable_target_from_decoder(decoder)?;
+            }
+            20 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            16 => {
+                skip_media_action_from_decoder(decoder)?;
+            }
+            17 => {
+                decoder.read_bool()?;
+            }
+            21 => {
+                decoder.read_var_float_value()?;
+            }
+            22 => {
+                decoder.read_var_float_value()?;
+            }
+            36 => {
+                decoder.read_var_float_value()?;
+            }
+            23 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_data_from_decoder(decoder)?;
+                }
+            }
+            24 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_conditional_actions_from_decoder(decoder)?;
+                }
+            }
+            27 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            28 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            29 => {
+                decoder.skip_string()?;
+            }
+            38 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            30 => {
+                skip_animation_type_from_decoder(decoder)?;
+            }
+            31 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            32 => {
+                skip_animation_phase_from_decoder(decoder)?;
+            }
+            33 => {
+                skip_animation_state_from_decoder(decoder)?;
+            }
+            37 => {
+                decoder.read_bool()?;
+            }
+            39 => {
+                skip_animation_timeline_action_from_decoder(decoder)?;
+            }
+            41 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            40 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PrototypeAction", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_animation_phase_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_animation_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_animation_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                skip_matrix_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnimationState", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_prototype_starting_point_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PrototypeStartingPoint",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_trigger_device_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_key_trigger_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_int()?;
+                }
+            }
+            2 => {
+                skip_trigger_device_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping KeyTrigger", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_hyperlink_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_cms_item_page_target_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Hyperlink", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cms_item_page_target_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CMSItemPageTarget", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_mention_source_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_mention_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                skip_mention_source_from_decoder(decoder)?;
+            }
+            6 => {
+                decoder.read_var_uint64()?;
+            }
+            7 => {
+                decoder.read_var_uint64()?;
+            }
+            8 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Mention", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_embed_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            6 => {
+                decoder.read_var_float_value()?;
+            }
+            7 => {
+                decoder.skip_string()?;
+            }
+            8 => {
+                decoder.skip_string()?;
+            }
+            9 => {
+                decoder.skip_string()?;
+            }
+            10 => {
+                decoder.skip_string()?;
+            }
+            11 => {
+                decoder.skip_string()?;
+            }
+            12 => {
+                decoder.skip_string()?;
+            }
+            13 => {
+                decoder.skip_string()?;
+            }
+            14 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping EmbedData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_stamp_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping StampData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_link_preview_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.skip_string()?;
+            }
+            7 => {
+                decoder.read_var_float_value()?;
+            }
+            8 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping LinkPreviewData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_viewport_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_rect_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Viewport", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_mouse_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_mouse_cursor_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_rect_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Mouse", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_click_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    skip_vector_from_decoder(decoder)?;
+    Ok(())
+}
+fn skip_scroll_position_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    skip_guid_from_decoder(decoder)?;
+    skip_vector_from_decoder(decoder)?;
+    Ok(())
+}
+fn skip_triggered_overlay_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    skip_guid_from_decoder(decoder)?;
+    skip_guid_from_decoder(decoder)?;
+    skip_guid_from_decoder(decoder)?;
+    Ok(())
+}
+fn skip_triggered_overlay_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TriggeredOverlayData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_triggered_set_variable_action_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TriggeredSetVariableActionData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_triggered_set_variable_mode_action_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TriggeredSetVariableModeActionData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_video_state_change_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VideoStateChangeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_embedded_prototype_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping EmbeddedPrototypeData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_presented_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_triggered_overlay_data_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PresentedState", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transition_direction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_top_level_playback_change_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_presented_state_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_presented_state_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            6 => {
+                skip_transition_direction_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TopLevelPlaybackChange",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_instance_state_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_playback_change_phase_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping InstanceStateChange", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_text_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_rect_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping TextCursor", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_text_selection_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_rect_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TextSelection", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_playback_change_phase_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_playback_change_keyframe_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_playback_change_phase_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PlaybackChangeKeyframe",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_state_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_top_level_playback_change_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_playback_change_keyframe_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping StateMapping", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_scroll_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ScrollMapping", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_playback_update_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_top_level_playback_change_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_playback_change_keyframe_from_decoder(decoder)?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_scroll_mapping_from_decoder(decoder)?;
+                }
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            7 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_state_mapping_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PlaybackUpdate", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ChatMessage", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_voice_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VoiceMetadata", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_april_fun_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AprilFunCursor", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_april_fun_fig_pal_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AprilFunFigPal", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_heartbeat_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_sites_view_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_design_full_page_view_state_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_agent_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping AgentInfo", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_user_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            44 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                skip_viewport_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_mouse_from_decoder(decoder)?;
+            }
+            8 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            9 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            10 => {
+                decoder.skip_string()?;
+            }
+            11 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_click_from_decoder(decoder)?;
+                }
+            }
+            12 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_scroll_position_from_decoder(decoder)?;
+                }
+            }
+            13 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_triggered_overlay_from_decoder(decoder)?;
+                }
+            }
+            14 => {
+                decoder.skip_string()?;
+            }
+            15 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            16 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            38 => {
+                decoder.read_var_uint()?;
+            }
+            17 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_triggered_overlay_data_from_decoder(decoder)?;
+                }
+            }
+            18 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_playback_update_from_decoder(decoder)?;
+                }
+            }
+            19 => {
+                skip_chat_message_from_decoder(decoder)?;
+            }
+            20 => {
+                skip_voice_metadata_from_decoder(decoder)?;
+            }
+            21 => {
+                decoder.read_bool()?;
+            }
+            22 => {
+                decoder.read_bool()?;
+            }
+            23 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_instance_state_change_from_decoder(decoder)?;
+                }
+            }
+            24 => {
+                skip_text_cursor_from_decoder(decoder)?;
+            }
+            25 => {
+                skip_text_selection_from_decoder(decoder)?;
+            }
+            26 => {
+                decoder.read_var_uint()?;
+            }
+            27 => {
+                decoder.read_bool()?;
+            }
+            28 => {
+                skip_heartbeat_from_decoder(decoder)?;
+            }
+            29 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_triggered_set_variable_action_data_from_decoder(decoder)?;
+                }
+            }
+            30 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_video_state_change_data_from_decoder(decoder)?;
+                }
+            }
+            31 => {
+                decoder.skip_string()?;
+            }
+            32 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            33 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_triggered_set_variable_mode_action_data_from_decoder(decoder)?;
+                }
+            }
+            34 => {
+                skip_april_fun_cursor_from_decoder(decoder)?;
+            }
+            35 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_embedded_prototype_data_from_decoder(decoder)?;
+                }
+            }
+            36 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            43 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            37 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            39 => {
+                skip_april_fun_fig_pal_from_decoder(decoder)?;
+            }
+            40 => {
+                skip_collaborative_text_selection_from_decoder(decoder)?;
+            }
+            41 => {
+                skip_sites_view_state_from_decoder(decoder)?;
+            }
+            42 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_chat_exchange_from_decoder(decoder)?;
+                }
+            }
+            45 => {
+                skip_design_full_page_view_state_from_decoder(decoder)?;
+            }
+            46 => {
+                skip_agent_info_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping UserChange", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_interactive_slide_element_change_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping InteractiveSlideElementChange",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_status_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                skip_section_status_info_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeStatusChange", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_buzz_approval_asset_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping BuzzApprovalAssetEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_buzz_approval_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_buzz_approval_asset_entry_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping BuzzApprovalChange", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_scene_graph_query_behavior_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_scene_graph_query_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_scene_graph_query_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                skip_scene_graph_query_behavior_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SceneGraphQuery", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_changes_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeChangesMetadata", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cursor_reaction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CursorReaction", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_timer_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                decoder.read_var_uint()?;
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.read_var_uint()?;
+            }
+            7 => {
+                decoder.read_var_uint()?;
+            }
+            8 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping TimerInfo", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_music_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.read_var_uint()?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping MusicInfo", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_presenter_nomination_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PresenterNomination", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_presenter_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_presenter_nomination_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PresenterInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_client_broadcast_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_cursor_reaction_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_timer_info_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_presenter_info_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_presenter_info_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_music_info_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ClientBroadcast", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_paste_asset_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_message_type_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            42 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            37 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_user_change_from_decoder(decoder)?;
+                }
+            }
+            32 => {
+                skip_interactive_slide_element_change_from_decoder(decoder)?;
+            }
+            36 => {
+                skip_node_status_change_from_decoder(decoder)?;
+            }
+            44 => {
+                skip_buzz_approval_change_from_decoder(decoder)?;
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_blob_from_decoder(decoder)?;
+                }
+            }
+            30 => {
+                decoder.read_var_uint()?;
+            }
+            7 => {
+                decoder.skip_string()?;
+            }
+            8 => {
+                skip_access_from_decoder(decoder)?;
+            }
+            9 => {
+                decoder.skip_string()?;
+            }
+            10 => {
+                skip_style_set_type_from_decoder(decoder)?;
+            }
+            11 => {
+                skip_style_set_content_type_from_decoder(decoder)?;
+            }
+            12 => {
+                decoder.read_var_int()?;
+            }
+            13 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            14 => {
+                decoder.skip_string()?;
+            }
+            15 => {
+                decoder.skip_string()?;
+            }
+            16 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_scene_graph_query_from_decoder(decoder)?;
+                }
+            }
+            17 => {
+                skip_node_changes_metadata_from_decoder(decoder)?;
+            }
+            18 => {
+                decoder.read_var_uint()?;
+            }
+            19 => {
+                decoder.read_bool()?;
+            }
+            20 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            21 => {
+                decoder.read_bool()?;
+            }
+            22 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_message_from_decoder(decoder)?;
+                }
+            }
+            23 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_message_from_decoder(decoder)?;
+                }
+            }
+            24 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_client_broadcast_from_decoder(decoder)?;
+                }
+            }
+            25 => {
+                decoder.read_var_uint()?;
+            }
+            26 => {
+                decoder.skip_string()?;
+            }
+            27 => {
+                skip_editor_type_from_decoder(decoder)?;
+            }
+            28 => {
+                decoder.skip_string()?;
+            }
+            29 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            31 => {
+                decoder.read_bool()?;
+            }
+            33 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_clipboard_selection_region_from_decoder(decoder)?;
+                }
+            }
+            34 => {
+                skip_encoded_offsets_index_from_decoder(decoder)?;
+            }
+            35 => {
+                decoder.read_bool()?;
+            }
+            38 => {
+                decoder.read_var_uint64()?;
+            }
+            39 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_annotation_category_from_decoder(decoder)?;
+                }
+            }
+            40 => {
+                skip_client_rendered_metadata_from_decoder(decoder)?;
+            }
+            41 => {
+                skip_paste_asset_type_from_decoder(decoder)?;
+            }
+            43 => {
+                skip_object_animation_list_from_decoder(decoder)?;
+            }
+            45 => {
+                skip_scene_graph_query_mode_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Message", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_encoded_offsets_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_and_encoded_offset_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping EncodedOffsetsIndex", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_guid_and_encoded_offset_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    skip_guid_from_decoder(decoder)?;
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_diff_chunk_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            2 => {
+                skip_node_phase_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            7 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            8 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            9 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            10 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            11 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping DiffChunk", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_diff_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_diff_payload_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_blob_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_diff_chunk_from_decoder(decoder)?;
+                }
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            7 => {
+                skip_diff_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping DiffPayload", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_rich_media_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_rich_media_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_rich_media_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping RichMediaData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_data_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_variable_resolved_data_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_variable_any_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                skip_variable_id_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_expression_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_variable_map_from_decoder(decoder)?;
+            }
+            8 => {
+                skip_symbol_id_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_variable_font_style_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_text_data_from_decoder(decoder)?;
+            }
+            11 => {
+                skip_node_field_alias_from_decoder(decoder)?;
+            }
+            12 => {
+                skip_cms_alias_from_decoder(decoder)?;
+            }
+            13 => {
+                skip_prop_ref_value_from_decoder(decoder)?;
+            }
+            14 => {
+                skip_image_parameter_value_from_decoder(decoder)?;
+            }
+            15 => {
+                skip_managed_string_alias_from_decoder(decoder)?;
+            }
+            16 => {
+                skip_hyperlink_from_decoder(decoder)?;
+            }
+            17 => {
+                skip_js_runtime_alias_from_decoder(decoder)?;
+            }
+            18 => {
+                skip_slot_content_id_from_decoder(decoder)?;
+            }
+            19 => {
+                skip_keyframe_track_id_from_decoder(decoder)?;
+            }
+            20 => {
+                skip_keyframe_track_parameter_value_from_decoder(decoder)?;
+            }
+            21 => {
+                skip_easing_data_from_decoder(decoder)?;
+            }
+            22 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            23 => {
+                skip_color_array_from_decoder(decoder)?;
+            }
+            24 => {
+                skip_line_from_decoder(decoder)?;
+            }
+            25 => {
+                skip_circle_from_decoder(decoder)?;
+            }
+            26 => {
+                skip_rotation3_d_from_decoder(decoder)?;
+            }
+            27 => {
+                skip_circle_point_from_decoder(decoder)?;
+            }
+            28 => {
+                skip_gradient_from_decoder(decoder)?;
+            }
+            29 => {
+                skip_color_point_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableAnyValue", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_expression_function_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_expression_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_expression_function_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_data_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping Expression", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_map_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableMapValue", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_map_value_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping VariableMap", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_color_array_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_data_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ColorArray", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableFontStyle", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_image_parameter_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_image_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_image_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_image_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.read_var_uint()?;
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            7 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ImageParameterValue", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_thumbnail_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ThumbnailInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_ai_canvas_prompt_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AiCanvasPrompt", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_field_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_node_field_alias_type_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeFieldAlias", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_field_alias_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cms_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_variable_data_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping CMSAlias", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_js_runtime_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping JsRuntimeAlias", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_prop_ref_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PropRefValue", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_placeholder_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringPlaceholderMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_slot_content_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SlotContentId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_managed_string_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_managed_string_id_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_managed_string_placeholder_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManagedStringAlias", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_keyframe_track_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping KeyframeTrackId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_animation_preset_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnimationPresetId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_tool_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ToolId", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_custom_effect_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CustomEffectId", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_trss_transform2_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TRSSTransform2D", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_any_value_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_data_type_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_variable_resolved_data_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_set_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableSetMode", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_data_values_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_data_values_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableDataValues", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_data_values_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableDataValuesEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_scope_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_keyframe_any_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_text_data_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping KeyframeAnyValue", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_keyframe_value_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_keyframe_value_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_keyframe_any_value_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_keyframe_value_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping KeyframeValueData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_keyframe_track_parameter_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_manual_keyframe_track_parameter_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_keyframe_track_id_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ManualKeyframeTrackParameter",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_animation_preset_keyframe_track_parameter_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_animation_preset_id_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_keyframe_track_id_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnimationPresetKeyframeTrackParameter",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_keyframe_track_any_parameter_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_manual_keyframe_track_parameter_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_animation_preset_keyframe_track_parameter_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping KeyframeTrackAnyParameter",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_keyframe_track_parameter_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_keyframe_track_any_parameter_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_keyframe_track_parameter_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping KeyframeTrackParameter",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_keyframe_track_parameter_value_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_keyframe_track_parameter_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping KeyframeTrackParameterValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_animation_presets_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_animation_preset_data_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnimationPresets", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_animation_preset_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_animation_preset_id_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AnimationPresetData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_style_animation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_animation_preset_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping StyleAnimation", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_style_id_for_animation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_int64()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping StyleIdForAnimation", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_tools_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_tool_data_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(format!("unknown field {} while skipping Tools", field)),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_tool_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_tool_id_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_code_component_id_from_decoder(decoder)?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_assignment_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ToolData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_custom_effects_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_custom_effect_data_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CustomEffects", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_custom_effect_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_custom_effect_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CustomEffectData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_spring_params_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SpringParams", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transition_easing_any_value_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_spring_params_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_bezier_handles_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransitionEasingAnyValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_easing_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_easing_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_transition_easing_any_value_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping EasingData", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transition_override_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_easing_data_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            8 => {
+                decoder.read_var_uint64()?;
+            }
+            9 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            10 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransitionOverride", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transition_override_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_transition_override_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                skip_transition_override_prop_map_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransitionOverrideData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transition_override_prop_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_transition_override_binding_top_level_field_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_transition_override_binding_location_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_transition_override_binding_top_level_field_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_int()?;
+            }
+            3 => {
+                decoder.read_var_int()?;
+            }
+            4 => {
+                decoder.read_var_int()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransitionOverrideBindingLocation",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_keyframe_binding_effect_parametrized_field_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_node_contents_keyframe_binding_location_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_transition_override_binding_top_level_field_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_field_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_var_int()?;
+            }
+            4 => {
+                skip_keyframe_binding_effect_parametrized_field_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeContentsKeyframeBindingLocation",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transition_override_prop_map_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_transition_override_prop_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransitionOverridePropMap",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_transition_override_prop_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_transition_override_prop_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_transition_override_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                skip_transition_override_binding_location_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_node_contents_keyframe_binding_location_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping TransitionOverridePropMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_syntax_platform_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_optional_vector_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping OptionalVector", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_html_tag_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_aria_role_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_migration_status_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping MigrationStatus", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_field_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_field_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeFieldMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_field_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeFieldMapEntry", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_color_profile_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_document_color_profile_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_child_reading_direction_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_aria_attribute_any_value_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_int()?;
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.skip_string()?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ARIAAttributeAnyValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_aria_attribute_data_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_aria_attribute_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_aria_attribute_data_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_aria_attribute_any_value_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ARIAAttributeData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_aria_attributes_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_aria_attributes_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ARIAAttributesMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_aria_attributes_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_aria_attribute_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ARIAAttributesMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_handoff_status_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_section_status_info_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping HandoffStatusMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_handoff_status_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_handoff_status_map_entry_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping HandoffStatusMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_edit_scope_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_edit_scope_stack_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_edit_scope_snapshot_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping EditScopeInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_edit_scope_snapshot_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_edit_scope_stack_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping EditScopeSnapshot", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_edit_scope_stack_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_edit_scope_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping EditScopeStack", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_edit_scope_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_edit_scope_type_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                skip_editor_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping EditScope", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_edit_scope_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_section_preset_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_emoji_image_set_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_selection_region_focus_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_section_preset_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint64()?;
+            }
+            2 => {
+                decoder.read_var_uint64()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                skip_section_preset_state_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SectionPresetInfo", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_clipboard_selection_region_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                skip_selection_region_focus_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ClipboardSelectionRegion",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_first_draft_kit_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_first_draft_kit_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_first_draft_kit_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping FirstDraftKit", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_first_draft_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_first_draft_kit_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping FirstDraftData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_first_draft_kit_element_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_first_draft_kit_element_data_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_first_draft_kit_element_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping FirstDraftKitElementData",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_platform_shape_property_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_platform_shape_behavior_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_platform_shape_property_map_entry_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_platform_shape_property_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PlatformShapePropertyMapEntry",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_platform_shape_definition_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_platform_shape_property_map_entry_from_decoder(decoder)?;
+                }
+            }
+            2 => {
+                skip_platform_shape_behavior_type_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PlatformShapeDefinition",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_behaviors_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_link_behavior_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_appear_behavior_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_hover_behavior_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_press_behavior_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_focus_behavior_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_scroll_parallax_behavior_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_scroll_transform_behavior_from_decoder(decoder)?;
+            }
+            8 => {
+                skip_cursor_behavior_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_marquee_behavior_from_decoder(decoder)?;
+            }
+            10 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_code_behavior_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeBehaviors", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_behavior_transition_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_easing_type_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_float_value()?;
+                }
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping BehaviorTransition", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_appear_behavior_trigger_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_relative_direction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_appear_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_appear_behavior_trigger_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_relative_direction_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_behavior_transition_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_behavior_transition_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            8 => {
+                decoder.read_bool()?;
+            }
+            9 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            10 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AppearBehavior", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_hover_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_behavior_transition_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping HoverBehavior", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_press_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_behavior_transition_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping PressBehavior", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_focus_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_behavior_transition_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping FocusBehavior", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_scroll_parallax_behavior_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_scroll_direction_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            5 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ScrollParallaxBehavior",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_scroll_transform_behavior_trigger_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_scroll_transform_behavior_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_scroll_transform_behavior_trigger_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            3 => {
+                skip_behavior_transition_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_node_change_from_decoder(decoder)?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            7 => {
+                decoder.read_bool()?;
+            }
+            8 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            9 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ScrollTransformBehavior",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cursor_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CursorBehavior", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_marquee_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_relative_direction_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            5 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            7 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping MarqueeBehavior", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_code_component_id_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_assignment_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CodeBehavior", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_client_rendered_metadata_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ClientRenderedMetadata",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_link_behavior_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_link_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_link_behavior_type_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping LinkBehavior", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_id_or_variable_override_id_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_variable_id_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_variable_override_id_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping VariableIdOrVariableOverrideId",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_index_font_variation_axis_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.skip_string()?;
+    decoder.skip_string()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_index_font_variation_axis_value_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.skip_string()?;
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+fn skip_index_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                decoder.read_var_float_value()?;
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_index_font_variation_axis_value_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping IndexFontStyle", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_index_font_file_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_index_font_style_from_decoder(decoder)?;
+                }
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_index_font_variation_axis_from_decoder(decoder)?;
+                }
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping IndexFontFile", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_index_family_rename_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.skip_string()?;
+    decoder.skip_string()?;
+    Ok(())
+}
+fn skip_index_style_rename_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.skip_string()?;
+    decoder.skip_string()?;
+    Ok(())
+}
+fn skip_index_family_styles_rename_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.skip_string()?;
+    {
+        let len = decoder.read_var_uint()? as usize;
+        for _ in 0..len {
+            skip_index_style_rename_from_decoder(decoder)?;
+        }
+    }
+    Ok(())
+}
+fn skip_index_renames_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    {
+        let len = decoder.read_var_uint()? as usize;
+        for _ in 0..len {
+            skip_index_family_rename_from_decoder(decoder)?;
+        }
+    }
+    {
+        let len = decoder.read_var_uint()? as usize;
+        for _ in 0..len {
+            skip_index_family_styles_rename_from_decoder(decoder)?;
+        }
+    }
+    Ok(())
+}
+fn skip_index_emoji_sequence_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    {
+        let len = decoder.read_var_uint()? as usize;
+        for _ in 0..len {
+            decoder.read_var_uint()?;
+        }
+    }
+    Ok(())
+}
+fn skip_index_emojis_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    {
+        let len = decoder.read_var_uint()? as usize;
+        for _ in 0..len {
+            decoder.read_var_uint()?;
+        }
+    }
+    {
+        let len = decoder.read_var_uint()? as usize;
+        for _ in 0..len {
+            skip_index_emoji_sequence_from_decoder(decoder)?;
+        }
+    }
+    Ok(())
+}
+fn skip_font_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_index_font_file_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                skip_index_renames_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_index_emojis_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping FontIndex", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_slide_theme_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_theme_id_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping SlideThemeData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_slide_number_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_node_chat_message_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_node_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_node_chat_message_type_from_decoder(decoder)?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                decoder.read_var_uint()?;
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_chat_tool_call_from_decoder(decoder)?;
+                }
+            }
+            7 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_chat_tool_result_from_decoder(decoder)?;
+                }
+            }
+            8 => {
+                decoder.read_var_uint64()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeChatMessage", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_chat_tool_call_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeChatToolCall", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_chat_tool_result_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeChatToolResult", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_chat_exchange_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_chat_message_from_decoder(decoder)?;
+                }
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_file_update_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeChatExchange", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_node_chat_compression_state_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping NodeChatCompressionState",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_file_update_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_bool()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping FileUpdate", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_ai_chat_content_part_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_ai_chat_content_part_type_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_ai_chat_content_part_any_value_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AIChatContentPart", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_ai_chat_content_part_type_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_ai_chat_content_part_any_value_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.skip_string()?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AIChatContentPartAnyValue",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_ai_chat_message_role_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_ai_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_ai_chat_message_role_from_decoder(decoder)?;
+            }
+            3 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_ai_chat_content_part_from_decoder(decoder)?;
+                }
+            }
+            4 => {
+                decoder.skip_string()?;
+            }
+            5 => {
+                decoder.read_var_uint64()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AIChatMessage", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_ai_chat_thread_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_ai_chat_message_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping AIChatThread", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_cooper_template_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_cooper_template_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_cooper_template_type_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping CooperTemplateData", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_image_import_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_image_import_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping ImageImportMap", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_image_import_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.skip_string()?;
+            }
+            2 => {
+                skip_image_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while skipping ImageImport", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_interpolation_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_bezier_handles_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_var_float_value()?;
+            }
+            2 => {
+                decoder.read_var_float_value()?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping BezierHandles", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_keyframe_operation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_timeline_position_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_playback_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
+    let mut decoder = Decoder::new(bytes.as_slice());
+    let mut node_count: usize = 0;
+    let mut parented_count: usize = 0;
+    let mut type_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    decode_scene_message_from_decoder(
+        &mut decoder,
+        &mut node_count,
+        &mut parented_count,
+        &mut type_counts,
+    )?;
+    decoder.finish()?;
+    let mut type_counts = type_counts.into_iter().collect::<Vec<_>>();
+    type_counts
+        .sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+    Ok(
+        SceneSummary {
+            node_count,
+            parented_count,
+            root_count: node_count.saturating_sub(parented_count),
+            type_counts,
+        }
+            .encode(env),
+    )
+}
+fn decode_scene_message_from_decoder(
+    decoder: &mut Decoder<'_>,
+    node_count: &mut usize,
+    parented_count: &mut usize,
+    type_counts: &mut std::collections::HashMap<String, usize>,
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_message_type_from_decoder(decoder)?;
+            }
+            2 => {
+                decoder.read_var_uint()?;
+            }
+            42 => {
+                decoder.skip_string()?;
+            }
+            3 => {
+                decoder.read_var_uint()?;
+            }
+            37 => {
+                decoder.read_bool()?;
+            }
+            5 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_user_change_from_decoder(decoder)?;
+                }
+            }
+            32 => {
+                skip_interactive_slide_element_change_from_decoder(decoder)?;
+            }
+            36 => {
+                skip_node_status_change_from_decoder(decoder)?;
+            }
+            44 => {
+                skip_buzz_approval_change_from_decoder(decoder)?;
+            }
+            6 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_blob_from_decoder(decoder)?;
+                }
+            }
+            30 => {
+                decoder.read_var_uint()?;
+            }
+            7 => {
+                decoder.skip_string()?;
+            }
+            8 => {
+                skip_access_from_decoder(decoder)?;
+            }
+            9 => {
+                decoder.skip_string()?;
+            }
+            10 => {
+                skip_style_set_type_from_decoder(decoder)?;
+            }
+            11 => {
+                skip_style_set_content_type_from_decoder(decoder)?;
+            }
+            12 => {
+                decoder.read_var_int()?;
+            }
+            13 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            14 => {
+                decoder.skip_string()?;
+            }
+            15 => {
+                decoder.skip_string()?;
+            }
+            16 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_scene_graph_query_from_decoder(decoder)?;
+                }
+            }
+            17 => {
+                skip_node_changes_metadata_from_decoder(decoder)?;
+            }
+            18 => {
+                decoder.read_var_uint()?;
+            }
+            19 => {
+                decoder.read_bool()?;
+            }
+            20 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            21 => {
+                decoder.read_bool()?;
+            }
+            22 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_message_from_decoder(decoder)?;
+                }
+            }
+            23 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_message_from_decoder(decoder)?;
+                }
+            }
+            24 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_client_broadcast_from_decoder(decoder)?;
+                }
+            }
+            25 => {
+                decoder.read_var_uint()?;
+            }
+            26 => {
+                decoder.skip_string()?;
+            }
+            27 => {
+                skip_editor_type_from_decoder(decoder)?;
+            }
+            28 => {
+                decoder.skip_string()?;
+            }
+            29 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            31 => {
+                decoder.read_bool()?;
+            }
+            33 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_clipboard_selection_region_from_decoder(decoder)?;
+                }
+            }
+            34 => {
+                skip_encoded_offsets_index_from_decoder(decoder)?;
+            }
+            35 => {
+                decoder.read_bool()?;
+            }
+            38 => {
+                decoder.read_var_uint64()?;
+            }
+            39 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_annotation_category_from_decoder(decoder)?;
+                }
+            }
+            40 => {
+                skip_client_rendered_metadata_from_decoder(decoder)?;
+            }
+            41 => {
+                skip_paste_asset_type_from_decoder(decoder)?;
+            }
+            43 => {
+                skip_object_animation_list_from_decoder(decoder)?;
+            }
+            45 => {
+                skip_scene_graph_query_mode_from_decoder(decoder)?;
+            }
+            4 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decode_scene_node_change_from_decoder(
+                        decoder,
+                        node_count,
+                        parented_count,
+                        type_counts,
+                    )?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while decoding scene summary", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn decode_scene_node_change_from_decoder(
+    decoder: &mut Decoder<'_>,
+    node_count: &mut usize,
+    parented_count: &mut usize,
+    type_counts: &mut std::collections::HashMap<String, usize>,
+) -> NifResult<()> {
+    *node_count += 1;
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => skip_guid_from_decoder(decoder)?,
+            3 => {
+                skip_parent_index_from_decoder(decoder)?;
+                *parented_count += 1;
+            }
+            4 => {
+                let value = decoder.read_var_uint()?;
+                let name = scene_node_type_name(value).to_string();
+                *type_counts.entry(name).or_insert(0) += 1;
+            }
+            5 => decoder.skip_string()?,
+            53 => {
+                decoder.read_var_uint()?;
+            }
+            2 => {
+                skip_node_phase_from_decoder(decoder)?;
+            }
+            54 => {
+                decoder.read_var_uint()?;
+            }
+            55 => {
+                decoder.read_var_uint()?;
+            }
+            56 => {
+                decoder.read_var_uint()?;
+            }
+            57 => {
+                decoder.read_var_uint()?;
+            }
+            174 => {
+                decoder.read_bool()?;
+            }
+            318 => {
+                decoder.skip_string()?;
+            }
+            256 => {
+                skip_library_move_info_from_decoder(decoder)?;
+            }
+            281 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_library_move_history_item_from_decoder(decoder)?;
+                }
+            }
+            319 => {
+                decoder.skip_string()?;
+            }
+            383 => {
+                skip_asset_id_map_from_decoder(decoder)?;
+            }
+            49 => {
+                decoder.read_var_uint()?;
+            }
+            101 => {
+                decoder.read_var_uint()?;
+            }
+            157 => {
+                decoder.read_bool()?;
+            }
+            161 => {
+                decoder.read_bool()?;
+            }
+            376 => {
+                decoder.read_bool()?;
+            }
+            163 => {
+                skip_style_type_from_decoder(decoder)?;
+            }
+            191 => {
+                decoder.skip_string()?;
+            }
+            171 => {
+                decoder.skip_string()?;
+            }
+            399 => {
+                decoder.skip_string()?;
+            }
+            320 => {
+                decoder.skip_string()?;
+            }
+            345 => {
+                skip_shared_style_master_data_from_decoder(decoder)?;
+            }
+            348 => {
+                skip_shared_style_master_data_from_decoder(decoder)?;
+            }
+            176 => {
+                decoder.read_bool()?;
+            }
+            177 => {
+                decoder.read_bool()?;
+            }
+            172 => {
+                skip_shared_style_master_data_from_decoder(decoder)?;
+            }
+            173 => {
+                skip_shared_style_reference_from_decoder(decoder)?;
+            }
+            158 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            162 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            167 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            168 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            169 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            170 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            185 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            332 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            333 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            334 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            335 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            336 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            580 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_style_animation_from_decoder(decoder)?;
+                }
+            }
+            193 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            194 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            225 => {
+                decoder.read_bool()?;
+            }
+            238 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_state_group_property_value_order_from_decoder(decoder)?;
+                }
+            }
+            581 => {
+                skip_partial_paste_annotation_from_decoder(decoder)?;
+            }
+            122 => {
+                skip_shared_symbol_reference_from_decoder(decoder)?;
+            }
+            123 => {
+                decoder.read_bool()?;
+            }
+            124 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            126 => {
+                decoder.skip_string()?;
+            }
+            152 => {
+                skip_shared_component_master_data_from_decoder(decoder)?;
+            }
+            144 => {
+                decoder.skip_string()?;
+            }
+            164 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            228 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_path_mapping_from_decoder(decoder)?;
+                }
+            }
+            214 => {
+                decoder.skip_string()?;
+            }
+            395 => {
+                decoder.skip_string()?;
+            }
+            215 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            216 => {
+                decoder.skip_string()?;
+            }
+            217 => {
+                decoder.read_bool()?;
+            }
+            218 => {
+                decoder.skip_string()?;
+            }
+            252 => {
+                decoder.skip_string()?;
+            }
+            266 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_def_from_decoder(decoder)?;
+                }
+            }
+            267 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_ref_from_decoder(decoder)?;
+                }
+            }
+            483 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variant_prop_spec_from_decoder(decoder)?;
+                }
+            }
+            113 => {
+                skip_symbol_data_from_decoder(decoder)?;
+            }
+            114 => {
+                decoder.read_var_uint()?;
+            }
+            125 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            394 => {
+                decoder.read_bool()?;
+            }
+            143 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            268 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_component_prop_assignment_from_decoder(decoder)?;
+                }
+            }
+            305 => {
+                decoder.read_bool()?;
+            }
+            248 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_instance_override_stash_from_decoder(decoder)?;
+                }
+            }
+            250 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_instance_override_stash_v2_from_decoder(decoder)?;
+                }
+            }
+            111 => {
+                skip_guid_path_from_decoder(decoder)?;
+            }
+            112 => {
+                decoder.read_var_uint()?;
+            }
+            321 => {
+                decoder.read_var_int()?;
+            }
+            382 => {
+                skip_module_type_from_decoder(decoder)?;
+            }
+            463 => {
+                decoder.read_bool()?;
+            }
+            495 => {
+                decoder.read_bool()?;
+            }
+            21 => {
+                decoder.read_var_float_value()?;
+            }
+            73 => {
+                decoder.read_var_uint()?;
+            }
+            22 => {
+                decoder.read_var_float_value()?;
+            }
+            74 => {
+                decoder.read_var_uint()?;
+            }
+            23 => {
+                decoder.read_var_float_value()?;
+            }
+            75 => {
+                decoder.read_var_uint()?;
+            }
+            32 => {
+                skip_text_align_horizontal_from_decoder(decoder)?;
+            }
+            84 => {
+                decoder.read_var_uint()?;
+            }
+            33 => {
+                skip_text_align_vertical_from_decoder(decoder)?;
+            }
+            85 => {
+                decoder.read_var_uint()?;
+            }
+            34 => {
+                skip_text_case_from_decoder(decoder)?;
+            }
+            86 => {
+                decoder.read_var_uint()?;
+            }
+            35 => {
+                skip_text_decoration_from_decoder(decoder)?;
+            }
+            87 => {
+                decoder.read_var_uint()?;
+            }
+            40 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            92 => {
+                decoder.read_var_uint()?;
+            }
+            41 => {
+                skip_font_name_from_decoder(decoder)?;
+            }
+            93 => {
+                decoder.read_var_uint()?;
+            }
+            42 => {
+                skip_text_data_from_decoder(decoder)?;
+            }
+            94 => {
+                decoder.read_var_uint()?;
+            }
+            359 => {
+                skip_derived_text_data_from_decoder(decoder)?;
+            }
+            127 => {
+                decoder.read_bool()?;
+            }
+            128 => {
+                decoder.read_bool()?;
+            }
+            129 => {
+                decoder.read_bool()?;
+            }
+            130 => {
+                decoder.read_bool()?;
+            }
+            131 => {
+                decoder.read_bool()?;
+            }
+            132 => {
+                decoder.read_bool()?;
+            }
+            133 => {
+                skip_font_variant_numeric_figure_from_decoder(decoder)?;
+            }
+            134 => {
+                skip_font_variant_numeric_spacing_from_decoder(decoder)?;
+            }
+            135 => {
+                skip_font_variant_numeric_fraction_from_decoder(decoder)?;
+            }
+            136 => {
+                skip_font_variant_caps_from_decoder(decoder)?;
+            }
+            137 => {
+                skip_font_variant_position_from_decoder(decoder)?;
+            }
+            165 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            202 => {
+                decoder.skip_string()?;
+            }
+            322 => {
+                skip_leading_trim_from_decoder(decoder)?;
+            }
+            337 => {
+                decoder.read_bool()?;
+            }
+            339 => {
+                decoder.read_bool()?;
+            }
+            550 => {
+                decoder.read_bool()?;
+            }
+            351 => {
+                decoder.read_var_int()?;
+            }
+            417 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_responsive_text_style_variant_from_decoder(decoder)?;
+                }
+            }
+            352 => {
+                skip_section_status_from_decoder(decoder)?;
+            }
+            355 => {
+                skip_section_status_info_from_decoder(decoder)?;
+            }
+            203 => {
+                decoder.read_var_uint()?;
+            }
+            396 => {
+                decoder.read_var_uint()?;
+            }
+            205 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_open_type_feature_from_decoder(decoder)?;
+                }
+            }
+            206 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_open_type_feature_from_decoder(decoder)?;
+                }
+            }
+            223 => {
+                skip_hyperlink_from_decoder(decoder)?;
+            }
+            340 => {
+                skip_mention_from_decoder(decoder)?;
+            }
+            260 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_font_variation_from_decoder(decoder)?;
+                }
+            }
+            279 => {
+                decoder.read_var_uint()?;
+            }
+            280 => {
+                skip_text_truncation_from_decoder(decoder)?;
+            }
+            292 => {
+                decoder.read_bool()?;
+            }
+            391 => {
+                skip_emoji_image_set_from_decoder(decoder)?;
+            }
+            392 => {
+                decoder.skip_string()?;
+            }
+            6 => {
+                decoder.read_bool()?;
+            }
+            58 => {
+                decoder.read_var_uint()?;
+            }
+            7 => {
+                decoder.read_bool()?;
+            }
+            59 => {
+                decoder.read_var_uint()?;
+            }
+            434 => {
+                skip_lock_mode_from_decoder(decoder)?;
+            }
+            8 => {
+                decoder.read_var_float_value()?;
+            }
+            60 => {
+                decoder.read_var_uint()?;
+            }
+            9 => {
+                skip_blend_mode_from_decoder(decoder)?;
+            }
+            61 => {
+                decoder.read_var_uint()?;
+            }
+            11 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            63 => {
+                decoder.read_var_uint()?;
+            }
+            12 => {
+                skip_matrix_from_decoder(decoder)?;
+            }
+            64 => {
+                decoder.read_var_uint()?;
+            }
+            13 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_float_value()?;
+                }
+            }
+            65 => {
+                decoder.read_var_uint()?;
+            }
+            16 => {
+                decoder.read_bool()?;
+            }
+            68 => {
+                decoder.read_var_uint()?;
+            }
+            424 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            18 => {
+                decoder.read_bool()?;
+            }
+            70 => {
+                decoder.read_var_uint()?;
+            }
+            317 => {
+                skip_mask_type_from_decoder(decoder)?;
+            }
+            19 => {
+                decoder.read_var_float_value()?;
+            }
+            71 => {
+                decoder.read_var_uint()?;
+            }
+            20 => {
+                decoder.read_var_float_value()?;
+            }
+            72 => {
+                decoder.read_var_uint()?;
+            }
+            26 => {
+                decoder.read_var_float_value()?;
+            }
+            78 => {
+                decoder.read_var_uint()?;
+            }
+            29 => {
+                skip_stroke_align_from_decoder(decoder)?;
+            }
+            81 => {
+                decoder.read_var_uint()?;
+            }
+            30 => {
+                skip_stroke_cap_from_decoder(decoder)?;
+            }
+            82 => {
+                decoder.read_var_uint()?;
+            }
+            497 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            31 => {
+                skip_stroke_join_from_decoder(decoder)?;
+            }
+            83 => {
+                decoder.read_var_uint()?;
+            }
+            38 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            90 => {
+                decoder.read_var_uint()?;
+            }
+            39 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            91 => {
+                decoder.read_var_uint()?;
+            }
+            43 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_effect_from_decoder(decoder)?;
+                }
+            }
+            95 => {
+                decoder.read_var_uint()?;
+            }
+            50 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            102 => {
+                decoder.read_var_uint()?;
+            }
+            51 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_path_from_decoder(decoder)?;
+                }
+            }
+            103 => {
+                decoder.read_var_uint()?;
+            }
+            52 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_path_from_decoder(decoder)?;
+                }
+            }
+            104 => {
+                decoder.read_var_uint()?;
+            }
+            564 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_path_from_decoder(decoder)?;
+                }
+            }
+            411 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            412 => {
+                decoder.read_bool()?;
+            }
+            413 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            415 => {
+                skip_number_from_decoder(decoder)?;
+            }
+            416 => {
+                skip_text_decoration_style_from_decoder(decoder)?;
+            }
+            455 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_transform_modifier_from_decoder(decoder)?;
+                }
+            }
+            570 => {
+                skip_transform3d_from_decoder(decoder)?;
+            }
+            571 => {
+                skip_stroke_data_from_decoder(decoder)?;
+            }
+            572 => {
+                skip_scene3d_from_decoder(decoder)?;
+            }
+            587 => {
+                skip_transform_origin_from_decoder(decoder)?;
+            }
+            145 => {
+                decoder.read_var_float_value()?;
+            }
+            146 => {
+                decoder.read_var_float_value()?;
+            }
+            147 => {
+                decoder.read_var_float_value()?;
+            }
+            148 => {
+                decoder.read_var_float_value()?;
+            }
+            149 => {
+                decoder.read_bool()?;
+            }
+            150 => {
+                decoder.read_bool()?;
+            }
+            151 => {
+                decoder.read_bool()?;
+            }
+            423 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            258 => {
+                decoder.read_bool()?;
+            }
+            287 => {
+                decoder.read_bool()?;
+            }
+            288 => {
+                decoder.read_bool()?;
+            }
+            289 => {
+                decoder.read_bool()?;
+            }
+            290 => {
+                decoder.read_bool()?;
+            }
+            294 => {
+                decoder.read_bool()?;
+            }
+            295 => {
+                decoder.read_var_float_value()?;
+            }
+            296 => {
+                decoder.read_var_float_value()?;
+            }
+            297 => {
+                decoder.read_var_float_value()?;
+            }
+            298 => {
+                decoder.read_var_float_value()?;
+            }
+            299 => {
+                decoder.read_bool()?;
+            }
+            28 => {
+                skip_constraint_type_from_decoder(decoder)?;
+            }
+            80 => {
+                decoder.read_var_uint()?;
+            }
+            105 => {
+                skip_stack_mode_from_decoder(decoder)?;
+            }
+            106 => {
+                decoder.read_var_uint()?;
+            }
+            107 => {
+                decoder.read_var_float_value()?;
+            }
+            108 => {
+                decoder.read_var_uint()?;
+            }
+            109 => {
+                decoder.read_var_float_value()?;
+            }
+            110 => {
+                decoder.read_var_uint()?;
+            }
+            120 => {
+                skip_stack_counter_align_from_decoder(decoder)?;
+            }
+            121 => {
+                skip_stack_justify_from_decoder(decoder)?;
+            }
+            208 => {
+                skip_stack_align_from_decoder(decoder)?;
+            }
+            209 => {
+                decoder.read_var_float_value()?;
+            }
+            210 => {
+                decoder.read_var_float_value()?;
+            }
+            211 => {
+                skip_stack_size_from_decoder(decoder)?;
+            }
+            212 => {
+                skip_stack_size_from_decoder(decoder)?;
+            }
+            229 => {
+                skip_stack_size_from_decoder(decoder)?;
+            }
+            230 => {
+                skip_stack_justify_from_decoder(decoder)?;
+            }
+            231 => {
+                skip_stack_align_from_decoder(decoder)?;
+            }
+            232 => {
+                decoder.read_var_float_value()?;
+            }
+            233 => {
+                decoder.read_var_float_value()?;
+            }
+            234 => {
+                decoder.read_var_float_value()?;
+            }
+            236 => {
+                skip_stack_counter_align_from_decoder(decoder)?;
+            }
+            269 => {
+                skip_stack_positioning_from_decoder(decoder)?;
+            }
+            271 => {
+                decoder.read_bool()?;
+            }
+            323 => {
+                skip_stack_wrap_from_decoder(decoder)?;
+            }
+            324 => {
+                decoder.read_var_float_value()?;
+            }
+            325 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            326 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            343 => {
+                skip_stack_counter_align_content_from_decoder(decoder)?;
+            }
+            406 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_int()?;
+                }
+            }
+            574 => {
+                decoder.read_var_uint()?;
+            }
+            435 => {
+                skip_guid_position_map_from_decoder(decoder)?;
+            }
+            436 => {
+                skip_guid_position_map_from_decoder(decoder)?;
+            }
+            437 => {
+                decoder.read_var_float_value()?;
+            }
+            438 => {
+                decoder.read_var_float_value()?;
+            }
+            439 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            440 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            441 => {
+                decoder.read_var_uint()?;
+            }
+            442 => {
+                decoder.read_var_uint()?;
+            }
+            474 => {
+                skip_guid_grid_track_size_map_from_decoder(decoder)?;
+            }
+            475 => {
+                skip_guid_grid_track_size_map_from_decoder(decoder)?;
+            }
+            476 => {
+                skip_grid_child_align_from_decoder(decoder)?;
+            }
+            477 => {
+                skip_grid_child_align_from_decoder(decoder)?;
+            }
+            555 => {
+                skip_grid_auto_tracks_from_decoder(decoder)?;
+            }
+            556 => {
+                decoder.read_bool()?;
+            }
+            344 => {
+                decoder.read_bool()?;
+            }
+            139 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            140 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            141 => {
+                skip_color_from_decoder(decoder)?;
+            }
+            153 => {
+                skip_transition_info_from_decoder(decoder)?;
+            }
+            154 => {
+                skip_transition_type_from_decoder(decoder)?;
+            }
+            155 => {
+                decoder.read_var_float_value()?;
+            }
+            156 => {
+                skip_easing_type_from_decoder(decoder)?;
+            }
+            181 => {
+                decoder.read_bool()?;
+            }
+            182 => {
+                skip_connection_type_from_decoder(decoder)?;
+            }
+            183 => {
+                decoder.skip_string()?;
+            }
+            184 => {
+                skip_prototype_device_from_decoder(decoder)?;
+            }
+            187 => {
+                skip_interaction_type_from_decoder(decoder)?;
+            }
+            188 => {
+                decoder.read_var_float_value()?;
+            }
+            189 => {
+                decoder.read_bool()?;
+            }
+            190 => {
+                decoder.read_var_float_value()?;
+            }
+            192 => {
+                decoder.read_bool()?;
+            }
+            207 => {
+                decoder.read_bool()?;
+            }
+            226 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_prototype_interaction_from_decoder(decoder)?;
+                }
+            }
+            426 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_prototype_interaction_from_decoder(decoder)?;
+                }
+            }
+            249 => {
+                skip_prototype_starting_point_from_decoder(decoder)?;
+            }
+            204 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_plugin_data_from_decoder(decoder)?;
+                }
+            }
+            219 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_plugin_relaunch_data_from_decoder(decoder)?;
+                }
+            }
+            242 => {
+                skip_connector_endpoint_from_decoder(decoder)?;
+            }
+            243 => {
+                skip_connector_endpoint_from_decoder(decoder)?;
+            }
+            244 => {
+                skip_connector_line_style_from_decoder(decoder)?;
+            }
+            245 => {
+                skip_stroke_cap_from_decoder(decoder)?;
+            }
+            246 => {
+                skip_stroke_cap_from_decoder(decoder)?;
+            }
+            253 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_connector_control_point_from_decoder(decoder)?;
+                }
+            }
+            479 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_connector_control_point_from_decoder(decoder)?;
+                }
+            }
+            255 => {
+                skip_connector_text_midpoint_from_decoder(decoder)?;
+            }
+            373 => {
+                skip_connector_type_from_decoder(decoder)?;
+            }
+            533 => {
+                decoder.read_var_int()?;
+            }
+            369 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_annotation_from_decoder(decoder)?;
+                }
+            }
+            384 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_annotation_measurement_from_decoder(decoder)?;
+                }
+            }
+            453 => {
+                skip_annotation_categories_from_decoder(decoder)?;
+            }
+            241 => {
+                skip_shape_with_text_type_from_decoder(decoder)?;
+            }
+            247 => {
+                decoder.read_var_float_value()?;
+            }
+            530 => {
+                decoder.read_bool()?;
+            }
+            254 => {
+                skip_derived_immutable_frame_data_from_decoder(decoder)?;
+            }
+            338 => {
+                skip_multiplayer_field_version_from_decoder(decoder)?;
+            }
+            240 => {
+                skip_node_generation_data_from_decoder(decoder)?;
+            }
+            491 => {
+                skip_jsx_data_from_decoder(decoder)?;
+            }
+            492 => {
+                skip_derived_jsx_data_from_decoder(decoder)?;
+            }
+            493 => {
+                decoder.skip_string()?;
+            }
+            259 => {
+                skip_code_block_language_from_decoder(decoder)?;
+            }
+            433 => {
+                skip_code_block_theme_from_decoder(decoder)?;
+            }
+            278 => {
+                skip_link_preview_data_from_decoder(decoder)?;
+            }
+            282 => {
+                decoder.read_bool()?;
+            }
+            283 => {
+                decoder.read_bool()?;
+            }
+            300 => {
+                skip_video_playback_from_decoder(decoder)?;
+            }
+            301 => {
+                skip_stamp_data_from_decoder(decoder)?;
+            }
+            370 => {
+                skip_section_preset_info_from_decoder(decoder)?;
+            }
+            409 => {
+                skip_platform_shape_definition_from_decoder(decoder)?;
+            }
+            273 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            274 => {
+                decoder.read_var_uint()?;
+            }
+            275 => {
+                skip_widget_derived_subtree_cursor_from_decoder(decoder)?;
+            }
+            276 => {
+                skip_widget_pointer_from_decoder(decoder)?;
+            }
+            285 => {
+                skip_widget_input_behavior_from_decoder(decoder)?;
+            }
+            286 => {
+                decoder.skip_string()?;
+            }
+            291 => {
+                skip_widget_hover_style_from_decoder(decoder)?;
+            }
+            293 => {
+                decoder.read_bool()?;
+            }
+            360 => {
+                decoder.read_bool()?;
+            }
+            262 => {
+                skip_widget_metadata_from_decoder(decoder)?;
+            }
+            263 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_widget_event_from_decoder(decoder)?;
+                }
+            }
+            265 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_widget_property_menu_item_from_decoder(decoder)?;
+                }
+            }
+            401 => {
+                skip_widget_input_text_node_type_from_decoder(decoder)?;
+            }
+            489 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            308 => {
+                skip_table_row_column_position_map_from_decoder(decoder)?;
+            }
+            309 => {
+                skip_table_row_column_position_map_from_decoder(decoder)?;
+            }
+            310 => {
+                skip_table_row_column_size_map_from_decoder(decoder)?;
+            }
+            311 => {
+                skip_table_row_column_size_map_from_decoder(decoder)?;
+            }
+            538 => {
+                skip_table_merged_cell_map_from_decoder(decoder)?;
+            }
+            371 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            372 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            402 => {
+                skip_flapp_type_from_decoder(decoder)?;
+            }
+            486 => {
+                decoder.read_bool()?;
+            }
+            389 => {
+                decoder.skip_string()?;
+            }
+            410 => {
+                decoder.read_bool()?;
+            }
+            573 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            379 => {
+                skip_theme_id_from_decoder(decoder)?;
+            }
+            381 => {
+                skip_slide_theme_data_from_decoder(decoder)?;
+            }
+            390 => {
+                skip_slide_theme_map_from_decoder(decoder)?;
+            }
+            393 => {
+                decoder.skip_string()?;
+            }
+            443 => {
+                skip_slide_number_from_decoder(decoder)?;
+            }
+            456 => {
+                decoder.skip_string()?;
+            }
+            363 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            362 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            364 => {
+                decoder.skip_string()?;
+            }
+            366 => {
+                skip_diagram_layout_rule_type_from_decoder(decoder)?;
+            }
+            367 => {
+                skip_diagram_parent_index_from_decoder(decoder)?;
+            }
+            368 => {
+                skip_diagram_layout_paused_from_decoder(decoder)?;
+            }
+            380 => {
+                decoder.read_bool()?;
+            }
+            251 => {
+                skip_internal_enum_for_test_from_decoder(decoder)?;
+            }
+            257 => {
+                skip_internal_data_for_test_from_decoder(decoder)?;
+            }
+            14 => {
+                decoder.read_bool()?;
+            }
+            66 => {
+                decoder.read_var_uint()?;
+            }
+            15 => {
+                decoder.read_bool()?;
+            }
+            67 => {
+                decoder.read_var_uint()?;
+            }
+            17 => {
+                decoder.read_bool()?;
+            }
+            69 => {
+                decoder.read_var_uint()?;
+            }
+            25 => {
+                decoder.read_var_float_value()?;
+            }
+            77 => {
+                decoder.read_var_uint()?;
+            }
+            27 => {
+                decoder.read_var_float_value()?;
+            }
+            79 => {
+                decoder.read_var_uint()?;
+            }
+            37 => {
+                skip_constraint_type_from_decoder(decoder)?;
+            }
+            89 => {
+                decoder.read_var_uint()?;
+            }
+            45 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_export_settings_from_decoder(decoder)?;
+                }
+            }
+            97 => {
+                decoder.read_var_uint()?;
+            }
+            46 => {
+                skip_text_auto_resize_from_decoder(decoder)?;
+            }
+            98 => {
+                decoder.read_var_uint()?;
+            }
+            47 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_layout_grid_from_decoder(decoder)?;
+                }
+            }
+            99 => {
+                decoder.read_var_uint()?;
+            }
+            115 => {
+                decoder.read_bool()?;
+            }
+            116 => {
+                decoder.read_var_uint()?;
+            }
+            117 => {
+                decoder.read_bool()?;
+            }
+            118 => {
+                decoder.read_var_uint()?;
+            }
+            36 => {
+                skip_boolean_operation_from_decoder(decoder)?;
+            }
+            88 => {
+                decoder.read_var_uint()?;
+            }
+            44 => {
+                skip_vector_mirror_from_decoder(decoder)?;
+            }
+            96 => {
+                decoder.read_var_uint()?;
+            }
+            10 => {
+                decoder.read_var_uint()?;
+            }
+            62 => {
+                decoder.read_var_uint()?;
+            }
+            24 => {
+                decoder.read_var_float_value()?;
+            }
+            76 => {
+                decoder.read_var_uint()?;
+            }
+            195 => {
+                skip_arc_data_from_decoder(decoder)?;
+            }
+            48 => {
+                skip_vector_data_from_decoder(decoder)?;
+            }
+            100 => {
+                decoder.read_var_uint()?;
+            }
+            425 => {
+                decoder.read_var_uint()?;
+            }
+            432 => {
+                skip_text_path_start_from_decoder(decoder)?;
+            }
+            119 => {
+                decoder.read_bool()?;
+            }
+            138 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guide_from_decoder(decoder)?;
+                }
+            }
+            142 => {
+                decoder.read_bool()?;
+            }
+            159 => {
+                skip_scroll_direction_from_decoder(decoder)?;
+            }
+            160 => {
+                decoder.read_var_float_value()?;
+            }
+            166 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            175 => {
+                decoder.read_bool()?;
+            }
+            178 => {
+                skip_scroll_contracted_state_from_decoder(decoder)?;
+            }
+            179 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            180 => {
+                decoder.skip_string()?;
+            }
+            186 => {
+                skip_scroll_behavior_from_decoder(decoder)?;
+            }
+            196 => {
+                decoder.read_var_int()?;
+            }
+            197 => {
+                skip_navigation_type_from_decoder(decoder)?;
+            }
+            198 => {
+                skip_overlay_position_type_from_decoder(decoder)?;
+            }
+            199 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            200 => {
+                skip_overlay_background_interaction_from_decoder(decoder)?;
+            }
+            201 => {
+                skip_overlay_background_appearance_from_decoder(decoder)?;
+            }
+            213 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            220 => {
+                decoder.read_bool()?;
+            }
+            221 => {
+                skip_stack_size_from_decoder(decoder)?;
+            }
+            222 => {
+                decoder.read_bool()?;
+            }
+            224 => {
+                skip_key_trigger_from_decoder(decoder)?;
+            }
+            227 => {
+                decoder.skip_string()?;
+            }
+            235 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_guid_from_decoder(decoder)?;
+                }
+            }
+            237 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_symbol_link_from_decoder(decoder)?;
+                }
+            }
+            239 => {
+                skip_text_list_data_from_decoder(decoder)?;
+            }
+            261 => {
+                decoder.read_bool()?;
+            }
+            264 => {
+                decoder.read_var_float_value()?;
+            }
+            270 => {
+                skip_embed_data_from_decoder(decoder)?;
+            }
+            272 => {
+                skip_rich_media_data_from_decoder(decoder)?;
+            }
+            277 => {
+                skip_multiplayer_map_from_decoder(decoder)?;
+            }
+            284 => {
+                decoder.read_bool()?;
+            }
+            302 => {
+                skip_html_tag_from_decoder(decoder)?;
+            }
+            303 => {
+                skip_aria_role_from_decoder(decoder)?;
+            }
+            357 => {
+                skip_aria_attributes_map_from_decoder(decoder)?;
+            }
+            304 => {
+                decoder.skip_string()?;
+            }
+            490 => {
+                decoder.read_bool()?;
+            }
+            306 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            307 => {
+                skip_variable_data_map_from_decoder(decoder)?;
+            }
+            316 => {
+                skip_variable_mode_by_set_map_from_decoder(decoder)?;
+            }
+            312 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_set_mode_from_decoder(decoder)?;
+                }
+            }
+            313 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            314 => {
+                skip_variable_resolved_data_type_from_decoder(decoder)?;
+            }
+            315 => {
+                skip_variable_data_values_from_decoder(decoder)?;
+            }
+            350 => {
+                decoder.skip_string()?;
+            }
+            566 => {
+                skip_variable_timing_display_unit_from_decoder(decoder)?;
+            }
+            353 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_scope_from_decoder(decoder)?;
+                }
+            }
+            445 => {
+                skip_variable_data_map_from_decoder(decoder)?;
+            }
+            358 => {
+                skip_code_syntax_map_from_decoder(decoder)?;
+            }
+            388 => {
+                skip_paste_source_from_decoder(decoder)?;
+            }
+            397 => {
+                skip_editor_type_from_decoder(decoder)?;
+            }
+            446 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            482 => {
+                decoder.read_var_uint64()?;
+            }
+            447 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_variable_width_point_from_decoder(decoder)?;
+                }
+            }
+            448 => {
+                skip_dynamic_stroke_settings_from_decoder(decoder)?;
+            }
+            449 => {
+                skip_scatter_stroke_settings_from_decoder(decoder)?;
+            }
+            450 => {
+                skip_stretch_stroke_settings_from_decoder(decoder)?;
+            }
+            488 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_matrix_from_decoder(decoder)?;
+                }
+            }
+            452 => {
+                skip_brush_type_from_decoder(decoder)?;
+            }
+            542 => {
+                skip_optional_vector_from_decoder(decoder)?;
+            }
+            554 => {
+                decoder.read_var_float_value()?;
+            }
+            377 => {
+                skip_variable_set_id_from_decoder(decoder)?;
+            }
+            464 => {
+                skip_variable_id_from_decoder(decoder)?;
+            }
+            378 => {
+                skip_variable_id_or_variable_override_id_from_decoder(decoder)?;
+            }
+            385 => {
+                decoder.read_bool()?;
+            }
+            386 => {
+                decoder.skip_string()?;
+            }
+            517 => {
+                skip_inherited_variables_data_from_decoder(decoder)?;
+            }
+            361 => {
+                skip_handoff_status_map_from_decoder(decoder)?;
+            }
+            327 => {
+                skip_agenda_position_map_from_decoder(decoder)?;
+            }
+            328 => {
+                skip_agenda_metadata_map_from_decoder(decoder)?;
+            }
+            329 => {
+                skip_migration_status_from_decoder(decoder)?;
+            }
+            330 => {
+                decoder.read_bool()?;
+            }
+            331 => {
+                skip_edit_info_from_decoder(decoder)?;
+            }
+            341 => {
+                skip_color_profile_from_decoder(decoder)?;
+            }
+            342 => {
+                skip_symbol_id_from_decoder(decoder)?;
+            }
+            346 => {
+                skip_child_reading_direction_from_decoder(decoder)?;
+            }
+            347 => {
+                decoder.skip_string()?;
+            }
+            349 => {
+                skip_document_color_profile_from_decoder(decoder)?;
+            }
+            354 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_developer_related_link_from_decoder(decoder)?;
+                }
+            }
+            356 => {
+                decoder.skip_string()?;
+            }
+            365 => {
+                skip_edit_scope_info_from_decoder(decoder)?;
+            }
+            374 => {
+                skip_semantic_weight_from_decoder(decoder)?;
+            }
+            375 => {
+                skip_semantic_italic_from_decoder(decoder)?;
+            }
+            403 => {
+                decoder.read_bool()?;
+            }
+            387 => {
+                decoder.read_bool()?;
+            }
+            500 => {
+                skip_derived_breakpoint_data_from_decoder(decoder)?;
+            }
+            398 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            458 => {
+                decoder.read_bool()?;
+            }
+            457 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            462 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            501 => {
+                decoder.read_var_float_value()?;
+            }
+            522 => {
+                decoder.read_bool()?;
+            }
+            400 => {
+                skip_responsive_set_settings_from_decoder(decoder)?;
+            }
+            404 => {
+                skip_node_behaviors_from_decoder(decoder)?;
+            }
+            414 => {
+                decoder.skip_string()?;
+            }
+            534 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_collaborative_text_op_id_from_decoder(decoder)?;
+                }
+            }
+            444 => {
+                skip_collaborative_plain_text_from_decoder(decoder)?;
+            }
+            427 => {
+                skip_code_library_id_from_decoder(decoder)?;
+            }
+            467 => {
+                skip_imported_code_files_from_decoder(decoder)?;
+            }
+            468 => {
+                skip_canvas_node_id_from_decoder(decoder)?;
+            }
+            498 => {
+                decoder.read_bool()?;
+            }
+            502 => {
+                decoder.skip_string()?;
+            }
+            503 => {
+                decoder.read_var_uint()?;
+            }
+            504 => {
+                decoder.skip_string()?;
+            }
+            515 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.skip_string()?;
+                }
+            }
+            524 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_used_make_library_from_decoder(decoder)?;
+                }
+            }
+            518 => {
+                decoder.skip_string()?;
+            }
+            520 => {
+                decoder.read_bool()?;
+            }
+            551 => {
+                decoder.read_bool()?;
+            }
+            531 => {
+                skip_prototype_device_from_decoder(decoder)?;
+            }
+            525 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_code_example_from_decoder(decoder)?;
+                }
+            }
+            428 => {
+                skip_code_file_id_from_decoder(decoder)?;
+            }
+            430 => {
+                decoder.skip_string()?;
+            }
+            547 => {
+                decoder.skip_string()?;
+            }
+            429 => {
+                skip_code_component_id_from_decoder(decoder)?;
+            }
+            487 => {
+                decoder.read_bool()?;
+            }
+            431 => {
+                skip_code_snapshot_state_from_decoder(decoder)?;
+            }
+            451 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_chat_message_from_decoder(decoder)?;
+                }
+            }
+            485 => {
+                skip_node_chat_compression_state_from_decoder(decoder)?;
+            }
+            496 => {
+                skip_ai_chat_thread_from_decoder(decoder)?;
+            }
+            484 => {
+                decoder.skip_string()?;
+            }
+            459 => {
+                skip_code_snapshot_from_decoder(decoder)?;
+            }
+            589 => {
+                skip_code_snapshot_layers_from_decoder(decoder)?;
+            }
+            480 => {
+                decoder.read_var_uint()?;
+            }
+            465 => {
+                decoder.read_bool()?;
+            }
+            469 => {
+                decoder.read_bool()?;
+            }
+            470 => {
+                decoder.read_bool()?;
+            }
+            471 => {
+                decoder.read_bool()?;
+            }
+            481 => {
+                skip_canvas_node_id_from_decoder(decoder)?;
+            }
+            473 => {
+                skip_image_import_map_from_decoder(decoder)?;
+            }
+            516 => {
+                skip_code_object_type_from_decoder(decoder)?;
+            }
+            472 => {
+                decoder.skip_string()?;
+            }
+            478 => {
+                skip_code_behavior_data_from_decoder(decoder)?;
+            }
+            519 => {
+                decoder.read_var_uint()?;
+            }
+            527 => {
+                decoder.read_bool()?;
+            }
+            532 => {
+                skip_code_embed_info_from_decoder(decoder)?;
+            }
+            546 => {
+                decoder.read_bool()?;
+            }
+            558 => {
+                skip_code_source_info_from_decoder(decoder)?;
+            }
+            536 => {
+                decoder.skip_string()?;
+            }
+            537 => {
+                decoder.skip_byte_array()?;
+            }
+            419 => {
+                skip_cms_selector_from_decoder(decoder)?;
+            }
+            420 => {
+                skip_cms_consumption_map_from_decoder(decoder)?;
+            }
+            460 => {
+                skip_cms_rich_text_style_map_from_decoder(decoder)?;
+            }
+            539 => {
+                skip_symbol_id_from_decoder(decoder)?;
+            }
+            540 => {
+                skip_repeater_cms_override_data_from_decoder(decoder)?;
+            }
+            549 => {
+                skip_repeater_symbol_override_data_from_decoder(decoder)?;
+            }
+            541 => {
+                skip_repeater_override_data_from_decoder(decoder)?;
+            }
+            405 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    decoder.read_var_uint()?;
+                }
+            }
+            408 => {
+                decoder.skip_string()?;
+            }
+            407 => {
+                skip_first_draft_data_from_decoder(decoder)?;
+            }
+            418 => {
+                skip_first_draft_kit_element_data_from_decoder(decoder)?;
+            }
+            421 => {
+                skip_cooper_revert_data_from_decoder(decoder)?;
+            }
+            461 => {
+                skip_cooper_template_data_from_decoder(decoder)?;
+            }
+            528 => {
+                skip_buzz_approval_requests_from_decoder(decoder)?;
+            }
+            529 => {
+                skip_buzz_approval_node_status_info_from_decoder(decoder)?;
+            }
+            422 => {
+                skip_hub_file_attribution_from_decoder(decoder)?;
+            }
+            454 => {
+                skip_managed_string_data_from_decoder(decoder)?;
+            }
+            466 => {
+                skip_thumbnail_info_from_decoder(decoder)?;
+            }
+            494 => {
+                skip_ai_canvas_prompt_from_decoder(decoder)?;
+            }
+            499 => {
+                skip_canvas_node_id_from_decoder(decoder)?;
+            }
+            548 => {
+                decoder.skip_string()?;
+            }
+            523 => {
+                skip_trss_transform2_d_from_decoder(decoder)?;
+            }
+            506 => {
+                decoder.read_var_int64()?;
+            }
+            507 => {
+                skip_keyframe_value_data_from_decoder(decoder)?;
+            }
+            586 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            505 => {
+                skip_interpolation_type_from_decoder(decoder)?;
+            }
+            508 => {
+                skip_bezier_handles_from_decoder(decoder)?;
+            }
+            535 => {
+                skip_easing_data_from_decoder(decoder)?;
+            }
+            509 => {
+                skip_keyframe_operation_from_decoder(decoder)?;
+            }
+            510 => {
+                skip_timeline_position_type_from_decoder(decoder)?;
+            }
+            545 => {
+                decoder.read_bool()?;
+            }
+            511 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            512 => {
+                decoder.read_var_uint64()?;
+            }
+            513 => {
+                decoder.read_var_int64()?;
+            }
+            543 => {
+                decoder.read_bool()?;
+            }
+            514 => {
+                skip_playback_style_from_decoder(decoder)?;
+            }
+            552 => {
+                skip_timeline_definitions_map_from_decoder(decoder)?;
+            }
+            553 => {
+                skip_timeline_assignments_map_from_decoder(decoder)?;
+            }
+            521 => {
+                skip_animation_presets_from_decoder(decoder)?;
+            }
+            582 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_style_id_for_animation_from_decoder(decoder)?;
+                }
+            }
+            583 => {
+                skip_animation_preset_id_from_decoder(decoder)?;
+            }
+            568 => {
+                skip_tools_from_decoder(decoder)?;
+            }
+            569 => {
+                skip_custom_effects_from_decoder(decoder)?;
+            }
+            526 => {
+                skip_transition_override_data_from_decoder(decoder)?;
+            }
+            544 => {
+                decoder.read_bool()?;
+            }
+            557 => {
+                skip_source_control_config_from_decoder(decoder)?;
+            }
+            559 => {
+                skip_spec_block_type_from_decoder(decoder)?;
+            }
+            560 => {
+                skip_collaborative_plain_text_from_decoder(decoder)?;
+            }
+            561 => {
+                decoder.skip_string()?;
+            }
+            562 => {
+                decoder.skip_string()?;
+            }
+            563 => {
+                decoder.read_var_int()?;
+            }
+            575 => {
+                decoder.skip_string()?;
+            }
+            576 => {
+                decoder.read_var_int()?;
+            }
+            577 => {
+                decoder.read_var_int()?;
+            }
+            578 => {
+                skip_table_row_column_size_map_from_decoder(decoder)?;
+            }
+            579 => {
+                skip_table_row_column_size_map_from_decoder(decoder)?;
+            }
+            590 => {
+                decoder.skip_string()?;
+            }
+            565 => {
+                decoder.read_bool()?;
+            }
+            584 => {
+                decoder.skip_string()?;
+            }
+            585 => {
+                decoder.read_var_int()?;
+            }
+            567 => {
+                decoder.read_bool()?;
+            }
+            588 => {
+                skip_custom_tool_artifact_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!("unknown field {} while decoding scene node", field),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
 }

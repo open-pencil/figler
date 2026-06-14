@@ -42,4 +42,34 @@ defmodule FigKiwi.NativeTest do
     assert FigKiwi.Native.decode_message(KiwiCodec.encode(unknown_enum_message)) ==
              unknown_enum_message
   end
+
+  test "decodes scene summary without materializing schema structs" do
+    guid = struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 0)
+
+    message =
+      struct(FigKiwi.Schema.Message,
+        type: :node_changes,
+        session_id: 0,
+        node_changes: [
+          struct(FigKiwi.Schema.NodeChange,
+            guid: guid,
+            type: :document,
+            name: "Document"
+          ),
+          struct(FigKiwi.Schema.NodeChange,
+            guid: struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 1),
+            parent_index: struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!"),
+            type: :canvas,
+            name: "Page 1"
+          )
+        ]
+      )
+
+    assert FigKiwi.Native.decode_scene_summary(KiwiCodec.encode(message)) == %{
+             node_count: 2,
+             parented_count: 1,
+             root_count: 1,
+             type_counts: [{"canvas", 1}, {"document", 1}]
+           }
+  end
 end

@@ -110,18 +110,48 @@ impl<'a> Decoder<'a> {
 
     pub fn read_byte_array<'b>(&mut self, env: Env<'b>) -> NifResult<Term<'b>> {
         let len = self.read_var_uint()? as usize;
+        let bytes = self.read_bytes(len)?;
+        let mut binary = rustler::NewBinary::new(env, len);
+        binary.as_mut_slice().copy_from_slice(bytes);
+        Ok(Term::from(binary))
+    }
+
+    pub fn skip_byte_array(&mut self) -> NifResult<()> {
+        let len = self.read_var_uint()? as usize;
+        self.skip_bytes(len)
+    }
+
+    fn read_bytes(&mut self, len: usize) -> NifResult<&'a [u8]> {
         if self.index + len > self.data.len() {
             return Err(Error::Term(Box::new("unexpected eof")));
         }
 
         let bytes = &self.data[self.index..self.index + len];
         self.index += len;
-        let mut binary = rustler::NewBinary::new(env, len);
+        Ok(bytes)
+    }
+
+    fn skip_bytes(&mut self, len: usize) -> NifResult<()> {
+        if self.index + len > self.data.len() {
+            return Err(Error::Term(Box::new("unexpected eof")));
+        }
+
+        self.index += len;
+        Ok(())
+    }
+
+    pub fn read_string<'b>(&mut self, env: Env<'b>) -> NifResult<Term<'b>> {
+        let bytes = self.read_string_bytes()?;
+        let mut binary = rustler::NewBinary::new(env, bytes.len());
         binary.as_mut_slice().copy_from_slice(bytes);
         Ok(Term::from(binary))
     }
 
-    pub fn read_string<'b>(&mut self, env: Env<'b>) -> NifResult<Term<'b>> {
+    pub fn skip_string(&mut self) -> NifResult<()> {
+        self.read_string_bytes().map(|_| ())
+    }
+
+    fn read_string_bytes(&mut self) -> NifResult<&'a [u8]> {
         let start = self.index;
         let offset = memchr::memchr(0, &self.data[start..])
             .ok_or_else(|| Error::Term(Box::new("unterminated string")))?;
@@ -130,10 +160,7 @@ impl<'a> Decoder<'a> {
         self.index = end + 1;
 
         simdutf8::basic::from_utf8(bytes).map_err(|_| Error::Term(Box::new("invalid utf-8")))?;
-
-        let mut binary = rustler::NewBinary::new(env, bytes.len());
-        binary.as_mut_slice().copy_from_slice(bytes);
-        Ok(Term::from(binary))
+        Ok(bytes)
     }
 
     pub fn read_repeated<T, F>(&mut self, mut read: F) -> NifResult<Vec<T>>

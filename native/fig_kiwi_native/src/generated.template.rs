@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rustler::types::atom::Atom;
 use rustler::{Binary, Encoder, Env, Error, NifResult, Term};
 
@@ -44,3 +46,4 @@ fn make_struct<'a>(
 
 __rq_definitions!();
 __rq_entrypoints!();
+__rq_scene_index!();
