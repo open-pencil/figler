@@ -15,6 +15,12 @@ defmodule FigKiwi.SceneTest do
            }
   end
 
+  test "scene node projection is backed by generated Kiwi schema metadata" do
+    assert Node.source_module() == FigKiwi.Schema.NodeChange
+    assert Node.source_fields() == [:guid, :type, :name, :parent_index]
+    assert Node.parent_index_source_fields() == [:guid, :position]
+  end
+
   test "queries raw message payloads" do
     assert Scene.query(message_payload(), "//canvas[@name='Page 1']") == [scene_canvas()]
   end
