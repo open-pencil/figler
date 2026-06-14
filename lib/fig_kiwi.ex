@@ -31,6 +31,17 @@ defmodule FigKiwi do
   end
 
   @doc """
+  Decodes a Figma `Message` payload into sparse schema-backed maps.
+
+  Sparse maps include `:__kiwi_module__` and only fields present on the wire.
+  This avoids materializing hundreds of nil fields per large `NodeChange`.
+  """
+  @spec decode_sparse_message(binary()) :: map()
+  def decode_sparse_message(binary) when is_binary(binary) do
+    FigKiwi.Native.decode_sparse_message(binary)
+  end
+
+  @doc """
   Encodes a generated Figma `Message` struct.
   """
   @spec encode_message(FigKiwi.Schema.Message.t()) :: binary()

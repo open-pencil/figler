@@ -14,6 +14,14 @@ binary = FigKiwi.encode_message(message)
 message = FigKiwi.decode_message(binary)
 ```
 
+Sparse native decode is available when you need schema-backed maps without materializing hundreds of absent `nil` fields:
+
+```elixir
+sparse = FigKiwi.decode_sparse_message(binary)
+FigKiwi.Sparse.module(sparse)
+FigKiwi.Sparse.get(sparse, :node_changes)
+```
+
 Map-based runtime encode/decode is available for tooling:
 
 ```elixir

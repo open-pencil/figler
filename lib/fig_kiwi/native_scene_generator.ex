@@ -20,7 +20,9 @@ defmodule FigKiwi.NativeSceneGenerator do
 
     summary_structs() ++
       [node_type_name(definition_map)] ++
+      Enum.map(schema.definitions, &sparse_definition(&1, definition_map)) ++
       Enum.map(schema.definitions, &skip_definition(&1, definition_map)) ++
+      sparse_entrypoints() ++
       scene_summary(definition_map)
   end
 
@@ -617,6 +619,126 @@ defmodule FigKiwi.NativeSceneGenerator do
     }
     """
   end
+
+  defp sparse_definition(%Definition{kind: :struct}, _definition_map), do: "const _: () = ();"
+
+  defp sparse_definition(%Definition{kind: :enum, name: name, fields: fields}, _definition_map) do
+    arms =
+      Enum.map_join(fields, "\n", fn field ->
+        "#{field.value} => { static ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new(); Ok(cached_atom(env, &ATOM_#{field.value}, \"#{Macro.underscore(field.name)}\").encode(env)) },"
+      end)
+
+    """
+    fn decode_sparse_#{rust_ident(name)}_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+        match decoder.read_var_uint()? {
+    #{indent(arms, 8)}
+            value => Ok((value as i64).encode(env)),
+        }
+    }
+    """
+  end
+
+  defp sparse_definition(%Definition{kind: :message, name: name}, _definition_map)
+       when name not in ["Message", "NodeChange"],
+       do: "const _: () = ();"
+
+  defp sparse_definition(%Definition{kind: :message, name: name, fields: fields}, definition_map) do
+    arms = Enum.map_join(fields, "\n", &sparse_message_arm(&1, definition_map))
+
+    """
+    fn decode_sparse_#{rust_ident(name)}_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+        static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+        static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
+        let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.#{name}");
+        let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+        let mut keys = vec![module_key_atom.encode(env)];
+        let mut values = vec![module_atom.encode(env)];
+
+        loop {
+            match decoder.read_var_uint()? {
+                0 => break,
+    #{indent(arms, 12)}
+                field => return Err(Error::Term(Box::new(format!("unknown field {} while decoding sparse #{name}", field)))),
+            }
+        }
+
+        Term::map_from_term_arrays(env, &keys, &values)
+    }
+    """
+  end
+
+  defp sparse_entrypoints do
+    [
+      """
+      #[rustler::nif(schedule = "DirtyCpu")]
+      pub fn decode_sparse_message<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
+          let mut decoder = Decoder::new(bytes.as_slice());
+          let value = decode_sparse_message_from_decoder(env, &mut decoder)?;
+          decoder.finish()?;
+          Ok(value)
+      }
+      """
+    ]
+  end
+
+  defp sparse_message_arm(field, definition_map) do
+    """
+    #{field.value} => {
+        let field_atom = Atom::from_str(env, "#{Macro.underscore(field.name)}").unwrap();
+    #{indent(sparse_decode_field(field, definition_map), 4)}
+        keys.push(field_atom.encode(env));
+        values.push(value);
+    },
+    """
+  end
+
+  defp sparse_decode_field(%{array?: true, type: "byte"}, _definition_map) do
+    "let value = decoder.read_byte_array(env)?;"
+  end
+
+  defp sparse_decode_field(%{array?: true} = field, definition_map) do
+    inner = sparse_decode_scalar(%{field | array?: false}, definition_map)
+
+    """
+    let len = decoder.read_var_uint()? as usize;
+    let mut items = Vec::with_capacity(len);
+    for _ in 0..len {
+    #{indent("let item = #{inner};", 4)}
+        items.push(item);
+    }
+    let value = items.encode(env);
+    """
+  end
+
+  defp sparse_decode_field(field, definition_map) do
+    "let value = #{sparse_decode_scalar(field, definition_map)};"
+  end
+
+  defp sparse_decode_scalar(%{type: type}, definition_map) do
+    cond do
+      primitive = sparse_primitive_decode(type) ->
+        primitive
+
+      Map.get(definition_map, type) && Map.fetch!(definition_map, type).kind == :enum ->
+        "decode_sparse_#{rust_ident(type)}_from_decoder(env, decoder)?"
+
+      type in ["Message", "NodeChange"] ->
+        "decode_sparse_#{rust_ident(type)}_from_decoder(env, decoder)?"
+
+      Map.has_key?(definition_map, type) ->
+        "decode_#{rust_ident(type)}_from_decoder(env, decoder)?"
+    end
+  end
+
+  defp sparse_primitive_decode("bool"), do: "decoder.read_bool()?.encode(env)"
+  defp sparse_primitive_decode("byte"), do: "decoder.read_byte()?.encode(env)"
+  defp sparse_primitive_decode("float"), do: "decoder.read_var_float(env)?"
+  defp sparse_primitive_decode("int"), do: "decoder.read_var_int()?.encode(env)"
+  defp sparse_primitive_decode("int64"), do: "decoder.read_var_int64()?.encode(env)"
+  defp sparse_primitive_decode("string"), do: "decoder.read_string(env)?"
+  defp sparse_primitive_decode("uint"), do: "decoder.read_var_uint()?.encode(env)"
+  defp sparse_primitive_decode("uint64"), do: "decoder.read_var_uint64()?.encode(env)"
+  defp sparse_primitive_decode(_type), do: nil
 
   defp skip_definition(%Definition{kind: :enum, name: name}, _definition_map) do
     """

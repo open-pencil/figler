@@ -43,6 +43,37 @@ defmodule FigKiwi.NativeTest do
              unknown_enum_message
   end
 
+  test "decodes sparse messages without absent fields" do
+    guid = struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34)
+
+    message =
+      struct(FigKiwi.Schema.Message,
+        type: :node_changes,
+        session_id: 12,
+        node_changes: [
+          struct(FigKiwi.Schema.NodeChange,
+            guid: guid,
+            type: :rectangle,
+            name: "Rect 1"
+          )
+        ]
+      )
+
+    assert FigKiwi.decode_sparse_message(KiwiCodec.encode(message)) == %{
+             __kiwi_module__: FigKiwi.Schema.Message,
+             type: :node_changes,
+             session_id: 12,
+             node_changes: [
+               %{
+                 __kiwi_module__: FigKiwi.Schema.NodeChange,
+                 guid: guid,
+                 type: :rectangle,
+                 name: "Rect 1"
+               }
+             ]
+           }
+  end
+
   test "decodes scene summary without materializing schema structs" do
     message = scene_message()
 
