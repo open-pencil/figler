@@ -41,7 +41,19 @@ defmodule FigKiwi.Scene do
   end
 
   @doc """
-  Queries the projected scene index with XPath.
+  Builds a reusable native scene index resource.
+
+  Use this when running multiple XPath queries over the same scene.
+  """
+  @spec index(binary()) :: reference()
+  def index(binary) when is_binary(binary) do
+    binary
+    |> payload!()
+    |> Native.build_scene_index()
+  end
+
+  @doc """
+  Queries a binary scene or reusable scene index with XPath.
 
   Scene nodes are exposed as elements named by their Figma node type, for
   example `//canvas` or `//text`. Supported projected attributes are:
@@ -52,11 +64,15 @@ defmodule FigKiwi.Scene do
     * `@parent_guid`
     * `@position`
   """
-  @spec query(binary(), String.t()) :: [scene_node()]
+  @spec query(binary() | reference(), String.t()) :: [scene_node()]
   def query(binary, xpath) when is_binary(binary) and is_binary(xpath) do
     binary
     |> payload!()
     |> Native.query_scene_xpath(xpath)
+  end
+
+  def query(index, xpath) when is_binary(xpath) do
+    Native.query_scene_index(index, xpath)
   end
 
   @doc """

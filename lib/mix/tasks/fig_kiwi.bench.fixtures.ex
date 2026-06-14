@@ -26,15 +26,25 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
 
     fixtures = fixtures!(fixture_dir, args)
 
-    Mix.shell().info("Fixture\tSize\tPayload\tSummary\tCanvas XPath\tNodes\tCanvases")
+    Mix.shell().info(
+      "Fixture\tSize\tPayload\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tNodes\tCanvases"
+    )
 
     Enum.each(fixtures, fn path ->
       {read_us, fig_binary} = timed(fn -> File.read!(path) end)
       {payload_us, payload} = timed(fn -> FigKiwi.Scene.payload!(fig_binary) end)
       {summary_us, summary} = timed(fn -> FigKiwi.Native.decode_scene_summary(payload) end)
+      {index_us, index} = timed(fn -> FigKiwi.Native.build_scene_index(payload) end)
 
       {query_us, canvases} =
         timed(fn -> FigKiwi.Native.query_scene_xpath(payload, "//canvas") end)
+
+      {indexed_query_us, indexed_canvases} =
+        timed(fn -> FigKiwi.Native.query_scene_index(index, "//canvas") end)
+
+      unless length(canvases) == length(indexed_canvases) do
+        Mix.raise("indexed query mismatch for #{path}")
+      end
 
       Mix.shell().info(
         Enum.join(
@@ -43,7 +53,9 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
             format_bytes(byte_size(fig_binary)),
             format_us(read_us + payload_us),
             format_us(summary_us),
+            format_us(index_us),
             format_us(query_us),
+            format_us(indexed_query_us),
             summary.node_count,
             length(canvases)
           ],

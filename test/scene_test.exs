@@ -14,15 +14,14 @@ defmodule FigKiwi.SceneTest do
   end
 
   test "queries raw message payloads" do
-    assert Scene.query(message_payload(), "//canvas[@name='Page 1']") == [
-             %{
-               guid: "0:1",
-               node_type: "canvas",
-               name: "Page 1",
-               parent_guid: "0:0",
-               position: "!"
-             }
-           ]
+    assert Scene.query(message_payload(), "//canvas[@name='Page 1']") == [scene_canvas()]
+  end
+
+  test "reuses projected scene indexes across XPath queries" do
+    index = Scene.index(message_payload())
+
+    assert Scene.query(index, "//canvas") == [scene_canvas()]
+    assert Scene.query(index, "//*[@parent_guid='0:0']") == [scene_canvas()]
   end
 
   test "accepts canvas.fig containers" do
@@ -30,15 +29,17 @@ defmodule FigKiwi.SceneTest do
   end
 
   test "accepts .fig ZIPs containing canvas.fig" do
-    assert Scene.query(fig_zip(), "//*[@parent_guid='0:0']") == [
-             %{
-               guid: "0:1",
-               node_type: "canvas",
-               name: "Page 1",
-               parent_guid: "0:0",
-               position: "!"
-             }
-           ]
+    assert Scene.query(fig_zip(), "//*[@parent_guid='0:0']") == [scene_canvas()]
+  end
+
+  defp scene_canvas do
+    %{
+      guid: "0:1",
+      node_type: "canvas",
+      name: "Page 1",
+      parent_guid: "0:0",
+      position: "!"
+    }
   end
 
   defp fig_zip do

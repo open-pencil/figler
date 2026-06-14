@@ -46705,8 +46705,9 @@ fn skip_playback_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
 mod scene_xpath_runtime {
     use super::*;
     use std::cmp::Ordering;
-    use std::rc::Rc;
+    use std::sync::Arc;
     use markup5ever::{ns, LocalName, Namespace, Prefix};
+    use rustler::{Resource, ResourceArc};
     use servo_xpath::{
         Attribute, Document, Dom, Element, NamespaceResolver, Node,
         ProcessingInstruction, Value,
@@ -46721,7 +46722,7 @@ mod scene_xpath_runtime {
         parent: Option<usize>,
         children: Vec<usize>,
     }
-    #[derive(Debug)]
+    #[derive(Clone, Debug)]
     struct SceneIndex {
         nodes: Vec<SceneNodeRecord>,
         roots: Vec<usize>,
@@ -46736,12 +46737,12 @@ mod scene_xpath_runtime {
     }
     #[derive(Clone, Debug)]
     struct SceneHandle {
-        scene: Rc<SceneIndex>,
+        scene: Arc<SceneIndex>,
         kind: SceneHandleKind,
     }
     impl PartialEq for SceneHandle {
         fn eq(&self, other: &Self) -> bool {
-            Rc::ptr_eq(&self.scene, &other.scene) && self.kind == other.kind
+            Arc::ptr_eq(&self.scene, &other.scene) && self.kind == other.kind
         }
     }
     impl Eq for SceneHandle {}
@@ -46752,15 +46753,19 @@ mod scene_xpath_runtime {
     #[derive(Clone, Debug, Eq, PartialEq)]
     struct SceneProcessingInstruction;
     #[derive(Clone, Debug)]
-    struct SceneDocument(Rc<SceneIndex>);
+    struct SceneDocument(Arc<SceneIndex>);
     impl PartialEq for SceneDocument {
         fn eq(&self, other: &Self) -> bool {
-            Rc::ptr_eq(&self.0, &other.0)
+            Arc::ptr_eq(&self.0, &other.0)
         }
     }
     impl Eq for SceneDocument {}
     #[derive(Clone, Debug, Eq, PartialEq)]
     struct SceneNamespaceResolver;
+    pub struct SceneIndexResource {
+        index: Arc<SceneIndex>,
+    }
+    impl Resource for SceneIndexResource {}
     struct SceneDom;
     impl SceneNodeRecord {
         fn attrs(&self) -> Vec<(&'static str, &str)> {
@@ -46883,19 +46888,19 @@ mod scene_xpath_runtime {
         }
     }
     impl SceneHandle {
-        fn document(scene: Rc<SceneIndex>) -> Self {
+        fn document(scene: Arc<SceneIndex>) -> Self {
             Self {
                 scene,
                 kind: SceneHandleKind::Document,
             }
         }
-        fn element(scene: Rc<SceneIndex>, index: usize) -> Self {
+        fn element(scene: Arc<SceneIndex>, index: usize) -> Self {
             Self {
                 scene,
                 kind: SceneHandleKind::Element(index),
             }
         }
-        fn attribute(scene: Rc<SceneIndex>, owner: usize, index: usize) -> Self {
+        fn attribute(scene: Arc<SceneIndex>, owner: usize, index: usize) -> Self {
             Self {
                 scene,
                 kind: SceneHandleKind::Attribute {
@@ -47186,16 +47191,33 @@ mod scene_xpath_runtime {
             position: node.position.clone(),
         }
     }
+    pub fn build_scene_index_value(
+        bytes: Binary<'_>,
+    ) -> NifResult<ResourceArc<SceneIndexResource>> {
+        let mut decoder = Decoder::new(bytes.as_slice());
+        let mut nodes = Vec::new();
+        decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
+        decoder.finish()?;
+        Ok(
+            ResourceArc::new(SceneIndexResource {
+                index: Arc::new(SceneIndex::new(nodes)),
+            }),
+        )
+    }
     pub fn query_scene_xpath_value<'a>(
         env: Env<'a>,
         bytes: Binary<'a>,
         xpath: String,
     ) -> NifResult<Term<'a>> {
-        let mut decoder = Decoder::new(bytes.as_slice());
-        let mut nodes = Vec::new();
-        decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
-        decoder.finish()?;
-        let index = Rc::new(SceneIndex::new(nodes));
+        let resource = build_scene_index_value(bytes)?;
+        query_scene_index_value(env, resource, xpath)
+    }
+    pub fn query_scene_index_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        xpath: String,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
         let root = SceneHandle::document(index.clone());
         let mut cx = ();
         let expression = servo_xpath::parse::<
@@ -49388,6 +49410,9 @@ mod scene_xpath_runtime {
         })
     }
 }
+pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
+    env.register::<scene_xpath_runtime::SceneIndexResource>().is_ok()
+}
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
     let mut decoder = Decoder::new(bytes.as_slice());
@@ -49415,12 +49440,26 @@ pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Te
     )
 }
 #[rustler::nif(schedule = "DirtyCpu")]
+pub fn build_scene_index(
+    bytes: Binary<'_>,
+) -> NifResult<rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>> {
+    scene_xpath_runtime::build_scene_index_value(bytes)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_xpath<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
     xpath: String,
 ) -> NifResult<Term<'a>> {
     scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn query_scene_index<'a>(
+    env: Env<'a>,
+    index: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    xpath: String,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_index_value(env, index, xpath)
 }
 fn decode_scene_message_from_decoder(
     decoder: &mut Decoder<'_>,

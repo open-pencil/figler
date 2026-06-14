@@ -2,4 +2,8 @@
 mod generated;
 mod runtime;
 
-rustler::init!("Elixir.FigKiwi.Native");
+fn load(env: rustler::Env, _term: rustler::Term) -> bool {
+    generated::load(env, _term)
+}
+
+rustler::init!("Elixir.FigKiwi.Native", load = load);
