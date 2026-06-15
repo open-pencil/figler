@@ -36,6 +36,27 @@ defmodule FigKiwi.OpenPencilFixtureSceneTest do
 
           assert Enum.any?(text_nodes, &(&1.text == text))
         end
+
+        @tag timeout: 120_000
+        test "projects component and paint summary fields from OpenPencil fixture #{name}" do
+          index = unquote(path) |> File.read!() |> FigKiwi.Scene.index()
+
+          assert [%FigKiwi.Scene.Node{component_key: component_key} | _] =
+                   FigKiwi.Scene.components(index)
+
+          assert is_binary(component_key)
+          assert component_key != ""
+
+          assert [%FigKiwi.Scene.Node{fill_count: fill_count} | _] =
+                   FigKiwi.Scene.with_fills(index)
+
+          assert fill_count > 0
+
+          assert [%FigKiwi.Scene.Node{stroke_count: stroke_count} | _] =
+                   FigKiwi.Scene.with_strokes(index)
+
+          assert stroke_count > 0
+        end
       end
     end
   else

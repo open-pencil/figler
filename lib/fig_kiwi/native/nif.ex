@@ -27,9 +27,15 @@ defmodule FigKiwi.Native.Nif do
     {:scene_index_children, 2},
     {:scene_index_siblings, 2},
     {:scene_index_by_type, 2},
+    {:scene_index_by_type_fields, 3},
     {:scene_index_named, 2},
     {:scene_index_name_contains, 2},
+    {:scene_index_name_contains_fields, 3},
     {:scene_index_text_contains, 2},
+    {:scene_index_text_contains_fields, 3},
+    {:scene_index_components, 1},
+    {:scene_index_with_fills, 1},
+    {:scene_index_with_strokes, 1},
     {:scene_index_ancestors, 2},
     {:scene_index_descendants, 2}
   ]

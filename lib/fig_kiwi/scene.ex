@@ -189,16 +189,27 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes of a given projected node type without constructing XPath.
   """
-  @spec by_type(binary() | Index.t() | reference(), atom() | String.t()) :: [scene_node()]
-  def by_type(nodes, type) when is_list(nodes) and (is_atom(type) or is_binary(type)) do
+  @spec by_type(
+          binary() | Index.t() | reference() | [scene_node()],
+          atom() | String.t(),
+          keyword()
+        ) :: [scene_node()]
+  def by_type(scene_or_nodes, type, opts \\ [])
+
+  def by_type(nodes, type, _opts) when is_list(nodes) and (is_atom(type) or is_binary(type)) do
     node_type = type |> to_string() |> Macro.underscore()
     Enum.filter(nodes, &(&1.node_type == node_type))
   end
 
-  def by_type(scene, type) when is_atom(type) or is_binary(type) do
-    scene
-    |> reusable_index()
-    |> NativeScene.index_by_type(type |> to_string() |> Macro.underscore())
+  def by_type(scene, type, opts) when is_atom(type) or is_binary(type) do
+    fields = query_fields(opts)
+    index = reusable_index(scene)
+    node_type = type |> to_string() |> Macro.underscore()
+
+    case fields do
+      :all -> NativeScene.index_by_type(index, node_type)
+      fields -> NativeScene.index_by_type_fields(index, node_type, fields)
+    end
     |> nodes_from_maps()
   end
 
@@ -220,15 +231,22 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes whose projected name contains `needle` without constructing XPath.
   """
-  @spec name_contains(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
-  def name_contains(nodes, needle) when is_list(nodes) and is_binary(needle) do
+  @spec name_contains(binary() | Index.t() | reference() | [scene_node()], String.t(), keyword()) ::
+          [scene_node()]
+  def name_contains(scene_or_nodes, needle, opts \\ [])
+
+  def name_contains(nodes, needle, _opts) when is_list(nodes) and is_binary(needle) do
     Enum.filter(nodes, &(is_binary(&1.name) and String.contains?(&1.name, needle)))
   end
 
-  def name_contains(scene, needle) when is_binary(needle) do
-    scene
-    |> reusable_index()
-    |> NativeScene.index_name_contains(needle)
+  def name_contains(scene, needle, opts) when is_binary(needle) do
+    fields = query_fields(opts)
+    index = reusable_index(scene)
+
+    case fields do
+      :all -> NativeScene.index_name_contains(index, needle)
+      fields -> NativeScene.index_name_contains_fields(index, needle, fields)
+    end
     |> nodes_from_maps()
   end
 
@@ -243,34 +261,59 @@ defmodule FigKiwi.Scene do
   """
   @spec components(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
   def components(nodes) when is_list(nodes), do: Enum.filter(nodes, &present?(&1.component_key))
-  def components(scene), do: query(scene, "//*[@component_key]")
+
+  def components(scene) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_components()
+    |> nodes_from_maps()
+  end
 
   @doc """
   Returns nodes with one or more fill paints.
   """
   @spec with_fills(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
   def with_fills(nodes) when is_list(nodes), do: Enum.filter(nodes, &positive?(&1.fill_count))
-  def with_fills(scene), do: query(scene, "//*[@fill_count]")
+
+  def with_fills(scene) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_with_fills()
+    |> nodes_from_maps()
+  end
 
   @doc """
   Returns nodes with one or more stroke paints.
   """
   @spec with_strokes(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
   def with_strokes(nodes) when is_list(nodes), do: Enum.filter(nodes, &positive?(&1.stroke_count))
-  def with_strokes(scene), do: query(scene, "//*[@stroke_count]")
+
+  def with_strokes(scene) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_with_strokes()
+    |> nodes_from_maps()
+  end
 
   @doc """
   Returns text nodes whose projected text contains `needle` without constructing XPath.
   """
-  @spec text_contains(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
-  def text_contains(nodes, needle) when is_list(nodes) and is_binary(needle) do
+  @spec text_contains(binary() | Index.t() | reference() | [scene_node()], String.t(), keyword()) ::
+          [scene_node()]
+  def text_contains(scene_or_nodes, needle, opts \\ [])
+
+  def text_contains(nodes, needle, _opts) when is_list(nodes) and is_binary(needle) do
     Enum.filter(nodes, &(is_binary(&1.text) and String.contains?(&1.text, needle)))
   end
 
-  def text_contains(scene, needle) when is_binary(needle) do
-    scene
-    |> reusable_index()
-    |> NativeScene.index_text_contains(needle)
+  def text_contains(scene, needle, opts) when is_binary(needle) do
+    fields = query_fields(opts)
+    index = reusable_index(scene)
+
+    case fields do
+      :all -> NativeScene.index_text_contains(index, needle)
+      fields -> NativeScene.index_text_contains_fields(index, needle, fields)
+    end
     |> nodes_from_maps()
   end
 

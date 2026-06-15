@@ -84,6 +84,18 @@ defmodule FigKiwi.SceneTest do
     assert Scene.text_nodes(index) == []
     assert Scene.text_contains(index, "Hello") == [scene_canvas()]
 
+    assert Scene.by_type(index, :canvas, fields: [:name]) == [
+             %Node{guid: "0:1", node_type: "canvas", name: "Page 1"}
+           ]
+
+    assert Scene.name_contains(index, "Page", fields: [:name]) == [
+             %Node{guid: "0:1", node_type: "canvas", name: "Page 1"}
+           ]
+
+    assert Scene.text_contains(index, "Hello", fields: [:text]) == [
+             %Node{guid: "0:1", node_type: "canvas", text: "Hello world"}
+           ]
+
     assert index
            |> Scene.by_type(:canvas)
            |> Scene.name_contains("Page")

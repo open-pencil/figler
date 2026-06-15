@@ -27,9 +27,15 @@ defmodule FigKiwi.Native do
     {:scene_index_children, [:index, :guid], :index_children},
     {:scene_index_siblings, [:index, :guid], :index_siblings},
     {:scene_index_by_type, [:index, :node_type], :index_by_type},
+    {:scene_index_by_type_fields, [:index, :node_type, :fields], :index_by_type_fields},
     {:scene_index_named, [:index, :name], :index_named},
     {:scene_index_name_contains, [:index, :needle], :index_name_contains},
+    {:scene_index_name_contains_fields, [:index, :needle, :fields], :index_name_contains_fields},
     {:scene_index_text_contains, [:index, :needle], :index_text_contains},
+    {:scene_index_text_contains_fields, [:index, :needle, :fields], :index_text_contains_fields},
+    {:scene_index_components, [:index], :index_components},
+    {:scene_index_with_fills, [:index], :index_with_fills},
+    {:scene_index_with_strokes, [:index], :index_with_strokes},
     {:scene_index_ancestors, [:index, :guid], :index_ancestors},
     {:scene_index_descendants, [:index, :guid], :index_descendants}
   ]

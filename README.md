@@ -73,6 +73,9 @@ button_labels =
   |> Scene.name_contains("Button")
   |> Scene.attribute(:text)
 
+# Helper APIs can push field filtering into native code when starting from an index.
+label_text_nodes = Scene.text_contains(index, "Label", fields: [:text])
+
 all_text =
   index
   |> Scene.text_nodes()

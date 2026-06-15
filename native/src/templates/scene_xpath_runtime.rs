@@ -829,6 +829,19 @@ mod scene_xpath_runtime {
             .collect()
     }
 
+    fn encode_scene_indexes<'a>(
+        env: Env<'a>,
+        index: &SceneIndex,
+        node_indexes: impl IntoIterator<Item = usize>,
+        fields: &[String],
+    ) -> NifResult<Term<'a>> {
+        let mut out = Vec::new();
+        for node_index in node_indexes {
+            out.push(scene_query_node_term(env, index, node_index, fields)?);
+        }
+        Ok(out.encode(env))
+    }
+
     pub fn scene_index_by_type_value(
         resource: ResourceArc<SceneIndexResource>,
         node_type: String,
@@ -842,6 +855,23 @@ mod scene_xpath_runtime {
             .copied()
             .map(|node_index| scene_query_node(&index, node_index))
             .collect()
+    }
+
+    pub fn scene_index_by_type_fields_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        node_type: String,
+        fields: Vec<String>,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        let node_indexes = index
+            .by_type
+            .get(node_type.as_str())
+            .into_iter()
+            .flatten()
+            .copied()
+            .collect::<Vec<_>>();
+        encode_scene_indexes(env, &index, node_indexes, &fields)
     }
 
     pub fn scene_index_named_value(
@@ -869,6 +899,27 @@ mod scene_xpath_runtime {
         })
     }
 
+    pub fn scene_index_name_contains_fields_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        needle: String,
+        fields: Vec<String>,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        let node_indexes = index
+            .preorder
+            .iter()
+            .copied()
+            .filter(|node_index| {
+                index.nodes[*node_index]
+                    .name
+                    .as_ref()
+                    .is_some_and(|name| name.contains(&needle))
+            })
+            .collect::<Vec<_>>();
+        encode_scene_indexes(env, &index, node_indexes, &fields)
+    }
+
     pub fn scene_index_text_contains_value(
         resource: ResourceArc<SceneIndexResource>,
         needle: String,
@@ -877,6 +928,48 @@ mod scene_xpath_runtime {
         scene_query_nodes_matching(&index, |node| {
             node.text.as_ref().is_some_and(|text| text.contains(&needle))
         })
+    }
+
+    pub fn scene_index_text_contains_fields_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        needle: String,
+        fields: Vec<String>,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        let node_indexes = index
+            .preorder
+            .iter()
+            .copied()
+            .filter(|node_index| {
+                index.nodes[*node_index]
+                    .text
+                    .as_ref()
+                    .is_some_and(|text| text.contains(&needle))
+            })
+            .collect::<Vec<_>>();
+        encode_scene_indexes(env, &index, node_indexes, &fields)
+    }
+
+    pub fn scene_index_components_value(
+        resource: ResourceArc<SceneIndexResource>,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        scene_query_nodes_matching(&index, |node| node.component_key.is_some())
+    }
+
+    pub fn scene_index_with_fills_value(
+        resource: ResourceArc<SceneIndexResource>,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        scene_query_nodes_matching(&index, |node| node.fill_count.unwrap_or(0) > 0)
+    }
+
+    pub fn scene_index_with_strokes_value(
+        resource: ResourceArc<SceneIndexResource>,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        scene_query_nodes_matching(&index, |node| node.stroke_count.unwrap_or(0) > 0)
     }
 
     pub fn scene_index_ancestors_value(

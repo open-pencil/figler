@@ -20,11 +20,23 @@ defmodule FigKiwi.OpenPencilNodeOracleTest do
       assert summary.node_count == open_pencil["totalNodes"]
       assert {"canvas", canvas_count} = List.keyfind(summary.type_counts, "canvas", 0)
       assert canvas_count == open_pencil["pages"]
+
+      fig_kiwi_types = Map.new(summary.type_counts)
+      open_pencil_types = normalize_type_counts(open_pencil["types"])
+
+      for type <- ["text", "frame", "component", "instance"],
+          Map.has_key?(open_pencil_types, type) do
+        assert fig_kiwi_types[type] == open_pencil_types[type]
+      end
     end
 
     defp open_pencil_info!(cli, fixture) do
       {json, 0} = System.cmd("node", [cli, "info", fixture, "--json"], stderr_to_stdout: true)
       Jason.decode!(json)
+    end
+
+    defp normalize_type_counts(types) do
+      Map.new(types, fn {type, count} -> {Macro.underscore(type), count} end)
     end
   else
     test "OpenPencil Node oracle tests are disabled" do

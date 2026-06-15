@@ -438,25 +438,61 @@ defmodule FigKiwi.NativeSceneGenerator do
         nif_name: "scene_index_roots",
         runtime_name: "scene_index_roots_value"
       )
-      | Enum.map(
-          [
-            scene_index_children: :scene_index_children_value,
-            scene_index_siblings: :scene_index_siblings_value,
-            scene_index_by_type: :scene_index_by_type_value,
-            scene_index_named: :scene_index_named_value,
-            scene_index_name_contains: :scene_index_name_contains_value,
-            scene_index_text_contains: :scene_index_text_contains_value,
-            scene_index_ancestors: :scene_index_ancestors_value,
-            scene_index_descendants: :scene_index_descendants_value
-          ],
-          fn {name, runtime_name} ->
-            render_scene_template("scene_navigation_list_nif.rs",
-              nif_name: Atom.to_string(name),
-              runtime_name: Atom.to_string(runtime_name)
-            )
-          end
-        )
+      | scene_list_nifs() ++ scene_filter_field_nifs() ++ scene_noarg_list_nifs()
     ]
+  end
+
+  defp scene_list_nifs do
+    Enum.map(
+      [
+        scene_index_children: :scene_index_children_value,
+        scene_index_siblings: :scene_index_siblings_value,
+        scene_index_by_type: :scene_index_by_type_value,
+        scene_index_named: :scene_index_named_value,
+        scene_index_name_contains: :scene_index_name_contains_value,
+        scene_index_text_contains: :scene_index_text_contains_value,
+        scene_index_ancestors: :scene_index_ancestors_value,
+        scene_index_descendants: :scene_index_descendants_value
+      ],
+      fn {name, runtime_name} ->
+        render_scene_template("scene_navigation_list_nif.rs",
+          nif_name: Atom.to_string(name),
+          runtime_name: Atom.to_string(runtime_name)
+        )
+      end
+    )
+  end
+
+  defp scene_filter_field_nifs do
+    Enum.map(
+      [
+        scene_index_by_type_fields: :scene_index_by_type_fields_value,
+        scene_index_name_contains_fields: :scene_index_name_contains_fields_value,
+        scene_index_text_contains_fields: :scene_index_text_contains_fields_value
+      ],
+      fn {name, runtime_name} ->
+        render_scene_template("scene_navigation_filter_fields_nif.rs",
+          nif_name: Atom.to_string(name),
+          runtime_name: Atom.to_string(runtime_name)
+        )
+      end
+    )
+  end
+
+  defp scene_noarg_list_nifs do
+    Enum.map(
+      [
+        scene_index_components: :scene_index_components_value,
+        scene_index_with_fills: :scene_index_with_fills_value,
+        scene_index_with_strokes: :scene_index_with_strokes_value
+      ],
+      fn {name, runtime_name} ->
+        render_scene_template("scene_navigation_noarg_list_nif.rs",
+          nif_name: Atom.to_string(name),
+          runtime_name: Atom.to_string(runtime_name)
+        )
+      end
+    )
   end
 
   defp render_scene_template(template, bindings) do
