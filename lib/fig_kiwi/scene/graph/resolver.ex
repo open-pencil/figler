@@ -268,14 +268,23 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   defp build_children(seed_nodes) do
     seed_nodes
+    |> Stream.with_index()
     |> Enum.reduce(%{}, fn
-      %SeedNode{parent_guid: nil}, acc ->
+      {%SeedNode{parent_guid: nil}, _index}, acc ->
         acc
 
-      %SeedNode{parent_guid: parent_guid, guid: guid}, acc ->
-        Map.update(acc, parent_guid, [guid], &[guid | &1])
+      {%SeedNode{parent_guid: parent_guid, guid: guid, position: position}, index}, acc ->
+        entry = {guid, position || "", index}
+        Map.update(acc, parent_guid, [entry], &[entry | &1])
     end)
-    |> reverse_group_values()
+    |> Map.new(fn {parent_guid, entries} ->
+      children =
+        entries
+        |> Enum.sort_by(fn {_guid, position, index} -> {position, index} end)
+        |> Enum.map(fn {guid, _position, _index} -> guid end)
+
+      {parent_guid, children}
+    end)
   end
 
   defp build_roots(seed_nodes) do
