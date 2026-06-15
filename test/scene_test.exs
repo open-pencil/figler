@@ -414,6 +414,34 @@ defmodule FigKiwi.SceneTest do
            ]
   end
 
+  test "variables stage records known variable data values as provenance" do
+    graph =
+      [
+        %SeedNode{
+          guid: {1, 1},
+          node_type: "variable",
+          variable_data_values: [
+            struct(FigKiwi.Schema.VariableDataValuesEntry,
+              mode_id: struct(FigKiwi.Schema.GUID, session_id: 9, local_id: 1),
+              variable_data:
+                struct(FigKiwi.Schema.VariableData,
+                  data_type: :float,
+                  resolved_data_type: :float,
+                  value: struct(FigKiwi.Schema.VariableAnyValue, float_value: 12.5)
+                )
+            )
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:variables])
+      |> Resolver.resolve()
+
+    assert Graph.explain(graph, "1:1").applied == [
+             {:variable_value_resolved, "9:1",
+              %{value: {:float, 12.5}, data_type: :float, resolved_data_type: :float}}
+           ]
+  end
+
   test "variables stage preserves style refs when style resolution is requested" do
     graph =
       [%SeedNode{guid: {1, 1}, node_type: "text", text_style_guid: "2:1"}]

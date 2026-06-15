@@ -89013,13 +89013,13 @@ struct GraphFocusMeta {
     guid: Option<GraphFocusGuid>,
     parent_guid: Option<GraphFocusGuid>,
     symbol_id: Option<GraphFocusGuid>,
-    swap_ids: Vec<GraphFocusGuid>,
+    refs: Option<Vec<GraphFocusGuid>>,
     byte_start: usize,
     byte_end: usize,
 }
 struct GraphFocusSymbolData {
     symbol_id: Option<GraphFocusGuid>,
-    swap_ids: Vec<GraphFocusGuid>,
+    refs: Option<Vec<GraphFocusGuid>>,
 }
 fn graph_focus_parse_guid(value: &str) -> Option<GraphFocusGuid> {
     let (session_id, local_id) = value.split_once(':')?;
@@ -89039,11 +89039,22 @@ fn graph_focus_read_parent_guid(decoder: &mut Decoder<'_>) -> NifResult<GraphFoc
     decoder.skip_string()?;
     Ok(guid)
 }
+fn graph_focus_push_ref(refs: &mut Option<Vec<GraphFocusGuid>>, guid: GraphFocusGuid) {
+    refs.get_or_insert_with(Vec::new).push(guid);
+}
+fn graph_focus_extend_refs(
+    refs: &mut Option<Vec<GraphFocusGuid>>,
+    next: Option<Vec<GraphFocusGuid>>,
+) {
+    if let Some(next) = next {
+        refs.get_or_insert_with(Vec::new).extend(next);
+    }
+}
 fn graph_focus_read_symbol_data(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<GraphFocusSymbolData> {
     let mut symbol_id = None;
-    let mut swap_ids = Vec::new();
+    let mut refs = None;
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -89054,7 +89065,7 @@ fn graph_focus_read_symbol_data(
                 let len = decoder.read_var_uint()? as usize;
                 for _ in 0..len {
                     let meta = graph_focus_index_node_change(decoder)?;
-                    swap_ids.extend(meta.swap_ids);
+                    graph_focus_extend_refs(&mut refs, meta.refs);
                 }
             }
             3 => {
@@ -89073,13 +89084,13 @@ fn graph_focus_read_symbol_data(
     }
     Ok(GraphFocusSymbolData {
         symbol_id,
-        swap_ids,
+        refs,
     })
 }
 fn graph_focus_read_component_prop_value(
     decoder: &mut Decoder<'_>,
-) -> NifResult<Vec<GraphFocusGuid>> {
-    let mut swap_ids = Vec::new();
+) -> NifResult<Option<Vec<GraphFocusGuid>>> {
+    let mut refs = None;
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -89090,7 +89101,7 @@ fn graph_focus_read_component_prop_value(
                 skip_text_data_from_decoder(decoder)?;
             }
             3 => {
-                swap_ids.push(graph_focus_read_guid(decoder)?);
+                graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);
             }
             4 => {
                 decoder.read_var_float_value()?;
@@ -89132,12 +89143,12 @@ fn graph_focus_read_component_prop_value(
             }
         }
     }
-    Ok(swap_ids)
+    Ok(refs)
 }
 fn graph_focus_read_component_prop_assignment(
     decoder: &mut Decoder<'_>,
-) -> NifResult<Vec<GraphFocusGuid>> {
-    let mut swap_ids = Vec::new();
+) -> NifResult<Option<Vec<GraphFocusGuid>>> {
+    let mut refs = None;
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -89145,7 +89156,8 @@ fn graph_focus_read_component_prop_assignment(
                 skip_guid_from_decoder(decoder)?;
             }
             2 => {
-                swap_ids.extend(graph_focus_read_component_prop_value(decoder)?);
+                let next = graph_focus_read_component_prop_value(decoder)?;
+                graph_focus_extend_refs(&mut refs, next);
             }
             3 => {
                 skip_variable_data_from_decoder(decoder)?;
@@ -89167,7 +89179,7 @@ fn graph_focus_read_component_prop_assignment(
             }
         }
     }
-    Ok(swap_ids)
+    Ok(refs)
 }
 fn graph_focus_index_node_change(
     decoder: &mut Decoder<'_>,
@@ -89175,7 +89187,7 @@ fn graph_focus_index_node_change(
     let mut guid = None;
     let mut parent_guid = None;
     let mut symbol_id = None;
-    let mut swap_ids = Vec::new();
+    let mut refs = None;
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -89416,7 +89428,7 @@ fn graph_focus_index_node_change(
             113 => {
                 let data = graph_focus_read_symbol_data(decoder)?;
                 symbol_id = data.symbol_id;
-                swap_ids.extend(data.swap_ids);
+                graph_focus_extend_refs(&mut refs, data.refs);
             }
             114 => {
                 decoder.read_var_uint()?;
@@ -89431,13 +89443,13 @@ fn graph_focus_index_node_change(
                 decoder.read_bool()?;
             }
             143 => {
-                swap_ids.push(graph_focus_read_guid(decoder)?);
+                graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);
             }
             268 => {
                 let len = decoder.read_var_uint()? as usize;
                 for _ in 0..len {
-                    swap_ids
-                        .extend(graph_focus_read_component_prop_assignment(decoder)?);
+                    let next = graph_focus_read_component_prop_assignment(decoder)?;
+                    graph_focus_extend_refs(&mut refs, next);
                 }
             }
             305 => {
@@ -91132,7 +91144,7 @@ fn graph_focus_index_node_change(
         guid,
         parent_guid,
         symbol_id,
-        swap_ids,
+        refs,
         byte_start: 0,
         byte_end: 0,
     })
@@ -91388,13 +91400,15 @@ fn graph_focus_wanted(
                         &children,
                     );
                 }
-                for swap_id in &metas[*index].swap_ids {
-                    graph_focus_collect_subtree(
-                        &mut wanted,
-                        *swap_id,
-                        &by_guid,
-                        &children,
-                    );
+                if let Some(refs) = &metas[*index].refs {
+                    for ref_id in refs {
+                        graph_focus_collect_subtree(
+                            &mut wanted,
+                            *ref_id,
+                            &by_guid,
+                            &children,
+                        );
+                    }
                 }
             }
         }
