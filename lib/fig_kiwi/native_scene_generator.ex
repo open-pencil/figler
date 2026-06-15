@@ -19,10 +19,9 @@ defmodule FigKiwi.NativeSceneGenerator do
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
     [
-      node_type_name: [node_type_name(definition_map)],
+      node_type_name_arms: node_type_name_arms(definition_map),
       sparse_decoders: Enum.map(schema.definitions, &sparse_definition(&1, definition_map)),
       skip_decoders: Enum.map(schema.definitions, &skip_definition(&1, definition_map)),
-      sparse_entrypoints: sparse_entrypoints(),
       scene_runtime: scene_summary(definition_map)
     ]
   end
@@ -638,23 +637,13 @@ defmodule FigKiwi.NativeSceneGenerator do
     """
   end
 
-  defp node_type_name(definition_map) do
-    arms =
-      definition_map
-      |> Map.fetch!("NodeType")
-      |> then(& &1.fields)
-      |> Enum.map_join("\n", fn field ->
-        "#{field.value} => \"#{Macro.underscore(field.name)}\","
-      end)
-
-    """
-    fn scene_node_type_name(value: u32) -> &'static str {
-        match value {
-    #{indent(arms, 8)}
-            _ => "unknown",
-        }
-    }
-    """
+  defp node_type_name_arms(definition_map) do
+    definition_map
+    |> Map.fetch!("NodeType")
+    |> then(& &1.fields)
+    |> Enum.map(fn field ->
+      "#{field.value} => \"#{Macro.underscore(field.name)}\","
+    end)
   end
 
   defp sparse_definition(%Definition{kind: :struct, name: name, fields: fields}, definition_map) do
@@ -719,20 +708,6 @@ defmodule FigKiwi.NativeSceneGenerator do
         Term::map_from_term_arrays(env, &keys, &values)
     }
     """
-  end
-
-  defp sparse_entrypoints do
-    [
-      """
-      #[rustler::nif(schedule = "DirtyCpu")]
-      pub fn decode_sparse_message<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-          let mut decoder = Decoder::new(bytes.as_slice());
-          let value = decode_sparse_message_from_decoder(env, &mut decoder)?;
-          decoder.finish()?;
-          Ok(value)
-      }
-      """
-    ]
   end
 
   defp sparse_struct_field(field, definition_map) do
@@ -862,54 +837,6 @@ defmodule FigKiwi.NativeSceneGenerator do
 
     [
       scene_xpath_runtime(message_arms, node_change_arms),
-      """
-      pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
-          env.register::<scene_xpath_runtime::SceneIndexResource>().is_ok()
-      }
-      """,
-      """
-      #[rustler::nif(schedule = "DirtyCpu")]
-      pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-          let mut decoder = Decoder::new(bytes.as_slice());
-          let mut node_count: usize = 0;
-          let mut parented_count: usize = 0;
-          let mut type_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-
-          decode_scene_message_from_decoder(&mut decoder, &mut node_count, &mut parented_count, &mut type_counts)?;
-          decoder.finish()?;
-          let mut type_counts = type_counts.into_iter().collect::<Vec<_>>();
-          type_counts.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
-
-          Ok(SceneSummary {
-              node_count,
-              parented_count,
-              root_count: node_count.saturating_sub(parented_count),
-              type_counts,
-          }.encode(env))
-      }
-      """,
-      """
-      #[rustler::nif(schedule = "DirtyCpu")]
-      pub fn build_scene_index(bytes: Binary<'_>) -> NifResult<rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>> {
-          scene_xpath_runtime::build_scene_index_value(bytes)
-      }
-      """,
-      """
-      #[rustler::nif(schedule = "DirtyCpu")]
-      pub fn query_scene_xpath<'a>(env: Env<'a>, bytes: Binary<'a>, xpath: String) -> NifResult<Term<'a>> {
-          scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
-      }
-      """,
-      """
-      #[rustler::nif(schedule = "DirtyCpu")]
-      pub fn query_scene_index<'a>(
-          env: Env<'a>,
-          index: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-          xpath: String,
-      ) -> NifResult<Term<'a>> {
-          scene_xpath_runtime::query_scene_index_value(env, index, xpath)
-      }
-      """,
       """
       fn decode_scene_message_from_decoder(
           decoder: &mut Decoder<'_>,

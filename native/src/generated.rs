@@ -70,6 +70,76 @@ pub struct SceneQueryNode {
     visible: Option<bool>,
     locked: Option<bool>,
 }
+fn scene_node_type_name(value: u32) -> &'static str {
+    match value {
+        0 => "none",
+        1 => "document",
+        2 => "canvas",
+        3 => "group",
+        4 => "frame",
+        5 => "boolean_operation",
+        6 => "vector",
+        7 => "star",
+        8 => "line",
+        9 => "ellipse",
+        10 => "rectangle",
+        11 => "regular_polygon",
+        12 => "rounded_rectangle",
+        13 => "text",
+        14 => "slice",
+        15 => "symbol",
+        16 => "instance",
+        17 => "sticky",
+        18 => "shape_with_text",
+        19 => "connector",
+        20 => "code_block",
+        21 => "widget",
+        22 => "stamp",
+        23 => "media",
+        24 => "highlight",
+        25 => "section",
+        26 => "section_overlay",
+        27 => "washi_tape",
+        28 => "variable",
+        29 => "table",
+        30 => "table_cell",
+        31 => "variable_set",
+        32 => "slide",
+        33 => "assisted_layout",
+        34 => "interactive_slide_element",
+        35 => "variable_override",
+        36 => "module",
+        37 => "slide_grid",
+        38 => "slide_row",
+        39 => "responsive_set",
+        40 => "code_component",
+        41 => "text_path",
+        42 => "code_instance",
+        43 => "code_library",
+        44 => "code_file",
+        45 => "code_layer",
+        46 => "brush",
+        47 => "managed_string",
+        48 => "transform",
+        49 => "cms_rich_text",
+        50 => "repeater",
+        51 => "jsx",
+        52 => "embedded_prototype",
+        53 => "react_fiber",
+        54 => "responsive_node_set",
+        55 => "webpage",
+        56 => "keyframe",
+        57 => "keyframe_track",
+        58 => "animation_preset_instance",
+        59 => "code_embed",
+        60 => "binary_file",
+        61 => "spec_block",
+        62 => "tool_instance",
+        63 => "custom_effect_instance",
+        64 => "native_code_layer_instance",
+        _ => "unknown",
+    }
+}
 fn decode_message_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
@@ -31102,76 +31172,6 @@ pub fn decode_message<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>
     let term = decode_message_from_decoder(env, &mut decoder)?;
     decoder.finish()?;
     Ok(term)
-}
-fn scene_node_type_name(value: u32) -> &'static str {
-    match value {
-        0 => "none",
-        1 => "document",
-        2 => "canvas",
-        3 => "group",
-        4 => "frame",
-        5 => "boolean_operation",
-        6 => "vector",
-        7 => "star",
-        8 => "line",
-        9 => "ellipse",
-        10 => "rectangle",
-        11 => "regular_polygon",
-        12 => "rounded_rectangle",
-        13 => "text",
-        14 => "slice",
-        15 => "symbol",
-        16 => "instance",
-        17 => "sticky",
-        18 => "shape_with_text",
-        19 => "connector",
-        20 => "code_block",
-        21 => "widget",
-        22 => "stamp",
-        23 => "media",
-        24 => "highlight",
-        25 => "section",
-        26 => "section_overlay",
-        27 => "washi_tape",
-        28 => "variable",
-        29 => "table",
-        30 => "table_cell",
-        31 => "variable_set",
-        32 => "slide",
-        33 => "assisted_layout",
-        34 => "interactive_slide_element",
-        35 => "variable_override",
-        36 => "module",
-        37 => "slide_grid",
-        38 => "slide_row",
-        39 => "responsive_set",
-        40 => "code_component",
-        41 => "text_path",
-        42 => "code_instance",
-        43 => "code_library",
-        44 => "code_file",
-        45 => "code_layer",
-        46 => "brush",
-        47 => "managed_string",
-        48 => "transform",
-        49 => "cms_rich_text",
-        50 => "repeater",
-        51 => "jsx",
-        52 => "embedded_prototype",
-        53 => "react_fiber",
-        54 => "responsive_node_set",
-        55 => "webpage",
-        56 => "keyframe",
-        57 => "keyframe_track",
-        58 => "animation_preset_instance",
-        59 => "code_embed",
-        60 => "binary_file",
-        61 => "spec_block",
-        62 => "tool_instance",
-        63 => "custom_effect_instance",
-        64 => "native_code_layer_instance",
-        _ => "unknown",
-    }
 }
 fn decode_sparse_message_type_from_decoder<'a>(
     env: Env<'a>,
@@ -87909,16 +87909,6 @@ fn skip_playback_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     decoder.read_var_uint()?;
     Ok(())
 }
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn decode_sparse_message<'a>(
-    env: Env<'a>,
-    bytes: Binary<'a>,
-) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    let value = decode_sparse_message_from_decoder(env, &mut decoder)?;
-    decoder.finish()?;
-    Ok(value)
-}
 mod scene_xpath_runtime {
     use super::*;
     use std::cmp::Ordering;
@@ -90675,57 +90665,6 @@ mod scene_xpath_runtime {
         })
     }
 }
-pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
-    env.register::<scene_xpath_runtime::SceneIndexResource>().is_ok()
-}
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    let mut node_count: usize = 0;
-    let mut parented_count: usize = 0;
-    let mut type_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-    decode_scene_message_from_decoder(
-        &mut decoder,
-        &mut node_count,
-        &mut parented_count,
-        &mut type_counts,
-    )?;
-    decoder.finish()?;
-    let mut type_counts = type_counts.into_iter().collect::<Vec<_>>();
-    type_counts
-        .sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
-    Ok(
-        SceneSummary {
-            node_count,
-            parented_count,
-            root_count: node_count.saturating_sub(parented_count),
-            type_counts,
-        }
-            .encode(env),
-    )
-}
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn build_scene_index(
-    bytes: Binary<'_>,
-) -> NifResult<rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>> {
-    scene_xpath_runtime::build_scene_index_value(bytes)
-}
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn query_scene_xpath<'a>(
-    env: Env<'a>,
-    bytes: Binary<'a>,
-    xpath: String,
-) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
-}
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn query_scene_index<'a>(
-    env: Env<'a>,
-    index: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-    xpath: String,
-) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::query_scene_index_value(env, index, xpath)
-}
 fn decode_scene_message_from_decoder(
     decoder: &mut Decoder<'_>,
     node_count: &mut usize,
@@ -92876,4 +92815,65 @@ fn decode_scene_node_change_from_decoder(
         }
     }
     Ok(())
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_sparse_message<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let mut decoder = Decoder::new(bytes.as_slice());
+    let value = decode_sparse_message_from_decoder(env, &mut decoder)?;
+    decoder.finish()?;
+    Ok(value)
+}
+pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
+    env.register::<scene_xpath_runtime::SceneIndexResource>().is_ok()
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
+    let mut decoder = Decoder::new(bytes.as_slice());
+    let mut node_count: usize = 0;
+    let mut parented_count: usize = 0;
+    let mut type_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    decode_scene_message_from_decoder(
+        &mut decoder,
+        &mut node_count,
+        &mut parented_count,
+        &mut type_counts,
+    )?;
+    decoder.finish()?;
+    let mut type_counts = type_counts.into_iter().collect::<Vec<_>>();
+    type_counts
+        .sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+    Ok(
+        SceneSummary {
+            node_count,
+            parented_count,
+            root_count: node_count.saturating_sub(parented_count),
+            type_counts,
+        }
+            .encode(env),
+    )
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn build_scene_index(
+    bytes: Binary<'_>,
+) -> NifResult<rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>> {
+    scene_xpath_runtime::build_scene_index_value(bytes)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn query_scene_xpath<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    xpath: String,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn query_scene_index<'a>(
+    env: Env<'a>,
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    xpath: String,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_index_value(env, resource, xpath)
 }
