@@ -64,6 +64,11 @@ defmodule FigKiwi.Scene do
     * `@transform`
     * `@visible`
     * `@locked`
+    * `@text`
+    * `@font_family`
+    * `@font_style`
+    * `@font_postscript`
+    * `@text_style_guid`
   """
   @spec query(binary() | reference(), String.t(), keyword()) :: [scene_node()]
   def query(scene, xpath, opts \\ [])
@@ -105,8 +110,9 @@ defmodule FigKiwi.Scene do
   @spec node(binary() | reference(), String.t()) :: scene_node() | nil
   def node(scene, guid) when is_binary(guid) do
     scene
-    |> query("//*[@guid=#{xpath_literal(guid)}]")
-    |> List.first()
+    |> reusable_index()
+    |> NativeScene.index_node(guid)
+    |> maybe_node_from_map()
   end
 
   @doc """
@@ -114,7 +120,32 @@ defmodule FigKiwi.Scene do
   """
   @spec children(binary() | reference(), String.t()) :: [scene_node()]
   def children(scene, parent_guid) when is_binary(parent_guid) do
-    query(scene, "//*[@parent_guid=#{xpath_literal(parent_guid)}]")
+    scene
+    |> reusable_index()
+    |> NativeScene.index_children(parent_guid)
+    |> nodes_from_maps()
+  end
+
+  @doc """
+  Returns ancestors for a node GUID, ordered from root to parent.
+  """
+  @spec ancestors(binary() | reference(), String.t()) :: [scene_node()]
+  def ancestors(scene, guid) when is_binary(guid) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_ancestors(guid)
+    |> nodes_from_maps()
+  end
+
+  @doc """
+  Returns all descendants for a node GUID in scene order.
+  """
+  @spec descendants(binary() | reference(), String.t()) :: [scene_node()]
+  def descendants(scene, guid) when is_binary(guid) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_descendants(guid)
+    |> nodes_from_maps()
   end
 
   @doc """
@@ -203,6 +234,9 @@ defmodule FigKiwi.Scene do
   end
 
   defp nodes_from_maps(nodes), do: Enum.map(nodes, &Node.from_map/1)
+
+  defp maybe_node_from_map(nil), do: nil
+  defp maybe_node_from_map(map), do: Node.from_map(map)
 
   defp query_fields(opts) do
     case Keyword.get(opts, :fields, :all) do

@@ -68,3 +68,5 @@ pub fn query_scene_index_fields<'a>(
 ) -> NifResult<Term<'a>> {
     scene_xpath_runtime::query_scene_index_fields_value(env, resource, xpath, fields)
 }
+
+__rq_scene_navigation_nifs!();

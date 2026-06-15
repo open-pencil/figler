@@ -1,5 +1,6 @@
 use RustQ.Config
 
+require_file("lib/fig_kiwi/scene/projection.ex")
 require_file("lib/fig_kiwi/native_scene_generator.ex")
 
 generate "native", "native/src/generated.rs" do

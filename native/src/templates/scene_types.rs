@@ -33,6 +33,11 @@ pub struct SceneQueryNode {
     transform: Option<SceneTransform>,
     visible: Option<bool>,
     locked: Option<bool>,
+    text: Option<String>,
+    font_family: Option<String>,
+    font_style: Option<String>,
+    font_postscript: Option<String>,
+    text_style_guid: Option<String>,
 }
 
 fn scene_node_type_name(value: u32) -> &'static str {

@@ -97,7 +97,12 @@ defmodule FigKiwi.NativeTest do
                size: nil,
                transform: nil,
                visible: nil,
-               locked: nil
+               locked: nil,
+               text: nil,
+               font_family: nil,
+               font_style: nil,
+               font_postscript: nil,
+               text_style_guid: nil
              }
            ]
   end

@@ -8,28 +8,11 @@ defmodule FigKiwi.Scene.Node do
   schema field.
   """
 
-  @source_module FigKiwi.Schema.NodeChange
-  @source_fields [:guid, :type, :name, :parent_index, :size, :transform, :visible, :locked]
-  @parent_index_source_fields [:guid, :position]
+  alias FigKiwi.Scene.Projection
 
-  @source_props @source_module.__kiwi_props__()
-  @parent_index_props FigKiwi.Schema.ParentIndex.__kiwi_props__()
-
-  for field <- @source_fields do
-    unless Map.has_key?(@source_props.fields_by_name, field) do
-      raise CompileError,
-        description:
-          "#{inspect(@source_module)} is missing required scene projection field #{inspect(field)}"
-    end
-  end
-
-  for field <- @parent_index_source_fields do
-    unless Map.has_key?(@parent_index_props.fields_by_name, field) do
-      raise CompileError,
-        description:
-          "FigKiwi.Schema.ParentIndex is missing required scene projection field #{inspect(field)}"
-    end
-  end
+  @source_module Projection.source_module()
+  @source_fields Projection.source_fields()
+  @parent_index_source_fields Projection.parent_index_source_fields()
 
   @enforce_keys [:guid, :node_type]
   defstruct [
@@ -42,6 +25,11 @@ defmodule FigKiwi.Scene.Node do
     :transform,
     :visible,
     :locked,
+    :text,
+    :font_family,
+    :font_style,
+    :font_postscript,
+    :text_style_guid,
     children: nil
   ]
 
@@ -55,6 +43,11 @@ defmodule FigKiwi.Scene.Node do
           transform: map() | nil,
           visible: boolean() | nil,
           locked: boolean() | nil,
+          text: String.t() | nil,
+          font_family: String.t() | nil,
+          font_style: String.t() | nil,
+          font_postscript: String.t() | nil,
+          text_style_guid: String.t() | nil,
           children: [t()] | nil
         }
 
@@ -90,7 +83,12 @@ defmodule FigKiwi.Scene.Node do
         :size,
         :transform,
         :visible,
-        :locked
+        :locked,
+        :text,
+        :font_family,
+        :font_style,
+        :font_postscript,
+        :text_style_guid
       ])
     )
   end

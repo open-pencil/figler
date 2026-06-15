@@ -3,19 +3,43 @@ defmodule FigKiwi.Native do
 
   alias FigKiwi.Native.{Codec, Scene}
 
-  defdelegate decode_guid(binary), to: Codec
-  defdelegate decode_vector(binary), to: Codec
-  defdelegate decode_matrix(binary), to: Codec
-  defdelegate decode_parent_index(binary), to: Codec
-  defdelegate decode_image(binary), to: Codec
-  defdelegate decode_node_change(binary), to: Codec
-  defdelegate decode_message(binary), to: Codec
-  defdelegate decode_sparse_message(binary), to: Codec
+  @codec_delegates [
+    {:decode_guid, [:binary], :decode_guid},
+    {:decode_vector, [:binary], :decode_vector},
+    {:decode_matrix, [:binary], :decode_matrix},
+    {:decode_parent_index, [:binary], :decode_parent_index},
+    {:decode_image, [:binary], :decode_image},
+    {:decode_node_change, [:binary], :decode_node_change},
+    {:decode_message, [:binary], :decode_message},
+    {:decode_sparse_message, [:binary], :decode_sparse_message}
+  ]
 
-  defdelegate decode_scene_summary(binary), to: Scene, as: :decode_summary
-  defdelegate build_scene_index(binary), to: Scene, as: :build_index
-  defdelegate query_scene_xpath(binary, xpath), to: Scene, as: :query_xpath
-  defdelegate query_scene_xpath_fields(binary, xpath, fields), to: Scene, as: :query_xpath_fields
-  defdelegate query_scene_index(index, xpath), to: Scene, as: :query_index
-  defdelegate query_scene_index_fields(index, xpath, fields), to: Scene, as: :query_index_fields
+  @scene_delegates [
+    {:decode_scene_summary, [:binary], :decode_summary},
+    {:build_scene_index, [:binary], :build_index},
+    {:query_scene_xpath, [:binary, :xpath], :query_xpath},
+    {:query_scene_xpath_fields, [:binary, :xpath, :fields], :query_xpath_fields},
+    {:query_scene_index, [:index, :xpath], :query_index},
+    {:query_scene_index_fields, [:index, :xpath, :fields], :query_index_fields},
+    {:scene_index_node, [:index, :guid], :index_node},
+    {:scene_index_children, [:index, :guid], :index_children},
+    {:scene_index_ancestors, [:index, :guid], :index_ancestors},
+    {:scene_index_descendants, [:index, :guid], :index_descendants}
+  ]
+
+  for {name, arg_names, target} <- @codec_delegates do
+    args = Enum.map(arg_names, &Macro.var(&1, nil))
+
+    def unquote(name)(unquote_splicing(args)) do
+      Codec.unquote(target)(unquote_splicing(args))
+    end
+  end
+
+  for {name, arg_names, target} <- @scene_delegates do
+    args = Enum.map(arg_names, &Macro.var(&1, nil))
+
+    def unquote(name)(unquote_splicing(args)) do
+      Scene.unquote(target)(unquote_splicing(args))
+    end
+  end
 end

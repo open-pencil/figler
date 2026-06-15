@@ -69,6 +69,11 @@ pub struct SceneQueryNode {
     transform: Option<SceneTransform>,
     visible: Option<bool>,
     locked: Option<bool>,
+    text: Option<String>,
+    font_family: Option<String>,
+    font_style: Option<String>,
+    font_postscript: Option<String>,
+    text_style_guid: Option<String>,
 }
 fn scene_node_type_name(value: u32) -> &'static str {
     match value {
@@ -88852,6 +88857,11 @@ mod scene_xpath_runtime {
         transform: Option<SceneTransform>,
         visible: Option<bool>,
         locked: Option<bool>,
+        text: Option<String>,
+        font_family: Option<String>,
+        font_style: Option<String>,
+        font_postscript: Option<String>,
+        text_style_guid: Option<String>,
         parent: Option<usize>,
         children: Vec<usize>,
     }
@@ -88935,6 +88945,21 @@ mod scene_xpath_runtime {
             }
             if let Some(value) = self.locked {
                 attrs.push(("locked", value.to_string()));
+            }
+            if let Some(value) = self.text.as_ref() {
+                attrs.push(("text", value.clone()));
+            }
+            if let Some(value) = self.font_family.as_ref() {
+                attrs.push(("font_family", value.clone()));
+            }
+            if let Some(value) = self.font_style.as_ref() {
+                attrs.push(("font_style", value.clone()));
+            }
+            if let Some(value) = self.font_postscript.as_ref() {
+                attrs.push(("font_postscript", value.clone()));
+            }
+            if let Some(value) = self.text_style_guid.as_ref() {
+                attrs.push(("text_style_guid", value.clone()));
             }
             attrs
         }
@@ -89354,6 +89379,156 @@ mod scene_xpath_runtime {
             m12: decoder.read_var_float_value()? as f64,
         })
     }
+    fn read_scene_font_name_value(
+        decoder: &mut Decoder<'_>,
+    ) -> NifResult<(Option<String>, Option<String>, Option<String>)> {
+        let family = Some(decoder.read_string_value()?);
+        let style = Some(decoder.read_string_value()?);
+        let postscript = Some(decoder.read_string_value()?);
+        Ok((family, style, postscript))
+    }
+    fn read_scene_text_data_value(
+        decoder: &mut Decoder<'_>,
+    ) -> NifResult<Option<String>> {
+        let mut text = None;
+        loop {
+            match decoder.read_var_uint()? {
+                0 => break,
+                1 => text = Some(decoder.read_string_value()?),
+                2 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        decoder.read_var_uint()?;
+                    }
+                }
+                3 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_node_change_from_decoder(decoder)?;
+                    }
+                }
+                12 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_text_line_data_from_decoder(decoder)?;
+                    }
+                }
+                8 => {
+                    decoder.read_var_uint()?;
+                }
+                10 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_font_name_from_decoder(decoder)?;
+                    }
+                }
+                17 => {
+                    decoder.read_var_float_value()?;
+                }
+                4 => {
+                    skip_vector_from_decoder(decoder)?;
+                }
+                5 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_baseline_from_decoder(decoder)?;
+                    }
+                }
+                6 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_glyph_from_decoder(decoder)?;
+                    }
+                }
+                7 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_decoration_from_decoder(decoder)?;
+                    }
+                }
+                16 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_blockquote_from_decoder(decoder)?;
+                    }
+                }
+                9 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_font_meta_data_from_decoder(decoder)?;
+                    }
+                }
+                11 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_hyperlink_box_from_decoder(decoder)?;
+                    }
+                }
+                13 => {
+                    decoder.read_var_int()?;
+                }
+                14 => {
+                    decoder.read_var_float_value()?;
+                }
+                15 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        decoder.read_var_float_value()?;
+                    }
+                }
+                18 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_mention_box_from_decoder(decoder)?;
+                    }
+                }
+                19 => {
+                    let len = decoder.read_var_uint()? as usize;
+                    for _ in 0..len {
+                        skip_derived_text_line_data_from_decoder(decoder)?;
+                    }
+                }
+                field => {
+                    return Err(
+                        Error::Term(
+                            Box::new(
+                                format!(
+                                    "unknown field {} while decoding scene text data", field
+                                ),
+                            ),
+                        ),
+                    );
+                }
+            }
+        }
+        Ok(text)
+    }
+    fn read_scene_style_id_value(
+        decoder: &mut Decoder<'_>,
+    ) -> NifResult<Option<String>> {
+        let mut guid = None;
+        loop {
+            match decoder.read_var_uint()? {
+                0 => break,
+                1 => guid = Some(read_guid_value(decoder)?),
+                2 => {
+                    skip_asset_ref_from_decoder(decoder)?;
+                }
+                field => {
+                    return Err(
+                        Error::Term(
+                            Box::new(
+                                format!(
+                                    "unknown field {} while decoding scene style id", field
+                                ),
+                            ),
+                        ),
+                    );
+                }
+            }
+        }
+        Ok(guid)
+    }
     fn scene_query_node(index: &SceneIndex, node_index: usize) -> SceneQueryNode {
         let node = &index.nodes[node_index];
         SceneQueryNode {
@@ -89366,6 +89541,11 @@ mod scene_xpath_runtime {
             transform: node.transform.clone(),
             visible: node.visible,
             locked: node.locked,
+            text: node.text.clone(),
+            font_family: node.font_family.clone(),
+            font_style: node.font_style.clone(),
+            font_postscript: node.font_postscript.clone(),
+            text_style_guid: node.text_style_guid.clone(),
         }
     }
     fn wants_field(fields: &[String], field: &str) -> bool {
@@ -89386,6 +89566,11 @@ mod scene_xpath_runtime {
         static TRANSFORM_ATOM: OnceLock<Atom> = OnceLock::new();
         static VISIBLE_ATOM: OnceLock<Atom> = OnceLock::new();
         static LOCKED_ATOM: OnceLock<Atom> = OnceLock::new();
+        static TEXT_ATOM: OnceLock<Atom> = OnceLock::new();
+        static FONT_FAMILY_ATOM: OnceLock<Atom> = OnceLock::new();
+        static FONT_STYLE_ATOM: OnceLock<Atom> = OnceLock::new();
+        static FONT_POSTSCRIPT_ATOM: OnceLock<Atom> = OnceLock::new();
+        static TEXT_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
         let node = &index.nodes[node_index];
         let mut keys = Vec::with_capacity(fields.len().max(2));
         let mut values = Vec::with_capacity(fields.len().max(2));
@@ -89420,6 +89605,30 @@ mod scene_xpath_runtime {
         if wants_field(fields, "locked") {
             keys.push(cached_atom(env, &LOCKED_ATOM, "locked").encode(env));
             values.push(node.locked.encode(env));
+        }
+        if wants_field(fields, "text") {
+            keys.push(cached_atom(env, &TEXT_ATOM, "text").encode(env));
+            values.push(node.text.encode(env));
+        }
+        if wants_field(fields, "font_family") {
+            keys.push(cached_atom(env, &FONT_FAMILY_ATOM, "font_family").encode(env));
+            values.push(node.font_family.encode(env));
+        }
+        if wants_field(fields, "font_style") {
+            keys.push(cached_atom(env, &FONT_STYLE_ATOM, "font_style").encode(env));
+            values.push(node.font_style.encode(env));
+        }
+        if wants_field(fields, "font_postscript") {
+            keys.push(
+                cached_atom(env, &FONT_POSTSCRIPT_ATOM, "font_postscript").encode(env),
+            );
+            values.push(node.font_postscript.encode(env));
+        }
+        if wants_field(fields, "text_style_guid") {
+            keys.push(
+                cached_atom(env, &TEXT_STYLE_GUID_ATOM, "text_style_guid").encode(env),
+            );
+            values.push(node.text_style_guid.encode(env));
         }
         Term::map_from_term_arrays(env, &keys, &values)
     }
@@ -89533,6 +89742,71 @@ mod scene_xpath_runtime {
             _ => Vec::new(),
         };
         Ok(matched.encode(env))
+    }
+    fn find_node_index(index: &SceneIndex, guid: &str) -> Option<usize> {
+        index.nodes.iter().position(|node| node.guid == guid)
+    }
+    pub fn scene_index_node_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        match find_node_index(&index, &guid) {
+            Some(node_index) => Ok(scene_query_node(&index, node_index).encode(env)),
+            None => Ok(None::<SceneQueryNode>.encode(env)),
+        }
+    }
+    pub fn scene_index_children_value(
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        find_node_index(&index, &guid)
+            .map(|node_index| {
+                index
+                    .nodes[node_index]
+                    .children
+                    .iter()
+                    .copied()
+                    .map(|child| scene_query_node(&index, child))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+    pub fn scene_index_ancestors_value(
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        let mut out = Vec::new();
+        let mut current = find_node_index(&index, &guid)
+            .and_then(|node_index| index.nodes[node_index].parent);
+        while let Some(node_index) = current {
+            out.push(scene_query_node(&index, node_index));
+            current = index.nodes[node_index].parent;
+        }
+        out.reverse();
+        out
+    }
+    pub fn scene_index_descendants_value(
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        let mut out = Vec::new();
+        if let Some(node_index) = find_node_index(&index, &guid) {
+            for child in index.nodes[node_index].children.iter().copied() {
+                let mut preorder = Vec::new();
+                SceneIndex::push_preorder(&index.nodes, child, &mut preorder);
+                out.extend(
+                    preorder
+                        .into_iter()
+                        .map(|index_node| scene_query_node(&index, index_node)),
+                );
+            }
+        }
+        out
     }
     fn decode_scene_index_message_from_decoder(
         decoder: &mut Decoder<'_>,
@@ -89735,6 +90009,11 @@ mod scene_xpath_runtime {
         let mut transform = None;
         let mut visible = None;
         let mut locked = None;
+        let mut text = None;
+        let mut font_family = None;
+        let mut font_style = None;
+        let mut font_postscript = None;
+        let mut text_style_guid = None;
         loop {
             match decoder.read_var_uint()? {
                 0 => break,
@@ -89754,6 +90033,16 @@ mod scene_xpath_runtime {
                 7 => locked = Some(decoder.read_bool()?),
                 11 => size = Some(read_scene_size_value(decoder)?),
                 12 => transform = Some(read_scene_transform_value(decoder)?),
+                41 => {
+                    let (family, style, postscript) = read_scene_font_name_value(
+                        decoder,
+                    )?;
+                    font_family = family;
+                    font_style = style;
+                    font_postscript = postscript;
+                }
+                42 => text = read_scene_text_data_value(decoder)?,
+                334 => text_style_guid = read_scene_style_id_value(decoder)?,
                 53 => {
                     decoder.read_var_uint()?;
                 }
@@ -89866,9 +90155,6 @@ mod scene_xpath_runtime {
                     skip_style_id_from_decoder(decoder)?;
                 }
                 333 => {
-                    skip_style_id_from_decoder(decoder)?;
-                }
-                334 => {
                     skip_style_id_from_decoder(decoder)?;
                 }
                 335 => {
@@ -90081,14 +90367,8 @@ mod scene_xpath_runtime {
                 92 => {
                     decoder.read_var_uint()?;
                 }
-                41 => {
-                    skip_font_name_from_decoder(decoder)?;
-                }
                 93 => {
                     decoder.read_var_uint()?;
-                }
-                42 => {
-                    skip_text_data_from_decoder(decoder)?;
                 }
                 94 => {
                     decoder.read_var_uint()?;
@@ -91688,6 +91968,11 @@ mod scene_xpath_runtime {
             transform,
             visible,
             locked,
+            text,
+            font_family,
+            font_style,
+            font_postscript,
+            text_style_guid,
             parent: None,
             children: Vec::new(),
         })
@@ -91920,6 +92205,15 @@ fn decode_scene_node_change_from_decoder(
             12 => {
                 skip_matrix_from_decoder(decoder)?;
             }
+            41 => {
+                skip_font_name_from_decoder(decoder)?;
+            }
+            42 => {
+                skip_text_data_from_decoder(decoder)?;
+            }
+            334 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
             53 => {
                 decoder.read_var_uint()?;
             }
@@ -92032,9 +92326,6 @@ fn decode_scene_node_change_from_decoder(
                 skip_style_id_from_decoder(decoder)?;
             }
             333 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            334 => {
                 skip_style_id_from_decoder(decoder)?;
             }
             335 => {
@@ -92247,14 +92538,8 @@ fn decode_scene_node_change_from_decoder(
             92 => {
                 decoder.read_var_uint()?;
             }
-            41 => {
-                skip_font_name_from_decoder(decoder)?;
-            }
             93 => {
                 decoder.read_var_uint()?;
-            }
-            42 => {
-                skip_text_data_from_decoder(decoder)?;
             }
             94 => {
                 decoder.read_var_uint()?;
@@ -93922,4 +94207,33 @@ pub fn query_scene_index_fields<'a>(
     fields: Vec<String>,
 ) -> NifResult<Term<'a>> {
     scene_xpath_runtime::query_scene_index_fields_value(env, resource, xpath, fields)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_node<'a>(
+    env: Env<'a>,
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::scene_index_node_value(env, resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_children(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_children_value(resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_ancestors(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_ancestors_value(resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_descendants(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_descendants_value(resource, guid)
 }

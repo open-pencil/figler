@@ -1,6 +1,7 @@
 defmodule FigKiwi.NativeSceneGenerator do
   @moduledoc false
 
+  alias FigKiwi.Scene.Projection
   alias KiwiCodec.Schema
   alias KiwiCodec.Schema.Definition
 
@@ -200,9 +201,81 @@ defmodule FigKiwi.NativeSceneGenerator do
         definition_map
         |> Map.fetch!("NodeChange")
         |> then(& &1.fields)
-        |> Enum.reject(&(&1.value in [1, 3, 4, 5, 6, 7, 11, 12]))
-        |> Enum.map(&skip_message_arm(&1, definition_map))
+        |> Enum.reject(&(&1.value in [1, 3, 4, 5, 6, 7, 11, 12, 41, 42, 334]))
+        |> Enum.map(&skip_message_arm(&1, definition_map)),
+      scene_text_data_skip_arms:
+        definition_map
+        |> Map.fetch!("TextData")
+        |> then(& &1.fields)
+        |> Enum.reject(&(&1.value == 1))
+        |> Enum.map(&skip_message_arm(&1, definition_map)),
+      scene_style_id_skip_arms:
+        definition_map
+        |> Map.fetch!("StyleId")
+        |> then(& &1.fields)
+        |> Enum.reject(&(&1.value == 1))
+        |> Enum.map(&skip_message_arm(&1, definition_map)),
+      scene_query_field_atoms: scene_query_field_atoms(),
+      scene_query_field_encoders: scene_query_field_encoders(),
+      scene_navigation_nifs: scene_navigation_nifs()
     ]
+  end
+
+  defp scene_query_field_atoms do
+    Projection.field_names()
+    |> Enum.reject(&(&1 in Projection.required_field_names()))
+    |> Enum.map(fn field ->
+      "static #{field |> Atom.to_string() |> String.upcase()}_ATOM: OnceLock<Atom> = OnceLock::new();"
+    end)
+  end
+
+  defp scene_query_field_encoders do
+    Projection.field_names()
+    |> Enum.reject(&(&1 in Projection.required_field_names()))
+    |> Enum.map(fn field ->
+      name = Atom.to_string(field)
+      atom = String.upcase(name)
+
+      """
+      if wants_field(fields, "#{name}") {
+          keys.push(cached_atom(env, &#{atom}_ATOM, "#{name}").encode(env));
+          values.push(node.#{name}.encode(env));
+      }
+      """
+    end)
+  end
+
+  defp scene_navigation_nifs do
+    node_nif = """
+    #[rustler::nif(schedule = "DirtyCpu")]
+    pub fn scene_index_node<'a>(
+        env: Env<'a>,
+        resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+        guid: String,
+    ) -> NifResult<Term<'a>> {
+        scene_xpath_runtime::scene_index_node_value(env, resource, guid)
+    }
+    """
+
+    list_nifs =
+      [
+        {:scene_index_children, :scene_index_children_value},
+        {:scene_index_ancestors, :scene_index_ancestors_value},
+        {:scene_index_descendants, :scene_index_descendants_value}
+      ]
+      |> Enum.map(fn {name, call} ->
+        """
+        #[rustler::nif(schedule = "DirtyCpu")]
+        pub fn #{name}(
+            resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+            guid: String,
+        ) -> Vec<SceneQueryNode> {
+            scene_xpath_runtime::#{call}(resource, guid)
+        }
+        """
+      end)
+
+    [node_nif | list_nifs]
   end
 
   defp skip_message_arm(field, definition_map) do

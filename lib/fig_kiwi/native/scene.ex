@@ -3,10 +3,24 @@ defmodule FigKiwi.Native.Scene do
 
   alias FigKiwi.Native.Nif
 
-  defdelegate decode_summary(binary), to: Nif, as: :decode_scene_summary
-  defdelegate build_index(binary), to: Nif, as: :build_scene_index
-  defdelegate query_xpath(binary, xpath), to: Nif, as: :query_scene_xpath
-  defdelegate query_xpath_fields(binary, xpath, fields), to: Nif, as: :query_scene_xpath_fields
-  defdelegate query_index(index, xpath), to: Nif, as: :query_scene_index
-  defdelegate query_index_fields(index, xpath, fields), to: Nif, as: :query_scene_index_fields
+  @delegates [
+    {:decode_summary, [:binary], :decode_scene_summary},
+    {:build_index, [:binary], :build_scene_index},
+    {:query_xpath, [:binary, :xpath], :query_scene_xpath},
+    {:query_xpath_fields, [:binary, :xpath, :fields], :query_scene_xpath_fields},
+    {:query_index, [:index, :xpath], :query_scene_index},
+    {:query_index_fields, [:index, :xpath, :fields], :query_scene_index_fields},
+    {:index_node, [:index, :guid], :scene_index_node},
+    {:index_children, [:index, :guid], :scene_index_children},
+    {:index_ancestors, [:index, :guid], :scene_index_ancestors},
+    {:index_descendants, [:index, :guid], :scene_index_descendants}
+  ]
+
+  for {name, arg_names, nif_name} <- @delegates do
+    args = Enum.map(arg_names, &Macro.var(&1, nil))
+
+    def unquote(name)(unquote_splicing(args)) do
+      Nif.unquote(nif_name)(unquote_splicing(args))
+    end
+  end
 end

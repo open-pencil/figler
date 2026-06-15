@@ -19,6 +19,11 @@ mod scene_xpath_runtime {
         transform: Option<SceneTransform>,
         visible: Option<bool>,
         locked: Option<bool>,
+        text: Option<String>,
+        font_family: Option<String>,
+        font_style: Option<String>,
+        font_postscript: Option<String>,
+        text_style_guid: Option<String>,
         parent: Option<usize>,
         children: Vec<usize>,
     }
@@ -102,6 +107,21 @@ mod scene_xpath_runtime {
             }
             if let Some(value) = self.locked {
                 attrs.push(("locked", value.to_string()));
+            }
+            if let Some(value) = self.text.as_ref() {
+                attrs.push(("text", value.clone()));
+            }
+            if let Some(value) = self.font_family.as_ref() {
+                attrs.push(("font_family", value.clone()));
+            }
+            if let Some(value) = self.font_style.as_ref() {
+                attrs.push(("font_style", value.clone()));
+            }
+            if let Some(value) = self.font_postscript.as_ref() {
+                attrs.push(("font_postscript", value.clone()));
+            }
+            if let Some(value) = self.text_style_guid.as_ref() {
+                attrs.push(("text_style_guid", value.clone()));
             }
             attrs
         }
@@ -521,6 +541,48 @@ mod scene_xpath_runtime {
             m12: decoder.read_var_float_value()? as f64,
         })
     }
+    fn read_scene_font_name_value(
+        decoder: &mut Decoder<'_>,
+    ) -> NifResult<(Option<String>, Option<String>, Option<String>)> {
+        let family = Some(decoder.read_string_value()?);
+        let style = Some(decoder.read_string_value()?);
+        let postscript = Some(decoder.read_string_value()?);
+        Ok((family, style, postscript))
+    }
+    fn read_scene_text_data_value(decoder: &mut Decoder<'_>) -> NifResult<Option<String>> {
+        let mut text = None;
+        loop {
+            match decoder.read_var_uint()? {
+                0 => break,
+                1 => text = Some(decoder.read_string_value()?),
+                __rq_scene_text_data_skip_arms => unreachable!(),
+                field => {
+                    return Err(Error::Term(Box::new(format!(
+                        "unknown field {} while decoding scene text data",
+                        field
+                    ))));
+                }
+            }
+        }
+        Ok(text)
+    }
+    fn read_scene_style_id_value(decoder: &mut Decoder<'_>) -> NifResult<Option<String>> {
+        let mut guid = None;
+        loop {
+            match decoder.read_var_uint()? {
+                0 => break,
+                1 => guid = Some(read_guid_value(decoder)?),
+                __rq_scene_style_id_skip_arms => unreachable!(),
+                field => {
+                    return Err(Error::Term(Box::new(format!(
+                        "unknown field {} while decoding scene style id",
+                        field
+                    ))));
+                }
+            }
+        }
+        Ok(guid)
+    }
     fn scene_query_node(index: &SceneIndex, node_index: usize) -> SceneQueryNode {
         let node = &index.nodes[node_index];
         SceneQueryNode {
@@ -533,6 +595,11 @@ mod scene_xpath_runtime {
             transform: node.transform.clone(),
             visible: node.visible,
             locked: node.locked,
+            text: node.text.clone(),
+            font_family: node.font_family.clone(),
+            font_style: node.font_style.clone(),
+            font_postscript: node.font_postscript.clone(),
+            text_style_guid: node.text_style_guid.clone(),
         }
     }
 
@@ -548,13 +615,7 @@ mod scene_xpath_runtime {
     ) -> NifResult<Term<'a>> {
         static GUID_ATOM: OnceLock<Atom> = OnceLock::new();
         static NODE_TYPE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static NAME_ATOM: OnceLock<Atom> = OnceLock::new();
-        static PARENT_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static POSITION_ATOM: OnceLock<Atom> = OnceLock::new();
-        static SIZE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static TRANSFORM_ATOM: OnceLock<Atom> = OnceLock::new();
-        static VISIBLE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static LOCKED_ATOM: OnceLock<Atom> = OnceLock::new();
+        __rq_scene_query_field_atoms!();
 
         let node = &index.nodes[node_index];
         let mut keys = Vec::with_capacity(fields.len().max(2));
@@ -565,34 +626,7 @@ mod scene_xpath_runtime {
         keys.push(cached_atom(env, &NODE_TYPE_ATOM, "node_type").encode(env));
         values.push(node.node_type.encode(env));
 
-        if wants_field(fields, "name") {
-            keys.push(cached_atom(env, &NAME_ATOM, "name").encode(env));
-            values.push(node.name.encode(env));
-        }
-        if wants_field(fields, "parent_guid") {
-            keys.push(cached_atom(env, &PARENT_GUID_ATOM, "parent_guid").encode(env));
-            values.push(node.parent_guid.encode(env));
-        }
-        if wants_field(fields, "position") {
-            keys.push(cached_atom(env, &POSITION_ATOM, "position").encode(env));
-            values.push(node.position.encode(env));
-        }
-        if wants_field(fields, "size") {
-            keys.push(cached_atom(env, &SIZE_ATOM, "size").encode(env));
-            values.push(node.size.encode(env));
-        }
-        if wants_field(fields, "transform") {
-            keys.push(cached_atom(env, &TRANSFORM_ATOM, "transform").encode(env));
-            values.push(node.transform.encode(env));
-        }
-        if wants_field(fields, "visible") {
-            keys.push(cached_atom(env, &VISIBLE_ATOM, "visible").encode(env));
-            values.push(node.visible.encode(env));
-        }
-        if wants_field(fields, "locked") {
-            keys.push(cached_atom(env, &LOCKED_ATOM, "locked").encode(env));
-            values.push(node.locked.encode(env));
-        }
+        __rq_scene_query_field_encoders!();
 
         Term::map_from_term_arrays(env, &keys, &values)
     }
@@ -708,6 +742,70 @@ mod scene_xpath_runtime {
         };
         Ok(matched.encode(env))
     }
+    fn find_node_index(index: &SceneIndex, guid: &str) -> Option<usize> {
+        index.nodes.iter().position(|node| node.guid == guid)
+    }
+
+    pub fn scene_index_node_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        match find_node_index(&index, &guid) {
+            Some(node_index) => Ok(scene_query_node(&index, node_index).encode(env)),
+            None => Ok(None::<SceneQueryNode>.encode(env)),
+        }
+    }
+
+    pub fn scene_index_children_value(
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        find_node_index(&index, &guid)
+            .map(|node_index| {
+                index.nodes[node_index]
+                    .children
+                    .iter()
+                    .copied()
+                    .map(|child| scene_query_node(&index, child))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn scene_index_ancestors_value(
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        let mut out = Vec::new();
+        let mut current = find_node_index(&index, &guid).and_then(|node_index| index.nodes[node_index].parent);
+        while let Some(node_index) = current {
+            out.push(scene_query_node(&index, node_index));
+            current = index.nodes[node_index].parent;
+        }
+        out.reverse();
+        out
+    }
+
+    pub fn scene_index_descendants_value(
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        let mut out = Vec::new();
+        if let Some(node_index) = find_node_index(&index, &guid) {
+            for child in index.nodes[node_index].children.iter().copied() {
+                let mut preorder = Vec::new();
+                SceneIndex::push_preorder(&index.nodes, child, &mut preorder);
+                out.extend(preorder.into_iter().map(|index_node| scene_query_node(&index, index_node)));
+            }
+        }
+        out
+    }
+
     fn decode_scene_index_message_from_decoder(
         decoder: &mut Decoder<'_>,
         nodes: &mut Vec<SceneNodeRecord>,
@@ -751,6 +849,11 @@ mod scene_xpath_runtime {
         let mut transform = None;
         let mut visible = None;
         let mut locked = None;
+        let mut text = None;
+        let mut font_family = None;
+        let mut font_style = None;
+        let mut font_postscript = None;
+        let mut text_style_guid = None;
         loop {
             match decoder.read_var_uint()? {
                 0 => break,
@@ -770,6 +873,14 @@ mod scene_xpath_runtime {
                 7 => locked = Some(decoder.read_bool()?),
                 11 => size = Some(read_scene_size_value(decoder)?),
                 12 => transform = Some(read_scene_transform_value(decoder)?),
+                41 => {
+                    let (family, style, postscript) = read_scene_font_name_value(decoder)?;
+                    font_family = family;
+                    font_style = style;
+                    font_postscript = postscript;
+                }
+                42 => text = read_scene_text_data_value(decoder)?,
+                334 => text_style_guid = read_scene_style_id_value(decoder)?,
                 __rq_scene_node_skip_arms => unreachable!(),
                 field => {
                     return Err(
@@ -794,6 +905,11 @@ mod scene_xpath_runtime {
             transform,
             visible,
             locked,
+            text,
+            font_family,
+            font_style,
+            font_postscript,
+            text_style_guid,
             parent: None,
             children: Vec::new(),
         })
