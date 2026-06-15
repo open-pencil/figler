@@ -9,6 +9,7 @@ defmodule FigKiwi.MixProject do
       app: :fig_kiwi,
       version: @version,
       elixir: "~> 1.19",
+      elixirc_options: [ignore_module_conflict: true],
       start_permanent: Mix.env() == :prod,
       description: "Figma Kiwi schema helpers for Elixir",
       aliases: aliases(),
@@ -30,8 +31,8 @@ defmodule FigKiwi.MixProject do
   defp aliases do
     [
       ci: [
-        "native.gen.check",
         "compile --warnings-as-errors",
+        "native.gen.check",
         "format --check-formatted",
         "rust.fmt --check",
         "rust.check",
