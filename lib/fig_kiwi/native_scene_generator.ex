@@ -620,7 +620,22 @@ defmodule FigKiwi.NativeSceneGenerator do
     """
   end
 
-  defp sparse_definition(%Definition{kind: :struct}, _definition_map), do: "const _: () = ();"
+  defp sparse_definition(%Definition{kind: :struct, name: name, fields: fields}, definition_map) do
+    body = Enum.map_join(fields, "\n", &sparse_struct_field(&1, definition_map))
+
+    """
+    fn decode_sparse_#{rust_ident(name)}_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+        static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+        static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
+        let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.#{name}");
+        let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+        let mut keys = vec![module_key_atom.encode(env)];
+        let mut values = vec![module_atom.encode(env)];
+    #{indent(body, 4)}
+        Term::map_from_term_arrays(env, &keys, &values)
+    }
+    """
+  end
 
   defp sparse_definition(%Definition{kind: :enum, name: name, fields: fields}, _definition_map) do
     arms =
@@ -637,10 +652,6 @@ defmodule FigKiwi.NativeSceneGenerator do
     }
     """
   end
-
-  defp sparse_definition(%Definition{kind: :message, name: name}, _definition_map)
-       when name not in ["Message", "NodeChange"],
-       do: "const _: () = ();"
 
   defp sparse_definition(%Definition{kind: :message, name: name, fields: fields}, definition_map) do
     arms = Enum.map_join(fields, "\n", &sparse_message_arm(&1, definition_map))
@@ -679,6 +690,17 @@ defmodule FigKiwi.NativeSceneGenerator do
       }
       """
     ]
+  end
+
+  defp sparse_struct_field(field, definition_map) do
+    """
+    {
+        let field_atom = Atom::from_str(env, "#{Macro.underscore(field.name)}").unwrap();
+    #{indent(sparse_decode_field(field, definition_map), 4)}
+        keys.push(field_atom.encode(env));
+        values.push(value);
+    }
+    """
   end
 
   defp sparse_message_arm(field, definition_map) do
@@ -722,7 +744,8 @@ defmodule FigKiwi.NativeSceneGenerator do
       Map.get(definition_map, type) && Map.fetch!(definition_map, type).kind == :enum ->
         "decode_sparse_#{rust_ident(type)}_from_decoder(env, decoder)?"
 
-      type in ["Message", "NodeChange"] ->
+      Map.get(definition_map, type) &&
+          Map.fetch!(definition_map, type).kind in [:message, :struct] ->
         "decode_sparse_#{rust_ident(type)}_from_decoder(env, decoder)?"
 
       Map.has_key?(definition_map, type) ->

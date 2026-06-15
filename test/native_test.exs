@@ -66,7 +66,11 @@ defmodule FigKiwi.NativeTest do
              node_changes: [
                %{
                  __kiwi_module__: FigKiwi.Schema.NodeChange,
-                 guid: guid,
+                 guid: %{
+                   __kiwi_module__: FigKiwi.Schema.GUID,
+                   session_id: 12,
+                   local_id: 34
+                 },
                  type: :rectangle,
                  name: "Rect 1"
                }

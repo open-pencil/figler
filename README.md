@@ -14,7 +14,7 @@ binary = FigKiwi.encode_message(message)
 message = FigKiwi.decode_message(binary)
 ```
 
-Sparse native decode is available when you need schema-backed maps without materializing hundreds of absent `nil` fields:
+Sparse native decode is available when you need recursive schema-backed maps without materializing hundreds of absent `nil` fields:
 
 ```elixir
 sparse = FigKiwi.decode_sparse_message(binary)
