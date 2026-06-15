@@ -517,22 +517,18 @@ defmodule FigKiwi.NativeSceneGenerator do
     accessor =
       if Keyword.get(opts, :by_ref?, true), do: "self.#{field}.as_ref()", else: "self.#{field}"
 
-    increment = unless Keyword.get(opts, :last?, false), do: "cursor += 1"
+    lines = [
+      Rust.stmt("if index == cursor { return Some((#{Rust.literal(attr)}, #{value_expr})); }")
+      | if(Keyword.get(opts, :last?, false), do: [], else: [Rust.stmt("cursor += 1")])
+    ]
 
-    """
-    if let Some(value) = #{accessor} {
-        if index == cursor {
-            return Some(("#{attr}", #{value_expr}));
-        }
-        #{increment && "#{increment};"}
-    }
-    """
+    Rust.to_fragment(Rust.if_let("Some(value)", accessor, lines))
   end
 
   defp scene_attr_count do
     Enum.map(scene_optional_fields(), fn
-      :size -> "if self.size.is_some() { count += 4; }"
-      field -> "if self.#{field}.is_some() { count += 1; }"
+      :size -> Rust.if_("self.size.is_some()", [Rust.stmt("count += 4")])
+      field -> Rust.if_("self.#{field}.is_some()", [Rust.stmt("count += 1")])
     end)
   end
 
@@ -558,12 +554,10 @@ defmodule FigKiwi.NativeSceneGenerator do
           "node.#{name}.encode(env)"
         end
 
-      """
-      if wants_field(fields, "#{name}") {
-          keys.push(cached_atom(env, &#{atom}_ATOM, "#{name}").encode(env));
-          values.push(#{value});
-      }
-      """
+      Rust.if_("wants_field(fields, #{Rust.literal(name)})", [
+        "keys.push(cached_atom(env, &#{atom}_ATOM, #{Rust.literal(name)}).encode(env));",
+        "values.push(#{value});"
+      ])
     end)
   end
 
