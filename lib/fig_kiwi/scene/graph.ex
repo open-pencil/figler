@@ -53,7 +53,7 @@ defmodule FigKiwi.Scene.Graph do
             roots: [GUID.graph_guid()],
             by_type: %{optional(String.t()) => [GUID.graph_guid()]},
             by_name: %{optional(String.t()) => [GUID.graph_guid()]},
-            clone_index: %{optional({GUID.figma_guid(), GUID.figma_guid()}) => GUID.graph_guid()},
+            clone_index: %{optional({GUID.figma_guid(), GUID.graph_guid()}) => GUID.graph_guid()},
             provenance: %{optional(GUID.graph_guid()) => map()},
             unresolved: [term()],
             stats: map()
@@ -150,7 +150,15 @@ defmodule FigKiwi.Scene.Graph do
   Returns graph build/runtime stats.
   """
   @spec stats(t()) :: map()
-  def stats(%__MODULE__{stats: stats}), do: stats
+  def stats(%__MODULE__{} = graph) do
+    Map.merge(graph.stats, %{
+      node_count: map_size(graph.nodes),
+      seed_count: map_size(graph.seed_nodes),
+      clone_count: clone_count(graph),
+      unresolved_count: length(graph.unresolved),
+      applied_count: applied_count(graph)
+    })
+  end
 
   @doc """
   Explains how a node appears in the graph.
@@ -196,8 +204,13 @@ defmodule FigKiwi.Scene.Graph do
   @doc """
   Returns unresolved graph items.
   """
-  @spec unresolved(t()) :: [term()]
-  def unresolved(%__MODULE__{unresolved: unresolved}), do: unresolved
+  @spec unresolved(t(), keyword()) :: [term()]
+  def unresolved(%__MODULE__{unresolved: unresolved}, opts \\ []) do
+    case Keyword.get(opts, :limit, :all) do
+      :all -> unresolved
+      limit when is_integer(limit) and limit >= 0 -> Enum.take(unresolved, limit)
+    end
+  end
 
   @doc """
   Diffs a raw index and graph node-by-node.
@@ -231,6 +244,19 @@ defmodule FigKiwi.Scene.Graph do
     seed_nodes
     |> Resolver.from_seed(resource: resource, source: index, stages: stages, options: options)
     |> Resolver.resolve()
+  end
+
+  defp clone_count(graph) do
+    Enum.count(graph.nodes, fn
+      {{:clone, _root_guid, _source_path}, _node} -> true
+      _entry -> false
+    end)
+  end
+
+  defp applied_count(graph) do
+    Enum.reduce(graph.provenance, 0, fn {_guid, provenance}, count ->
+      count + length(Map.get(provenance, :applied, []))
+    end)
   end
 
   defp provenance(graph, guid), do: Map.get(graph.provenance, guid, %{})

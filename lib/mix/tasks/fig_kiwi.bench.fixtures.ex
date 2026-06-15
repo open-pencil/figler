@@ -12,15 +12,17 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
 
       mix fig_kiwi.bench.fixtures gold-preview.fig material3.fig
 
-  Full and sparse decode timings can be disabled for large fixtures:
+  Full, sparse, and graph decode timings can be controlled for large fixtures:
 
       FIG_KIWI_BENCH_FULL_DECODE=0 mix fig_kiwi.bench.fixtures nuxtui.fig
       FIG_KIWI_BENCH_SPARSE_DECODE=0 mix fig_kiwi.bench.fixtures nuxtui.fig
+      FIG_KIWI_BENCH_GRAPH=1 mix fig_kiwi.bench.fixtures gold-preview.fig
   """
 
   use Mix.Task
 
   alias FigKiwi.Native.{Codec, Scene}
+  alias FigKiwi.Scene.Graph
 
   @shortdoc "Benchmarks projected scene operations against .fig fixtures"
   @requirements ["app.start"]
@@ -34,9 +36,10 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
     fixtures = fixtures!(fixture_dir, args)
     full_decode? = env_enabled?("FIG_KIWI_BENCH_FULL_DECODE", default: true)
     sparse_decode? = env_enabled?("FIG_KIWI_BENCH_SPARSE_DECODE", default: true)
+    graph? = env_enabled?("FIG_KIWI_BENCH_GRAPH", default: false)
 
     Mix.shell().info(
-      "Fixture\tSize\tPayload\tFull Decode\tFull Mem\tSparse Decode\tSparse Mem\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tIndexed fields //canvas\tIndexed //*\tIndexed fields //*\tBy type text\tText contains\tNode lookup\tNodes\tCanvases"
+      "Fixture\tSize\tPayload\tFull Decode\tFull Mem\tSparse Decode\tSparse Mem\tGraph\tGraph Mem\tGraph Nodes\tGraph Clones\tGraph Unresolved\tGraph Applied\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tIndexed fields //canvas\tIndexed //*\tIndexed fields //*\tBy type text\tText contains\tNode lookup\tNodes\tCanvases"
     )
 
     Enum.each(fixtures, fn path ->
@@ -55,6 +58,13 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
           sparse_decode?,
           fn -> Codec.decode_sparse_message(payload) end,
           &sparse_message_info/1
+        )
+
+      {graph_us, graph_mem, graph_stats} =
+        maybe_measured_with_info(
+          graph?,
+          fn -> FigKiwi.Scene.graph(fig_binary) end,
+          &graph_info/1
         )
 
       {summary_us, summary} = timed(fn -> Scene.decode_summary(payload) end)
@@ -110,6 +120,12 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
             format_optional_bytes(full_decode_mem),
             format_optional_us(sparse_decode_us),
             format_optional_bytes(sparse_decode_mem),
+            format_optional_us(graph_us),
+            format_optional_bytes(graph_mem),
+            optional_stat(graph_stats, :node_count),
+            optional_stat(graph_stats, :clone_count),
+            optional_stat(graph_stats, :unresolved_count),
+            optional_stat(graph_stats, :applied_count),
             format_us(summary_us),
             format_us(index_us),
             format_us(query_us),
@@ -163,6 +179,12 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
     {elapsed_us, memory_bytes}
   end
 
+  defp maybe_measured_with_info(false, _fun, _info_fun), do: {:skip, :skip, :skip}
+
+  defp maybe_measured_with_info(true, fun, info_fun) do
+    measured(fun, info_fun)
+  end
+
   defp measured(fun, info_fun) do
     parent = self()
     ref = make_ref()
@@ -207,6 +229,8 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
 
   defp sparse_message_info(_message), do: %{}
 
+  defp graph_info(graph), do: Graph.stats(graph)
+
   defp env_enabled?(name, opts) do
     default = Keyword.fetch!(opts, :default)
 
@@ -222,6 +246,9 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
 
   defp format_optional_bytes(:skip), do: "skip"
   defp format_optional_bytes(bytes), do: format_bytes(bytes)
+
+  defp optional_stat(:skip, _key), do: "skip"
+  defp optional_stat(stats, key), do: Map.fetch!(stats, key)
 
   defp format_us(us) when us >= 1_000_000,
     do: :io_lib.format("~.3fs", [us / 1_000_000]) |> IO.iodata_to_binary()

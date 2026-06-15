@@ -74,9 +74,13 @@ defmodule FigKiwi.Scene.Graph.GUID do
   end
 
   @doc """
-  Appends a source GUID to a clone path.
+  Appends a source GUID or source clone path to a clone path.
   """
-  @spec append(graph_guid(), figma_guid()) :: graph_guid()
+  @spec append(graph_guid(), graph_guid()) :: graph_guid()
+  def append(parent_guid, {:clone, _source_root, source_path}) do
+    Enum.reduce(source_path, parent_guid, &append(&2, &1))
+  end
+
   def append({:clone, root_guid, source_path}, {_source_session, _source_local} = source_guid) do
     {:clone, root_guid, source_path ++ [source_guid]}
   end
