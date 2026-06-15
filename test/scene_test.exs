@@ -316,6 +316,63 @@ defmodule FigKiwi.SceneTest do
     assert {:component_prop, :visible, true, false} in applied
   end
 
+  test "records symbol override component swap intent" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Old"},
+        %SeedNode{guid: {3, 1}, node_type: "component", name: "New"},
+        %SeedNode{
+          guid: {2, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          symbol_overrides: [
+            %SymbolOverride{guid_path: [{2, 1}], overridden_symbol_id: {3, 1}}
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:symbol_overrides])
+      |> Resolver.resolve()
+
+    assert graph.seed_nodes[{2, 1}].symbol_id == {3, 1}
+
+    assert Graph.explain(graph, "2:1").applied == [
+             {:symbol_override, :component_guid, {1, 1}, {3, 1}}
+           ]
+  end
+
+  test "records component prop component swap intent" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Old"},
+        %SeedNode{
+          guid: {1, 2},
+          node_type: "instance",
+          parent_guid: {1, 1},
+          symbol_id: {4, 1},
+          component_prop_refs: [%ComponentPropRef{def_id: {9, 1}, field: :overridden_symbol_id}]
+        },
+        %SeedNode{guid: {3, 1}, node_type: "component", name: "New"},
+        %SeedNode{
+          guid: {2, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          component_prop_assignments: [
+            %ComponentPropAssignment{def_id: {9, 1}, value: {:guid, {3, 1}}}
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:populate_instances, :component_props])
+      |> Resolver.resolve()
+
+    clone_guid = {:clone, {2, 1}, {1, 2}}
+    assert graph.seed_nodes[clone_guid].symbol_id == {3, 1}
+
+    assert {:component_prop, :component_guid, {4, 1}, {3, 1}} in Graph.explain(
+             graph,
+             "clone:2:1/1:2"
+           ).applied
+  end
+
   test "applies derived symbol layout data to cloned children" do
     transform = %{m00: 1.0, m01: 0.0, m02: 10.0, m10: 0.0, m11: 1.0, m12: 20.0}
 

@@ -12,6 +12,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   alias FigKiwi.Scene.Graph.ComponentProps
   alias FigKiwi.Scene.Graph.DerivedData
   alias FigKiwi.Scene.Graph.GUID
+  alias FigKiwi.Scene.Graph.Nodes
   alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.Target
@@ -110,17 +111,26 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     case Target.resolve(graph, seed.guid, override.guid_path) do
       {:ok, target_guid} ->
         graph
-        |> Patch.apply_all(symbol_override_patches(target_guid, override.fields))
+        |> Patch.apply_all(symbol_override_patches(target_guid, override))
 
       {:error, reason} ->
         add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
     end
   end
 
-  defp symbol_override_patches(target_guid, fields) do
-    Enum.map(fields, fn {field, value} ->
-      Patch.set(target_guid, field, value, source: :symbol_override)
-    end)
+  defp symbol_override_patches(target_guid, override) do
+    field_patches =
+      Enum.map(override.fields, fn {field, value} ->
+        Patch.set(target_guid, field, value, source: :symbol_override)
+      end)
+
+    case override.overridden_symbol_id do
+      nil ->
+        field_patches
+
+      component_guid ->
+        [Patch.swap(target_guid, component_guid, source: :symbol_override) | field_patches]
+    end
   end
 
   defp populate_seed_instance(
@@ -165,7 +175,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
     graph
     |> put_clone_node(clone_guid, cloned_node, cloned_seed, instance_guid, source_guid)
-    |> add_child(clone_parent_guid, clone_guid)
+    |> Nodes.child(clone_parent_guid, clone_guid)
     |> put_clone_provenance(clone_guid, source_guid, instance_guid, component_guid)
     |> clone_children(instance_guid, clone_guid, source_guid, component_guid)
   end
@@ -184,20 +194,11 @@ defmodule FigKiwi.Scene.Graph.Resolver do
          instance_guid,
          source_guid
        ) do
-    %Graph{
-      graph
-      | nodes: Map.put(graph.nodes, clone_guid, cloned_node),
-        seed_nodes: put_if_present(graph.seed_nodes, clone_guid, cloned_seed),
-        by_type: append_group(graph.by_type, cloned_node.node_type, clone_guid),
-        by_name: append_group(graph.by_name, cloned_node.name, clone_guid),
-        clone_index: Map.put(graph.clone_index, {instance_guid, source_guid}, clone_guid)
-    }
-  end
+    %Graph{} = graph = Nodes.put(graph, clone_guid, cloned_node, cloned_seed)
 
-  defp add_child(%Graph{} = graph, parent_guid, child_guid) do
     %Graph{
       graph
-      | children: Map.update(graph.children, parent_guid, [child_guid], &(&1 ++ [child_guid]))
+      | clone_index: Map.put(graph.clone_index, {instance_guid, source_guid}, clone_guid)
     }
   end
 
@@ -219,13 +220,6 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
     %Graph{graph | provenance: Map.put(graph.provenance, clone_guid, provenance)}
   end
-
-  defp put_if_present(map, _key, nil), do: map
-  defp put_if_present(map, key, value), do: Map.put(map, key, value)
-
-  defp append_group(groups, nil, _guid), do: groups
-  defp append_group(groups, "", _guid), do: groups
-  defp append_group(groups, key, guid), do: Map.update(groups, key, [guid], &(&1 ++ [guid]))
 
   defp mark_stage(%Graph{} = graph, stage) do
     update_in(graph.stats[:resolved_stages], fn stages -> [stage | stages || []] end)

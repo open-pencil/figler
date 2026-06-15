@@ -40,7 +40,7 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
     with {source_guid, field} <- ref(graph, assignment.def_id),
          {:ok, target_guid} <- target(graph, instance.guid, source_guid),
          {:ok, value} <- value(field, assignment.value) do
-      Patch.apply_all(graph, Patch.set(target_guid, field, value, source: :component_prop))
+      Patch.apply_all(graph, patch(target_guid, field, value))
     else
       nil ->
         unresolved(graph, {:component_prop_ref, instance.guid, assignment.def_id})
@@ -60,15 +60,22 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
 
   defp field(:visible), do: :visible
   defp field(:text_data), do: :text
-  defp field(:overridden_symbol_id), do: nil
+  defp field(:overridden_symbol_id), do: :component_guid
   defp field("VISIBLE"), do: :visible
   defp field("TEXT"), do: :text
   defp field("TEXT_DATA"), do: :text
-  defp field("OVERRIDDEN_SYMBOL_ID"), do: nil
+  defp field("OVERRIDDEN_SYMBOL_ID"), do: :component_guid
   defp field(_field), do: nil
+
+  defp patch(target_guid, :component_guid, value),
+    do: Patch.swap(target_guid, value, source: :component_prop)
+
+  defp patch(target_guid, field, value),
+    do: Patch.set(target_guid, field, value, source: :component_prop)
 
   defp value(:visible, {:bool, value}), do: {:ok, value}
   defp value(:text, {:text, value}), do: {:ok, value}
+  defp value(:component_guid, {:guid, value}), do: {:ok, value}
   defp value(_field, _value), do: {:error, :unsupported_value}
 
   defp unresolved(%Graph{} = graph, item),

@@ -14,7 +14,7 @@ defmodule FigKiwi.Scene.Graph.Patch do
   defstruct [:op, :target, :field, :value, :source, meta: %{}]
 
   @type t :: %__MODULE__{
-          op: :set,
+          op: :set | :swap,
           target: GUID.graph_guid(),
           field: atom() | nil,
           value: term(),
@@ -32,6 +32,22 @@ defmodule FigKiwi.Scene.Graph.Patch do
       target: target,
       field: field,
       value: value,
+      source: Keyword.fetch!(opts, :source),
+      meta: Keyword.get(opts, :meta, %{})
+    }
+  end
+
+  @doc """
+  Creates a component swap intent patch.
+  """
+  @spec swap(GUID.graph_guid(), GUID.figma_guid(), keyword()) :: t()
+  def swap(target, component_guid, opts \\ [])
+      when is_tuple(target) and is_tuple(component_guid) do
+    %__MODULE__{
+      op: :swap,
+      target: target,
+      field: :component_guid,
+      value: component_guid,
       source: Keyword.fetch!(opts, :source),
       meta: Keyword.get(opts, :meta, %{})
     }
@@ -72,6 +88,45 @@ defmodule FigKiwi.Scene.Graph.Patch do
               )
         }
     end
+  end
+
+  defp apply_one(%__MODULE__{op: :swap} = patch, %Graph{} = graph) do
+    case Map.fetch(graph.nodes, patch.target) do
+      {:ok, %{node_type: "instance"}} ->
+        old_value = graph.seed_nodes |> Map.get(patch.target) |> old_component()
+        applied = {patch.source, :component_guid, old_value, patch.value}
+
+        %Graph{
+          graph
+          | seed_nodes: update_seed(graph.seed_nodes, patch.target, patch.value),
+            provenance:
+              Map.update(
+                graph.provenance,
+                patch.target,
+                provenance(applied),
+                &append_applied(&1, applied)
+              )
+        }
+
+      {:ok, _node} ->
+        %Graph{
+          graph
+          | unresolved: [{:swap_target, patch.target, :not_instance} | graph.unresolved]
+        }
+
+      :error ->
+        %Graph{graph | unresolved: [{:swap_target, patch.target, :missing} | graph.unresolved]}
+    end
+  end
+
+  defp old_component(nil), do: nil
+  defp old_component(seed), do: seed.symbol_id
+
+  defp update_seed(seed_nodes, target, component_guid) do
+    Map.update(seed_nodes, target, nil, fn
+      nil -> nil
+      seed -> %{seed | symbol_id: component_guid, component_guid: component_guid}
+    end)
   end
 
   defp provenance(applied), do: %{applied: [applied]}
