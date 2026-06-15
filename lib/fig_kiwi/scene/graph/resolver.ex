@@ -184,6 +184,9 @@ defmodule FigKiwi.Scene.Graph.Resolver do
        )
        when is_tuple(component_guid) do
     cond do
+      instance.visible == false ->
+        graph
+
       Map.get(graph.children, instance.guid, []) != [] ->
         graph
 
@@ -223,7 +226,31 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     |> Nodes.child(clone_parent_guid, clone_guid)
     |> put_clone_provenance(clone_guid, source_guid, instance_guid, component_guid)
     |> clone_children(instance_guid, clone_guid, source_guid, component_guid)
+    |> populate_nested_clone(source_seed, instance_guid, clone_guid)
   end
+
+  defp populate_nested_clone(
+         graph,
+         %SeedNode{node_type: "instance", symbol_id: nested_component_guid} = source_seed,
+         root_instance_guid,
+         clone_guid
+       )
+       when is_tuple(nested_component_guid) do
+    if source_seed.visible != false and Map.get(graph.children, clone_guid, []) == [] and
+         Map.has_key?(graph.nodes, nested_component_guid) do
+      clone_children(
+        graph,
+        root_instance_guid,
+        clone_guid,
+        nested_component_guid,
+        nested_component_guid
+      )
+    else
+      graph
+    end
+  end
+
+  defp populate_nested_clone(graph, _source_seed, _root_instance_guid, _clone_guid), do: graph
 
   defp put_clone_node(
          %Graph{} = graph,

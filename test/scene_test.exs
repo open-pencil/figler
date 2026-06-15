@@ -239,6 +239,20 @@ defmodule FigKiwi.SceneTest do
            }
   end
 
+  test "does not populate invisible instances" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Button"},
+        %SeedNode{guid: {1, 2}, node_type: "text", parent_guid: {1, 1}, text: "Default"},
+        %SeedNode{guid: {2, 1}, node_type: "instance", symbol_id: {1, 1}, visible: false}
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:populate_instances])
+      |> Resolver.resolve()
+
+    assert Scene.children(graph, "2:1") == []
+    assert Graph.stats(graph).clone_count == 0
+  end
+
   test "focuses resolver stages on selected source subtrees" do
     graph =
       [
