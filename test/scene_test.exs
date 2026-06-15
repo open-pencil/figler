@@ -69,7 +69,14 @@ defmodule FigKiwi.SceneTest do
     assert Scene.siblings(index, "0:1") == []
     assert Scene.ancestors(index, "0:1") == [scene_document()]
     assert Scene.descendants(index, "0:0") == [scene_canvas()]
-    assert Scene.find(index, type: :canvas, name_contains: "Page") == [scene_canvas()]
+    assert Scene.by_type(index, :canvas) == [scene_canvas()]
+    assert Scene.named(index, "Page 1") == [scene_canvas()]
+    assert Scene.name_contains(index, "Page") == [scene_canvas()]
+    assert Scene.text_contains(index, "Hello") == [scene_canvas()]
+
+    assert Scene.find(index, type: :canvas, name_contains: "Page", text_contains: "Hello") == [
+             scene_canvas()
+           ]
 
     assert Scene.tree(index, depth: 1) == [
              %Node{scene_document() | children: [%Node{scene_canvas() | children: []}]}

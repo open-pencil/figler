@@ -46,17 +46,27 @@ alias FigKiwi.Scene
 
 summary = Scene.summary(fig_binary)
 canvases = Scene.query(fig_binary, "//canvas")
-named_text = Scene.query(fig_binary, "//text[contains(@name, 'Hello')]")
+text = Scene.query(fig_binary, "//text[@text]", fields: [:name, :text])
 
 index = Scene.index(fig_binary)
 canvases = Scene.pages(index)
 node = Scene.node(index, "0:123")
 children = Scene.children(index, "0:123")
+descendants = Scene.descendants(index, "0:123")
 frames = Scene.find(index, type: :frame, name_contains: "Card")
 tree = Scene.tree(index, depth: 3)
 ```
 
-Projected XPath nodes are returned as `%FigKiwi.Scene.Node{}` structs and expose `@guid`, `@type`, `@name`, `@parent_guid`, and `@position` to XPath. Summaries are returned as `%FigKiwi.Scene.Summary{}` structs. Use `Scene.query/2` for raw XPath and build a reusable scene index when running multiple queries over the same file.
+For dynamic values, prefer native helpers instead of interpolating XPath strings:
+
+```elixir
+text_nodes = Scene.by_type(index, :text)
+buttons = Scene.name_contains(index, "Button")
+labels = Scene.text_contains(index, "Label")
+named = Scene.named(index, "Primary action")
+```
+
+Projected XPath nodes are returned as `%FigKiwi.Scene.Node{}` structs and expose `@guid`, `@type`, `@name`, `@parent_guid`, `@position`, geometry, visibility, text, font, and text-style attributes to XPath. Summaries are returned as `%FigKiwi.Scene.Summary{}` structs. Use `Scene.query/2` for raw XPath and build a reusable scene index when running multiple queries over the same file.
 
 ## Updating generated schema modules
 

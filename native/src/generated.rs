@@ -89910,6 +89910,55 @@ mod scene_xpath_runtime {
             })
             .unwrap_or_default()
     }
+    fn scene_query_nodes_matching(
+        index: &SceneIndex,
+        predicate: impl Fn(&SceneNodeRecord) -> bool,
+    ) -> Vec<SceneQueryNode> {
+        index
+            .preorder
+            .iter()
+            .copied()
+            .filter(|node_index| predicate(&index.nodes[*node_index]))
+            .map(|node_index| scene_query_node(index, node_index))
+            .collect()
+    }
+    pub fn scene_index_by_type_value(
+        resource: ResourceArc<SceneIndexResource>,
+        node_type: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        scene_query_nodes_matching(&index, |node| node.node_type == node_type)
+    }
+    pub fn scene_index_named_value(
+        resource: ResourceArc<SceneIndexResource>,
+        name: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        scene_query_nodes_matching(
+            &index,
+            |node| node.name.as_deref() == Some(name.as_str()),
+        )
+    }
+    pub fn scene_index_name_contains_value(
+        resource: ResourceArc<SceneIndexResource>,
+        needle: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        scene_query_nodes_matching(
+            &index,
+            |node| { node.name.as_ref().is_some_and(|name| name.contains(&needle)) },
+        )
+    }
+    pub fn scene_index_text_contains_value(
+        resource: ResourceArc<SceneIndexResource>,
+        needle: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        scene_query_nodes_matching(
+            &index,
+            |node| { node.text.as_ref().is_some_and(|text| text.contains(&needle)) },
+        )
+    }
     pub fn scene_index_ancestors_value(
         resource: ResourceArc<SceneIndexResource>,
         guid: String,
@@ -94379,6 +94428,34 @@ pub fn scene_index_siblings(
     guid: String,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_siblings_value(resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_by_type(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_by_type_value(resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_named(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_named_value(resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_name_contains(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_name_contains_value(resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_text_contains(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_text_contains_value(resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn scene_index_ancestors(

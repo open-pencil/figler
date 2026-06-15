@@ -182,33 +182,65 @@ defmodule FigKiwi.Scene do
   end
 
   @doc """
-  Finds nodes by common projected fields.
+  Returns nodes of a given projected node type without constructing XPath.
+  """
+  @spec by_type(binary() | reference(), atom() | String.t()) :: [scene_node()]
+  def by_type(scene, type) when is_atom(type) or is_binary(type) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_by_type(type |> to_string() |> Macro.underscore())
+    |> nodes_from_maps()
+  end
+
+  @doc """
+  Returns nodes with an exact projected name without constructing XPath.
+  """
+  @spec named(binary() | reference(), String.t()) :: [scene_node()]
+  def named(scene, name) when is_binary(name) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_named(name)
+    |> nodes_from_maps()
+  end
+
+  @doc """
+  Returns nodes whose projected name contains `needle` without constructing XPath.
+  """
+  @spec name_contains(binary() | reference(), String.t()) :: [scene_node()]
+  def name_contains(scene, needle) when is_binary(needle) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_name_contains(needle)
+    |> nodes_from_maps()
+  end
+
+  @doc """
+  Returns text nodes whose projected text contains `needle` without constructing XPath.
+  """
+  @spec text_contains(binary() | reference(), String.t()) :: [scene_node()]
+  def text_contains(scene, needle) when is_binary(needle) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_text_contains(needle)
+    |> nodes_from_maps()
+  end
+
+  @doc """
+  Finds nodes by common projected fields without interpolating XPath.
 
   Supported options:
 
     * `:type` - atom or string node type, for example `:text` or `"text"`
     * `:name` - exact node name
     * `:name_contains` - substring match on node name
+    * `:text_contains` - substring match on projected text
   """
   @spec find(binary() | reference(), keyword()) :: [scene_node()]
   def find(scene, opts) when is_list(opts) do
-    type = opts[:type]
-    element = if type, do: type |> to_string() |> Macro.underscore(), else: "*"
-
-    predicates =
-      [
-        if(name = opts[:name], do: "@name=#{xpath_literal(name)}"),
-        if(contains = opts[:name_contains], do: "contains(@name, #{xpath_literal(contains)})")
-      ]
-      |> Enum.reject(&is_nil/1)
-
-    predicate =
-      case predicates do
-        [] -> ""
-        predicates -> "[#{Enum.join(predicates, " and ")}]"
-      end
-
-    query(scene, "//#{element}#{predicate}")
+    scene
+    |> reusable_index()
+    |> find_candidates(opts)
+    |> filter_find_results(opts)
   end
 
   @doc """
@@ -266,6 +298,28 @@ defmodule FigKiwi.Scene do
     %Node{node | children: children}
   end
 
+  defp find_candidates(index, opts) do
+    cond do
+      type = opts[:type] -> by_type(index, type)
+      name = opts[:name] -> named(index, name)
+      name = opts[:name_contains] -> name_contains(index, name)
+      text = opts[:text_contains] -> text_contains(index, text)
+      true -> query(index, "//*")
+    end
+  end
+
+  defp filter_find_results(nodes, opts) do
+    Enum.filter(nodes, fn node ->
+      Enum.all?(opts, fn
+        {:type, type} -> node.node_type == type |> to_string() |> Macro.underscore()
+        {:name, name} -> node.name == name
+        {:name_contains, needle} -> is_binary(node.name) and String.contains?(node.name, needle)
+        {:text_contains, needle} -> is_binary(node.text) and String.contains?(node.text, needle)
+        {_key, _value} -> true
+      end)
+    end)
+  end
+
   defp nodes_from_maps(nodes), do: Enum.map(nodes, &Node.from_map/1)
 
   defp maybe_node_from_map(nil), do: nil
@@ -280,22 +334,6 @@ defmodule FigKiwi.Scene do
 
   defp field_name(field) when is_atom(field), do: Atom.to_string(field)
   defp field_name(field) when is_binary(field), do: field
-
-  defp xpath_literal(value) when is_atom(value), do: value |> Atom.to_string() |> xpath_literal()
-
-  defp xpath_literal(value) when is_binary(value) do
-    cond do
-      not String.contains?(value, "'") ->
-        "'#{value}'"
-
-      not String.contains?(value, "\"") ->
-        "\"#{value}\""
-
-      true ->
-        parts = value |> String.split("'") |> Enum.map(&"'#{&1}'")
-        "concat(#{Enum.join(parts, ~s[, "'", ])})"
-    end
-  end
 
   defp unzip_canvas!(zip_binary) do
     case :zip.extract(zip_binary, [:memory]) do

@@ -389,6 +389,10 @@ defmodule FigKiwi.NativeSceneGenerator do
           [
             scene_index_children: :scene_index_children_value,
             scene_index_siblings: :scene_index_siblings_value,
+            scene_index_by_type: :scene_index_by_type_value,
+            scene_index_named: :scene_index_named_value,
+            scene_index_name_contains: :scene_index_name_contains_value,
+            scene_index_text_contains: :scene_index_text_contains_value,
             scene_index_ancestors: :scene_index_ancestors_value,
             scene_index_descendants: :scene_index_descendants_value
           ],
