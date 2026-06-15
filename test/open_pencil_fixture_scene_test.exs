@@ -22,6 +22,20 @@ defmodule FigKiwi.OpenPencilFixtureSceneTest do
           assert {"canvas", canvas_count} = List.keyfind(summary.type_counts, "canvas", 0)
           assert canvas_count > 0
         end
+
+        @tag timeout: 120_000
+        test "projects text fields from OpenPencil fixture #{name}" do
+          index = unquote(path) |> File.read!() |> FigKiwi.Scene.index()
+
+          text_nodes =
+            FigKiwi.Scene.query(index, "//text[@text]", fields: [:name, :text, :font_family])
+
+          assert [%FigKiwi.Scene.Node{node_type: "text", text: text} | _] = text_nodes
+          assert is_binary(text)
+          assert text != ""
+
+          assert Enum.any?(text_nodes, &(&1.text == text))
+        end
       end
     end
   else

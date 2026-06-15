@@ -116,6 +116,28 @@ defmodule FigKiwi.Scene do
   end
 
   @doc """
+  Returns root nodes in scene order.
+  """
+  @spec roots(binary() | reference()) :: [scene_node()]
+  def roots(scene) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_roots()
+    |> nodes_from_maps()
+  end
+
+  @doc """
+  Returns the parent node for a node GUID.
+  """
+  @spec parent(binary() | reference(), String.t()) :: scene_node() | nil
+  def parent(scene, guid) when is_binary(guid) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_parent(guid)
+    |> maybe_node_from_map()
+  end
+
+  @doc """
   Returns direct children for a parent GUID in scene order.
   """
   @spec children(binary() | reference(), String.t()) :: [scene_node()]
@@ -123,6 +145,17 @@ defmodule FigKiwi.Scene do
     scene
     |> reusable_index()
     |> NativeScene.index_children(parent_guid)
+    |> nodes_from_maps()
+  end
+
+  @doc """
+  Returns sibling nodes for a node GUID in scene order.
+  """
+  @spec siblings(binary() | reference(), String.t()) :: [scene_node()]
+  def siblings(scene, guid) when is_binary(guid) do
+    scene
+    |> reusable_index()
+    |> NativeScene.index_siblings(guid)
     |> nodes_from_maps()
   end
 

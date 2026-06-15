@@ -11,7 +11,10 @@ defmodule FigKiwi.Native.Scene do
     {:query_index, [:index, :xpath], :query_scene_index},
     {:query_index_fields, [:index, :xpath, :fields], :query_scene_index_fields},
     {:index_node, [:index, :guid], :scene_index_node},
+    {:index_parent, [:index, :guid], :scene_index_parent},
+    {:index_roots, [:index], :scene_index_roots},
     {:index_children, [:index, :guid], :scene_index_children},
+    {:index_siblings, [:index, :guid], :scene_index_siblings},
     {:index_ancestors, [:index, :guid], :scene_index_ancestors},
     {:index_descendants, [:index, :guid], :scene_index_descendants}
   ]

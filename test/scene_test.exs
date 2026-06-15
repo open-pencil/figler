@@ -62,8 +62,11 @@ defmodule FigKiwi.SceneTest do
     index = Scene.index(message_payload())
 
     assert Scene.pages(index) == [scene_canvas()]
+    assert Scene.roots(index) == [scene_document()]
     assert Scene.node(index, "0:1") == scene_canvas()
+    assert Scene.parent(index, "0:1") == scene_document()
     assert Scene.children(index, "0:0") == [scene_canvas()]
+    assert Scene.siblings(index, "0:1") == []
     assert Scene.ancestors(index, "0:1") == [scene_document()]
     assert Scene.descendants(index, "0:0") == [scene_canvas()]
     assert Scene.find(index, type: :canvas, name_contains: "Page") == [scene_canvas()]

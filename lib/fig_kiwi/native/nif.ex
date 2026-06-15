@@ -22,7 +22,10 @@ defmodule FigKiwi.Native.Nif do
     {:query_scene_index, 2},
     {:query_scene_index_fields, 3},
     {:scene_index_node, 2},
+    {:scene_index_parent, 2},
+    {:scene_index_roots, 1},
     {:scene_index_children, 2},
+    {:scene_index_siblings, 2},
     {:scene_index_ancestors, 2},
     {:scene_index_descendants, 2}
   ]

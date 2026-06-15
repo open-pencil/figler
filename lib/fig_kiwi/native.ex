@@ -22,7 +22,10 @@ defmodule FigKiwi.Native do
     {:query_scene_index, [:index, :xpath], :query_index},
     {:query_scene_index_fields, [:index, :xpath, :fields], :query_index_fields},
     {:scene_index_node, [:index, :guid], :index_node},
+    {:scene_index_parent, [:index, :guid], :index_parent},
+    {:scene_index_roots, [:index], :index_roots},
     {:scene_index_children, [:index, :guid], :index_children},
+    {:scene_index_siblings, [:index, :guid], :index_siblings},
     {:scene_index_ancestors, [:index, :guid], :index_ancestors},
     {:scene_index_descendants, [:index, :guid], :index_descendants}
   ]

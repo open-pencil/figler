@@ -88871,6 +88871,7 @@ mod scene_xpath_runtime {
         roots: Vec<usize>,
         preorder: Vec<usize>,
         ranks: Vec<usize>,
+        by_guid: std::collections::HashMap<String, usize>,
     }
     #[derive(Clone, Debug, Eq, PartialEq, std::hash::Hash)]
     enum SceneHandleKind {
@@ -88911,63 +88912,152 @@ mod scene_xpath_runtime {
     impl Resource for SceneIndexResource {}
     struct SceneDom;
     impl SceneNodeRecord {
-        fn attrs(&self) -> Vec<(&'static str, String)> {
-            let mut attrs = vec![
-                ("guid", self.guid.clone()), ("type", self.node_type.clone())
-            ];
+        fn attr(&self, index: usize) -> Option<(&'static str, String)> {
+            let mut cursor = 0;
+            if index == cursor {
+                return Some(("guid", self.guid.clone()));
+            }
+            cursor += 1;
+            if index == cursor {
+                return Some(("type", self.node_type.clone()));
+            }
+            cursor += 1;
             if let Some(value) = self.name.as_ref() {
-                attrs.push(("name", value.clone()));
+                if index == cursor {
+                    return Some(("name", value.clone()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.parent_guid.as_ref() {
-                attrs.push(("parent_guid", value.clone()));
+                if index == cursor {
+                    return Some(("parent_guid", value.clone()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.position.as_ref() {
-                attrs.push(("position", value.clone()));
+                if index == cursor {
+                    return Some(("position", value.clone()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.size.as_ref() {
-                attrs.push(("x", value.x.to_string()));
-                attrs.push(("y", value.y.to_string()));
-                attrs.push(("width", value.x.to_string()));
-                attrs.push(("height", value.y.to_string()));
+                if index == cursor {
+                    return Some(("x", value.x.to_string()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.size.as_ref() {
+                if index == cursor {
+                    return Some(("y", value.y.to_string()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.size.as_ref() {
+                if index == cursor {
+                    return Some(("width", value.x.to_string()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.size.as_ref() {
+                if index == cursor {
+                    return Some(("height", value.y.to_string()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.transform.as_ref() {
-                attrs
-                    .push((
+                if index == cursor {
+                    return Some((
                         "transform",
                         format!(
                             "{},{},{},{},{},{}", value.m00, value.m01, value.m02, value
                             .m10, value.m11, value.m12
                         ),
                     ));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.visible {
-                attrs.push(("visible", value.to_string()));
+                if index == cursor {
+                    return Some(("visible", value.to_string()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.locked {
-                attrs.push(("locked", value.to_string()));
+                if index == cursor {
+                    return Some(("locked", value.to_string()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.text.as_ref() {
-                attrs.push(("text", value.clone()));
+                if index == cursor {
+                    return Some(("text", value.clone()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.font_family.as_ref() {
-                attrs.push(("font_family", value.clone()));
+                if index == cursor {
+                    return Some(("font_family", value.clone()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.font_style.as_ref() {
-                attrs.push(("font_style", value.clone()));
+                if index == cursor {
+                    return Some(("font_style", value.clone()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.font_postscript.as_ref() {
-                attrs.push(("font_postscript", value.clone()));
+                if index == cursor {
+                    return Some(("font_postscript", value.clone()));
+                }
+                cursor += 1;
             }
             if let Some(value) = self.text_style_guid.as_ref() {
-                attrs.push(("text_style_guid", value.clone()));
+                if index == cursor {
+                    return Some(("text_style_guid", value.clone()));
+                }
             }
-            attrs
-        }
-        fn attr(&self, index: usize) -> Option<(&'static str, String)> {
-            self.attrs().get(index).cloned()
+            None
         }
         fn attr_count(&self) -> usize {
-            self.attrs().len()
+            let mut count = 2;
+            if self.name.is_some() {
+                count += 1;
+            }
+            if self.parent_guid.is_some() {
+                count += 1;
+            }
+            if self.position.is_some() {
+                count += 1;
+            }
+            if self.size.is_some() {
+                count += 4;
+            }
+            if self.transform.is_some() {
+                count += 1;
+            }
+            if self.visible.is_some() {
+                count += 1;
+            }
+            if self.locked.is_some() {
+                count += 1;
+            }
+            if self.text.is_some() {
+                count += 1;
+            }
+            if self.font_family.is_some() {
+                count += 1;
+            }
+            if self.font_style.is_some() {
+                count += 1;
+            }
+            if self.font_postscript.is_some() {
+                count += 1;
+            }
+            if self.text_style_guid.is_some() {
+                count += 1;
+            }
+            count
         }
     }
     impl SceneIndex {
@@ -89015,6 +89105,7 @@ mod scene_xpath_runtime {
                 roots,
                 preorder,
                 ranks,
+                by_guid,
             }
         }
         fn push_preorder(nodes: &[SceneNodeRecord], index: usize, out: &mut Vec<usize>) {
@@ -89744,7 +89835,7 @@ mod scene_xpath_runtime {
         Ok(matched.encode(env))
     }
     fn find_node_index(index: &SceneIndex, guid: &str) -> Option<usize> {
-        index.nodes.iter().position(|node| node.guid == guid)
+        index.by_guid.get(guid).copied()
     }
     pub fn scene_index_node_value<'a>(
         env: Env<'a>,
@@ -89756,6 +89847,30 @@ mod scene_xpath_runtime {
             Some(node_index) => Ok(scene_query_node(&index, node_index).encode(env)),
             None => Ok(None::<SceneQueryNode>.encode(env)),
         }
+    }
+    pub fn scene_index_parent_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        match find_node_index(&index, &guid)
+            .and_then(|node_index| index.nodes[node_index].parent)
+        {
+            Some(parent_index) => Ok(scene_query_node(&index, parent_index).encode(env)),
+            None => Ok(None::<SceneQueryNode>.encode(env)),
+        }
+    }
+    pub fn scene_index_roots_value(
+        resource: ResourceArc<SceneIndexResource>,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        index
+            .roots
+            .iter()
+            .copied()
+            .map(|node_index| scene_query_node(&index, node_index))
+            .collect()
     }
     pub fn scene_index_children_value(
         resource: ResourceArc<SceneIndexResource>,
@@ -89770,6 +89885,27 @@ mod scene_xpath_runtime {
                     .iter()
                     .copied()
                     .map(|child| scene_query_node(&index, child))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+    pub fn scene_index_siblings_value(
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        find_node_index(&index, &guid)
+            .map(|node_index| {
+                let siblings = index
+                    .nodes[node_index]
+                    .parent
+                    .map(|parent| index.nodes[parent].children.as_slice())
+                    .unwrap_or(index.roots.as_slice());
+                siblings
+                    .iter()
+                    .copied()
+                    .filter(|sibling| *sibling != node_index)
+                    .map(|sibling| scene_query_node(&index, sibling))
                     .collect()
             })
             .unwrap_or_default()
@@ -94217,11 +94353,32 @@ pub fn scene_index_node<'a>(
     scene_xpath_runtime::scene_index_node_value(env, resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_parent<'a>(
+    env: Env<'a>,
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::scene_index_parent_value(env, resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_roots(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_roots_value(resource)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
 pub fn scene_index_children(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     guid: String,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_children_value(resource, guid)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn scene_index_siblings(
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    guid: String,
+) -> Vec<SceneQueryNode> {
+    scene_xpath_runtime::scene_index_siblings_value(resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn scene_index_ancestors(

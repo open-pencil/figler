@@ -33,6 +33,7 @@ mod scene_xpath_runtime {
         roots: Vec<usize>,
         preorder: Vec<usize>,
         ranks: Vec<usize>,
+        by_guid: std::collections::HashMap<String, usize>,
     }
     #[derive(Clone, Debug, Eq, PartialEq, std::hash::Hash)]
     enum SceneHandleKind {
@@ -73,63 +74,23 @@ mod scene_xpath_runtime {
     impl Resource for SceneIndexResource {}
     struct SceneDom;
     impl SceneNodeRecord {
-        fn attrs(&self) -> Vec<(&'static str, String)> {
-            let mut attrs = vec![
-                ("guid", self.guid.clone()), ("type", self.node_type.clone())
-            ];
-            if let Some(value) = self.name.as_ref() {
-                attrs.push(("name", value.clone()));
-            }
-            if let Some(value) = self.parent_guid.as_ref() {
-                attrs.push(("parent_guid", value.clone()));
-            }
-            if let Some(value) = self.position.as_ref() {
-                attrs.push(("position", value.clone()));
-            }
-            if let Some(value) = self.size.as_ref() {
-                attrs.push(("x", value.x.to_string()));
-                attrs.push(("y", value.y.to_string()));
-                attrs.push(("width", value.x.to_string()));
-                attrs.push(("height", value.y.to_string()));
-            }
-            if let Some(value) = self.transform.as_ref() {
-                attrs
-                    .push((
-                        "transform",
-                        format!(
-                            "{},{},{},{},{},{}", value.m00, value.m01, value.m02, value
-                            .m10, value.m11, value.m12
-                        ),
-                    ));
-            }
-            if let Some(value) = self.visible {
-                attrs.push(("visible", value.to_string()));
-            }
-            if let Some(value) = self.locked {
-                attrs.push(("locked", value.to_string()));
-            }
-            if let Some(value) = self.text.as_ref() {
-                attrs.push(("text", value.clone()));
-            }
-            if let Some(value) = self.font_family.as_ref() {
-                attrs.push(("font_family", value.clone()));
-            }
-            if let Some(value) = self.font_style.as_ref() {
-                attrs.push(("font_style", value.clone()));
-            }
-            if let Some(value) = self.font_postscript.as_ref() {
-                attrs.push(("font_postscript", value.clone()));
-            }
-            if let Some(value) = self.text_style_guid.as_ref() {
-                attrs.push(("text_style_guid", value.clone()));
-            }
-            attrs
-        }
         fn attr(&self, index: usize) -> Option<(&'static str, String)> {
-            self.attrs().get(index).cloned()
+            let mut cursor = 0;
+            if index == cursor {
+                return Some(("guid", self.guid.clone()));
+            }
+            cursor += 1;
+            if index == cursor {
+                return Some(("type", self.node_type.clone()));
+            }
+            cursor += 1;
+            __rq_scene_attr_lookup!();
+            None
         }
         fn attr_count(&self) -> usize {
-            self.attrs().len()
+            let mut count = 2;
+            __rq_scene_attr_count!();
+            count
         }
     }
     impl SceneIndex {
@@ -177,6 +138,7 @@ mod scene_xpath_runtime {
                 roots,
                 preorder,
                 ranks,
+                by_guid,
             }
         }
         fn push_preorder(nodes: &[SceneNodeRecord], index: usize, out: &mut Vec<usize>) {
@@ -588,18 +550,7 @@ mod scene_xpath_runtime {
         SceneQueryNode {
             guid: node.guid.clone(),
             node_type: node.node_type.clone(),
-            name: node.name.clone(),
-            parent_guid: node.parent_guid.clone(),
-            position: node.position.clone(),
-            size: node.size.clone(),
-            transform: node.transform.clone(),
-            visible: node.visible,
-            locked: node.locked,
-            text: node.text.clone(),
-            font_family: node.font_family.clone(),
-            font_style: node.font_style.clone(),
-            font_postscript: node.font_postscript.clone(),
-            text_style_guid: node.text_style_guid.clone(),
+            __rq_scene_query_node_build_fields: (),
         }
     }
 
@@ -743,7 +694,7 @@ mod scene_xpath_runtime {
         Ok(matched.encode(env))
     }
     fn find_node_index(index: &SceneIndex, guid: &str) -> Option<usize> {
-        index.nodes.iter().position(|node| node.guid == guid)
+        index.by_guid.get(guid).copied()
     }
 
     pub fn scene_index_node_value<'a>(
@@ -758,6 +709,25 @@ mod scene_xpath_runtime {
         }
     }
 
+    pub fn scene_index_parent_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        match find_node_index(&index, &guid).and_then(|node_index| index.nodes[node_index].parent) {
+            Some(parent_index) => Ok(scene_query_node(&index, parent_index).encode(env)),
+            None => Ok(None::<SceneQueryNode>.encode(env)),
+        }
+    }
+
+    pub fn scene_index_roots_value(
+        resource: ResourceArc<SceneIndexResource>,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        index.roots.iter().copied().map(|node_index| scene_query_node(&index, node_index)).collect()
+    }
+
     pub fn scene_index_children_value(
         resource: ResourceArc<SceneIndexResource>,
         guid: String,
@@ -770,6 +740,27 @@ mod scene_xpath_runtime {
                     .iter()
                     .copied()
                     .map(|child| scene_query_node(&index, child))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn scene_index_siblings_value(
+        resource: ResourceArc<SceneIndexResource>,
+        guid: String,
+    ) -> Vec<SceneQueryNode> {
+        let index = resource.index.clone();
+        find_node_index(&index, &guid)
+            .map(|node_index| {
+                let siblings = index.nodes[node_index]
+                    .parent
+                    .map(|parent| index.nodes[parent].children.as_slice())
+                    .unwrap_or(index.roots.as_slice());
+                siblings
+                    .iter()
+                    .copied()
+                    .filter(|sibling| *sibling != node_index)
+                    .map(|sibling| scene_query_node(&index, sibling))
                     .collect()
             })
             .unwrap_or_default()
@@ -842,18 +833,7 @@ mod scene_xpath_runtime {
     ) -> NifResult<SceneNodeRecord> {
         let mut guid = None;
         let mut node_type = None;
-        let mut name = None;
-        let mut parent_guid = None;
-        let mut position = None;
-        let mut size = None;
-        let mut transform = None;
-        let mut visible = None;
-        let mut locked = None;
-        let mut text = None;
-        let mut font_family = None;
-        let mut font_style = None;
-        let mut font_postscript = None;
-        let mut text_style_guid = None;
+        __rq_scene_decode_locals!();
         loop {
             match decoder.read_var_uint()? {
                 0 => break,
@@ -868,19 +848,7 @@ mod scene_xpath_runtime {
                         scene_node_type_name(decoder.read_var_uint()?).to_string(),
                     );
                 }
-                5 => name = Some(decoder.read_string_value()?),
-                6 => visible = Some(decoder.read_bool()?),
-                7 => locked = Some(decoder.read_bool()?),
-                11 => size = Some(read_scene_size_value(decoder)?),
-                12 => transform = Some(read_scene_transform_value(decoder)?),
-                41 => {
-                    let (family, style, postscript) = read_scene_font_name_value(decoder)?;
-                    font_family = family;
-                    font_style = style;
-                    font_postscript = postscript;
-                }
-                42 => text = read_scene_text_data_value(decoder)?,
-                334 => text_style_guid = read_scene_style_id_value(decoder)?,
+                __rq_scene_decode_arms => unreachable!(),
                 __rq_scene_node_skip_arms => unreachable!(),
                 field => {
                     return Err(
@@ -898,18 +866,7 @@ mod scene_xpath_runtime {
         Ok(SceneNodeRecord {
             guid: guid.unwrap_or_default(),
             node_type: node_type.unwrap_or_else(|| "unknown".to_string()),
-            name,
-            parent_guid,
-            position,
-            size,
-            transform,
-            visible,
-            locked,
-            text,
-            font_family,
-            font_style,
-            font_postscript,
-            text_style_guid,
+            __rq_scene_record_build_fields: (),
             parent: None,
             children: Vec::new(),
         })
