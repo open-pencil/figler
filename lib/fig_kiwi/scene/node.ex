@@ -30,6 +30,14 @@ defmodule FigKiwi.Scene.Node do
     :font_style,
     :font_postscript,
     :text_style_guid,
+    :component_key,
+    :origin_component_key,
+    :fill_style_guid,
+    :stroke_style_guid,
+    :effect_style_guid,
+    :grid_style_guid,
+    :fill_count,
+    :stroke_count,
     children: nil
   ]
 
@@ -48,6 +56,14 @@ defmodule FigKiwi.Scene.Node do
           font_style: String.t() | nil,
           font_postscript: String.t() | nil,
           text_style_guid: String.t() | nil,
+          component_key: String.t() | nil,
+          origin_component_key: String.t() | nil,
+          fill_style_guid: String.t() | nil,
+          stroke_style_guid: String.t() | nil,
+          effect_style_guid: String.t() | nil,
+          grid_style_guid: String.t() | nil,
+          fill_count: non_neg_integer() | nil,
+          stroke_count: non_neg_integer() | nil,
           children: [t()] | nil
         }
 
@@ -88,7 +104,15 @@ defmodule FigKiwi.Scene.Node do
         :font_family,
         :font_style,
         :font_postscript,
-        :text_style_guid
+        :text_style_guid,
+        :component_key,
+        :origin_component_key,
+        :fill_style_guid,
+        :stroke_style_guid,
+        :effect_style_guid,
+        :grid_style_guid,
+        :fill_count,
+        :stroke_count
       ])
     )
   end

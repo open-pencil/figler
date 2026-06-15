@@ -102,7 +102,15 @@ defmodule FigKiwi.NativeTest do
                font_family: nil,
                font_style: nil,
                font_postscript: nil,
-               text_style_guid: nil
+               text_style_guid: nil,
+               component_key: nil,
+               origin_component_key: nil,
+               fill_style_guid: nil,
+               stroke_style_guid: nil,
+               effect_style_guid: nil,
+               grid_style_guid: nil,
+               fill_count: nil,
+               stroke_count: nil
              }
            ]
   end

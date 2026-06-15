@@ -67,13 +67,39 @@ fn decode_scene_node_change_from_decoder(
             12 => {
                 skip_matrix_from_decoder(decoder)?;
             }
+            38 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            39 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
             41 => {
                 skip_font_name_from_decoder(decoder)?;
             }
             42 => {
                 skip_text_data_from_decoder(decoder)?;
             }
+            216 => decoder.skip_string()?,
+            252 => decoder.skip_string()?,
+            332 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            333 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
             334 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            335 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            336 => {
                 skip_style_id_from_decoder(decoder)?;
             }
             __rq_scene_node_skip_arms => unreachable!(),

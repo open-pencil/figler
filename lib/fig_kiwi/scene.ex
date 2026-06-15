@@ -14,6 +14,7 @@ defmodule FigKiwi.Scene do
 
   alias FigKiwi.Container
   alias FigKiwi.Native.Scene, as: NativeScene
+  alias FigKiwi.Scene.Index
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Summary
 
@@ -36,11 +37,14 @@ defmodule FigKiwi.Scene do
 
   Use this when running multiple XPath queries over the same scene.
   """
-  @spec index(binary()) :: reference()
+  @spec index(binary()) :: Index.t()
   def index(binary) when is_binary(binary) do
-    binary
-    |> payload!()
-    |> NativeScene.build_index()
+    resource =
+      binary
+      |> payload!()
+      |> NativeScene.build_index()
+
+    %Index{resource: resource}
   end
 
   @doc """
@@ -70,7 +74,7 @@ defmodule FigKiwi.Scene do
     * `@font_postscript`
     * `@text_style_guid`
   """
-  @spec query(binary() | reference(), String.t(), keyword()) :: [scene_node()]
+  @spec query(binary() | Index.t() | reference(), String.t(), keyword()) :: [scene_node()]
   def query(scene, xpath, opts \\ [])
 
   def query(binary, xpath, opts) when is_binary(binary) and is_binary(xpath) and is_list(opts) do
@@ -88,11 +92,12 @@ defmodule FigKiwi.Scene do
 
   def query(index, xpath, opts) when is_binary(xpath) and is_list(opts) do
     fields = query_fields(opts)
+    resource = reusable_index(index)
 
     nodes =
       case fields do
-        :all -> NativeScene.query_index(index, xpath)
-        fields -> NativeScene.query_index_fields(index, xpath, fields)
+        :all -> NativeScene.query_index(resource, xpath)
+        fields -> NativeScene.query_index_fields(resource, xpath, fields)
       end
 
     nodes_from_maps(nodes)
@@ -101,13 +106,13 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns canvas/page nodes.
   """
-  @spec pages(binary() | reference()) :: [scene_node()]
+  @spec pages(binary() | Index.t() | reference()) :: [scene_node()]
   def pages(scene), do: query(scene, "//canvas")
 
   @doc """
   Looks up a projected scene node by GUID.
   """
-  @spec node(binary() | reference(), String.t()) :: scene_node() | nil
+  @spec node(binary() | Index.t() | reference(), String.t()) :: scene_node() | nil
   def node(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -118,7 +123,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns root nodes in scene order.
   """
-  @spec roots(binary() | reference()) :: [scene_node()]
+  @spec roots(binary() | Index.t() | reference()) :: [scene_node()]
   def roots(scene) do
     scene
     |> reusable_index()
@@ -129,7 +134,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns the parent node for a node GUID.
   """
-  @spec parent(binary() | reference(), String.t()) :: scene_node() | nil
+  @spec parent(binary() | Index.t() | reference(), String.t()) :: scene_node() | nil
   def parent(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -140,7 +145,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns direct children for a parent GUID in scene order.
   """
-  @spec children(binary() | reference(), String.t()) :: [scene_node()]
+  @spec children(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
   def children(scene, parent_guid) when is_binary(parent_guid) do
     scene
     |> reusable_index()
@@ -151,7 +156,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns sibling nodes for a node GUID in scene order.
   """
-  @spec siblings(binary() | reference(), String.t()) :: [scene_node()]
+  @spec siblings(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
   def siblings(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -162,7 +167,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns ancestors for a node GUID, ordered from root to parent.
   """
-  @spec ancestors(binary() | reference(), String.t()) :: [scene_node()]
+  @spec ancestors(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
   def ancestors(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -173,7 +178,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns all descendants for a node GUID in scene order.
   """
-  @spec descendants(binary() | reference(), String.t()) :: [scene_node()]
+  @spec descendants(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
   def descendants(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -184,7 +189,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes of a given projected node type without constructing XPath.
   """
-  @spec by_type(binary() | reference(), atom() | String.t()) :: [scene_node()]
+  @spec by_type(binary() | Index.t() | reference(), atom() | String.t()) :: [scene_node()]
   def by_type(scene, type) when is_atom(type) or is_binary(type) do
     scene
     |> reusable_index()
@@ -195,7 +200,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes with an exact projected name without constructing XPath.
   """
-  @spec named(binary() | reference(), String.t()) :: [scene_node()]
+  @spec named(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
   def named(scene, name) when is_binary(name) do
     scene
     |> reusable_index()
@@ -206,7 +211,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes whose projected name contains `needle` without constructing XPath.
   """
-  @spec name_contains(binary() | reference(), String.t()) :: [scene_node()]
+  @spec name_contains(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
   def name_contains(scene, needle) when is_binary(needle) do
     scene
     |> reusable_index()
@@ -217,7 +222,7 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns text nodes whose projected text contains `needle` without constructing XPath.
   """
-  @spec text_contains(binary() | reference(), String.t()) :: [scene_node()]
+  @spec text_contains(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
   def text_contains(scene, needle) when is_binary(needle) do
     scene
     |> reusable_index()
@@ -235,7 +240,7 @@ defmodule FigKiwi.Scene do
     * `:name_contains` - substring match on node name
     * `:text_contains` - substring match on projected text
   """
-  @spec find(binary() | reference(), keyword()) :: [scene_node()]
+  @spec find(binary() | Index.t() | reference(), keyword()) :: [scene_node()]
   def find(scene, opts) when is_list(opts) do
     scene
     |> reusable_index()
@@ -251,7 +256,7 @@ defmodule FigKiwi.Scene do
     * `:root` - GUID to use as the root. Defaults to all root nodes.
     * `:depth` - maximum child depth. Defaults to `3`.
   """
-  @spec tree(binary() | reference(), keyword()) :: [Node.t()] | Node.t() | nil
+  @spec tree(binary() | Index.t() | reference(), keyword()) :: [Node.t()] | Node.t() | nil
   def tree(scene, opts \\ []) when is_list(opts) do
     index = reusable_index(scene)
     depth = Keyword.get(opts, :depth, 3)
@@ -288,7 +293,8 @@ defmodule FigKiwi.Scene do
     MatchError -> binary
   end
 
-  defp reusable_index(scene) when is_binary(scene), do: index(scene)
+  defp reusable_index(scene) when is_binary(scene), do: scene |> index() |> reusable_index()
+  defp reusable_index(%Index{resource: resource}), do: resource
   defp reusable_index(index), do: index
 
   defp tree_node(_index, %Node{} = node, 0), do: %Node{node | children: []}

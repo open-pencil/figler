@@ -201,7 +201,29 @@ defmodule FigKiwi.NativeSceneGenerator do
         definition_map
         |> Map.fetch!("NodeChange")
         |> then(& &1.fields)
-        |> Enum.reject(&(&1.value in [1, 3, 4, 5, 6, 7, 11, 12, 41, 42, 334]))
+        |> Enum.reject(
+          &(&1.value in [
+              1,
+              3,
+              4,
+              5,
+              6,
+              7,
+              11,
+              12,
+              38,
+              39,
+              41,
+              42,
+              216,
+              252,
+              332,
+              333,
+              334,
+              335,
+              336
+            ])
+        )
         |> Enum.map(&skip_message_arm(&1, definition_map)),
       scene_text_data_skip_arms:
         definition_map
@@ -242,7 +264,14 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp scene_node_build_fields do
     Enum.map(scene_optional_fields(), fn field ->
       name = Atom.to_string(field)
-      value = if field in [:visible, :locked], do: "node.#{name}", else: "node.#{name}.clone()"
+
+      value =
+        cond do
+          field == :parent_guid -> "node.parent_guid.map(|guid| guid.to_string())"
+          field in [:visible, :locked, :fill_count, :stroke_count] -> "node.#{name}"
+          true -> "node.#{name}.clone()"
+        end
+
       "#{name}: #{value},"
     end)
   end
@@ -275,7 +304,19 @@ defmodule FigKiwi.NativeSceneGenerator do
       {field_id.("fontName"),
        "{ let (family, style, postscript) = read_scene_font_name_value(decoder)?; font_family = family; font_style = style; font_postscript = postscript; }"},
       {field_id.("textData"), "text = read_scene_text_data_value(decoder)?"},
-      {field_id.("styleIdForText"), "text_style_guid = read_scene_style_id_value(decoder)?"}
+      {field_id.("componentKey"), "component_key = Some(decoder.read_string_value()?)"},
+      {field_id.("originComponentKey"),
+       "origin_component_key = Some(decoder.read_string_value()?)"},
+      {field_id.("styleIdForFill"), "fill_style_guid = read_scene_style_id_value(decoder)?"},
+      {field_id.("styleIdForStrokeFill"),
+       "stroke_style_guid = read_scene_style_id_value(decoder)?"},
+      {field_id.("styleIdForText"), "text_style_guid = read_scene_style_id_value(decoder)?"},
+      {field_id.("styleIdForEffect"), "effect_style_guid = read_scene_style_id_value(decoder)?"},
+      {field_id.("styleIdForGrid"), "grid_style_guid = read_scene_style_id_value(decoder)?"},
+      {field_id.("fillPaints"),
+       "fill_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"},
+      {field_id.("strokePaints"),
+       "stroke_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"}
     ]
     |> Enum.map(fn {id, expr} -> "#{id} => #{expr}," end)
   end
@@ -284,6 +325,8 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp scene_rust_field_type(:transform), do: "Option<SceneTransform>"
   defp scene_rust_field_type(:visible), do: "Option<bool>"
   defp scene_rust_field_type(:locked), do: "Option<bool>"
+  defp scene_rust_field_type(:fill_count), do: "Option<usize>"
+  defp scene_rust_field_type(:stroke_count), do: "Option<usize>"
   defp scene_rust_field_type(_field), do: "Option<String>"
 
   defp scene_attr_lookup do
@@ -305,8 +348,11 @@ defmodule FigKiwi.NativeSceneGenerator do
              []}
           ]
 
-        field when field in [:visible, :locked] ->
+        field when field in [:visible, :locked, :fill_count, :stroke_count] ->
           [{field, Atom.to_string(field), "value.to_string()", by_ref?: false}]
+
+        :parent_guid ->
+          [{:parent_guid, "parent_guid", "value.to_string()", []}]
 
         field ->
           [{field, Atom.to_string(field), "value.clone()", []}]
@@ -362,10 +408,17 @@ defmodule FigKiwi.NativeSceneGenerator do
       name = Atom.to_string(field)
       atom = String.upcase(name)
 
+      value =
+        if field == :parent_guid do
+          "node.parent_guid.map(|guid| guid.to_string()).encode(env)"
+        else
+          "node.#{name}.encode(env)"
+        end
+
       """
       if wants_field(fields, "#{name}") {
           keys.push(cached_atom(env, &#{atom}_ATOM, "#{name}").encode(env));
-          values.push(node.#{name}.encode(env));
+          values.push(#{value});
       }
       """
     end)

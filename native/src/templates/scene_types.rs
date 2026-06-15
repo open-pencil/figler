@@ -38,6 +38,14 @@ pub struct SceneQueryNode {
     font_style: Option<String>,
     font_postscript: Option<String>,
     text_style_guid: Option<String>,
+    component_key: Option<String>,
+    origin_component_key: Option<String>,
+    fill_style_guid: Option<String>,
+    stroke_style_guid: Option<String>,
+    effect_style_guid: Option<String>,
+    grid_style_guid: Option<String>,
+    fill_count: Option<usize>,
+    stroke_count: Option<usize>,
 }
 
 fn scene_node_type_name(value: u32) -> &'static str {

@@ -21,7 +21,23 @@ defmodule FigKiwi.Scene.Projection do
     %{name: :font_family, source: {:font_name, :family}, xpath_attrs: [:font_family]},
     %{name: :font_style, source: {:font_name, :style}, xpath_attrs: [:font_style]},
     %{name: :font_postscript, source: {:font_name, :postscript}, xpath_attrs: [:font_postscript]},
-    %{name: :text_style_guid, source: {:style_id, :guid}, xpath_attrs: [:text_style_guid]}
+    %{name: :text_style_guid, source: {:style_id, :guid}, xpath_attrs: [:text_style_guid]},
+    %{
+      name: :component_key,
+      source: {:node_change, :component_key},
+      xpath_attrs: [:component_key]
+    },
+    %{
+      name: :origin_component_key,
+      source: {:node_change, :origin_component_key},
+      xpath_attrs: [:origin_component_key]
+    },
+    %{name: :fill_style_guid, source: {:style_id, :guid}, xpath_attrs: [:fill_style_guid]},
+    %{name: :stroke_style_guid, source: {:style_id, :guid}, xpath_attrs: [:stroke_style_guid]},
+    %{name: :effect_style_guid, source: {:style_id, :guid}, xpath_attrs: [:effect_style_guid]},
+    %{name: :grid_style_guid, source: {:style_id, :guid}, xpath_attrs: [:grid_style_guid]},
+    %{name: :fill_count, source: {:node_change, :fill_paints}, xpath_attrs: [:fill_count]},
+    %{name: :stroke_count, source: {:node_change, :stroke_paints}, xpath_attrs: [:stroke_count]}
   ]
 
   @node_change_source_fields @fields
@@ -30,6 +46,10 @@ defmodule FigKiwi.Scene.Projection do
                                %{source: {:parent_index, _}} -> [:parent_index]
                                %{source: {:text_data, _}} -> [:text_data]
                                %{source: {:font_name, _}} -> [:font_name]
+                               %{name: :fill_style_guid} -> [:style_id_for_fill]
+                               %{name: :stroke_style_guid} -> [:style_id_for_stroke_fill]
+                               %{name: :effect_style_guid} -> [:style_id_for_effect]
+                               %{name: :grid_style_guid} -> [:style_id_for_grid]
                                %{source: {:style_id, _}} -> [:style_id_for_text]
                              end)
                              |> Enum.uniq()

@@ -74,6 +74,14 @@ pub struct SceneQueryNode {
     font_style: Option<String>,
     font_postscript: Option<String>,
     text_style_guid: Option<String>,
+    component_key: Option<String>,
+    origin_component_key: Option<String>,
+    fill_style_guid: Option<String>,
+    stroke_style_guid: Option<String>,
+    effect_style_guid: Option<String>,
+    grid_style_guid: Option<String>,
+    fill_count: Option<usize>,
+    stroke_count: Option<usize>,
 }
 fn scene_node_type_name(value: u32) -> &'static str {
     match value {
@@ -88846,12 +88854,31 @@ mod scene_xpath_runtime {
         Attribute, Document, Dom, Element, NamespaceResolver, Node,
         ProcessingInstruction, Value,
     };
+    #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    struct SceneGuid {
+        session_id: u32,
+        local_id: u32,
+    }
+    impl SceneGuid {
+        fn parse(value: &str) -> Option<Self> {
+            let (session_id, local_id) = value.split_once(':')?;
+            Some(Self {
+                session_id: session_id.parse().ok()?,
+                local_id: local_id.parse().ok()?,
+            })
+        }
+    }
+    impl std::fmt::Display for SceneGuid {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}:{}", self.session_id, self.local_id)
+        }
+    }
     #[derive(Clone, Debug)]
     struct SceneNodeRecord {
-        guid: String,
+        guid: SceneGuid,
         node_type: &'static str,
         name: Option<String>,
-        parent_guid: Option<String>,
+        parent_guid: Option<SceneGuid>,
         position: Option<String>,
         size: Option<SceneSize>,
         transform: Option<SceneTransform>,
@@ -88862,6 +88889,14 @@ mod scene_xpath_runtime {
         font_style: Option<String>,
         font_postscript: Option<String>,
         text_style_guid: Option<String>,
+        component_key: Option<String>,
+        origin_component_key: Option<String>,
+        fill_style_guid: Option<String>,
+        stroke_style_guid: Option<String>,
+        effect_style_guid: Option<String>,
+        grid_style_guid: Option<String>,
+        fill_count: Option<usize>,
+        stroke_count: Option<usize>,
         parent: Option<usize>,
         children: Vec<usize>,
     }
@@ -88871,7 +88906,9 @@ mod scene_xpath_runtime {
         roots: Vec<usize>,
         preorder: Vec<usize>,
         ranks: Vec<usize>,
-        by_guid: std::collections::HashMap<String, usize>,
+        by_guid: std::collections::HashMap<SceneGuid, usize>,
+        by_type: std::collections::HashMap<&'static str, Vec<usize>>,
+        by_name: std::collections::HashMap<String, Vec<usize>>,
     }
     #[derive(Clone, Debug, Eq, PartialEq, std::hash::Hash)]
     enum SceneHandleKind {
@@ -88915,7 +88952,7 @@ mod scene_xpath_runtime {
         fn attr(&self, index: usize) -> Option<(&'static str, String)> {
             let mut cursor = 0;
             if index == cursor {
-                return Some(("guid", self.guid.clone()));
+                return Some(("guid", self.guid.to_string()));
             }
             cursor += 1;
             if index == cursor {
@@ -88930,7 +88967,7 @@ mod scene_xpath_runtime {
             }
             if let Some(value) = self.parent_guid.as_ref() {
                 if index == cursor {
-                    return Some(("parent_guid", value.clone()));
+                    return Some(("parent_guid", value.to_string()));
                 }
                 cursor += 1;
             }
@@ -89016,6 +89053,54 @@ mod scene_xpath_runtime {
                 if index == cursor {
                     return Some(("text_style_guid", value.clone()));
                 }
+                cursor += 1;
+            }
+            if let Some(value) = self.component_key.as_ref() {
+                if index == cursor {
+                    return Some(("component_key", value.clone()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.origin_component_key.as_ref() {
+                if index == cursor {
+                    return Some(("origin_component_key", value.clone()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.fill_style_guid.as_ref() {
+                if index == cursor {
+                    return Some(("fill_style_guid", value.clone()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.stroke_style_guid.as_ref() {
+                if index == cursor {
+                    return Some(("stroke_style_guid", value.clone()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.effect_style_guid.as_ref() {
+                if index == cursor {
+                    return Some(("effect_style_guid", value.clone()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.grid_style_guid.as_ref() {
+                if index == cursor {
+                    return Some(("grid_style_guid", value.clone()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.fill_count {
+                if index == cursor {
+                    return Some(("fill_count", value.to_string()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.stroke_count {
+                if index == cursor {
+                    return Some(("stroke_count", value.to_string()));
+                }
             }
             None
         }
@@ -89057,6 +89142,30 @@ mod scene_xpath_runtime {
             if self.text_style_guid.is_some() {
                 count += 1;
             }
+            if self.component_key.is_some() {
+                count += 1;
+            }
+            if self.origin_component_key.is_some() {
+                count += 1;
+            }
+            if self.fill_style_guid.is_some() {
+                count += 1;
+            }
+            if self.stroke_style_guid.is_some() {
+                count += 1;
+            }
+            if self.effect_style_guid.is_some() {
+                count += 1;
+            }
+            if self.grid_style_guid.is_some() {
+                count += 1;
+            }
+            if self.fill_count.is_some() {
+                count += 1;
+            }
+            if self.stroke_count.is_some() {
+                count += 1;
+            }
             count
         }
     }
@@ -89065,14 +89174,13 @@ mod scene_xpath_runtime {
             let by_guid = nodes
                 .iter()
                 .enumerate()
-                .map(|(index, node)| (node.guid.clone(), index))
+                .map(|(index, node)| (node.guid, index))
                 .collect::<std::collections::HashMap<_, _>>();
             let mut roots = Vec::new();
             for index in 0..nodes.len() {
                 let parent = nodes[index]
                     .parent_guid
-                    .as_ref()
-                    .and_then(|guid| by_guid.get(guid).copied());
+                    .and_then(|guid| by_guid.get(&guid).copied());
                 nodes[index].parent = parent;
                 if let Some(parent) = parent {
                     nodes[parent].children.push(index);
@@ -89100,12 +89208,22 @@ mod scene_xpath_runtime {
             for (rank, index) in preorder.iter().copied().enumerate() {
                 ranks[index] = rank;
             }
+            let mut by_type: std::collections::HashMap<&'static str, Vec<usize>> = std::collections::HashMap::new();
+            let mut by_name: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
+            for index in preorder.iter().copied() {
+                by_type.entry(nodes[index].node_type).or_default().push(index);
+                if let Some(name) = nodes[index].name.as_ref() {
+                    by_name.entry(name.clone()).or_default().push(index);
+                }
+            }
             Self {
                 nodes,
                 roots,
                 preorder,
                 ranks,
                 by_guid,
+                by_type,
+                by_name,
             }
         }
         fn push_preorder(nodes: &[SceneNodeRecord], index: usize, out: &mut Vec<usize>) {
@@ -89381,7 +89499,10 @@ mod scene_xpath_runtime {
                 .preorder
                 .iter()
                 .copied()
-                .filter(|index| scene.nodes[*index].guid == id)
+                .filter(|index| {
+                    SceneGuid::parse(id)
+                        .is_some_and(|guid| scene.nodes[*index].guid == guid)
+                })
                 .collect::<Vec<_>>();
             indexes
                 .into_iter()
@@ -89440,14 +89561,14 @@ mod scene_xpath_runtime {
             )
         }
     }
-    fn read_guid_value(decoder: &mut Decoder<'_>) -> NifResult<String> {
+    fn read_guid_value(decoder: &mut Decoder<'_>) -> NifResult<SceneGuid> {
         let session_id = decoder.read_var_uint()?;
         let local_id = decoder.read_var_uint()?;
-        Ok(format!("{}:{}", session_id, local_id))
+        Ok(SceneGuid { session_id, local_id })
     }
     fn read_parent_index_value(
         decoder: &mut Decoder<'_>,
-    ) -> NifResult<(String, String)> {
+    ) -> NifResult<(SceneGuid, String)> {
         let guid = read_guid_value(decoder)?;
         let position = decoder.read_string_value()?;
         Ok((guid, position))
@@ -89477,6 +89598,16 @@ mod scene_xpath_runtime {
         let style = Some(decoder.read_string_value()?);
         let postscript = Some(decoder.read_string_value()?);
         Ok((family, style, postscript))
+    }
+    fn read_scene_counted_array_value(
+        decoder: &mut Decoder<'_>,
+        mut skip_item: impl FnMut(&mut Decoder<'_>) -> NifResult<()>,
+    ) -> NifResult<Option<usize>> {
+        let len = decoder.read_var_uint()? as usize;
+        for _ in 0..len {
+            skip_item(decoder)?;
+        }
+        Ok(Some(len))
     }
     fn read_scene_text_data_value(
         decoder: &mut Decoder<'_>,
@@ -89601,7 +89732,7 @@ mod scene_xpath_runtime {
         loop {
             match decoder.read_var_uint()? {
                 0 => break,
-                1 => guid = Some(read_guid_value(decoder)?),
+                1 => guid = Some(read_guid_value(decoder)?.to_string()),
                 2 => {
                     skip_asset_ref_from_decoder(decoder)?;
                 }
@@ -89623,10 +89754,10 @@ mod scene_xpath_runtime {
     fn scene_query_node(index: &SceneIndex, node_index: usize) -> SceneQueryNode {
         let node = &index.nodes[node_index];
         SceneQueryNode {
-            guid: node.guid.clone(),
+            guid: node.guid.to_string(),
             node_type: node.node_type.to_string(),
             name: node.name.clone(),
-            parent_guid: node.parent_guid.clone(),
+            parent_guid: node.parent_guid.map(|guid| guid.to_string()),
             position: node.position.clone(),
             size: node.size.clone(),
             transform: node.transform.clone(),
@@ -89637,6 +89768,14 @@ mod scene_xpath_runtime {
             font_style: node.font_style.clone(),
             font_postscript: node.font_postscript.clone(),
             text_style_guid: node.text_style_guid.clone(),
+            component_key: node.component_key.clone(),
+            origin_component_key: node.origin_component_key.clone(),
+            fill_style_guid: node.fill_style_guid.clone(),
+            stroke_style_guid: node.stroke_style_guid.clone(),
+            effect_style_guid: node.effect_style_guid.clone(),
+            grid_style_guid: node.grid_style_guid.clone(),
+            fill_count: node.fill_count,
+            stroke_count: node.stroke_count,
         }
     }
     fn wants_field(fields: &[String], field: &str) -> bool {
@@ -89662,11 +89801,19 @@ mod scene_xpath_runtime {
         static FONT_STYLE_ATOM: OnceLock<Atom> = OnceLock::new();
         static FONT_POSTSCRIPT_ATOM: OnceLock<Atom> = OnceLock::new();
         static TEXT_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+        static COMPONENT_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
+        static ORIGIN_COMPONENT_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
+        static FILL_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+        static STROKE_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+        static EFFECT_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+        static GRID_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+        static FILL_COUNT_ATOM: OnceLock<Atom> = OnceLock::new();
+        static STROKE_COUNT_ATOM: OnceLock<Atom> = OnceLock::new();
         let node = &index.nodes[node_index];
         let mut keys = Vec::with_capacity(fields.len().max(2));
         let mut values = Vec::with_capacity(fields.len().max(2));
         keys.push(cached_atom(env, &GUID_ATOM, "guid").encode(env));
-        values.push(node.guid.encode(env));
+        values.push(node.guid.to_string().encode(env));
         keys.push(cached_atom(env, &NODE_TYPE_ATOM, "node_type").encode(env));
         values.push(node.node_type.encode(env));
         if wants_field(fields, "name") {
@@ -89675,7 +89822,7 @@ mod scene_xpath_runtime {
         }
         if wants_field(fields, "parent_guid") {
             keys.push(cached_atom(env, &PARENT_GUID_ATOM, "parent_guid").encode(env));
-            values.push(node.parent_guid.encode(env));
+            values.push(node.parent_guid.map(|guid| guid.to_string()).encode(env));
         }
         if wants_field(fields, "position") {
             keys.push(cached_atom(env, &POSITION_ATOM, "position").encode(env));
@@ -89720,6 +89867,53 @@ mod scene_xpath_runtime {
                 cached_atom(env, &TEXT_STYLE_GUID_ATOM, "text_style_guid").encode(env),
             );
             values.push(node.text_style_guid.encode(env));
+        }
+        if wants_field(fields, "component_key") {
+            keys.push(
+                cached_atom(env, &COMPONENT_KEY_ATOM, "component_key").encode(env),
+            );
+            values.push(node.component_key.encode(env));
+        }
+        if wants_field(fields, "origin_component_key") {
+            keys.push(
+                cached_atom(env, &ORIGIN_COMPONENT_KEY_ATOM, "origin_component_key")
+                    .encode(env),
+            );
+            values.push(node.origin_component_key.encode(env));
+        }
+        if wants_field(fields, "fill_style_guid") {
+            keys.push(
+                cached_atom(env, &FILL_STYLE_GUID_ATOM, "fill_style_guid").encode(env),
+            );
+            values.push(node.fill_style_guid.encode(env));
+        }
+        if wants_field(fields, "stroke_style_guid") {
+            keys.push(
+                cached_atom(env, &STROKE_STYLE_GUID_ATOM, "stroke_style_guid")
+                    .encode(env),
+            );
+            values.push(node.stroke_style_guid.encode(env));
+        }
+        if wants_field(fields, "effect_style_guid") {
+            keys.push(
+                cached_atom(env, &EFFECT_STYLE_GUID_ATOM, "effect_style_guid")
+                    .encode(env),
+            );
+            values.push(node.effect_style_guid.encode(env));
+        }
+        if wants_field(fields, "grid_style_guid") {
+            keys.push(
+                cached_atom(env, &GRID_STYLE_GUID_ATOM, "grid_style_guid").encode(env),
+            );
+            values.push(node.grid_style_guid.encode(env));
+        }
+        if wants_field(fields, "fill_count") {
+            keys.push(cached_atom(env, &FILL_COUNT_ATOM, "fill_count").encode(env));
+            values.push(node.fill_count.encode(env));
+        }
+        if wants_field(fields, "stroke_count") {
+            keys.push(cached_atom(env, &STROKE_COUNT_ATOM, "stroke_count").encode(env));
+            values.push(node.stroke_count.encode(env));
         }
         Term::map_from_term_arrays(env, &keys, &values)
     }
@@ -89835,7 +90029,7 @@ mod scene_xpath_runtime {
         Ok(matched.encode(env))
     }
     fn find_node_index(index: &SceneIndex, guid: &str) -> Option<usize> {
-        index.by_guid.get(guid).copied()
+        SceneGuid::parse(guid).and_then(|guid| index.by_guid.get(&guid).copied())
     }
     pub fn scene_index_node_value<'a>(
         env: Env<'a>,
@@ -89927,17 +90121,28 @@ mod scene_xpath_runtime {
         node_type: String,
     ) -> Vec<SceneQueryNode> {
         let index = resource.index.clone();
-        scene_query_nodes_matching(&index, |node| node.node_type == node_type.as_str())
+        index
+            .by_type
+            .get(node_type.as_str())
+            .into_iter()
+            .flatten()
+            .copied()
+            .map(|node_index| scene_query_node(&index, node_index))
+            .collect()
     }
     pub fn scene_index_named_value(
         resource: ResourceArc<SceneIndexResource>,
         name: String,
     ) -> Vec<SceneQueryNode> {
         let index = resource.index.clone();
-        scene_query_nodes_matching(
-            &index,
-            |node| node.name.as_deref() == Some(name.as_str()),
-        )
+        index
+            .by_name
+            .get(&name)
+            .into_iter()
+            .flatten()
+            .copied()
+            .map(|node_index| scene_query_node(&index, node_index))
+            .collect()
     }
     pub fn scene_index_name_contains_value(
         resource: ResourceArc<SceneIndexResource>,
@@ -90199,6 +90404,14 @@ mod scene_xpath_runtime {
         let mut font_style = None;
         let mut font_postscript = None;
         let mut text_style_guid = None;
+        let mut component_key = None;
+        let mut origin_component_key = None;
+        let mut fill_style_guid = None;
+        let mut stroke_style_guid = None;
+        let mut effect_style_guid = None;
+        let mut grid_style_guid = None;
+        let mut fill_count = None;
+        let mut stroke_count = None;
         loop {
             match decoder.read_var_uint()? {
                 0 => break,
@@ -90225,7 +90438,25 @@ mod scene_xpath_runtime {
                     font_postscript = postscript;
                 }
                 42 => text = read_scene_text_data_value(decoder)?,
+                216 => component_key = Some(decoder.read_string_value()?),
+                252 => origin_component_key = Some(decoder.read_string_value()?),
+                332 => fill_style_guid = read_scene_style_id_value(decoder)?,
+                333 => stroke_style_guid = read_scene_style_id_value(decoder)?,
                 334 => text_style_guid = read_scene_style_id_value(decoder)?,
+                335 => effect_style_guid = read_scene_style_id_value(decoder)?,
+                336 => grid_style_guid = read_scene_style_id_value(decoder)?,
+                38 => {
+                    fill_count = read_scene_counted_array_value(
+                        decoder,
+                        skip_paint_from_decoder,
+                    )?;
+                }
+                39 => {
+                    stroke_count = read_scene_counted_array_value(
+                        decoder,
+                        skip_paint_from_decoder,
+                    )?;
+                }
                 53 => {
                     decoder.read_var_uint()?;
                 }
@@ -90334,18 +90565,6 @@ mod scene_xpath_runtime {
                 185 => {
                     skip_guid_from_decoder(decoder)?;
                 }
-                332 => {
-                    skip_style_id_from_decoder(decoder)?;
-                }
-                333 => {
-                    skip_style_id_from_decoder(decoder)?;
-                }
-                335 => {
-                    skip_style_id_from_decoder(decoder)?;
-                }
-                336 => {
-                    skip_style_id_from_decoder(decoder)?;
-                }
                 580 => {
                     let len = decoder.read_var_uint()? as usize;
                     for _ in 0..len {
@@ -90415,16 +90634,10 @@ mod scene_xpath_runtime {
                 215 => {
                     skip_guid_from_decoder(decoder)?;
                 }
-                216 => {
-                    decoder.skip_string()?;
-                }
                 217 => {
                     decoder.read_bool()?;
                 }
                 218 => {
-                    decoder.skip_string()?;
-                }
-                252 => {
                     decoder.skip_string()?;
                 }
                 266 => {
@@ -90763,20 +90976,8 @@ mod scene_xpath_runtime {
                 83 => {
                     decoder.read_var_uint()?;
                 }
-                38 => {
-                    let len = decoder.read_var_uint()? as usize;
-                    for _ in 0..len {
-                        skip_paint_from_decoder(decoder)?;
-                    }
-                }
                 90 => {
                     decoder.read_var_uint()?;
-                }
-                39 => {
-                    let len = decoder.read_var_uint()? as usize;
-                    for _ in 0..len {
-                        skip_paint_from_decoder(decoder)?;
-                    }
                 }
                 91 => {
                     decoder.read_var_uint()?;
@@ -92156,6 +92357,14 @@ mod scene_xpath_runtime {
             font_style,
             font_postscript,
             text_style_guid,
+            component_key,
+            origin_component_key,
+            fill_style_guid,
+            stroke_style_guid,
+            effect_style_guid,
+            grid_style_guid,
+            fill_count,
+            stroke_count,
             parent: None,
             children: Vec::new(),
         })
@@ -92388,13 +92597,39 @@ fn decode_scene_node_change_from_decoder(
             12 => {
                 skip_matrix_from_decoder(decoder)?;
             }
+            38 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
+            39 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_paint_from_decoder(decoder)?;
+                }
+            }
             41 => {
                 skip_font_name_from_decoder(decoder)?;
             }
             42 => {
                 skip_text_data_from_decoder(decoder)?;
             }
+            216 => decoder.skip_string()?,
+            252 => decoder.skip_string()?,
+            332 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            333 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
             334 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            335 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            336 => {
                 skip_style_id_from_decoder(decoder)?;
             }
             53 => {
@@ -92505,18 +92740,6 @@ fn decode_scene_node_change_from_decoder(
             185 => {
                 skip_guid_from_decoder(decoder)?;
             }
-            332 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            333 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            335 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            336 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
             580 => {
                 let len = decoder.read_var_uint()? as usize;
                 for _ in 0..len {
@@ -92586,16 +92809,10 @@ fn decode_scene_node_change_from_decoder(
             215 => {
                 skip_guid_from_decoder(decoder)?;
             }
-            216 => {
-                decoder.skip_string()?;
-            }
             217 => {
                 decoder.read_bool()?;
             }
             218 => {
-                decoder.skip_string()?;
-            }
-            252 => {
                 decoder.skip_string()?;
             }
             266 => {
@@ -92934,20 +93151,8 @@ fn decode_scene_node_change_from_decoder(
             83 => {
                 decoder.read_var_uint()?;
             }
-            38 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_paint_from_decoder(decoder)?;
-                }
-            }
             90 => {
                 decoder.read_var_uint()?;
-            }
-            39 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_paint_from_decoder(decoder)?;
-                }
             }
             91 => {
                 decoder.read_var_uint()?;

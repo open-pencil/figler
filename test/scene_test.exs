@@ -29,7 +29,15 @@ defmodule FigKiwi.SceneTest do
              :locked,
              :text_data,
              :font_name,
-             :style_id_for_text
+             :style_id_for_text,
+             :component_key,
+             :origin_component_key,
+             :style_id_for_fill,
+             :style_id_for_stroke_fill,
+             :style_id_for_effect,
+             :style_id_for_grid,
+             :fill_paints,
+             :stroke_paints
            ]
 
     assert Node.parent_index_source_fields() == [:guid, :position]
