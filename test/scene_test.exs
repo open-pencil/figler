@@ -316,11 +316,13 @@ defmodule FigKiwi.SceneTest do
     assert {:component_prop, :visible, true, false} in applied
   end
 
-  test "records symbol override component swap intent" do
+  test "materializes symbol override component swaps" do
     graph =
       [
         %SeedNode{guid: {1, 1}, node_type: "component", name: "Old"},
+        %SeedNode{guid: {1, 2}, node_type: "text", parent_guid: {1, 1}, text: "Old label"},
         %SeedNode{guid: {3, 1}, node_type: "component", name: "New"},
+        %SeedNode{guid: {3, 2}, node_type: "text", parent_guid: {3, 1}, text: "New label"},
         %SeedNode{
           guid: {2, 1},
           node_type: "instance",
@@ -330,17 +332,22 @@ defmodule FigKiwi.SceneTest do
           ]
         }
       ]
-      |> Resolver.from_seed(resource: make_ref(), stages: [:symbol_overrides])
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances, :symbol_overrides]
+      )
       |> Resolver.resolve()
 
     assert graph.seed_nodes[{2, 1}].symbol_id == {3, 1}
+    assert Scene.node(graph, "clone:2:1/1:2") == nil
+    assert [%Node{guid: "clone:2:1/3:2", text: "New label"}] = Scene.children(graph, "2:1")
 
     assert Graph.explain(graph, "2:1").applied == [
              {:symbol_override, :component_guid, {1, 1}, {3, 1}}
            ]
   end
 
-  test "records component prop component swap intent" do
+  test "materializes component prop component swaps" do
     graph =
       [
         %SeedNode{guid: {1, 1}, node_type: "component", name: "Old"},
@@ -352,6 +359,7 @@ defmodule FigKiwi.SceneTest do
           component_prop_refs: [%ComponentPropRef{def_id: {9, 1}, field: :overridden_symbol_id}]
         },
         %SeedNode{guid: {3, 1}, node_type: "component", name: "New"},
+        %SeedNode{guid: {3, 2}, node_type: "text", parent_guid: {3, 1}, text: "New nested"},
         %SeedNode{
           guid: {2, 1},
           node_type: "instance",
@@ -366,6 +374,9 @@ defmodule FigKiwi.SceneTest do
 
     clone_guid = {:clone, {2, 1}, {1, 2}}
     assert graph.seed_nodes[clone_guid].symbol_id == {3, 1}
+
+    assert [%Node{guid: "clone:clone:2:1/1:2/3:2", text: "New nested"}] =
+             Scene.children(graph, "clone:2:1/1:2")
 
     assert {:component_prop, :component_guid, {4, 1}, {3, 1}} in Graph.explain(
              graph,

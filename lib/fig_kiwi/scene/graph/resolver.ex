@@ -171,19 +171,13 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     }
 
     source_seed = Map.get(graph.seed_nodes, source_guid)
-    cloned_seed = clone_seed(source_seed, clone_guid, clone_parent_guid)
+    cloned_seed = SeedNode.clone(source_seed, clone_guid, clone_parent_guid)
 
     graph
     |> put_clone_node(clone_guid, cloned_node, cloned_seed, instance_guid, source_guid)
     |> Nodes.child(clone_parent_guid, clone_guid)
     |> put_clone_provenance(clone_guid, source_guid, instance_guid, component_guid)
     |> clone_children(instance_guid, clone_guid, source_guid, component_guid)
-  end
-
-  defp clone_seed(nil, _clone_guid, _clone_parent_guid), do: nil
-
-  defp clone_seed(%SeedNode{} = seed, clone_guid, clone_parent_guid) do
-    %SeedNode{seed | guid: clone_guid, parent_guid: clone_parent_guid, source: seed}
   end
 
   defp put_clone_node(

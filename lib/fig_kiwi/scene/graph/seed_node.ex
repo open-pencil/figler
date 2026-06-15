@@ -157,6 +157,16 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   end
 
   @doc """
+  Builds a cloned seed node.
+  """
+  @spec clone(t() | nil, GUID.graph_guid(), GUID.graph_guid()) :: t() | nil
+  def clone(nil, _clone_guid, _parent_guid), do: nil
+
+  def clone(%__MODULE__{} = seed, clone_guid, parent_guid) do
+    %__MODULE__{seed | guid: clone_guid, parent_guid: parent_guid, source: seed}
+  end
+
+  @doc """
   Converts a seed node back to the public projected node struct.
   """
   @spec to_node(t()) :: Node.t()

@@ -8,19 +8,19 @@ defmodule FigKiwi.Scene.Graph.GUID do
   """
 
   @type figma_guid :: {non_neg_integer(), non_neg_integer()}
-  @type graph_guid :: figma_guid() | {:clone, figma_guid(), figma_guid()}
+  @type graph_guid :: figma_guid() | {:clone, graph_guid(), figma_guid()}
 
   @doc """
   Parses a public GUID string or returns an already parsed graph GUID.
   """
   @spec parse(String.t() | graph_guid() | nil) :: graph_guid() | nil
   def parse(nil), do: nil
-  def parse({:clone, {_s1, _l1}, {_s2, _l2}} = guid), do: guid
+  def parse({:clone, _instance_guid, {_s2, _l2}} = guid), do: guid
   def parse({_session_id, _local_id} = guid), do: guid
 
   def parse("clone:" <> clone) do
-    with [instance, source] <- String.split(clone, "/", parts: 2),
-         {instance_guid, ""} <- parse_figma(instance),
+    with {instance, source} <- split_clone(clone),
+         instance_guid when not is_nil(instance_guid) <- parse(instance),
          {source_guid, ""} <- parse_figma(source) do
       {:clone, instance_guid, source_guid}
     else
@@ -66,12 +66,20 @@ defmodule FigKiwi.Scene.Graph.GUID do
   @doc """
   Builds a synthetic clone graph GUID.
   """
-  @spec clone(figma_guid(), figma_guid()) :: graph_guid()
-  def clone(
-        {_session_id, _local_id} = instance_guid,
-        {_source_session, _source_local} = source_guid
-      ) do
+  @spec clone(graph_guid(), figma_guid()) :: graph_guid()
+  def clone(instance_guid, {_source_session, _source_local} = source_guid)
+      when is_tuple(instance_guid) do
     {:clone, instance_guid, source_guid}
+  end
+
+  defp split_clone(clone) do
+    parts = String.split(clone, "/")
+
+    case List.pop_at(parts, -1) do
+      {nil, _parts} -> :error
+      {source, []} -> {source, ""}
+      {source, instance_parts} -> {Enum.join(instance_parts, "/"), source}
+    end
   end
 
   defp parse_figma(value) do

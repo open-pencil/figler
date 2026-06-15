@@ -9,6 +9,7 @@ defmodule FigKiwi.Scene.Graph.Patch do
 
   alias FigKiwi.Scene.Graph
   alias FigKiwi.Scene.Graph.GUID
+  alias FigKiwi.Scene.Graph.Swap
 
   @enforce_keys [:op, :target, :source]
   defstruct [:op, :target, :field, :value, :source, meta: %{}]
@@ -93,20 +94,21 @@ defmodule FigKiwi.Scene.Graph.Patch do
   defp apply_one(%__MODULE__{op: :swap} = patch, %Graph{} = graph) do
     case Map.fetch(graph.nodes, patch.target) do
       {:ok, %{node_type: "instance"}} ->
-        old_value = graph.seed_nodes |> Map.get(patch.target) |> old_component()
-        applied = {patch.source, :component_guid, old_value, patch.value}
+        if Map.has_key?(graph.nodes, patch.value) do
+          old_value = graph.seed_nodes |> Map.get(patch.target) |> old_component()
+          applied = {patch.source, :component_guid, old_value, patch.value}
 
-        %Graph{
           graph
-          | seed_nodes: update_seed(graph.seed_nodes, patch.target, patch.value),
-            provenance:
-              Map.update(
-                graph.provenance,
-                patch.target,
-                provenance(applied),
-                &append_applied(&1, applied)
-              )
-        }
+          |> put_swap(patch, applied)
+          |> Swap.run(patch.target, patch.value)
+        else
+          %Graph{
+            graph
+            | unresolved: [
+                {:swap_component, patch.target, patch.value, :missing} | graph.unresolved
+              ]
+          }
+        end
 
       {:ok, _node} ->
         %Graph{
@@ -117,6 +119,20 @@ defmodule FigKiwi.Scene.Graph.Patch do
       :error ->
         %Graph{graph | unresolved: [{:swap_target, patch.target, :missing} | graph.unresolved]}
     end
+  end
+
+  defp put_swap(%Graph{} = graph, patch, applied) do
+    %Graph{
+      graph
+      | seed_nodes: update_seed(graph.seed_nodes, patch.target, patch.value),
+        provenance:
+          Map.update(
+            graph.provenance,
+            patch.target,
+            provenance(applied),
+            &append_applied(&1, applied)
+          )
+    }
   end
 
   defp old_component(nil), do: nil
