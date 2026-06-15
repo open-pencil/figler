@@ -26,6 +26,15 @@ defmodule FigKiwi.Container do
     }
   end
 
+  @doc """
+  Parses a `fig-kiwi` container and inflates only its data chunk.
+  """
+  @spec data(binary()) :: binary()
+  def data(binary) when is_binary(binary) do
+    %{chunks: [_schema_chunk, data_chunk | _rest]} = parse(binary)
+    inflate(data_chunk)
+  end
+
   @spec build([iodata()], keyword()) :: binary()
   def build(chunks, opts \\ []) do
     opts = Keyword.put_new(opts, :magic, "fig-kiwi")

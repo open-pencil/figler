@@ -505,8 +505,7 @@ defmodule FigKiwi.Scene do
   end
 
   def payload!(binary) when is_binary(binary) do
-    %{data: data} = Container.decode(binary)
-    data
+    Container.data(binary)
   rescue
     KiwiCodec.DecodeError -> binary
     MatchError -> binary
@@ -614,7 +613,7 @@ defmodule FigKiwi.Scene do
   end
 
   defp unzip_canvas!(zip_binary) do
-    case :zip.extract(zip_binary, [:memory]) do
+    case :zip.extract(zip_binary, [:memory, {:file_list, [~c"canvas.fig"]}]) do
       {:ok, entries} -> canvas_entry!(entries)
       {:error, reason} -> raise ArgumentError, "cannot read FIG ZIP: #{inspect(reason)}"
     end
