@@ -31,7 +31,10 @@ defmodule FigKiwi.Scene.Graph.Nodes do
   """
   @spec child(Graph.t(), GUID.graph_guid(), GUID.graph_guid()) :: Graph.t()
   def child(%Graph{} = graph, parent, child) do
-    %Graph{graph | children: Map.update(graph.children, parent, [child], &append_once(&1, child))}
+    %Graph{
+      graph
+      | children: Map.update(graph.children, parent, [child], &append_child(&1, child))
+    }
   end
 
   @doc """
@@ -90,7 +93,7 @@ defmodule FigKiwi.Scene.Graph.Nodes do
 
   defp add_index(index, nil, _guid), do: index
   defp add_index(index, "", _guid), do: index
-  defp add_index(index, key, guid), do: Map.update(index, key, [guid], &append_once(&1, guid))
+  defp add_index(index, key, guid), do: Map.update(index, key, [guid], &[guid | &1])
 
   defp remove_index(index, nil, _guid), do: index
   defp remove_index(index, "", _guid), do: index
@@ -99,9 +102,7 @@ defmodule FigKiwi.Scene.Graph.Nodes do
     Map.update(index, key, [], &Enum.reject(&1, fn value -> value == guid end))
   end
 
-  defp append_once(values, value) do
-    if value in values, do: values, else: values ++ [value]
-  end
+  defp append_child(values, value), do: values ++ [value]
 
   defp delete_child_refs(children, guid) do
     children

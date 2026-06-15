@@ -40,6 +40,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
       by_type: group_guids(seed_nodes, & &1.node_type),
       by_name: group_guids(seed_nodes, & &1.name),
       clone_index: %{},
+      component_prop_refs: component_prop_refs(seed_nodes),
       provenance: initial_provenance(seed_nodes),
       unresolved: [],
       stats: stats(seed_nodes, children, roots)
@@ -263,6 +264,23 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     seed_nodes
     |> Enum.filter(&is_nil(&1.parent_guid))
     |> Enum.map(& &1.guid)
+  end
+
+  defp component_prop_refs(seed_nodes) do
+    Enum.reduce(seed_nodes, %{}, &add_component_prop_refs/2)
+  end
+
+  defp add_component_prop_refs(seed, refs) do
+    Enum.reduce(seed.component_prop_refs, refs, &add_component_prop_ref(seed, &1, &2))
+  end
+
+  defp add_component_prop_ref(seed, prop_ref, refs) do
+    with def_id when not is_nil(def_id) <- prop_ref.def_id,
+         field when not is_nil(field) <- ComponentProps.field(prop_ref.field) do
+      Map.put_new(refs, def_id, {seed.guid, field})
+    else
+      _value -> refs
+    end
   end
 
   defp group_guids(seed_nodes, key_fun) do

@@ -33,6 +33,7 @@ defmodule FigKiwi.Scene.Graph do
     by_type: %{},
     by_name: %{},
     clone_index: %{},
+    component_prop_refs: %{},
     provenance: %{},
     unresolved: [],
     stats: %{}
@@ -54,6 +55,7 @@ defmodule FigKiwi.Scene.Graph do
             by_type: %{optional(String.t()) => [GUID.graph_guid()]},
             by_name: %{optional(String.t()) => [GUID.graph_guid()]},
             clone_index: %{optional({GUID.figma_guid(), GUID.graph_guid()}) => GUID.graph_guid()},
+            component_prop_refs: %{optional(GUID.figma_guid()) => {GUID.graph_guid(), atom()}},
             provenance: %{optional(GUID.graph_guid()) => map()},
             unresolved: [term()],
             stats: map()

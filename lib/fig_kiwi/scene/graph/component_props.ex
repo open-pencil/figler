@@ -25,16 +25,7 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
   """
   @spec ref(Graph.t(), GUID.figma_guid()) :: {GUID.graph_guid(), atom()} | nil
   def ref(%Graph{} = graph, def_id) do
-    graph.seed_nodes
-    |> Map.values()
-    |> Enum.find_value(fn seed ->
-      seed.component_prop_refs
-      |> Enum.find(&(&1.def_id == def_id))
-      |> case do
-        nil -> nil
-        prop_ref -> field(prop_ref.field) && {seed.guid, field(prop_ref.field)}
-      end
-    end)
+    Map.get(graph.component_prop_refs, def_id)
   end
 
   defp reduce(graph, instance, predicate) do
@@ -72,14 +63,15 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
     end
   end
 
-  defp field(:visible), do: :visible
-  defp field(:text_data), do: :text
-  defp field(:overridden_symbol_id), do: :component_guid
-  defp field("VISIBLE"), do: :visible
-  defp field("TEXT"), do: :text
-  defp field("TEXT_DATA"), do: :text
-  defp field("OVERRIDDEN_SYMBOL_ID"), do: :component_guid
-  defp field(_field), do: nil
+  @doc false
+  def field(:visible), do: :visible
+  def field(:text_data), do: :text
+  def field(:overridden_symbol_id), do: :component_guid
+  def field("VISIBLE"), do: :visible
+  def field("TEXT"), do: :text
+  def field("TEXT_DATA"), do: :text
+  def field("OVERRIDDEN_SYMBOL_ID"), do: :component_guid
+  def field(_field), do: nil
 
   defp patch(target_guid, :component_guid, value),
     do: Patch.swap(target_guid, value, source: :component_prop)
