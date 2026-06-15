@@ -172,7 +172,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     Enum.flat_map(graph.seed_nodes, fn
       {guid, %{origin: :source, node_type: "instance"} = seed} ->
         if (is_nil(focus) or MapSet.member?(focus, guid)) and
-             not definition_instance?(graph, guid),
+             not opaque_definition_instance?(graph, guid),
            do: [seed],
            else: []
 
@@ -181,16 +181,27 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     end)
   end
 
-  defp definition_instance?(graph, guid) do
+  defp opaque_definition_instance?(graph, guid) do
+    graph
+    |> definition_symbol_ancestors(guid)
+    |> Enum.any?(&(not focused_source?(graph, &1)))
+  end
+
+  defp definition_symbol_ancestors(graph, guid) do
     case Map.get(graph.nodes, guid) do
       %{parent_guid: parent_guid} when is_binary(parent_guid) ->
         graph
         |> ancestor_nodes(parent_guid)
-        |> Enum.any?(&(&1.node_type == "symbol"))
+        |> Enum.filter(&(&1.node_type == "symbol"))
+        |> Enum.map(&GUID.parse!(&1.guid))
 
       _node ->
-        false
+        []
     end
+  end
+
+  defp focused_source?(graph, guid) do
+    guid in Keyword.get(graph.options, :focus, [])
   end
 
   defp ancestor_nodes(graph, parent_guid) do

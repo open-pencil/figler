@@ -272,6 +272,25 @@ defmodule FigKiwi.SceneTest do
     assert Graph.stats(graph).clone_count == 0
   end
 
+  test "populates source instances inside focused symbol definitions" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "symbol", name: "Accordion"},
+        %SeedNode{guid: {1, 2}, node_type: "instance", parent_guid: {1, 1}, symbol_id: {2, 1}},
+        %SeedNode{guid: {2, 1}, node_type: "component", name: "Panel"},
+        %SeedNode{guid: {2, 2}, node_type: "text", parent_guid: {2, 1}, text: "Item"}
+      ]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances],
+        options: [focus: [{1, 1}]]
+      )
+      |> Resolver.resolve()
+
+    assert [%Node{guid: "clone:1:2/2:2"}] = Scene.children(graph, "1:2")
+    assert Graph.stats(graph).clone_count == 1
+  end
+
   test "focuses resolver stages on selected source subtrees" do
     graph =
       [
