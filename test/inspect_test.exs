@@ -2,6 +2,7 @@ defmodule FigKiwi.InspectTest do
   use ExUnit.Case, async: true
 
   alias FigKiwi.Scene
+  alias FigKiwi.Scene.Graph
   alias FigKiwi.Scene.Summary
 
   test "inspects compact schema structs" do
@@ -62,5 +63,15 @@ defmodule FigKiwi.InspectTest do
     }
 
     assert inspect(summary) == "#FigKiwi.Scene.Summary<nodes=10 roots=1 parented=9 types=1>"
+
+    graph = %Graph{
+      resource: make_ref(),
+      mode: :projected,
+      stages: [:populate_instances, :symbol_overrides],
+      stats: %{resolver: :projected_index}
+    }
+
+    assert inspect(graph) ==
+             "#FigKiwi.Scene.Graph<mode=projected stages=2 resolver=projected_index>"
   end
 end

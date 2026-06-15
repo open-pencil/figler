@@ -14,12 +14,15 @@ defmodule FigKiwi.Scene do
 
   alias FigKiwi.Container
   alias FigKiwi.Native.Scene, as: NativeScene
+  alias FigKiwi.Scene.Graph
   alias FigKiwi.Scene.Index
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Summary
 
   @type summary :: Summary.t()
   @type scene_node :: Node.t()
+  @type scene_index :: Index.t()
+  @type scene_graph :: Graph.t()
 
   @doc """
   Returns a projected scene summary.
@@ -48,7 +51,19 @@ defmodule FigKiwi.Scene do
   end
 
   @doc """
-  Queries a binary scene or reusable scene index with XPath.
+  Builds an effective scene graph handle.
+
+  `Scene.index/1` is the fast raw projection. `Scene.graph/2` is the separate
+  surface for resolved Figma semantics such as populated instances, symbol
+  overrides, component props, derived symbol data, and variable/style
+  resolution. The first graph implementation is backed by the projected native
+  index while resolver stages are added incrementally.
+  """
+  @spec graph(binary() | Index.t() | Graph.t() | reference(), keyword()) :: Graph.t()
+  def graph(scene, opts \\ []) when is_list(opts), do: Graph.build(scene, opts)
+
+  @doc """
+  Queries a binary scene, reusable scene index, or effective graph with XPath.
 
   Options:
 
@@ -74,7 +89,9 @@ defmodule FigKiwi.Scene do
     * `@font_postscript`
     * `@text_style_guid`
   """
-  @spec query(binary() | Index.t() | reference(), String.t(), keyword()) :: [scene_node()]
+  @spec query(binary() | Index.t() | Graph.t() | reference(), String.t(), keyword()) :: [
+          scene_node()
+        ]
   def query(scene, xpath, opts \\ [])
 
   def query(binary, xpath, opts) when is_binary(binary) and is_binary(xpath) and is_list(opts) do
@@ -106,13 +123,15 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns canvas/page nodes.
   """
-  @spec pages(binary() | Index.t() | reference()) :: [scene_node()]
+  @spec pages(binary() | Index.t() | Graph.t() | reference()) :: [scene_node()]
   def pages(scene), do: query(scene, "//canvas")
 
   @doc """
   Looks up a projected scene node by GUID.
   """
-  @spec node(binary() | Index.t() | reference(), String.t()) :: scene_node() | nil
+  @spec node(binary() | Index.t() | Graph.t() | reference(), String.t()) :: scene_node() | nil
+  def node(%Graph{} = graph, guid) when is_binary(guid), do: Map.get(graph.nodes, guid)
+
   def node(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -123,7 +142,9 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns root nodes in scene order.
   """
-  @spec roots(binary() | Index.t() | reference()) :: [scene_node()]
+  @spec roots(binary() | Index.t() | Graph.t() | reference()) :: [scene_node()]
+  def roots(%Graph{} = graph), do: nodes_by_guids(graph, graph.roots)
+
   def roots(scene) do
     scene
     |> reusable_index()
@@ -134,7 +155,14 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns the parent node for a node GUID.
   """
-  @spec parent(binary() | Index.t() | reference(), String.t()) :: scene_node() | nil
+  @spec parent(binary() | Index.t() | Graph.t() | reference(), String.t()) :: scene_node() | nil
+  def parent(%Graph{} = graph, guid) when is_binary(guid) do
+    case node(graph, guid) do
+      %Node{parent_guid: parent_guid} when is_binary(parent_guid) -> node(graph, parent_guid)
+      _node -> nil
+    end
+  end
+
   def parent(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -145,7 +173,11 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns direct children for a parent GUID in scene order.
   """
-  @spec children(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
+  @spec children(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
+  def children(%Graph{} = graph, parent_guid) when is_binary(parent_guid) do
+    nodes_by_guids(graph, Map.get(graph.children, parent_guid, []))
+  end
+
   def children(scene, parent_guid) when is_binary(parent_guid) do
     scene
     |> reusable_index()
@@ -156,7 +188,20 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns sibling nodes for a node GUID in scene order.
   """
-  @spec siblings(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
+  @spec siblings(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
+  def siblings(%Graph{} = graph, guid) when is_binary(guid) do
+    case node(graph, guid) do
+      %Node{parent_guid: nil} ->
+        []
+
+      %Node{parent_guid: parent_guid} ->
+        Enum.reject(children(graph, parent_guid), &(&1.guid == guid))
+
+      nil ->
+        []
+    end
+  end
+
   def siblings(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -167,7 +212,11 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns ancestors for a node GUID, ordered from root to parent.
   """
-  @spec ancestors(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
+  @spec ancestors(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
+  def ancestors(%Graph{} = graph, guid) when is_binary(guid) do
+    graph_ancestors(graph, guid, [])
+  end
+
   def ancestors(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -178,7 +227,11 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns all descendants for a node GUID in scene order.
   """
-  @spec descendants(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
+  @spec descendants(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
+  def descendants(%Graph{} = graph, guid) when is_binary(guid) do
+    graph_descendants(graph, guid)
+  end
+
   def descendants(scene, guid) when is_binary(guid) do
     scene
     |> reusable_index()
@@ -190,7 +243,7 @@ defmodule FigKiwi.Scene do
   Returns nodes of a given projected node type without constructing XPath.
   """
   @spec by_type(
-          binary() | Index.t() | reference() | [scene_node()],
+          binary() | Index.t() | Graph.t() | reference() | [scene_node()],
           atom() | String.t(),
           keyword()
         ) :: [scene_node()]
@@ -199,6 +252,14 @@ defmodule FigKiwi.Scene do
   def by_type(nodes, type, _opts) when is_list(nodes) and (is_atom(type) or is_binary(type)) do
     node_type = type |> to_string() |> Macro.underscore()
     Enum.filter(nodes, &(&1.node_type == node_type))
+  end
+
+  def by_type(%Graph{} = graph, type, opts) when is_atom(type) or is_binary(type) do
+    node_type = type |> to_string() |> Macro.underscore()
+
+    graph
+    |> nodes_by_guids(Map.get(graph.by_type, node_type, []))
+    |> apply_field_filter(opts)
   end
 
   def by_type(scene, type, opts) when is_atom(type) or is_binary(type) do
@@ -216,9 +277,15 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes with an exact projected name without constructing XPath.
   """
-  @spec named(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
+  @spec named(binary() | Index.t() | Graph.t() | reference() | [scene_node()], String.t()) :: [
+          scene_node()
+        ]
   def named(nodes, name) when is_list(nodes) and is_binary(name) do
     Enum.filter(nodes, &(&1.name == name))
+  end
+
+  def named(%Graph{} = graph, name) when is_binary(name) do
+    nodes_by_guids(graph, Map.get(graph.by_name, name, []))
   end
 
   def named(scene, name) when is_binary(name) do
@@ -231,12 +298,23 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes whose projected name contains `needle` without constructing XPath.
   """
-  @spec name_contains(binary() | Index.t() | reference() | [scene_node()], String.t(), keyword()) ::
+  @spec name_contains(
+          binary() | Index.t() | Graph.t() | reference() | [scene_node()],
+          String.t(),
+          keyword()
+        ) ::
           [scene_node()]
   def name_contains(scene_or_nodes, needle, opts \\ [])
 
   def name_contains(nodes, needle, _opts) when is_list(nodes) and is_binary(needle) do
     Enum.filter(nodes, &(is_binary(&1.name) and String.contains?(&1.name, needle)))
+  end
+
+  def name_contains(%Graph{} = graph, needle, opts) when is_binary(needle) do
+    graph.nodes
+    |> Map.values()
+    |> name_contains(needle)
+    |> apply_field_filter(opts)
   end
 
   def name_contains(scene, needle, opts) when is_binary(needle) do
@@ -253,14 +331,20 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns text nodes.
   """
-  @spec text_nodes(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
+  @spec text_nodes(binary() | Index.t() | Graph.t() | reference() | [scene_node()]) :: [
+          scene_node()
+        ]
   def text_nodes(scene_or_nodes), do: by_type(scene_or_nodes, :text)
 
   @doc """
   Returns nodes with component keys.
   """
-  @spec components(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
+  @spec components(binary() | Index.t() | Graph.t() | reference() | [scene_node()]) :: [
+          scene_node()
+        ]
   def components(nodes) when is_list(nodes), do: Enum.filter(nodes, &present?(&1.component_key))
+
+  def components(%Graph{} = graph), do: graph.nodes |> Map.values() |> components()
 
   def components(scene) do
     scene
@@ -272,8 +356,12 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes with one or more fill paints.
   """
-  @spec with_fills(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
+  @spec with_fills(binary() | Index.t() | Graph.t() | reference() | [scene_node()]) :: [
+          scene_node()
+        ]
   def with_fills(nodes) when is_list(nodes), do: Enum.filter(nodes, &positive?(&1.fill_count))
+
+  def with_fills(%Graph{} = graph), do: graph.nodes |> Map.values() |> with_fills()
 
   def with_fills(scene) do
     scene
@@ -285,8 +373,12 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns nodes with one or more stroke paints.
   """
-  @spec with_strokes(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
+  @spec with_strokes(binary() | Index.t() | Graph.t() | reference() | [scene_node()]) :: [
+          scene_node()
+        ]
   def with_strokes(nodes) when is_list(nodes), do: Enum.filter(nodes, &positive?(&1.stroke_count))
+
+  def with_strokes(%Graph{} = graph), do: graph.nodes |> Map.values() |> with_strokes()
 
   def with_strokes(scene) do
     scene
@@ -298,12 +390,23 @@ defmodule FigKiwi.Scene do
   @doc """
   Returns text nodes whose projected text contains `needle` without constructing XPath.
   """
-  @spec text_contains(binary() | Index.t() | reference() | [scene_node()], String.t(), keyword()) ::
+  @spec text_contains(
+          binary() | Index.t() | Graph.t() | reference() | [scene_node()],
+          String.t(),
+          keyword()
+        ) ::
           [scene_node()]
   def text_contains(scene_or_nodes, needle, opts \\ [])
 
   def text_contains(nodes, needle, _opts) when is_list(nodes) and is_binary(needle) do
     Enum.filter(nodes, &(is_binary(&1.text) and String.contains?(&1.text, needle)))
+  end
+
+  def text_contains(%Graph{} = graph, needle, opts) when is_binary(needle) do
+    graph.nodes
+    |> Map.values()
+    |> text_contains(needle)
+    |> apply_field_filter(opts)
   end
 
   def text_contains(scene, needle, opts) when is_binary(needle) do
@@ -353,7 +456,7 @@ defmodule FigKiwi.Scene do
     * `:name_contains` - substring match on node name
     * `:text_contains` - substring match on projected text
   """
-  @spec find(binary() | Index.t() | reference(), keyword()) :: [scene_node()]
+  @spec find(binary() | Index.t() | Graph.t() | reference(), keyword()) :: [scene_node()]
   def find(scene, opts) when is_list(opts) do
     scene
     |> reusable_index()
@@ -369,7 +472,8 @@ defmodule FigKiwi.Scene do
     * `:root` - GUID to use as the root. Defaults to all root nodes.
     * `:depth` - maximum child depth. Defaults to `3`.
   """
-  @spec tree(binary() | Index.t() | reference(), keyword()) :: [Node.t()] | Node.t() | nil
+  @spec tree(binary() | Index.t() | Graph.t() | reference(), keyword()) ::
+          [Node.t()] | Node.t() | nil
   def tree(scene, opts \\ []) when is_list(opts) do
     index = reusable_index(scene)
     depth = Keyword.get(opts, :depth, 3)
@@ -407,6 +511,7 @@ defmodule FigKiwi.Scene do
   end
 
   defp reusable_index(scene) when is_binary(scene), do: scene |> index() |> reusable_index()
+  defp reusable_index(%Graph{resource: resource}), do: resource
   defp reusable_index(%Index{resource: resource}), do: resource
   defp reusable_index(index), do: index
 
@@ -440,6 +545,41 @@ defmodule FigKiwi.Scene do
   end
 
   defp nodes_from_maps(nodes), do: Enum.map(nodes, &Node.from_map/1)
+
+  defp nodes_by_guids(%Graph{} = graph, guids) do
+    guids
+    |> Enum.map(&Map.get(graph.nodes, &1))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp apply_field_filter(nodes, opts) do
+    case query_fields(opts) do
+      :all -> nodes
+      fields -> Enum.map(nodes, &filter_node_fields(&1, fields))
+    end
+  end
+
+  defp filter_node_fields(%Node{} = node, fields) do
+    fields = Enum.uniq(["guid", "node_type" | fields])
+
+    node
+    |> Map.from_struct()
+    |> Map.take(Enum.map(fields, &node_field/1))
+    |> Node.from_map()
+  end
+
+  defp graph_ancestors(%Graph{} = graph, guid, acc) do
+    case parent(graph, guid) do
+      nil -> acc
+      %Node{guid: parent_guid} = parent -> graph_ancestors(graph, parent_guid, [parent | acc])
+    end
+  end
+
+  defp graph_descendants(%Graph{} = graph, guid) do
+    graph
+    |> children(guid)
+    |> Enum.flat_map(fn child -> [child | graph_descendants(graph, child.guid)] end)
+  end
 
   defp present?(value), do: is_binary(value) and value != ""
   defp positive?(value), do: is_integer(value) and value > 0

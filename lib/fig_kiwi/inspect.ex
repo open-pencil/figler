@@ -134,6 +134,20 @@ defimpl Inspect, for: FigKiwi.Scene.Node do
   defp children(_children), do: nil
 end
 
+defimpl Inspect, for: FigKiwi.Scene.Graph do
+  def inspect(graph, _opts) do
+    Algebra.concat([
+      "#FigKiwi.Scene.Graph<mode=",
+      to_string(graph.mode),
+      " stages=",
+      to_string(length(graph.stages)),
+      " resolver=",
+      to_string(Map.get(graph.stats, :resolver, :unknown)),
+      ">"
+    ])
+  end
+end
+
 defimpl Inspect, for: FigKiwi.Scene.Summary do
   def inspect(summary, _opts) do
     Algebra.concat([

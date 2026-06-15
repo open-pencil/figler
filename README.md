@@ -57,6 +57,15 @@ frames = Scene.find(index, type: :frame, name_contains: "Card")
 components = Scene.components(index)
 filled_nodes = Scene.with_fills(index)
 tree = Scene.tree(index, depth: 3)
+
+# A graph is the separate effective-scene surface for resolved Figma semantics.
+# It accepts the same query/navigation helpers as an index. The initial graph
+# handle is backed by the projected native index while native resolver stages
+# for instances, overrides, component props, derived symbol data, and variables
+# are added incrementally.
+graph = Scene.graph(index) # %FigKiwi.Scene.Graph{}
+text = Scene.text_contains(graph, "Submit")
+explanation = Scene.Graph.explain(graph, "0:123")
 ```
 
 For dynamic values, prefer native helpers instead of interpolating XPath strings:
