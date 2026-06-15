@@ -1018,6 +1018,8 @@ message Paint {
   Vector noiseSize = 36;
   CodeComponentId customEffectId = 39;
   ComponentPropAssignment[] componentPropAssignments = 40;
+  InterpolationColorSpace interpolationColorSpace = 41;
+  InterpolationHueMethod interpolationHueMethod = 42;
 }
 
 enum NoiseType {
@@ -1036,6 +1038,21 @@ enum PatternAlignment {
   START = 0;
   CENTER = 1;
   END = 2;
+}
+
+enum InterpolationColorSpace {
+  DEFAULT = 0;
+  OKLAB = 1;
+  OKLCH = 2;
+  HSL = 3;
+  SRGB_LINEAR = 4;
+}
+
+enum InterpolationHueMethod {
+  SHORTER = 0;
+  LONGER = 1;
+  INCREASING = 2;
+  DECREASING = 3;
 }
 
 message FontMetaData {

@@ -3960,6 +3960,8 @@ fn decode_paint_from_decoder<'a>(
             "noise_size",
             "custom_effect_id",
             "component_prop_assignments",
+            "interpolation_color_space",
+            "interpolation_hue_method",
         ],
     );
     let mut values = default_values(module_atom, keys.len() - 1);
@@ -4138,6 +4140,14 @@ fn decode_paint_from_decoder<'a>(
                     ))?;
                 values[40] = value.encode(env).as_c_arg();
             }
+            41 => {
+                let value = decode_interpolation_color_space_from_decoder(env, decoder)?;
+                values[41] = value.encode(env).as_c_arg();
+            }
+            42 => {
+                let value = decode_interpolation_hue_method_from_decoder(env, decoder)?;
+                values[42] = value.encode(env).as_c_arg();
+            }
             field => {
                 return Err(
                     Error::Term(
@@ -4205,6 +4215,58 @@ fn decode_pattern_alignment_from_decoder<'a>(
         2 => {
             static ATOM_2: OnceLock<Atom> = OnceLock::new();
             Ok(cached_atom(env, &ATOM_2, "end").encode(env))
+        }
+        value => Ok((value as i64).encode(env)),
+    }
+}
+fn decode_interpolation_color_space_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    match decoder.read_var_uint()? {
+        0 => {
+            static ATOM_0: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_0, "default").encode(env))
+        }
+        1 => {
+            static ATOM_1: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_1, "oklab").encode(env))
+        }
+        2 => {
+            static ATOM_2: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_2, "oklch").encode(env))
+        }
+        3 => {
+            static ATOM_3: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_3, "hsl").encode(env))
+        }
+        4 => {
+            static ATOM_4: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_4, "srgb_linear").encode(env))
+        }
+        value => Ok((value as i64).encode(env)),
+    }
+}
+fn decode_interpolation_hue_method_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    match decoder.read_var_uint()? {
+        0 => {
+            static ATOM_0: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_0, "shorter").encode(env))
+        }
+        1 => {
+            static ATOM_1: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_1, "longer").encode(env))
+        }
+        2 => {
+            static ATOM_2: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_2, "increasing").encode(env))
+        }
+        3 => {
+            static ATOM_3: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_3, "decreasing").encode(env))
         }
         value => Ok((value as i64).encode(env)),
     }
@@ -35282,8 +35344,8 @@ fn decode_sparse_paint_from_decoder<'a>(
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Paint");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Paint";
-    let mut keys = Vec::with_capacity(41);
-    let mut values = Vec::with_capacity(41);
+    let mut keys = Vec::with_capacity(43);
+    let mut values = Vec::with_capacity(43);
     keys.push(module_key_atom.encode(env));
     values.push(module_atom.encode(env));
     loop {
@@ -35622,6 +35684,34 @@ fn decode_sparse_paint_from_decoder<'a>(
                 keys.push(field_atom.encode(env));
                 values.push(value);
             }
+            41 => {
+                static FIELD_ATOM_41: OnceLock<Atom> = OnceLock::new();
+                let field_atom = cached_atom(
+                    env,
+                    &FIELD_ATOM_41,
+                    "interpolation_color_space",
+                );
+                let value = decode_sparse_interpolation_color_space_from_decoder(
+                    env,
+                    decoder,
+                )?;
+                keys.push(field_atom.encode(env));
+                values.push(value);
+            }
+            42 => {
+                static FIELD_ATOM_42: OnceLock<Atom> = OnceLock::new();
+                let field_atom = cached_atom(
+                    env,
+                    &FIELD_ATOM_42,
+                    "interpolation_hue_method",
+                );
+                let value = decode_sparse_interpolation_hue_method_from_decoder(
+                    env,
+                    decoder,
+                )?;
+                keys.push(field_atom.encode(env));
+                values.push(value);
+            }
             field => {
                 return Err(
                     Error::Term(
@@ -35694,6 +35784,58 @@ fn decode_sparse_pattern_alignment_from_decoder<'a>(
         2 => {
             static ATOM_2: OnceLock<Atom> = OnceLock::new();
             Ok(cached_atom(env, &ATOM_2, "end").encode(env))
+        }
+        value => Ok((value as i64).encode(env)),
+    }
+}
+fn decode_sparse_interpolation_color_space_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    match decoder.read_var_uint()? {
+        0 => {
+            static ATOM_0: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_0, "default").encode(env))
+        }
+        1 => {
+            static ATOM_1: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_1, "oklab").encode(env))
+        }
+        2 => {
+            static ATOM_2: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_2, "oklch").encode(env))
+        }
+        3 => {
+            static ATOM_3: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_3, "hsl").encode(env))
+        }
+        4 => {
+            static ATOM_4: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_4, "srgb_linear").encode(env))
+        }
+        value => Ok((value as i64).encode(env)),
+    }
+}
+fn decode_sparse_interpolation_hue_method_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    match decoder.read_var_uint()? {
+        0 => {
+            static ATOM_0: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_0, "shorter").encode(env))
+        }
+        1 => {
+            static ATOM_1: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_1, "longer").encode(env))
+        }
+        2 => {
+            static ATOM_2: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_2, "increasing").encode(env))
+        }
+        3 => {
+            static ATOM_3: OnceLock<Atom> = OnceLock::new();
+            Ok(cached_atom(env, &ATOM_3, "decreasing").encode(env))
         }
         value => Ok((value as i64).encode(env)),
     }
@@ -73568,6 +73710,12 @@ fn skip_paint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     skip_component_prop_assignment_from_decoder(decoder)?;
                 }
             }
+            41 => {
+                skip_interpolation_color_space_from_decoder(decoder)?;
+            }
+            42 => {
+                skip_interpolation_hue_method_from_decoder(decoder)?;
+            }
             field => {
                 return Err(
                     Error::Term(
@@ -73592,6 +73740,18 @@ fn skip_pattern_tile_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_pattern_alignment_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_interpolation_color_space_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+fn skip_interpolation_hue_method_from_decoder(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<()> {
     decoder.read_var_uint()?;
     Ok(())
 }

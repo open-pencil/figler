@@ -4,7 +4,7 @@ defmodule FigKiwiTest do
   test "parses vendored Figma schema" do
     schema = FigKiwi.schema()
 
-    assert Enum.count(schema.definitions) == 605
+    assert Enum.count(schema.definitions) == 607
     assert KiwiCodec.Schema.definition(schema, "Message")
     assert KiwiCodec.Schema.definition(schema, "NodeChange")
   end

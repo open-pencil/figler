@@ -79,4 +79,14 @@ defmodule FigKiwi.Schema.Paint do
     type: FigKiwi.Schema.ComponentPropAssignment,
     source_name: "componentPropAssignments"
   )
+
+  field(:interpolation_color_space, 41,
+    type: {:enum, FigKiwi.Schema.InterpolationColorSpace},
+    source_name: "interpolationColorSpace"
+  )
+
+  field(:interpolation_hue_method, 42,
+    type: {:enum, FigKiwi.Schema.InterpolationHueMethod},
+    source_name: "interpolationHueMethod"
+  )
 end
