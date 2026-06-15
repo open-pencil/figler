@@ -414,6 +414,37 @@ defmodule FigKiwi.SceneTest do
            ]
   end
 
+  test "variables stage applies known variable refs to clear node fields" do
+    graph =
+      [
+        %SeedNode{
+          guid: {1, 1},
+          node_type: "rectangle",
+          size: %{x: 10.0, y: 20.0},
+          variable_consumption: [
+            struct(FigKiwi.Schema.VariableDataMapEntry,
+              variable_field: :width,
+              variable_data:
+                struct(FigKiwi.Schema.VariableData,
+                  data_type: :float,
+                  resolved_data_type: :float,
+                  value: struct(FigKiwi.Schema.VariableAnyValue, float_value: 42.0)
+                )
+            )
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:variables])
+      |> Resolver.resolve()
+
+    assert Scene.node(graph, "1:1").size == %{x: 42.0, y: 20.0}
+
+    assert [
+             {:variable_value_applied, :width, 10.0, 42.0,
+              %{value: {:float, 42.0}, data_type: :float, resolved_data_type: :float}}
+           ] = Graph.explain(graph, "1:1").applied
+  end
+
   test "variables stage records known variable data values as provenance" do
     graph =
       [

@@ -19,8 +19,9 @@ defmodule FigKiwi.Scene.Graph.Variables do
   @spec apply(Graph.t()) :: Graph.t()
   def apply(%Graph{} = graph) do
     Enum.reduce(graph.seed_nodes, graph, fn {_guid, seed}, acc ->
-      unresolved = unresolved_refs(graph, seed)
-      applied = applied_values(graph, seed)
+      {acc, variable_applied, variable_unresolved} = apply_variable_refs(acc, seed)
+      unresolved = Enum.reverse(variable_unresolved, style_refs(graph, seed))
+      applied = Enum.reverse(variable_applied, variable_values(graph, seed))
 
       acc
       |> put_applied(seed.guid, applied)
@@ -28,28 +29,29 @@ defmodule FigKiwi.Scene.Graph.Variables do
     end)
   end
 
-  defp unresolved_refs(%Graph{} = graph, %SeedNode{} = seed) do
-    variable_refs(graph, seed) ++ style_refs(graph, seed)
+  defp apply_variable_refs(%Graph{options: options} = graph, seed) do
+    case Keyword.get(options, :resolve_variables, :known) do
+      false -> {graph, [], []}
+      _mode -> apply_variable_refs(graph, seed, seed.variable_consumption)
+    end
   end
 
-  defp applied_values(%Graph{options: options}, seed) do
+  defp apply_variable_refs(%Graph{} = graph, _seed, []), do: {graph, [], []}
+
+  defp apply_variable_refs(%Graph{} = graph, seed, refs) do
+    Enum.reduce(refs, {graph, [], []}, fn ref, {acc, applied, unresolved} ->
+      case apply_variable_ref(acc, seed, ref) do
+        {:ok, next, item} -> {next, [item | applied], unresolved}
+        :unknown -> {acc, applied, [{:variable_ref_preserved, ref} | unresolved]}
+      end
+    end)
+  end
+
+  defp variable_values(%Graph{options: options}, seed) do
     case Keyword.get(options, :resolve_variables, :known) do
       false -> []
       _mode -> variable_values(seed)
     end
-  end
-
-  defp variable_refs(%Graph{options: options}, seed) do
-    case Keyword.get(options, :resolve_variables, :known) do
-      false -> []
-      _mode -> variable_refs(seed)
-    end
-  end
-
-  defp variable_refs(%SeedNode{variable_consumption: []}), do: []
-
-  defp variable_refs(%SeedNode{variable_consumption: refs}) do
-    Enum.map(refs, &{:variable_ref_preserved, &1})
   end
 
   defp variable_values(%SeedNode{variable_data_values: []}), do: []
@@ -89,6 +91,69 @@ defmodule FigKiwi.Scene.Graph.Variables do
       vector = vector(get(value, :vector_value)) -> {:ok, {:vector, vector}}
       color = color(get(value, :color_value)) -> {:ok, {:color, color}}
       true -> :unknown
+    end
+  end
+
+  defp apply_variable_ref(%Graph{} = graph, seed, ref) do
+    field = get(ref, :variable_field)
+
+    with {:ok, data} <- known_variable_data(get(ref, :variable_data)),
+         {:ok, next, old, new} <- apply_known_value(graph, seed.guid, field, data.value) do
+      {:ok, next, {:variable_value_applied, field, old, new, data}}
+    else
+      _value -> :unknown
+    end
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :visible, {:bool, value}) do
+    update_node(graph, guid, :visible, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :text_data, {:text, value}) do
+    update_node(graph, guid, :text, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :width, {:float, value}) do
+    update_node(graph, guid, :size, fn size ->
+      size = size || %{}
+      {Map.get(size, :x), Map.put(size, :x, value), value}
+    end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :height, {:float, value}) do
+    update_node(graph, guid, :size, fn size ->
+      size = size || %{}
+      {Map.get(size, :y), Map.put(size, :y, value), value}
+    end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :x_position, {:float, value}) do
+    update_node(graph, guid, :transform, fn transform ->
+      transform = transform || %{}
+      {Map.get(transform, :m02), Map.put(transform, :m02, value), value}
+    end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :y_position, {:float, value}) do
+    update_node(graph, guid, :transform, fn transform ->
+      transform = transform || %{}
+      {Map.get(transform, :m12), Map.put(transform, :m12, value), value}
+    end)
+  end
+
+  defp apply_known_value(_graph, _guid, _field, _value), do: :unknown
+
+  defp update_node(%Graph{} = graph, guid, field, fun) do
+    case Map.fetch(graph.nodes, guid) do
+      {:ok, node} ->
+        {old, new_field_value, new_applied_value} = fun.(Map.get(node, field))
+        next_node = Map.put(node, field, new_field_value)
+
+        {:ok, %Graph{graph | nodes: Map.put(graph.nodes, guid, next_node)}, old,
+         new_applied_value}
+
+      :error ->
+        :unknown
     end
   end
 
