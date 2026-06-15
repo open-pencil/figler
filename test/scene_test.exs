@@ -236,6 +236,40 @@ defmodule FigKiwi.SceneTest do
            }
   end
 
+  test "validates nested source paths when resolving symbol overrides" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Card"},
+        %SeedNode{guid: {1, 2}, node_type: "frame", parent_guid: {1, 1}, name: "Body"},
+        %SeedNode{guid: {1, 3}, node_type: "text", parent_guid: {1, 2}, text: "Default"},
+        %SeedNode{
+          guid: {2, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          symbol_overrides: [
+            %SymbolOverride{guid_path: [{1, 1}, {1, 2}, {1, 3}], fields: %{text: "Submit"}},
+            %SymbolOverride{guid_path: [{1, 1}, {1, 3}], fields: %{visible: false}}
+          ]
+        }
+      ]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances, :symbol_overrides]
+      )
+      |> Resolver.resolve()
+
+    assert [%Node{guid: "clone:2:1/1:2"}] = Scene.children(graph, "2:1")
+    assert [%Node{guid: "clone:2:1/1:3", text: "Submit"}] = Scene.children(graph, "clone:2:1/1:2")
+
+    assert Graph.explain(graph, "clone:2:1/1:3").applied == [
+             {:symbol_override, :text, "Default", "Submit"}
+           ]
+
+    assert Graph.unresolved(graph) == [
+             {:symbol_override_target, {2, 1}, [{1, 1}, {1, 3}], :invalid_path}
+           ]
+  end
+
   test "navigates projected scene indexes" do
     index = Scene.index(message_payload())
 

@@ -12,6 +12,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.SeedNode
+  alias FigKiwi.Scene.Graph.Target
 
   @doc """
   Builds the initial graph working set from seed nodes.
@@ -90,31 +91,19 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp apply_symbol_override(seed, override, graph) do
-    case resolve_override_target(graph, seed, override.guid_path) do
-      nil ->
-        add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path})
-
-      target_guid ->
+    case Target.resolve(graph, seed.guid, override.guid_path) do
+      {:ok, target_guid} ->
         graph
         |> Patch.apply_all(symbol_override_patches(target_guid, override.fields))
+
+      {:error, reason} ->
+        add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
     end
   end
 
   defp symbol_override_patches(target_guid, fields) do
     Enum.map(fields, fn {field, value} ->
       Patch.set(target_guid, field, value, source: :symbol_override)
-    end)
-  end
-
-  defp resolve_override_target(graph, seed, []),
-    do: if(Map.has_key?(graph.nodes, seed.guid), do: seed.guid)
-
-  defp resolve_override_target(graph, seed, guid_path) do
-    guid_path
-    |> Enum.reverse()
-    |> Enum.find_value(fn source_guid ->
-      Map.get(graph.clone_index, {seed.guid, source_guid}) ||
-        if(Map.has_key?(graph.nodes, source_guid), do: source_guid)
     end)
   end
 
