@@ -176,6 +176,9 @@ defmodule FigKiwi.Scene.Graph do
   The explanation includes the resolved node, projected source node when known,
   provenance, applied resolver operations, unresolved diagnostics recorded on
   the node, and instance metadata for instance nodes.
+
+      graph = FigKiwi.Scene.graph(fig_binary, root: "3740:112537")
+      FigKiwi.Scene.Graph.explain(graph, "3740:112537")
   """
   @spec explain(t(), String.t()) :: map() | nil
   def explain(%__MODULE__{} = graph, guid) when is_binary(guid) do
@@ -227,6 +230,9 @@ defmodule FigKiwi.Scene.Graph do
 
     * `:root` - graph GUID string/tuple to use as root. Defaults to all roots.
     * `:depth` - maximum child depth. Defaults to `3`.
+
+      graph = FigKiwi.Scene.graph(fig_binary, root: "3740:112537")
+      FigKiwi.Scene.Graph.tree(graph, root: "3740:112537", depth: 3)
   """
   @spec tree(t(), keyword()) :: [Node.t()] | Node.t() | nil
   def tree(%__MODULE__{} = graph, opts \\ []) when is_list(opts) do
@@ -249,6 +255,8 @@ defmodule FigKiwi.Scene.Graph do
 
   @doc """
   Returns instance-specific effective graph metadata for a node.
+
+  Returns `nil` for non-instance nodes.
   """
   @spec instance(t(), String.t()) :: map() | nil
   def instance(%__MODULE__{} = graph, guid) when is_binary(guid) do
@@ -278,6 +286,7 @@ defmodule FigKiwi.Scene.Graph do
   Diffs effective graph nodes against their projected source nodes.
 
   Returns only nodes whose projected source differs from the effective node.
+  Pass `root:` to diff a subtree.
   """
   @spec diff(t(), keyword()) :: [map()]
   def diff(%__MODULE__{} = graph, opts \\ []) when is_list(opts) do
