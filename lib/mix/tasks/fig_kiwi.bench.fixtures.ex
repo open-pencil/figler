@@ -36,7 +36,7 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
     sparse_decode? = env_enabled?("FIG_KIWI_BENCH_SPARSE_DECODE", default: true)
 
     Mix.shell().info(
-      "Fixture\tSize\tPayload\tFull Decode\tFull Mem\tSparse Decode\tSparse Mem\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tIndexed fields //canvas\tIndexed //*\tIndexed fields //*\tNodes\tCanvases"
+      "Fixture\tSize\tPayload\tFull Decode\tFull Mem\tSparse Decode\tSparse Mem\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tIndexed fields //canvas\tIndexed //*\tIndexed fields //*\tBy type text\tText contains\tNode lookup\tNodes\tCanvases"
     )
 
     Enum.each(fixtures, fn path ->
@@ -87,6 +87,19 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
         Mix.raise("indexed all fields query mismatch for #{path}")
       end
 
+      {by_type_text_us, text_nodes} =
+        timed(fn -> Scene.index_by_type(index, "text") end)
+
+      {text_contains_us, label_nodes} =
+        timed(fn -> Scene.index_text_contains(index, "Label") end)
+
+      sample_guid = canvases |> List.first() |> Map.fetch!(:guid)
+      {node_lookup_us, _node} = timed(fn -> Scene.index_node(index, sample_guid) end)
+
+      if length(label_nodes) > length(text_nodes) do
+        Mix.raise("text helper mismatch for #{path}")
+      end
+
       Mix.shell().info(
         Enum.join(
           [
@@ -104,6 +117,9 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
             format_us(indexed_fields_query_us),
             format_us(indexed_all_query_us),
             format_us(indexed_all_fields_query_us),
+            format_us(by_type_text_us),
+            format_us(text_contains_us),
+            format_us(node_lookup_us),
             summary.node_count,
             length(canvases)
           ],

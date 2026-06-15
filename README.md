@@ -91,6 +91,14 @@ FIG_KIWI_BENCH_FULL_DECODE=0 \
   mix fig_kiwi.bench.fixtures nuxtui.fig
 ```
 
+OpenPencil oracle tests can use a Node-compatible OpenPencil CLI build:
+
+```sh
+FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
+FIG_KIWI_OPEN_PENCIL_NODE_CLI=/path/to/openpencil-cli.js \
+  mix test test/open_pencil_node_oracle_test.exs
+```
+
 ## Development
 
 ```sh

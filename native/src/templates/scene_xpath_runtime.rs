@@ -11,7 +11,7 @@ mod scene_xpath_runtime {
     #[derive(Clone, Debug)]
     struct SceneNodeRecord {
         guid: String,
-        node_type: String,
+        node_type: &'static str,
         name: Option<String>,
         parent_guid: Option<String>,
         position: Option<String>,
@@ -81,7 +81,7 @@ mod scene_xpath_runtime {
             }
             cursor += 1;
             if index == cursor {
-                return Some(("type", self.node_type.clone()));
+                return Some(("type", self.node_type.to_string()));
             }
             cursor += 1;
             __rq_scene_attr_lookup!();
@@ -438,7 +438,7 @@ mod scene_xpath_runtime {
         }
         fn local_name(&self) -> LocalName {
             let SceneHandleKind::Element(index) = self.0.kind else { unreachable!() };
-            LocalName::from(self.0.scene.nodes[index].node_type.as_str())
+            LocalName::from(self.0.scene.nodes[index].node_type)
         }
         fn attributes(&self, _cx: &mut ()) -> impl Iterator<Item = Self::Attribute> {
             let SceneHandleKind::Element(owner) = self.0.kind else { unreachable!() };
@@ -549,7 +549,7 @@ mod scene_xpath_runtime {
         let node = &index.nodes[node_index];
         SceneQueryNode {
             guid: node.guid.clone(),
-            node_type: node.node_type.clone(),
+            node_type: node.node_type.to_string(),
             __rq_scene_query_node_build_fields: (),
         }
     }
@@ -784,7 +784,7 @@ mod scene_xpath_runtime {
         node_type: String,
     ) -> Vec<SceneQueryNode> {
         let index = resource.index.clone();
-        scene_query_nodes_matching(&index, |node| node.node_type == node_type)
+        scene_query_nodes_matching(&index, |node| node.node_type == node_type.as_str())
     }
 
     pub fn scene_index_named_value(
@@ -881,7 +881,7 @@ mod scene_xpath_runtime {
         decoder: &mut Decoder<'_>,
     ) -> NifResult<SceneNodeRecord> {
         let mut guid = None;
-        let mut node_type = None;
+        let mut node_type: Option<&'static str> = None;
         __rq_scene_decode_locals!();
         loop {
             match decoder.read_var_uint()? {
@@ -893,9 +893,7 @@ mod scene_xpath_runtime {
                     position = Some(pos);
                 }
                 4 => {
-                    node_type = Some(
-                        scene_node_type_name(decoder.read_var_uint()?).to_string(),
-                    );
+                    node_type = Some(scene_node_type_name(decoder.read_var_uint()?));
                 }
                 __rq_scene_decode_arms => unreachable!(),
                 __rq_scene_node_skip_arms => unreachable!(),
@@ -914,7 +912,7 @@ mod scene_xpath_runtime {
         }
         Ok(SceneNodeRecord {
             guid: guid.unwrap_or_default(),
-            node_type: node_type.unwrap_or_else(|| "unknown".to_string()),
+            node_type: node_type.unwrap_or("unknown"),
             __rq_scene_record_build_fields: (),
             parent: None,
             children: Vec::new(),
