@@ -104,27 +104,26 @@ defmodule FigKiwi.NativeSceneGenerator do
   end
 
   defp sparse_struct_field(field, definition_map) do
-    """
-    {
-        static FIELD_ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new();
-        let field_atom = cached_atom(env, &FIELD_ATOM_#{field.value}, "#{Macro.underscore(field.name)}");
-    #{indent(sparse_decode_field(field, definition_map), 4)}
-        keys.push(field_atom.encode(env));
-        values.push(value);
-    }
-    """
+    field
+    |> sparse_field_block(definition_map)
+    |> Rust.to_fragment()
   end
 
   defp sparse_message_arm(field, definition_map) do
-    """
-    #{field.value} => {
-        static FIELD_ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new();
-        let field_atom = cached_atom(env, &FIELD_ATOM_#{field.value}, "#{Macro.underscore(field.name)}");
-    #{indent(sparse_decode_field(field, definition_map), 4)}
-        keys.push(field_atom.encode(env));
-        values.push(value);
-    },
-    """
+    Rust.arm(
+      Integer.to_string(field.value),
+      field |> sparse_field_block(definition_map) |> Rust.to_fragment()
+    )
+  end
+
+  defp sparse_field_block(field, definition_map) do
+    Rust.block([
+      "static FIELD_ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new();",
+      ~s|let field_atom = cached_atom(env, &FIELD_ATOM_#{field.value}, "#{Macro.underscore(field.name)}");|,
+      sparse_decode_field(field, definition_map),
+      "keys.push(field_atom.encode(env));",
+      "values.push(value);"
+    ])
   end
 
   defp sparse_decode_field(%{array?: true, type: "byte"}, _definition_map) do
@@ -213,19 +212,29 @@ defmodule FigKiwi.NativeSceneGenerator do
       Enum.map_join(node_fields, "\n", fn field ->
         case field.name do
           "guid" ->
-            "#{field.value} => { guid = Some(graph_focus_read_guid(decoder)?); },"
+            graph_focus_arm(field, "guid = Some(graph_focus_read_guid(decoder)?);")
 
           "parentIndex" ->
-            "#{field.value} => { parent_guid = Some(graph_focus_read_parent_guid(decoder)?); },"
+            graph_focus_arm(field, "parent_guid = Some(graph_focus_read_parent_guid(decoder)?);")
 
           "symbolData" ->
-            "#{field.value} => { let data = graph_focus_read_symbol_data(decoder)?; symbol_id = data.symbol_id; graph_focus_extend_refs(&mut refs, data.refs); },"
+            graph_focus_arm(field, [
+              "let data = graph_focus_read_symbol_data(decoder)?;",
+              "symbol_id = data.symbol_id;",
+              "graph_focus_extend_refs(&mut refs, data.refs);"
+            ])
 
           "overriddenSymbolID" ->
-            "#{field.value} => { graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?); },"
+            graph_focus_arm(
+              field,
+              "graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);"
+            )
 
           "componentPropAssignments" ->
-            "#{field.value} => { let len = decoder.read_var_uint()? as usize; for _ in 0..len { let next = graph_focus_read_component_prop_assignment(decoder)?; graph_focus_extend_refs(&mut refs, next); } },"
+            graph_focus_arm(field, [
+              "let len = decoder.read_var_uint()? as usize;",
+              "for _ in 0..len { let next = graph_focus_read_component_prop_assignment(decoder)?; graph_focus_extend_refs(&mut refs, next); }"
+            ])
 
           _other ->
             skip_message_arm_text(field, definition_map)
@@ -465,11 +474,21 @@ defmodule FigKiwi.NativeSceneGenerator do
     ]
   end
 
+  defp graph_focus_arm(field, lines) do
+    field.value
+    |> Integer.to_string()
+    |> Rust.arm(lines |> List.wrap() |> Rust.block() |> Rust.to_fragment())
+    |> Rust.to_fragment()
+  end
+
   defp graph_focus_prop_assignment_arms(fields, definition_map) do
     Enum.map_join(fields, "\n", fn field ->
       case field.name do
         "value" ->
-          "#{field.value} => { let next = graph_focus_read_component_prop_value(decoder)?; graph_focus_extend_refs(&mut refs, next); },"
+          graph_focus_arm(field, [
+            "let next = graph_focus_read_component_prop_value(decoder)?;",
+            "graph_focus_extend_refs(&mut refs, next);"
+          ])
 
         _other ->
           skip_message_arm_text(field, definition_map)
@@ -481,7 +500,10 @@ defmodule FigKiwi.NativeSceneGenerator do
     Enum.map_join(fields, "\n", fn field ->
       case field.name do
         "guidValue" ->
-          "#{field.value} => { graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?); },"
+          graph_focus_arm(
+            field,
+            "graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);"
+          )
 
         _other ->
           skip_message_arm_text(field, definition_map)
