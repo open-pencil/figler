@@ -43,7 +43,18 @@ defmodule FigKiwi.Scene.Graph.Nodes do
   @spec remove(Graph.t(), GUID.graph_guid()) :: Graph.t()
   def remove(%Graph{} = graph, guid) do
     guids = subtree(graph, guid)
-    Enum.reduce(guids, graph, &delete_one(&2, &1))
+    guid_set = MapSet.new(guids)
+
+    %Graph{
+      graph
+      | nodes: Map.drop(graph.nodes, guids),
+        seed_nodes: Map.drop(graph.seed_nodes, guids),
+        children: delete_child_refs(graph.children, guid_set),
+        clone_index: delete_clone_refs(graph.clone_index, guid_set),
+        provenance: Map.drop(graph.provenance, guids),
+        by_type: remove_index_entries(graph.by_type, guid_set),
+        by_name: remove_index_entries(graph.by_name, guid_set)
+    }
   end
 
   @doc """
@@ -57,21 +68,6 @@ defmodule FigKiwi.Scene.Graph.Nodes do
       |> Enum.flat_map(&subtree(graph, &1))
 
     descendants ++ [guid]
-  end
-
-  defp delete_one(%Graph{} = graph, guid) do
-    graph
-    |> remove_indexes(guid)
-    |> then(fn %Graph{} = graph ->
-      %Graph{
-        graph
-        | nodes: Map.delete(graph.nodes, guid),
-          seed_nodes: Map.delete(graph.seed_nodes, guid),
-          children: delete_child_refs(graph.children, guid),
-          clone_index: delete_clone_refs(graph.clone_index, guid),
-          provenance: Map.delete(graph.provenance, guid)
-      }
-    end)
   end
 
   defp remove_indexes(%Graph{} = graph, guid) do
@@ -104,15 +100,21 @@ defmodule FigKiwi.Scene.Graph.Nodes do
 
   defp append_child(values, value), do: values ++ [value]
 
-  defp delete_child_refs(children, guid) do
-    children
-    |> Map.delete(guid)
-    |> Map.new(fn {parent, child_guids} ->
-      {parent, Enum.reject(child_guids, &(&1 == guid))}
+  defp remove_index_entries(index, guid_set) do
+    Map.new(index, fn {key, guids} ->
+      {key, Enum.reject(guids, &MapSet.member?(guid_set, &1))}
     end)
   end
 
-  defp delete_clone_refs(clone_index, guid) do
-    Map.reject(clone_index, fn {_key, clone_guid} -> clone_guid == guid end)
+  defp delete_child_refs(children, guid_set) do
+    children
+    |> Map.reject(fn {parent, _child_guids} -> MapSet.member?(guid_set, parent) end)
+    |> Map.new(fn {parent, child_guids} ->
+      {parent, Enum.reject(child_guids, &MapSet.member?(guid_set, &1))}
+    end)
+  end
+
+  defp delete_clone_refs(clone_index, guid_set) do
+    Map.reject(clone_index, fn {_key, clone_guid} -> MapSet.member?(guid_set, clone_guid) end)
   end
 end
