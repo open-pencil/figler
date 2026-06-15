@@ -96,9 +96,13 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   @doc """
   Builds seed nodes from a decoded generated `Message` struct.
   """
-  @spec from_message(FigKiwi.Schema.Message.t()) :: [t()]
-  def from_message(%{node_changes: node_changes}) when is_list(node_changes) do
-    Enum.map(node_changes, &from_node_change/1)
+  @spec from_message(FigKiwi.Schema.Message.t() | map(), keyword()) :: [t()]
+  def from_message(message, opts \\ [])
+
+  def from_message(%{node_changes: node_changes}, opts) when is_list(node_changes) do
+    node_changes
+    |> focused_node_changes(Keyword.get(opts, :focus))
+    |> Enum.map(&from_node_change/1)
   end
 
   @doc """
@@ -198,6 +202,70 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
       fill_count: seed.fill_count,
       stroke_count: seed.stroke_count
     }
+  end
+
+  defp focused_node_changes(node_changes, nil), do: node_changes
+  defp focused_node_changes(node_changes, []), do: node_changes
+
+  defp focused_node_changes(node_changes, focus) do
+    node_by_guid = Map.new(node_changes, &{guid(get(&1, :guid)), &1})
+    children = node_change_children(node_changes)
+
+    focused_guids =
+      focus
+      |> Enum.reduce(MapSet.new(), &collect_node_subtree(&2, &1, node_by_guid, children))
+      |> collect_node_components(node_by_guid, children)
+
+    Enum.filter(node_changes, &MapSet.member?(focused_guids, guid(get(&1, :guid))))
+  end
+
+  defp node_change_children(node_changes) do
+    Enum.reduce(node_changes, %{}, fn node_change, children ->
+      parent_index = get(node_change, :parent_index)
+
+      parent_guid = parent_index && guid(get(parent_index, :guid))
+      node_guid = guid(get(node_change, :guid))
+
+      if parent_guid do
+        Map.update(children, parent_guid, [node_guid], &[node_guid | &1])
+      else
+        children
+      end
+    end)
+  end
+
+  defp collect_node_components(guids, node_by_guid, children) do
+    next =
+      Enum.reduce(guids, guids, fn guid, acc ->
+        node_change = Map.get(node_by_guid, guid)
+        symbol_data = node_change && get(node_change, :symbol_data)
+        component_guid = symbol_data && guid(get(symbol_data, :symbol_id))
+
+        if is_tuple(component_guid) do
+          collect_node_subtree(acc, component_guid, node_by_guid, children)
+        else
+          acc
+        end
+      end)
+
+    if MapSet.size(next) == MapSet.size(guids) do
+      next
+    else
+      collect_node_components(next, node_by_guid, children)
+    end
+  end
+
+  defp collect_node_subtree(guids, guid, node_by_guid, children) do
+    if Map.has_key?(node_by_guid, guid) do
+      children
+      |> Map.get(guid, [])
+      |> Enum.reduce(
+        MapSet.put(guids, guid),
+        &collect_node_subtree(&2, &1, node_by_guid, children)
+      )
+    else
+      guids
+    end
   end
 
   defp public_node_from_change(node_change) do

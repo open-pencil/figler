@@ -115,7 +115,7 @@ defmodule FigKiwi.Scene.Graph do
   def build(binary, opts) when is_binary(binary) and is_list(opts) do
     index = Scene.index(binary)
     summary = Scene.summary(binary)
-    seed_nodes = seed_nodes(binary)
+    seed_nodes = seed_nodes(binary, opts)
     %__MODULE__{} = graph = build_from_seed(index, index.resource, opts, seed_nodes)
 
     %__MODULE__{
@@ -141,15 +141,16 @@ defmodule FigKiwi.Scene.Graph do
 
   def seed_nodes(binary, opts) when is_binary(binary) do
     payload = Scene.payload!(binary)
+    opts = normalize_focus(opts)
 
     if Keyword.get(opts, :native, true) do
       payload
       |> Codec.decode_sparse_message()
-      |> SeedNode.from_message()
+      |> SeedNode.from_message(opts)
     else
       payload
       |> FigKiwi.decode_message()
-      |> SeedNode.from_message()
+      |> SeedNode.from_message(opts)
     end
   end
 

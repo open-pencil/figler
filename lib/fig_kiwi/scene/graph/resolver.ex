@@ -22,6 +22,8 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   """
   @spec from_seed([SeedNode.t()], keyword()) :: Graph.t()
   def from_seed(seed_nodes, opts \\ []) when is_list(seed_nodes) and is_list(opts) do
+    options = Keyword.get(opts, :options, [])
+    seed_nodes = materialized_seed_nodes(seed_nodes, options)
     nodes = Map.new(seed_nodes, &{&1.guid, SeedNode.to_node(&1)})
     seed_by_guid = Map.new(seed_nodes, &{&1.guid, &1})
     children = build_children(seed_nodes)
@@ -32,7 +34,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
       source: Keyword.get(opts, :source),
       mode: :projected,
       stages: Keyword.get(opts, :stages, []),
-      options: Keyword.get(opts, :options, []),
+      options: options,
       seed_nodes: seed_by_guid,
       nodes: nodes,
       children: children,
@@ -266,6 +268,56 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp add_unresolved(%Graph{} = graph, item),
     do: %{graph | unresolved: [item | graph.unresolved]}
 
+  defp materialized_seed_nodes(seed_nodes, options) do
+    case Keyword.get(options, :focus) do
+      nil -> seed_nodes
+      [] -> seed_nodes
+      focus -> focused_seed_nodes(seed_nodes, focus)
+    end
+  end
+
+  defp focused_seed_nodes(seed_nodes, focus) do
+    seed_by_guid = Map.new(seed_nodes, &{&1.guid, &1})
+    children = build_children(seed_nodes)
+
+    focused_guids =
+      focus
+      |> Enum.reduce(MapSet.new(), &collect_subtree(&2, &1, seed_by_guid, children))
+      |> collect_instance_components(seed_by_guid, children)
+
+    Enum.filter(seed_nodes, &MapSet.member?(focused_guids, &1.guid))
+  end
+
+  defp collect_instance_components(guids, seed_by_guid, children) do
+    next =
+      Enum.reduce(guids, guids, fn guid, acc ->
+        case Map.get(seed_by_guid, guid) do
+          %SeedNode{node_type: "instance", symbol_id: component_guid}
+          when is_tuple(component_guid) ->
+            collect_subtree(acc, component_guid, seed_by_guid, children)
+
+          _seed ->
+            acc
+        end
+      end)
+
+    if MapSet.size(next) == MapSet.size(guids) do
+      next
+    else
+      collect_instance_components(next, seed_by_guid, children)
+    end
+  end
+
+  defp collect_subtree(guids, guid, seed_by_guid, children) do
+    if Map.has_key?(seed_by_guid, guid) do
+      children
+      |> Map.get(guid, [])
+      |> Enum.reduce(MapSet.put(guids, guid), &collect_subtree(&2, &1, seed_by_guid, children))
+    else
+      guids
+    end
+  end
+
   defp build_children(seed_nodes) do
     seed_nodes
     |> Stream.with_index()
@@ -288,8 +340,10 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp build_roots(seed_nodes) do
+    guids = MapSet.new(seed_nodes, & &1.guid)
+
     seed_nodes
-    |> Enum.filter(&is_nil(&1.parent_guid))
+    |> Enum.filter(&(is_nil(&1.parent_guid) or not MapSet.member?(guids, &1.parent_guid)))
     |> Enum.map(& &1.guid)
   end
 
