@@ -1,7 +1,12 @@
 use RustQ.Config
 
-require_file("lib/fig_kiwi/scene/projection.ex")
-require_file("lib/fig_kiwi/native_scene_generator.ex")
+unless Code.ensure_loaded?(FigKiwi.Scene.Projection) do
+  Code.require_file("lib/fig_kiwi/scene/projection.ex")
+end
+
+unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator) do
+  Code.require_file("lib/fig_kiwi/native_scene_generator.ex")
+end
 
 generate "native", "native/src/generated.rs" do
   schema =

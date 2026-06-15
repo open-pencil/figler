@@ -133,15 +133,12 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp sparse_decode_field(%{array?: true} = field, definition_map) do
     inner = sparse_decode_scalar(%{field | array?: false}, definition_map)
 
-    """
-    let len = decoder.read_var_uint()? as usize;
-    let mut items = Vec::with_capacity(len);
-    for _ in 0..len {
-    #{indent("let item = #{inner};", 4)}
-        items.push(item);
-    }
-    let value = items.encode(env);
-    """
+    rust_statements([
+      Rust.let_("len", "decoder.read_var_uint()? as usize"),
+      Rust.let_mut("items", "Vec::with_capacity(len)"),
+      Rust.stmt("for _ in 0..len { let item = #{inner}; items.push(item); }"),
+      Rust.let_("value", "items.encode(env)")
+    ])
   end
 
   defp sparse_decode_field(field, definition_map) do
@@ -623,14 +620,12 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp skip_field(%{array?: true} = field, definition_map) do
     inner = skip_field(%{field | array?: false}, definition_map)
 
-    """
-    {
-        let len = decoder.read_var_uint()? as usize;
-        for _ in 0..len {
-    #{indent(inner, 8)}
-        }
-    }
-    """
+    Rust.to_fragment(
+      Rust.block([
+        Rust.let_("len", "decoder.read_var_uint()? as usize"),
+        Rust.stmt("for _ in 0..len { #{inner} }")
+      ])
+    )
   end
 
   defp skip_field(%{type: type}, definition_map) do
@@ -643,18 +638,13 @@ defmodule FigKiwi.NativeSceneGenerator do
     end
   end
 
+  defp rust_statements(statements) do
+    Enum.map_join(statements, "\n", &Rust.to_fragment/1)
+  end
+
   defp rust_ident(name) do
     name
     |> Macro.underscore()
     |> String.replace(~r/[^a-zA-Z0-9_]/, "_")
-  end
-
-  defp indent(text, spaces) do
-    padding = String.duplicate(" ", spaces)
-
-    text
-    |> String.trim_trailing()
-    |> String.split("\n")
-    |> Enum.map_join("\n", &(padding <> &1))
   end
 end

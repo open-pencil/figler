@@ -3,15 +3,38 @@ defmodule FigKiwi.OracleFixtureTest do
 
   alias FigKiwi.Scene.Graph.Oracle
 
-  @fixture "test/fixtures/oracles/basic/basic.fig"
-  @manifest "test/fixtures/oracles/basic/manifest.json"
+  @committed_manifest "test/fixtures/oracles/basic/manifest.json"
+  @committed_fixture "test/fixtures/oracles/basic/basic.fig"
 
   test "committed oracle fixture matches effective graph projection" do
-    base_dir = Path.dirname(@manifest)
-    fixture = @fixture |> File.read!() |> FigKiwi.Scene.payload!()
+    assert_manifest(@committed_fixture, @committed_manifest)
+  end
 
-    results = Enum.map(Oracle.entries!(@manifest), &Oracle.run(fixture, base_dir, &1))
+  test "optional external oracle fixtures match effective graph projection" do
+    fixture_dir = System.get_env("FIG_KIWI_EXTERNAL_ORACLE_DIR")
 
-    assert Enum.map(results, & &1.diff_count) == [0]
+    if is_nil(fixture_dir) or fixture_dir == "" do
+      :ok
+    else
+      manifests = Path.wildcard(Path.join(fixture_dir, "**/manifest.json"))
+      assert manifests != []
+
+      for manifest <- manifests do
+        fixture =
+          manifest |> Path.dirname() |> Path.join("*.fig") |> Path.wildcard() |> List.first()
+
+        assert is_binary(fixture), "no .fig fixture found next to #{manifest}"
+        assert_manifest(fixture, manifest)
+      end
+    end
+  end
+
+  defp assert_manifest(fixture_path, manifest_path) do
+    base_dir = Path.dirname(manifest_path)
+    fixture = fixture_path |> File.read!() |> FigKiwi.Scene.payload!()
+
+    results = Enum.map(Oracle.entries!(manifest_path), &Oracle.run(fixture, base_dir, &1))
+
+    assert Enum.all?(results, &(&1.diff_count == 0))
   end
 end

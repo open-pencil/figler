@@ -26,5 +26,14 @@ FIG_KIWI_ORACLE_FIXTURE=/path/to/fixture.fig \
 ```
 
 The `basic/` fixture is a tiny generated `.fig` used by CI as a smoke test for
-committed oracle manifests. Larger oracle fixtures should be real exported
-Figma files with matching JSON captures from the same source document.
+committed oracle manifests. Do not commit larger binary fixtures directly.
+
+For local or CI environments that provide external real fixtures, set:
+
+```sh
+FIG_KIWI_EXTERNAL_ORACLE_DIR=/path/to/oracle-fixtures \
+  mise exec rust@1.96.0 -- mix test test/oracle_fixture_test.exs
+```
+
+Each external fixture directory should contain a `.fig`, a `manifest.json`, and
+oracle JSON files referenced by that manifest.
