@@ -3,6 +3,8 @@ defmodule FigKiwi.SceneTest do
 
   alias FigKiwi.Scene
   alias FigKiwi.Scene.Graph
+  alias FigKiwi.Scene.Graph.ComponentPropAssignment
+  alias FigKiwi.Scene.Graph.ComponentPropRef
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.SymbolOverride
@@ -268,6 +270,49 @@ defmodule FigKiwi.SceneTest do
     assert Graph.unresolved(graph) == [
              {:symbol_override_target, {2, 1}, [{1, 1}, {1, 3}], :invalid_path}
            ]
+  end
+
+  test "applies basic component property assignments to cloned children" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Button"},
+        %SeedNode{
+          guid: {1, 2},
+          node_type: "text",
+          parent_guid: {1, 1},
+          text: "Default",
+          visible: true,
+          component_prop_refs: [
+            %ComponentPropRef{def_id: {9, 1}, field: :text_data},
+            %ComponentPropRef{def_id: {9, 2}, field: :visible}
+          ]
+        },
+        %SeedNode{
+          guid: {2, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          component_prop_assignments: [
+            %ComponentPropAssignment{def_id: {9, 1}, value: {:text, "Submit"}},
+            %ComponentPropAssignment{def_id: {9, 2}, value: {:bool, false}}
+          ]
+        }
+      ]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances, :component_props]
+      )
+      |> Resolver.resolve()
+
+    assert [%Node{guid: clone_guid, text: "Submit", visible: false}] =
+             Scene.children(graph, "2:1")
+
+    assert clone_guid == "clone:2:1/1:2"
+    assert Scene.node(graph, "1:2").text == "Default"
+    assert Scene.node(graph, "1:2").visible == true
+
+    applied = Graph.explain(graph, clone_guid).applied
+    assert {:component_prop, :text, "Default", "Submit"} in applied
+    assert {:component_prop, :visible, true, false} in applied
   end
 
   test "navigates projected scene indexes" do
