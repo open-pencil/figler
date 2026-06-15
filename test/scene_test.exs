@@ -256,6 +256,22 @@ defmodule FigKiwi.SceneTest do
     assert Graph.stats(graph).clone_count == 0
   end
 
+  test "does not populate source instances inside symbol definitions" do
+    graph =
+      [
+        %SeedNode{guid: {1, 0}, node_type: "canvas", name: "Internal", visible: false},
+        %SeedNode{guid: {1, 1}, node_type: "symbol", parent_guid: {1, 0}, name: "Variant"},
+        %SeedNode{guid: {1, 2}, node_type: "instance", parent_guid: {1, 1}, symbol_id: {2, 1}},
+        %SeedNode{guid: {2, 1}, node_type: "component", name: "Button"},
+        %SeedNode{guid: {2, 2}, node_type: "text", parent_guid: {2, 1}, text: "Default"}
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:populate_instances])
+      |> Resolver.resolve()
+
+    assert Scene.children(graph, "1:2") == []
+    assert Graph.stats(graph).clone_count == 0
+  end
+
   test "focuses resolver stages on selected source subtrees" do
     graph =
       [

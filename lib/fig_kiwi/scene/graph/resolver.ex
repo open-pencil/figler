@@ -171,11 +171,42 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
     Enum.flat_map(graph.seed_nodes, fn
       {guid, %{origin: :source, node_type: "instance"} = seed} ->
-        if is_nil(focus) or MapSet.member?(focus, guid), do: [seed], else: []
+        if (is_nil(focus) or MapSet.member?(focus, guid)) and
+             not definition_instance?(graph, guid),
+           do: [seed],
+           else: []
 
       _entry ->
         []
     end)
+  end
+
+  defp definition_instance?(graph, guid) do
+    case Map.get(graph.nodes, guid) do
+      %{parent_guid: parent_guid} when is_binary(parent_guid) ->
+        graph
+        |> ancestor_nodes(parent_guid)
+        |> Enum.any?(&(&1.node_type == "symbol"))
+
+      _node ->
+        false
+    end
+  end
+
+  defp ancestor_nodes(graph, parent_guid) do
+    parent_guid
+    |> GUID.parse()
+    |> then(&Map.get(graph.nodes, &1))
+    |> case do
+      %{parent_guid: next_parent_guid} = node when is_binary(next_parent_guid) ->
+        [node | ancestor_nodes(graph, next_parent_guid)]
+
+      nil ->
+        []
+
+      node ->
+        [node]
+    end
   end
 
   defp focus_set(graph) do
@@ -324,6 +355,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
       focus
       |> Enum.reduce(MapSet.new(), &collect_subtree(&2, &1, seed_by_guid, children))
       |> collect_instance_components(seed_by_guid, children)
+      |> collect_ancestors(seed_by_guid)
 
     Enum.filter(seed_nodes, &MapSet.member?(focused_guids, &1.guid))
   end
@@ -374,6 +406,22 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   defp component_assignment_guid(%{value: {:guid, guid}}), do: guid
   defp component_assignment_guid(_assignment), do: nil
+
+  defp collect_ancestors(guids, seed_by_guid) do
+    Enum.reduce(guids, guids, &collect_ancestor(&2, &1, seed_by_guid))
+  end
+
+  defp collect_ancestor(guids, guid, seed_by_guid) do
+    case Map.get(seed_by_guid, guid) do
+      %{parent_guid: parent_guid} when is_tuple(parent_guid) ->
+        guids
+        |> MapSet.put(parent_guid)
+        |> collect_ancestor(parent_guid, seed_by_guid)
+
+      _seed ->
+        guids
+    end
+  end
 
   defp collect_subtree(guids, guid, seed_by_guid, children) do
     if Map.has_key?(seed_by_guid, guid) do

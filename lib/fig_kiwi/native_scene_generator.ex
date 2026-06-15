@@ -363,6 +363,20 @@ defmodule FigKiwi.NativeSceneGenerator do
           }
       }
 
+      fn graph_focus_collect_ancestors(
+          wanted: &mut std::collections::HashSet<GraphFocusGuid>,
+          guid: GraphFocusGuid,
+          metas: &[GraphFocusMeta],
+          by_guid: &std::collections::HashMap<GraphFocusGuid, usize>,
+      ) {
+          let mut current = guid;
+          while let Some(index) = by_guid.get(&current) {
+              let Some(parent_guid) = metas[*index].parent_guid else { break; };
+              wanted.insert(parent_guid);
+              current = parent_guid;
+          }
+      }
+
       fn graph_focus_wanted(metas: &[GraphFocusMeta], focus: &[String]) -> std::collections::HashSet<GraphFocusGuid> {
           let mut by_guid = std::collections::HashMap::new();
           let mut children: std::collections::HashMap<GraphFocusGuid, Vec<GraphFocusGuid>> = std::collections::HashMap::new();
@@ -395,6 +409,12 @@ defmodule FigKiwi.NativeSceneGenerator do
               }
               if wanted.len() == before { break; }
           }
+
+          let current = wanted.iter().copied().collect::<Vec<_>>();
+          for guid in current {
+              graph_focus_collect_ancestors(&mut wanted, guid, metas, &by_guid);
+          }
+
           wanted
       }
 
