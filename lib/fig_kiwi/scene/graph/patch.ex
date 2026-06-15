@@ -9,6 +9,7 @@ defmodule FigKiwi.Scene.Graph.Patch do
 
   alias FigKiwi.Scene.Graph
   alias FigKiwi.Scene.Graph.GUID
+  alias FigKiwi.Scene.Graph.Nodes
   alias FigKiwi.Scene.Graph.Swap
 
   @enforce_keys [:op, :target, :source]
@@ -88,6 +89,7 @@ defmodule FigKiwi.Scene.Graph.Patch do
                 &append_applied(&1, applied)
               )
         }
+        |> maybe_clear_hidden_children(patch)
     end
   end
 
@@ -120,6 +122,18 @@ defmodule FigKiwi.Scene.Graph.Patch do
         %Graph{graph | unresolved: [{:swap_target, patch.target, :missing} | graph.unresolved]}
     end
   end
+
+  defp maybe_clear_hidden_children(%Graph{} = graph, %__MODULE__{
+         target: target,
+         field: :visible,
+         value: false
+       }) do
+    graph.children
+    |> Map.get(target, [])
+    |> Enum.reduce(graph, &Nodes.remove(&2, &1))
+  end
+
+  defp maybe_clear_hidden_children(%Graph{} = graph, _patch), do: graph
 
   defp put_swap(%Graph{} = graph, patch, applied) do
     %Graph{

@@ -15,9 +15,14 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
   def apply(%Graph{} = graph, %SeedNode{component_prop_assignments: []}), do: graph
 
   def apply(%Graph{} = graph, %SeedNode{} = instance) do
+    apply_assignments(graph, instance.guid, instance.component_prop_assignments)
+  end
+
+  @doc false
+  def apply_assignments(%Graph{} = graph, instance_guid, assignments) do
     graph
-    |> reduce(instance, &swap?/1)
-    |> reduce(instance, &(not swap?(&1)))
+    |> reduce(instance_guid, assignments, &swap?/1)
+    |> reduce(instance_guid, assignments, &(not swap?(&1)))
   end
 
   @doc """
@@ -28,25 +33,25 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
     Map.get(graph.component_prop_refs, def_id)
   end
 
-  defp reduce(graph, instance, predicate) do
-    instance.component_prop_assignments
+  defp reduce(graph, instance_guid, assignments, predicate) do
+    assignments
     |> Enum.filter(predicate)
-    |> Enum.reduce(graph, &apply_assignment(instance, &1, &2))
+    |> Enum.reduce(graph, &apply_assignment(instance_guid, &1, &2))
   end
 
   defp swap?(assignment), do: match?({:guid, _guid}, assignment.value)
 
-  defp apply_assignment(instance, assignment, graph) do
+  defp apply_assignment(instance_guid, assignment, graph) do
     with {source_guid, field} <- ref(graph, assignment.def_id),
-         {:ok, target_guid} <- target(graph, instance.guid, source_guid),
+         {:ok, target_guid} <- target(graph, instance_guid, source_guid),
          {:ok, value} <- value(field, assignment.value) do
       Patch.apply_all(graph, patch(target_guid, field, value))
     else
       nil ->
-        unresolved(graph, {:component_prop_ref, instance.guid, assignment.def_id})
+        unresolved(graph, {:component_prop_ref, instance_guid, assignment.def_id})
 
       {:error, reason} ->
-        unresolved(graph, {:component_prop_assignment, instance.guid, assignment.def_id, reason})
+        unresolved(graph, {:component_prop_assignment, instance_guid, assignment.def_id, reason})
     end
   end
 

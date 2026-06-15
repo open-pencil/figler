@@ -125,10 +125,11 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp swap(seed, override, graph) do
     case Target.resolve(graph, seed.guid, override.guid_path) do
       {:ok, target_guid} ->
-        Patch.apply_all(
-          graph,
+        graph
+        |> Patch.apply_all(
           Patch.swap(target_guid, override.overridden_symbol_id, source: :symbol_override)
         )
+        |> ComponentProps.apply_assignments(target_guid, override.component_prop_assignments)
 
       {:error, reason} ->
         add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})

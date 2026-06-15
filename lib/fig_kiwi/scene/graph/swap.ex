@@ -14,10 +14,12 @@ defmodule FigKiwi.Scene.Graph.Swap do
   """
   @spec run(Graph.t(), GUID.graph_guid(), GUID.figma_guid()) :: Graph.t()
   def run(%Graph{} = graph, target_guid, component_guid) do
+    scale = scale(graph, target_guid, component_guid)
+
     graph
     |> clear(target_guid)
     |> update_target(target_guid, component_guid)
-    |> fill(target_guid, component_guid)
+    |> fill(target_guid, component_guid, scale)
   end
 
   defp update_target(%Graph{} = graph, target_guid, component_guid) do
@@ -64,23 +66,24 @@ defmodule FigKiwi.Scene.Graph.Swap do
   @doc """
   Clones component children under an instance target.
   """
-  @spec fill(Graph.t(), GUID.graph_guid(), GUID.figma_guid()) :: Graph.t()
-  def fill(%Graph{} = graph, target_guid, component_guid) do
+  @spec fill(Graph.t(), GUID.graph_guid(), GUID.figma_guid(), {number(), number()}) :: Graph.t()
+  def fill(%Graph{} = graph, target_guid, component_guid, scale \\ {1.0, 1.0}) do
     graph.children
     |> Map.get(component_guid, [])
     |> Enum.reduce(graph, fn source_child_guid, acc ->
-      clone(acc, target_guid, target_guid, source_child_guid, component_guid)
+      clone(acc, target_guid, target_guid, source_child_guid, component_guid, scale)
     end)
   end
 
-  defp clone(graph, instance_guid, parent_guid, source_guid, component_guid) do
+  defp clone(graph, instance_guid, parent_guid, source_guid, component_guid, scale) do
     source_node = Map.fetch!(graph.nodes, source_guid)
     clone_guid = GUID.append(parent_guid, source_guid)
 
     cloned_node = %{
       source_node
       | guid: GUID.format(clone_guid),
-        parent_guid: GUID.format(parent_guid)
+        parent_guid: GUID.format(parent_guid),
+        transform: scale_transform(source_node.transform, scale)
     }
 
     cloned_seed =
@@ -93,16 +96,43 @@ defmodule FigKiwi.Scene.Graph.Swap do
     |> Nodes.child(parent_guid, clone_guid)
     |> put_index(GUID.root(instance_guid), source_guid, clone_guid)
     |> put_provenance(clone_guid, source_guid, instance_guid, component_guid)
-    |> fill_child(instance_guid, clone_guid, source_guid, component_guid)
+    |> fill_child(instance_guid, clone_guid, source_guid, component_guid, scale)
   end
 
-  defp fill_child(graph, instance_guid, parent_guid, source_guid, component_guid) do
+  defp fill_child(graph, instance_guid, parent_guid, source_guid, component_guid, scale) do
     graph.children
     |> Map.get(source_guid, [])
     |> Enum.reduce(graph, fn child_guid, acc ->
-      clone(acc, instance_guid, parent_guid, child_guid, component_guid)
+      clone(acc, instance_guid, parent_guid, child_guid, component_guid, scale)
     end)
   end
+
+  defp scale(%Graph{} = graph, target_guid, component_guid) do
+    target_size = graph.nodes |> Map.get(target_guid) |> size()
+    component_size = graph.nodes |> Map.get(component_guid) |> size()
+
+    case {target_size, component_size} do
+      {%{x: tx, y: ty}, %{x: cx, y: cy}} when cx not in [nil, 0] and cy not in [nil, 0] ->
+        {tx / cx, ty / cy}
+
+      _other ->
+        {1.0, 1.0}
+    end
+  end
+
+  defp size(%{size: size}), do: size
+  defp size(_node), do: nil
+
+  defp scale_transform(nil, _scale), do: nil
+
+  defp scale_transform(transform, {scale_x, scale_y}) do
+    transform
+    |> Map.update(:m02, nil, &scale_value(&1, scale_x))
+    |> Map.update(:m12, nil, &scale_value(&1, scale_y))
+  end
+
+  defp scale_value(nil, _scale), do: nil
+  defp scale_value(value, scale), do: value * scale
 
   defp put_index(%Graph{} = graph, instance_guid, source_guid, clone_guid) do
     %Graph{

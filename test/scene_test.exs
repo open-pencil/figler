@@ -7,6 +7,7 @@ defmodule FigKiwi.SceneTest do
   alias FigKiwi.Scene.Graph.ComponentPropRef
   alias FigKiwi.Scene.Graph.DerivedSymbolData
   alias FigKiwi.Scene.Graph.GUID
+  alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.SymbolOverride
@@ -431,6 +432,81 @@ defmodule FigKiwi.SceneTest do
     assert Graph.explain(graph, "clone:2:1/3:2").applied == [
              {:symbol_override, :text, "New label", "Patched label"}
            ]
+  end
+
+  test "applies component prop assignments carried by symbol override swaps" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Wrapper"},
+        %SeedNode{guid: {1, 2}, node_type: "instance", parent_guid: {1, 1}, symbol_id: {2, 1}},
+        %SeedNode{guid: {2, 1}, node_type: "component", name: "Old"},
+        %SeedNode{guid: {3, 1}, node_type: "component", name: "New"},
+        %SeedNode{
+          guid: {3, 2},
+          node_type: "frame",
+          parent_guid: {3, 1},
+          name: "Menu",
+          visible: true,
+          component_prop_refs: [%ComponentPropRef{def_id: {3, 99}, field: :visible}]
+        },
+        %SeedNode{guid: {3, 3}, node_type: "text", parent_guid: {3, 2}, text: "Hidden child"},
+        %SeedNode{
+          guid: {9, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          symbol_overrides: [
+            %SymbolOverride{
+              guid_path: [{1, 2}],
+              overridden_symbol_id: {3, 1},
+              component_prop_assignments: [
+                %ComponentPropAssignment{def_id: {3, 99}, value: {:bool, false}}
+              ]
+            }
+          ]
+        }
+      ]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances, :symbol_overrides]
+      )
+      |> Resolver.resolve()
+
+    assert [%Node{guid: item_guid, name: "New"}] = Scene.children(graph, "9:1")
+    assert [%Node{guid: menu_guid, visible: false}] = Scene.children(graph, item_guid)
+    assert Scene.children(graph, menu_guid) == []
+
+    assert {:component_prop, :visible, true, false} in Graph.explain(graph, menu_guid).applied
+  end
+
+  test "scales swapped component child offsets to the target instance size" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Old", size: %{x: 20.0, y: 20.0}},
+        %SeedNode{
+          guid: {1, 2},
+          node_type: "vector",
+          parent_guid: {1, 1},
+          transform: %{m00: 1.0, m01: 0.0, m02: 4.0, m10: 0.0, m11: 1.0, m12: 4.0}
+        },
+        %SeedNode{guid: {3, 1}, node_type: "component", name: "New", size: %{x: 24.0, y: 24.0}},
+        %SeedNode{
+          guid: {3, 2},
+          node_type: "vector",
+          parent_guid: {3, 1},
+          transform: %{m00: 1.0, m01: 0.0, m02: 3.0, m10: 0.0, m11: 1.0, m12: 3.0}
+        },
+        %SeedNode{
+          guid: {2, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          size: %{x: 20.0, y: 20.0}
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:populate_instances])
+      |> Resolver.resolve()
+      |> Patch.apply_all(Patch.swap({2, 1}, {3, 1}, source: :test))
+
+    assert [%Node{transform: %{m02: 2.5, m12: 2.5}}] = Scene.children(graph, "2:1")
   end
 
   test "materializes component prop component swaps" do
