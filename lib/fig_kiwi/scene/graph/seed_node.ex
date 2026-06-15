@@ -97,8 +97,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   Builds seed nodes from a decoded generated `Message` struct.
   """
   @spec from_message(FigKiwi.Schema.Message.t()) :: [t()]
-  def from_message(%FigKiwi.Schema.Message{node_changes: node_changes})
-      when is_list(node_changes) do
+  def from_message(%{node_changes: node_changes}) when is_list(node_changes) do
     Enum.map(node_changes, &from_node_change/1)
   end
 
@@ -106,23 +105,25 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   Builds a seed node from a generated `NodeChange` struct, including initial
   graph resolver metadata.
   """
-  @spec from_node_change(FigKiwi.Schema.NodeChange.t()) :: t()
-  def from_node_change(%FigKiwi.Schema.NodeChange{} = node_change) do
+  @spec from_node_change(FigKiwi.Schema.NodeChange.t() | map()) :: t()
+  def from_node_change(node_change) when is_map(node_change) do
+    symbol_data = get(node_change, :symbol_data)
+    symbol_id = guid(symbol_data && get(symbol_data, :symbol_id))
     node = public_node_from_change(node_change)
 
     %__MODULE__{
       from_node(node)
-      | symbol_id: guid(node_change.symbol_data && node_change.symbol_data.symbol_id),
-        override_key: guid(node_change.override_key),
-        component_guid: guid(node_change.symbol_data && node_change.symbol_data.symbol_id),
-        symbol_overrides: symbol_overrides(node_change.symbol_data),
-        component_prop_defs: component_prop_defs(node_change.component_prop_defs),
-        component_prop_refs: component_prop_refs(node_change.component_prop_refs),
+      | symbol_id: symbol_id,
+        override_key: guid(get(node_change, :override_key)),
+        component_guid: symbol_id,
+        symbol_overrides: symbol_overrides(symbol_data),
+        component_prop_defs: component_prop_defs(get(node_change, :component_prop_defs)),
+        component_prop_refs: component_prop_refs(get(node_change, :component_prop_refs)),
         component_prop_assignments:
-          component_prop_assignments(node_change.component_prop_assignments),
-        derived_symbol_data: derived_symbol_data(node_change.derived_symbol_data),
-        variable_consumption: multiplayer_entries(node_change.variable_consumption_map),
-        variable_data_values: multiplayer_entries(node_change.variable_data_values)
+          component_prop_assignments(get(node_change, :component_prop_assignments)),
+        derived_symbol_data: derived_symbol_data(get(node_change, :derived_symbol_data)),
+        variable_consumption: multiplayer_entries(get(node_change, :variable_consumption_map)),
+        variable_data_values: multiplayer_entries(get(node_change, :variable_data_values))
     }
   end
 
@@ -200,29 +201,33 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   end
 
   defp public_node_from_change(node_change) do
+    parent_index = get(node_change, :parent_index)
+    text_data = get(node_change, :text_data)
+    font_name = get(node_change, :font_name)
+
     %Node{
-      guid: GUID.format(guid(node_change.guid)),
-      node_type: node_change.type |> to_string() |> Macro.underscore(),
-      name: node_change.name,
-      parent_guid: GUID.format(guid(node_change.parent_index && node_change.parent_index.guid)),
-      position: node_change.parent_index && node_change.parent_index.position,
-      size: vector(node_change.size),
-      transform: matrix(node_change.transform),
-      visible: node_change.visible,
-      locked: node_change.locked,
-      text: node_change.text_data && node_change.text_data.characters,
-      font_family: node_change.font_name && node_change.font_name.family,
-      font_style: node_change.font_name && node_change.font_name.style,
-      font_postscript: node_change.font_name && node_change.font_name.postscript,
-      text_style_guid: style_guid(node_change.style_id_for_text),
-      component_key: node_change.component_key,
-      origin_component_key: node_change.origin_component_key,
-      fill_style_guid: style_guid(node_change.style_id_for_fill),
-      stroke_style_guid: style_guid(node_change.style_id_for_stroke_fill),
-      effect_style_guid: style_guid(node_change.style_id_for_effect),
-      grid_style_guid: style_guid(node_change.style_id_for_grid),
-      fill_count: count(node_change.fill_paints),
-      stroke_count: count(node_change.stroke_paints)
+      guid: GUID.format(guid(get(node_change, :guid))),
+      node_type: node_change |> get(:type) |> to_string() |> Macro.underscore(),
+      name: get(node_change, :name),
+      parent_guid: GUID.format(guid(parent_index && get(parent_index, :guid))),
+      position: parent_index && get(parent_index, :position),
+      size: vector(get(node_change, :size)),
+      transform: matrix(get(node_change, :transform)),
+      visible: get(node_change, :visible),
+      locked: get(node_change, :locked),
+      text: text_data && get(text_data, :characters),
+      font_family: font_name && get(font_name, :family),
+      font_style: font_name && get(font_name, :style),
+      font_postscript: font_name && get(font_name, :postscript),
+      text_style_guid: style_guid(get(node_change, :style_id_for_text)),
+      component_key: get(node_change, :component_key),
+      origin_component_key: get(node_change, :origin_component_key),
+      fill_style_guid: style_guid(get(node_change, :style_id_for_fill)),
+      stroke_style_guid: style_guid(get(node_change, :style_id_for_stroke_fill)),
+      effect_style_guid: style_guid(get(node_change, :style_id_for_effect)),
+      grid_style_guid: style_guid(get(node_change, :style_id_for_grid)),
+      fill_count: count(get(node_change, :fill_paints)),
+      stroke_count: count(get(node_change, :stroke_paints))
     }
   end
 
@@ -232,23 +237,26 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   defp symbol_overrides(%{symbol_overrides: overrides}) do
     Enum.map(overrides, fn override ->
       %SymbolOverride{
-        guid_path: guid_path(override.guid_path),
-        overridden_symbol_id: guid(override.overridden_symbol_id),
+        guid_path: guid_path(get(override, :guid_path)),
+        overridden_symbol_id: guid(get(override, :overridden_symbol_id)),
         fields: override_fields(override),
         component_prop_assignments:
-          component_prop_assignments(override.component_prop_assignments),
-        variable_consumption: multiplayer_entries(override.variable_consumption_map)
+          component_prop_assignments(get(override, :component_prop_assignments)),
+        variable_consumption: multiplayer_entries(get(override, :variable_consumption_map))
       }
     end)
   end
 
   defp override_fields(override) do
     %{}
-    |> put_present(:name, override.name)
-    |> put_present(:visible, override.visible)
-    |> put_present(:text, override.text_data && override.text_data.characters)
-    |> put_present(:size, vector(override.size))
-    |> put_present(:transform, matrix(override.transform))
+    |> put_present(:name, get(override, :name))
+    |> put_present(:visible, get(override, :visible))
+    |> put_present(
+      :text,
+      get(override, :text_data) && get(get(override, :text_data), :characters)
+    )
+    |> put_present(:size, vector(get(override, :size)))
+    |> put_present(:transform, matrix(get(override, :transform)))
   end
 
   defp component_prop_defs(nil), do: []
@@ -256,10 +264,10 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   defp component_prop_defs(defs) do
     Enum.map(defs, fn defn ->
       %ComponentPropDef{
-        id: guid(defn.id),
-        name: defn.name,
-        type: defn.type,
-        initial_value: component_prop_value(defn.initial_value)
+        id: guid(get(defn, :id)),
+        name: get(defn, :name),
+        type: get(defn, :type),
+        initial_value: component_prop_value(get(defn, :initial_value))
       }
     end)
   end
@@ -269,8 +277,8 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   defp component_prop_refs(refs) do
     Enum.map(refs, fn ref ->
       %ComponentPropRef{
-        def_id: guid(ref.def_id),
-        field: ref.component_prop_node_field || ref.node_field
+        def_id: guid(get(ref, :def_id)),
+        field: get(ref, :component_prop_node_field) || get(ref, :node_field)
       }
     end)
   end
@@ -280,9 +288,9 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   defp component_prop_assignments(assignments) do
     Enum.map(assignments, fn assignment ->
       %ComponentPropAssignment{
-        def_id: guid(assignment.def_id),
-        value: component_prop_value(assignment.value),
-        variable_value: variable_data(assignment.var_value)
+        def_id: guid(get(assignment, :def_id)),
+        value: component_prop_value(get(assignment, :value)),
+        variable_value: variable_data(get(assignment, :var_value))
       }
     end)
   end
@@ -292,16 +300,16 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   defp derived_symbol_data(values) do
     Enum.map(values, fn value ->
       %DerivedSymbolData{
-        guid_path: guid_path(value.guid_path),
-        size: vector(value.size),
-        transform: matrix(value.transform),
-        font_size: value.font_size,
-        line_height: value.line_height,
-        letter_spacing: value.letter_spacing,
-        stroke_weight: value.stroke_weight,
-        derived_text_data: value.derived_text_data,
-        fill_geometry: value.fill_geometry || [],
-        stroke_geometry: value.stroke_geometry || []
+        guid_path: guid_path(get(value, :guid_path)),
+        size: vector(get(value, :size)),
+        transform: matrix(get(value, :transform)),
+        font_size: get(value, :font_size),
+        line_height: get(value, :line_height),
+        letter_spacing: get(value, :letter_spacing),
+        stroke_weight: get(value, :stroke_weight),
+        derived_text_data: get(value, :derived_text_data),
+        fill_geometry: get(value, :fill_geometry) || [],
+        stroke_geometry: get(value, :stroke_geometry) || []
       }
     end)
   end
@@ -310,11 +318,11 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
 
   defp component_prop_value(value) do
     cond do
-      is_boolean(value.bool_value) -> {:bool, value.bool_value}
-      value.text_value -> {:text, value.text_value.characters}
-      value.guid_value -> {:guid, guid(value.guid_value)}
-      is_number(value.float_value) -> {:float, value.float_value}
-      value.vector_value -> {:vector, vector(value.vector_value)}
+      is_boolean(get(value, :bool_value)) -> {:bool, get(value, :bool_value)}
+      get(value, :text_value) -> {:text, get(get(value, :text_value), :characters)}
+      get(value, :guid_value) -> {:guid, guid(get(value, :guid_value))}
+      is_number(get(value, :float_value)) -> {:float, get(value, :float_value)}
+      get(value, :vector_value) -> {:vector, vector(get(value, :vector_value))}
       true -> value
     end
   end
@@ -331,7 +339,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
 
   defp guid(nil), do: nil
 
-  defp guid(%FigKiwi.Schema.GUID{} = guid), do: GUID.from_schema(guid)
+  defp guid(%{session_id: session_id, local_id: local_id}), do: {session_id, local_id}
 
   defp guid_path(nil), do: []
   defp guid_path(%{guids: guids}) when is_list(guids), do: Enum.map(guids, &guid/1)
@@ -347,7 +355,11 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
 
   defp style_guid(nil), do: nil
   defp style_guid(%{guid: guid}), do: guid |> guid() |> GUID.format()
+  defp style_guid(_style_id), do: nil
 
   defp count(nil), do: nil
   defp count(values) when is_list(values), do: length(values)
+
+  defp get(nil, _key), do: nil
+  defp get(map, key) when is_map(map), do: Map.get(map, key)
 end

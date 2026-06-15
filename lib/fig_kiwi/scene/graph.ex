@@ -12,6 +12,7 @@ defmodule FigKiwi.Scene.Graph do
   stages grow in Elixir where they are easier to inspect and verify.
   """
 
+  alias FigKiwi.Native.Codec
   alias FigKiwi.Scene
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Resolver
@@ -135,11 +136,18 @@ defmodule FigKiwi.Scene.Graph do
     Map.values(seed_nodes)
   end
 
-  def seed_nodes(binary, _opts) when is_binary(binary) do
-    binary
-    |> Scene.payload!()
-    |> FigKiwi.decode_message()
-    |> SeedNode.from_message()
+  def seed_nodes(binary, opts) when is_binary(binary) do
+    payload = Scene.payload!(binary)
+
+    if Keyword.get(opts, :native, true) do
+      payload
+      |> Codec.decode_sparse_message()
+      |> SeedNode.from_message()
+    else
+      payload
+      |> FigKiwi.decode_message()
+      |> SeedNode.from_message()
+    end
   end
 
   def seed_nodes(input, opts) when is_list(opts) do
