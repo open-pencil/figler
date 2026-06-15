@@ -42,7 +42,7 @@ defmodule FigKiwi.Scene.Graph.Swap do
 
   defp clone(graph, instance_guid, parent_guid, source_guid, component_guid) do
     source_node = Map.fetch!(graph.nodes, source_guid)
-    clone_guid = GUID.clone(instance_guid, source_guid)
+    clone_guid = GUID.append(parent_guid, source_guid)
 
     cloned_node = %{
       source_node
@@ -58,7 +58,7 @@ defmodule FigKiwi.Scene.Graph.Swap do
     graph
     |> Nodes.put(clone_guid, cloned_node, cloned_seed)
     |> Nodes.child(parent_guid, clone_guid)
-    |> put_index(instance_guid, source_guid, clone_guid)
+    |> put_index(GUID.root(instance_guid), source_guid, clone_guid)
     |> put_provenance(clone_guid, source_guid, instance_guid, component_guid)
     |> fill_child(instance_guid, clone_guid, source_guid, component_guid)
   end

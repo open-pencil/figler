@@ -4,25 +4,25 @@ defmodule FigKiwi.Scene.Graph.GUID do
 
   Public scene APIs expose GUIDs as strings like `"1:23"`. The graph resolver
   keeps real Figma GUIDs as `{session_id, local_id}` tuples and synthetic clone
-  IDs as `{:clone, instance_guid, source_guid}` tagged tuples.
+  IDs as `{:clone, root_instance_guid, source_path}` tagged tuples.
   """
 
   @type figma_guid :: {non_neg_integer(), non_neg_integer()}
-  @type graph_guid :: figma_guid() | {:clone, graph_guid(), figma_guid()}
+  @type graph_guid :: figma_guid() | {:clone, figma_guid(), [figma_guid()]}
 
   @doc """
   Parses a public GUID string or returns an already parsed graph GUID.
   """
   @spec parse(String.t() | graph_guid() | nil) :: graph_guid() | nil
   def parse(nil), do: nil
-  def parse({:clone, _instance_guid, {_s2, _l2}} = guid), do: guid
+  def parse({:clone, {_session_id, _local_id}, path} = guid) when is_list(path), do: guid
   def parse({_session_id, _local_id} = guid), do: guid
 
   def parse("clone:" <> clone) do
-    with {instance, source} <- split_clone(clone),
-         instance_guid when not is_nil(instance_guid) <- parse(instance),
-         {source_guid, ""} <- parse_figma(source) do
-      {:clone, instance_guid, source_guid}
+    with [root | path] <- String.split(clone, "/"),
+         {root_guid, ""} <- parse_figma(root),
+         path when path != [] <- parse_path(path) do
+      {:clone, root_guid, path}
     else
       _ -> nil
     end
@@ -50,8 +50,10 @@ defmodule FigKiwi.Scene.Graph.GUID do
   def format(nil), do: nil
   def format({session_id, local_id}), do: "#{session_id}:#{local_id}"
 
-  def format({:clone, instance_guid, source_guid}),
-    do: "clone:#{format(instance_guid)}/#{format(source_guid)}"
+  def format({:clone, root_guid, source_path}) do
+    path = Enum.map_join(source_path, "/", &format/1)
+    "clone:#{format(root_guid)}/#{path}"
+  end
 
   @doc """
   Converts a generated schema GUID struct to an internal tuple.
@@ -64,21 +66,42 @@ defmodule FigKiwi.Scene.Graph.GUID do
   end
 
   @doc """
-  Builds a synthetic clone graph GUID.
+  Builds a synthetic clone graph GUID under a root instance.
   """
-  @spec clone(graph_guid(), figma_guid()) :: graph_guid()
-  def clone(instance_guid, {_source_session, _source_local} = source_guid)
-      when is_tuple(instance_guid) do
-    {:clone, instance_guid, source_guid}
+  @spec clone(figma_guid(), figma_guid()) :: graph_guid()
+  def clone({_session_id, _local_id} = root_guid, {_source_session, _source_local} = source_guid) do
+    {:clone, root_guid, [source_guid]}
   end
 
-  defp split_clone(clone) do
-    parts = String.split(clone, "/")
+  @doc """
+  Appends a source GUID to a clone path.
+  """
+  @spec append(graph_guid(), figma_guid()) :: graph_guid()
+  def append({:clone, root_guid, source_path}, {_source_session, _source_local} = source_guid) do
+    {:clone, root_guid, source_path ++ [source_guid]}
+  end
 
-    case List.pop_at(parts, -1) do
-      {nil, _parts} -> :error
-      {source, []} -> {source, ""}
-      {source, instance_parts} -> {Enum.join(instance_parts, "/"), source}
+  def append({_session_id, _local_id} = root_guid, {_source_session, _source_local} = source_guid) do
+    clone(root_guid, source_guid)
+  end
+
+  @doc """
+  Returns the root instance GUID for graph GUIDs.
+  """
+  @spec root(graph_guid()) :: figma_guid()
+  def root({:clone, root_guid, _source_path}), do: root_guid
+  def root({_session_id, _local_id} = guid), do: guid
+
+  defp parse_path(parts) do
+    Enum.reduce_while(parts, [], fn part, acc ->
+      case parse_figma(part) do
+        {guid, ""} -> {:cont, [guid | acc]}
+        _other -> {:halt, nil}
+      end
+    end)
+    |> case do
+      nil -> nil
+      path -> Enum.reverse(path)
     end
   end
 

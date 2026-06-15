@@ -162,7 +162,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   defp clone_subtree(graph, instance_guid, clone_parent_guid, source_guid, component_guid) do
     source_node = Map.fetch!(graph.nodes, source_guid)
-    clone_guid = GUID.clone(instance_guid, source_guid)
+    clone_guid = GUID.append(clone_parent_guid, source_guid)
 
     cloned_node = %{
       source_node
@@ -192,7 +192,8 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
     %Graph{
       graph
-      | clone_index: Map.put(graph.clone_index, {instance_guid, source_guid}, clone_guid)
+      | clone_index:
+          Map.put(graph.clone_index, {GUID.root(instance_guid), source_guid}, clone_guid)
     }
   end
 

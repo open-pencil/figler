@@ -262,9 +262,11 @@ defmodule FigKiwi.SceneTest do
       |> Resolver.resolve()
 
     assert [%Node{guid: "clone:2:1/1:2"}] = Scene.children(graph, "2:1")
-    assert [%Node{guid: "clone:2:1/1:3", text: "Submit"}] = Scene.children(graph, "clone:2:1/1:2")
 
-    assert Graph.explain(graph, "clone:2:1/1:3").applied == [
+    assert [%Node{guid: "clone:2:1/1:2/1:3", text: "Submit"}] =
+             Scene.children(graph, "clone:2:1/1:2")
+
+    assert Graph.explain(graph, "clone:2:1/1:2/1:3").applied == [
              {:symbol_override, :text, "Default", "Submit"}
            ]
 
@@ -372,10 +374,10 @@ defmodule FigKiwi.SceneTest do
       |> Resolver.from_seed(resource: make_ref(), stages: [:populate_instances, :component_props])
       |> Resolver.resolve()
 
-    clone_guid = {:clone, {2, 1}, {1, 2}}
+    clone_guid = {:clone, {2, 1}, [{1, 2}]}
     assert graph.seed_nodes[clone_guid].symbol_id == {3, 1}
 
-    assert [%Node{guid: "clone:clone:2:1/1:2/3:2", text: "New nested"}] =
+    assert [%Node{guid: "clone:2:1/1:2/3:2", text: "New nested"}] =
              Scene.children(graph, "clone:2:1/1:2")
 
     assert {:component_prop, :component_guid, {4, 1}, {3, 1}} in Graph.explain(

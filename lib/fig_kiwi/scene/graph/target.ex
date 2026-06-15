@@ -57,7 +57,7 @@ defmodule FigKiwi.Scene.Graph.Target do
 
   defp resolve_source_guid(graph, instance_guid, source_guid) do
     cond do
-      clone_guid = Map.get(graph.clone_index, {instance_guid, source_guid}) ->
+      clone_guid = Map.get(graph.clone_index, {GUID.root(instance_guid), source_guid}) ->
         {:ok, clone_guid}
 
       Map.has_key?(graph.nodes, source_guid) ->
