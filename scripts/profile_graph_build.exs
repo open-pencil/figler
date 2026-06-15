@@ -17,47 +17,29 @@ roots =
   |> String.split(",", trim: true)
   |> Enum.map(&String.trim/1)
 
-stages = [
-  :populate_instances,
-  :symbol_overrides,
-  :sync_overrides,
-  :component_props,
-  :sync_component_props,
-  :derived_symbol_data,
-  :stack_layout,
-  :variables
-]
+until =
+  System.get_env("FIG_KIWI_PROFILE_UNTIL", "variables")
+  |> String.to_existing_atom()
 
-measure = fn label, fun ->
-  {us, result} = :timer.tc(fun)
-  {label, System.convert_time_unit(us, :microsecond, :millisecond), result}
-end
+{payload_us, payload} =
+  :timer.tc(fn -> fixture |> File.read!() |> FigKiwi.Scene.payload!() end)
 
-{payload_label, payload_ms, payload} =
-  measure.("payload", fn -> fixture |> File.read!() |> FigKiwi.Scene.payload!() end)
+profile = FigKiwi.Scene.Graph.profile(payload, root: roots, until: until)
 
-stage_results =
-  Enum.map(stages, fn stage ->
-    {_label, ms, graph} =
-      measure.(Atom.to_string(stage), fn ->
-        FigKiwi.Scene.graph(payload, root: roots, until: stage)
-      end)
-
-    stats =
-      graph
-      |> FigKiwi.Scene.Graph.stats()
-      |> Map.take([:node_count, :clone_count, :unresolved_count, :applied_count])
-
-    %{stage: stage, cumulative_ms: ms, graph: stats}
-  end)
+graph = profile.graph
 
 summary = %{
   fixture: fixture,
   roots: roots,
-  payload_ms: payload_ms,
-  payload_label: payload_label,
-  note: "stage timings are independent cumulative graph builds through each stage",
-  stages: stage_results
+  until: until,
+  payload_ms: System.convert_time_unit(payload_us, :microsecond, :millisecond),
+  initial_ms: profile.initial_ms,
+  total_ms: profile.total_ms,
+  final_graph:
+    graph
+    |> FigKiwi.Scene.Graph.stats()
+    |> Map.take([:node_count, :clone_count, :unresolved_count, :applied_count]),
+  stages: profile.stages
 }
 
 IO.puts(Jason.encode!(summary, pretty: true))

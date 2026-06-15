@@ -132,6 +132,36 @@ defmodule FigKiwi.Scene.Graph do
   end
 
   @doc """
+  Profiles graph construction and resolver stages.
+
+  Returns the final graph, total build time, initial seed/materialization time,
+  and per-stage timings. Options are the same as `build/2`.
+  """
+  @spec profile(binary() | Index.t() | reference() | t(), keyword()) :: map()
+  def profile(input, opts \\ []) when is_list(opts) do
+    selected_stages = stages(opts)
+    base_opts = stage_profile_opts(opts, [])
+
+    {initial_us, graph} = :timer.tc(fn -> build(input, base_opts) end)
+
+    {stage_results, graph} =
+      Enum.map_reduce(selected_stages, graph, fn stage, acc ->
+        {stage_us, next} = :timer.tc(fn -> build(acc, stage_profile_opts(opts, stage)) end)
+
+        {%{stage: stage, ms: native_ms(stage_us), graph: stats(next)}, next}
+      end)
+
+    initial_ms = native_ms(initial_us)
+
+    %{
+      graph: graph,
+      initial_ms: initial_ms,
+      total_ms: initial_ms + Enum.reduce(stage_results, 0, &(&1.ms + &2)),
+      stages: stage_results
+    }
+  end
+
+  @doc """
   Returns structured seed nodes for the graph resolver.
   """
   @spec seed_nodes(binary() | Index.t() | reference() | t(), keyword()) :: [SeedNode.t()]
@@ -362,6 +392,16 @@ defmodule FigKiwi.Scene.Graph do
   end
 
   defp focused?(opts), do: Keyword.has_key?(opts, :focus) or Keyword.has_key?(opts, :root)
+
+  defp stage_profile_opts(opts, stage) do
+    opts
+    |> Keyword.delete(:until)
+    |> Keyword.delete(:stages)
+    |> Keyword.put(:only, stage)
+  end
+
+  defp native_ms(microseconds),
+    do: System.convert_time_unit(microseconds, :microsecond, :millisecond)
 
   defp build_from_seed(index, resource, opts, seed_nodes \\ nil) do
     stages = stages(opts)
