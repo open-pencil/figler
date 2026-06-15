@@ -27,12 +27,19 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
     fixtures = fixtures!(fixture_dir, args)
 
     Mix.shell().info(
-      "Fixture\tSize\tPayload\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tNodes\tCanvases"
+      "Fixture\tSize\tPayload\tFull Decode\tFull Mem\tSparse Decode\tSparse Mem\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tNodes\tCanvases"
     )
 
     Enum.each(fixtures, fn path ->
       {read_us, fig_binary} = timed(fn -> File.read!(path) end)
       {payload_us, payload} = timed(fn -> FigKiwi.Scene.payload!(fig_binary) end)
+
+      {full_decode_us, full_decode_mem, _full_info} =
+        measured(fn -> FigKiwi.Native.decode_message(payload) end, &message_info/1)
+
+      {sparse_decode_us, sparse_decode_mem, _sparse_info} =
+        measured(fn -> FigKiwi.Native.decode_sparse_message(payload) end, &sparse_message_info/1)
+
       {summary_us, summary} = timed(fn -> FigKiwi.Native.decode_scene_summary(payload) end)
       {index_us, index} = timed(fn -> FigKiwi.Native.build_scene_index(payload) end)
 
@@ -52,6 +59,10 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
             Path.basename(path),
             format_bytes(byte_size(fig_binary)),
             format_us(read_us + payload_us),
+            format_us(full_decode_us),
+            format_bytes(full_decode_mem),
+            format_us(sparse_decode_us),
+            format_bytes(sparse_decode_mem),
             format_us(summary_us),
             format_us(index_us),
             format_us(query_us),
@@ -91,6 +102,50 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
   defp timed(fun) do
     :timer.tc(fun)
   end
+
+  defp measured(fun, info_fun) do
+    parent = self()
+    ref = make_ref()
+
+    {pid, monitor_ref} =
+      spawn_monitor(fn ->
+        :erlang.garbage_collect()
+        before_memory = process_memory(self())
+        start = System.monotonic_time()
+        result = fun.()
+
+        elapsed_us =
+          System.convert_time_unit(System.monotonic_time() - start, :native, :microsecond)
+
+        after_memory = process_memory(self())
+        info = info_fun.(result)
+        send(parent, {ref, elapsed_us, max(after_memory - before_memory, 0), info})
+      end)
+
+    receive do
+      {^ref, elapsed_us, memory_bytes, info} ->
+        Process.demonitor(monitor_ref, [:flush])
+        {elapsed_us, memory_bytes, info}
+
+      {:DOWN, ^monitor_ref, :process, ^pid, reason} ->
+        Mix.raise("benchmark process failed: #{inspect(reason)}")
+    end
+  end
+
+  defp process_memory(pid) do
+    {:memory, bytes} = Process.info(pid, :memory)
+    bytes
+  end
+
+  defp message_info(%{node_changes: node_changes}) when is_list(node_changes),
+    do: %{node_changes: length(node_changes)}
+
+  defp message_info(_message), do: %{}
+
+  defp sparse_message_info(%{node_changes: node_changes}) when is_list(node_changes),
+    do: %{node_changes: length(node_changes)}
+
+  defp sparse_message_info(_message), do: %{}
 
   defp format_us(us) when us >= 1_000_000,
     do: :io_lib.format("~.3fs", [us / 1_000_000]) |> IO.iodata_to_binary()
