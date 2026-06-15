@@ -155,6 +155,10 @@ defmodule FigKiwi.Scene.Graph do
       node_count: map_size(graph.nodes),
       seed_count: map_size(graph.seed_nodes),
       clone_count: clone_count(graph),
+      source_seed_count: seed_count(graph, :source),
+      clone_seed_count: seed_count(graph, :clone),
+      source_instance_count: instance_count(graph, :source),
+      clone_instance_count: instance_count(graph, :clone),
       unresolved_count: length(graph.unresolved),
       applied_count: applied_count(graph)
     })
@@ -250,6 +254,16 @@ defmodule FigKiwi.Scene.Graph do
     Enum.count(graph.nodes, fn
       {{:clone, _root_guid, _source_path}, _node} -> true
       _entry -> false
+    end)
+  end
+
+  defp seed_count(graph, origin) do
+    Enum.count(graph.seed_nodes, fn {_guid, seed} -> seed.origin == origin end)
+  end
+
+  defp instance_count(graph, origin) do
+    Enum.count(graph.seed_nodes, fn {_guid, seed} ->
+      seed.origin == origin and seed.node_type == "instance"
     end)
   end
 

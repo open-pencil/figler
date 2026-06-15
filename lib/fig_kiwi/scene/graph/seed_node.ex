@@ -45,6 +45,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
     :component_guid,
     :symbol_id,
     :override_key,
+    origin: :source,
     symbol_overrides: [],
     component_prop_defs: [],
     component_prop_refs: [],
@@ -81,6 +82,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
           component_guid: GUID.figma_guid() | nil,
           symbol_id: GUID.figma_guid() | nil,
           override_key: GUID.figma_guid() | nil,
+          origin: :source | :clone,
           symbol_overrides: [SymbolOverride.t()],
           component_prop_defs: [ComponentPropDef.t()],
           component_prop_refs: [ComponentPropRef.t()],
@@ -163,7 +165,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   def clone(nil, _clone_guid, _parent_guid), do: nil
 
   def clone(%__MODULE__{} = seed, clone_guid, parent_guid) do
-    %__MODULE__{seed | guid: clone_guid, parent_guid: parent_guid, source: seed}
+    %__MODULE__{seed | guid: clone_guid, parent_guid: parent_guid, origin: :clone, source: seed}
   end
 
   @doc """

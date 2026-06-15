@@ -275,6 +275,33 @@ defmodule FigKiwi.SceneTest do
            ]
   end
 
+  test "does not run resolver stages from cloned seeds" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Wrapper"},
+        %SeedNode{
+          guid: {1, 2},
+          node_type: "instance",
+          parent_guid: {1, 1},
+          symbol_id: {3, 1},
+          name: "Nested instance",
+          symbol_overrides: [%SymbolOverride{guid_path: [{1, 2}], fields: %{name: "Patched"}}]
+        },
+        %SeedNode{guid: {2, 1}, node_type: "instance", symbol_id: {1, 1}},
+        %SeedNode{guid: {3, 1}, node_type: "component", name: "Leaf"}
+      ]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances, :symbol_overrides]
+      )
+      |> Resolver.resolve()
+
+    assert Scene.node(graph, "1:2").name == "Patched"
+    assert [%Node{guid: "clone:2:1/1:2", name: "Nested instance"}] = Scene.children(graph, "2:1")
+    assert Graph.stats(graph).clone_instance_count == 1
+    assert Graph.stats(graph).source_instance_count == 2
+  end
+
   test "applies basic component property assignments to cloned children" do
     graph =
       [

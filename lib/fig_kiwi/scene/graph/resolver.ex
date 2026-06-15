@@ -68,14 +68,14 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp run_stage(stage, graph), do: add_unresolved(graph, {:unknown_stage, stage})
 
   defp populate_instances(graph) do
-    graph.seed_nodes
-    |> Map.values()
+    graph
+    |> source_instances()
     |> Enum.reduce(graph, &populate_seed_instance/2)
     |> mark_stage(:populate_instances)
   end
 
   defp apply_symbol_overrides(graph) do
-    seeds = Map.values(graph.seed_nodes)
+    seeds = source_instances(graph)
 
     graph
     |> reduce(seeds, &swap_from/2)
@@ -86,8 +86,8 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp sync_overrides(graph), do: mark_stage(graph, :sync_overrides)
 
   defp apply_component_props(graph) do
-    graph.seed_nodes
-    |> Map.values()
+    graph
+    |> source_instances()
     |> Enum.reduce(graph, &ComponentProps.apply(&2, &1))
     |> mark_stage(:component_props)
   end
@@ -95,8 +95,8 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp sync_component_props(graph), do: mark_stage(graph, :sync_component_props)
 
   defp apply_derived_symbol_data(graph) do
-    graph.seed_nodes
-    |> Map.values()
+    graph
+    |> source_instances()
     |> Enum.reduce(graph, &DerivedData.apply(&2, &1))
     |> mark_stage(:derived_symbol_data)
   end
@@ -149,6 +149,13 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp reduce(graph, values, fun), do: Enum.reduce(values, graph, fun)
+
+  defp source_instances(graph) do
+    Enum.flat_map(graph.seed_nodes, fn
+      {_guid, %{origin: :source, node_type: "instance"} = seed} -> [seed]
+      _entry -> []
+    end)
+  end
 
   defp populate_seed_instance(
          %SeedNode{node_type: "instance", symbol_id: component_guid} = instance,
