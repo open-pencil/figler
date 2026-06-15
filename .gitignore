@@ -23,6 +23,7 @@ erl_crash.dump
 fig_kiwi-*.tar
 
 # Rustler build artifacts
+/native/target/
 /native/fig_kiwi_native/target/
 /priv/native/
 
