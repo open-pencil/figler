@@ -22,7 +22,8 @@ defmodule FigKiwi.NativeSceneGenerator do
     [
       node_type_name_arms: node_type_name_arms(definition_map),
       sparse_decoders: Enum.map(schema.definitions, &sparse_definition(&1, definition_map)),
-      skip_decoders: Enum.map(schema.definitions, &skip_definition(&1, definition_map))
+      skip_decoders: Enum.map(schema.definitions, &skip_definition(&1, definition_map)),
+      graph_focus_decoders: graph_focus_decoders(definition_map)
     ] ++ scene_splices(definition_map)
   end
 
@@ -187,6 +188,191 @@ defmodule FigKiwi.NativeSceneGenerator do
       name: name,
       splice: [skip_field_arms: Enum.map(fields, &skip_message_arm(&1, definition_map))]
     )
+  end
+
+  defp graph_focus_decoders(definition_map) do
+    message_fields = definition_map |> Map.fetch!("Message") |> then(& &1.fields)
+    node_fields = definition_map |> Map.fetch!("NodeChange") |> then(& &1.fields)
+    symbol_fields = definition_map |> Map.fetch!("SymbolData") |> then(& &1.fields)
+
+    message_skip_arms =
+      message_fields
+      |> Enum.reject(&(&1.name == "nodeChanges"))
+      |> Enum.map_join("\n", &skip_message_arm(&1, definition_map))
+
+    node_focus_arms =
+      Enum.map_join(node_fields, "\n", fn field ->
+        case field.name do
+          "guid" ->
+            "#{field.value} => { guid = Some(graph_focus_read_guid(decoder)?); },"
+
+          "parentIndex" ->
+            "#{field.value} => { parent_guid = Some(graph_focus_read_parent_guid(decoder)?); },"
+
+          "symbolData" ->
+            "#{field.value} => { symbol_id = graph_focus_read_symbol_id(decoder)?; },"
+
+          _other ->
+            skip_message_arm(field, definition_map)
+        end
+      end)
+
+    symbol_focus_arms =
+      Enum.map_join(symbol_fields, "\n", fn field ->
+        case field.name do
+          "symbolID" ->
+            "#{field.value} => { symbol_id = Some(graph_focus_read_guid(decoder)?); },"
+
+          _other ->
+            skip_message_arm(field, definition_map)
+        end
+      end)
+
+    [
+      """
+      #[derive(Clone, Copy, Eq, Hash, PartialEq)]
+      struct GraphFocusGuid { session_id: u32, local_id: u32 }
+
+      struct GraphFocusMeta {
+          guid: Option<GraphFocusGuid>,
+          parent_guid: Option<GraphFocusGuid>,
+          symbol_id: Option<GraphFocusGuid>,
+      }
+
+      fn graph_focus_parse_guid(value: &str) -> Option<GraphFocusGuid> {
+          let (session_id, local_id) = value.split_once(':')?;
+          Some(GraphFocusGuid { session_id: session_id.parse().ok()?, local_id: local_id.parse().ok()? })
+      }
+
+      fn graph_focus_read_guid(decoder: &mut Decoder<'_>) -> NifResult<GraphFocusGuid> {
+          Ok(GraphFocusGuid { session_id: decoder.read_var_uint()?, local_id: decoder.read_var_uint()? })
+      }
+
+      fn graph_focus_read_parent_guid(decoder: &mut Decoder<'_>) -> NifResult<GraphFocusGuid> {
+          let guid = graph_focus_read_guid(decoder)?;
+          decoder.skip_string()?;
+          Ok(guid)
+      }
+
+      fn graph_focus_read_symbol_id(decoder: &mut Decoder<'_>) -> NifResult<Option<GraphFocusGuid>> {
+          let mut symbol_id = None;
+          loop {
+              match decoder.read_var_uint()? {
+                  0 => break,
+                  #{symbol_focus_arms}
+                  field => return Err(Error::Term(Box::new(format!("unknown field {} while indexing SymbolData", field)))),
+              }
+          }
+          Ok(symbol_id)
+      }
+
+      fn graph_focus_index_node_change(decoder: &mut Decoder<'_>) -> NifResult<GraphFocusMeta> {
+          let mut guid = None;
+          let mut parent_guid = None;
+          let mut symbol_id = None;
+          loop {
+              match decoder.read_var_uint()? {
+                  0 => break,
+                  #{node_focus_arms}
+                  field => return Err(Error::Term(Box::new(format!("unknown field {} while indexing NodeChange", field)))),
+              }
+          }
+          Ok(GraphFocusMeta { guid, parent_guid, symbol_id })
+      }
+
+      fn graph_focus_index_message(decoder: &mut Decoder<'_>) -> NifResult<Vec<GraphFocusMeta>> {
+          let mut nodes = Vec::new();
+          loop {
+              match decoder.read_var_uint()? {
+                  0 => break,
+                  4 => {
+                      let len = decoder.read_var_uint()? as usize;
+                      nodes.reserve(len);
+                      for _ in 0..len {
+                          nodes.push(graph_focus_index_node_change(decoder)?);
+                      }
+                  },
+                  #{message_skip_arms}
+                  field => return Err(Error::Term(Box::new(format!("unknown field {} while indexing Message", field)))),
+              }
+          }
+          Ok(nodes)
+      }
+
+      fn graph_focus_collect_subtree(
+          wanted: &mut std::collections::HashSet<GraphFocusGuid>,
+          guid: GraphFocusGuid,
+          by_guid: &std::collections::HashMap<GraphFocusGuid, usize>,
+          children: &std::collections::HashMap<GraphFocusGuid, Vec<GraphFocusGuid>>,
+      ) {
+          if !by_guid.contains_key(&guid) || !wanted.insert(guid) { return; }
+          if let Some(child_guids) = children.get(&guid) {
+              for child_guid in child_guids {
+                  graph_focus_collect_subtree(wanted, *child_guid, by_guid, children);
+              }
+          }
+      }
+
+      fn graph_focus_wanted(metas: &[GraphFocusMeta], focus: &[String]) -> std::collections::HashSet<GraphFocusGuid> {
+          let mut by_guid = std::collections::HashMap::new();
+          let mut children: std::collections::HashMap<GraphFocusGuid, Vec<GraphFocusGuid>> = std::collections::HashMap::new();
+          for (index, meta) in metas.iter().enumerate() {
+              if let Some(guid) = meta.guid {
+                  by_guid.insert(guid, index);
+                  if let Some(parent_guid) = meta.parent_guid {
+                      children.entry(parent_guid).or_default().push(guid);
+                  }
+              }
+          }
+
+          let mut wanted = std::collections::HashSet::new();
+          for guid in focus.iter().filter_map(|value| graph_focus_parse_guid(value)) {
+              graph_focus_collect_subtree(&mut wanted, guid, &by_guid, &children);
+          }
+
+          loop {
+              let before = wanted.len();
+              let current = wanted.iter().copied().collect::<Vec<_>>();
+              for guid in current {
+                  if let Some(index) = by_guid.get(&guid) {
+                      if let Some(symbol_id) = metas[*index].symbol_id {
+                          graph_focus_collect_subtree(&mut wanted, symbol_id, &by_guid, &children);
+                      }
+                  }
+              }
+              if wanted.len() == before { break; }
+          }
+          wanted
+      }
+
+      fn graph_focus_sparse_message_from_decoder<'a>(
+          env: Env<'a>,
+          decoder: &mut Decoder<'_>,
+          metas: &[GraphFocusMeta],
+          wanted: &std::collections::HashSet<GraphFocusGuid>,
+      ) -> NifResult<Term<'a>> {
+          static NODE_CHANGES_ATOM: OnceLock<Atom> = OnceLock::new();
+          let node_changes_atom = cached_atom(env, &NODE_CHANGES_ATOM, "node_changes");
+          let mut node_changes = Vec::new();
+          loop {
+              match decoder.read_var_uint()? {
+                  0 => break,
+                  4 => {
+                      let len = decoder.read_var_uint()? as usize;
+                      for index in 0..len {
+                          let keep = metas.get(index).and_then(|meta| meta.guid).map(|guid| wanted.contains(&guid)).unwrap_or(false);
+                          if keep { node_changes.push(decode_sparse_node_change_from_decoder(env, decoder)?); }
+                          else { skip_node_change_from_decoder(decoder)?; }
+                      }
+                  },
+                  #{message_skip_arms}
+                  field => return Err(Error::Term(Box::new(format!("unknown field {} while decoding focused Message", field)))),
+              }
+          }
+          Term::map_from_term_arrays(env, &[node_changes_atom.encode(env)], &[node_changes.encode(env)])
+      }
+      """
+    ]
   end
 
   defp scene_splices(definition_map) do

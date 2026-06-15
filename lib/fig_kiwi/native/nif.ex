@@ -15,6 +15,7 @@ defmodule FigKiwi.Native.Nif do
     {:decode_node_change, 1},
     {:decode_message, 1},
     {:decode_sparse_message, 1},
+    {:decode_graph_focused_sparse_message, 2},
     {:decode_scene_summary, 1},
     {:build_scene_index, 1},
     {:query_scene_xpath, 2},

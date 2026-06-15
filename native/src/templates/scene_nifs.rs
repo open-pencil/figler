@@ -6,6 +6,30 @@ pub fn decode_sparse_message<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<T
     Ok(value)
 }
 
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_graph_focused_sparse_message<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    focus: Vec<String>,
+) -> NifResult<Term<'a>> {
+    if focus.is_empty() {
+        let mut decoder = Decoder::new(bytes.as_slice());
+        let value = decode_sparse_message_from_decoder(env, &mut decoder)?;
+        decoder.finish()?;
+        return Ok(value);
+    }
+
+    let mut index_decoder = Decoder::new(bytes.as_slice());
+    let metas = graph_focus_index_message(&mut index_decoder)?;
+    index_decoder.finish()?;
+    let wanted = graph_focus_wanted(&metas, &focus);
+
+    let mut decoder = Decoder::new(bytes.as_slice());
+    let value = graph_focus_sparse_message_from_decoder(env, &mut decoder, &metas, &wanted)?;
+    decoder.finish()?;
+    Ok(value)
+}
+
 pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
     env.register::<scene_xpath_runtime::SceneIndexResource>().is_ok()
 }

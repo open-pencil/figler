@@ -50,6 +50,7 @@ __rq_definitions!();
 __rq_entrypoints!();
 __rq_sparse_decoders!();
 __rq_skip_decoders!();
+__rq_graph_focus_decoders!();
 
 __rq_include!("templates/scene_xpath_runtime.rs");
 __rq_include!("templates/scene_summary_decoders.rs");

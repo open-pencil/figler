@@ -17,4 +17,6 @@ defmodule FigKiwi.Native.Codec do
   for name <- @delegates do
     defdelegate unquote(name)(binary), to: Nif
   end
+
+  defdelegate decode_graph_focused_sparse_message(binary, focus), to: Nif
 end

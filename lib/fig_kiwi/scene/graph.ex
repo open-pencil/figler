@@ -145,7 +145,7 @@ defmodule FigKiwi.Scene.Graph do
 
     if Keyword.get(opts, :native, true) do
       payload
-      |> Codec.decode_sparse_message()
+      |> sparse_message(opts)
       |> SeedNode.from_message(opts)
     else
       payload
@@ -251,6 +251,14 @@ defmodule FigKiwi.Scene.Graph do
       is_nil(raw) and is_nil(resolved) -> nil
       raw == resolved -> %{guid: guid, changed: []}
       true -> %{guid: guid, raw: raw, resolved: resolved, changed: :unknown}
+    end
+  end
+
+  defp sparse_message(payload, opts) do
+    case Keyword.get(opts, :focus) do
+      nil -> Codec.decode_sparse_message(payload)
+      [] -> Codec.decode_sparse_message(payload)
+      focus -> Codec.decode_graph_focused_sparse_message(payload, Enum.map(focus, &GUID.format/1))
     end
   end
 
