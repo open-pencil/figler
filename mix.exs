@@ -82,6 +82,7 @@ defmodule FigKiwi.MixProject do
     [
       kiwi_codec_dep(),
       rustq_dep(),
+      json_codec_dep(),
       {:ezstd, "~> 1.2"},
       {:rustler, "~> 0.38"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -106,6 +107,14 @@ defmodule FigKiwi.MixProject do
       {:rustq, "~> 0.4", path: "../rustq", runtime: false}
     else
       {:rustq, github: "dannote/rustq", branch: "master", runtime: false}
+    end
+  end
+
+  defp json_codec_dep do
+    if File.dir?("../json_codec") do
+      {:json_codec, "~> 0.1.0", path: "../json_codec"}
+    else
+      {:json_codec, github: "dannote/json_codec", branch: "master"}
     end
   end
 
