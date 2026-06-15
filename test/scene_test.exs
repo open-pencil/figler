@@ -38,6 +38,10 @@ defmodule FigKiwi.SceneTest do
     assert Scene.query(message_payload(), "//canvas[@width='100' and @visible='true']") == [
              scene_canvas()
            ]
+
+    assert Scene.query(message_payload(), "//canvas", fields: [:name]) == [
+             %Node{guid: "0:1", node_type: "canvas", name: "Page 1"}
+           ]
   end
 
   test "reuses projected scene indexes across XPath queries" do

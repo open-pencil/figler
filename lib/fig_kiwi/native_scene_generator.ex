@@ -84,6 +84,19 @@ defmodule FigKiwi.NativeSceneGenerator do
     )
   end
 
+  defp render_skip_template(template, opts) do
+    name = Keyword.fetch!(opts, :name)
+    path = Path.join(["native", "src", "templates", template])
+
+    RustQ.render!(File.read!(path), path,
+      bind: [
+        skip_decoder_name: "skip_#{rust_ident(name)}_from_decoder",
+        definition_name: {:literal, name}
+      ],
+      splice: Keyword.get(opts, :splice, [])
+    )
+  end
+
   defp sparse_struct_field(field, definition_map) do
     """
     {
@@ -158,40 +171,21 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp sparse_primitive_decode(_type), do: nil
 
   defp skip_definition(%Definition{kind: :enum, name: name}, _definition_map) do
-    """
-    fn skip_#{rust_ident(name)}_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-        decoder.read_var_uint()?;
-        Ok(())
-    }
-    """
+    render_skip_template("skip_enum_decoder.rs", name: name)
   end
 
   defp skip_definition(%Definition{kind: :struct, name: name, fields: fields}, definition_map) do
-    body = Enum.map_join(fields, "\n", &skip_field(&1, definition_map))
-
-    """
-    fn skip_#{rust_ident(name)}_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    #{indent(body, 4)}
-        Ok(())
-    }
-    """
+    render_skip_template("skip_struct_decoder.rs",
+      name: name,
+      splice: [skip_fields: Enum.map(fields, &skip_field(&1, definition_map))]
+    )
   end
 
   defp skip_definition(%Definition{kind: :message, name: name, fields: fields}, definition_map) do
-    arms = Enum.map_join(fields, "\n", &skip_message_arm(&1, definition_map))
-
-    """
-    fn skip_#{rust_ident(name)}_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-        loop {
-            match decoder.read_var_uint()? {
-                0 => break,
-    #{indent(arms, 12)}
-                field => return Err(Error::Term(Box::new(format!("unknown field {} while skipping #{name}", field)))),
-            }
-        }
-        Ok(())
-    }
-    """
+    render_skip_template("skip_message_decoder.rs",
+      name: name,
+      splice: [skip_field_arms: Enum.map(fields, &skip_message_arm(&1, definition_map))]
+    )
   end
 
   defp scene_splices(definition_map) do

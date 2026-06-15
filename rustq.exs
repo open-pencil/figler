@@ -22,7 +22,8 @@ generate "native", "native/src/generated.rs" do
       ],
       module_prefix: "FigKiwi.Schema",
       template: "native/src/generated.template.rs",
-      extra_splices: FigKiwi.NativeSceneGenerator.render_splices(schema)
+      extra_splices: FigKiwi.NativeSceneGenerator.render_splices(schema),
+      rustfmt: true
     )
   )
 end

@@ -73079,6 +73079,7 @@ fn skip_color_stop_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_color_stop_var_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ColorStopVar";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73096,7 +73097,7 @@ fn skip_color_stop_var_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ColorStopVar", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -73178,6 +73179,7 @@ fn skip_snapshot_capture_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_code_source_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeSourceInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73204,7 +73206,7 @@ fn skip_code_source_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeSourceInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -73221,6 +73223,7 @@ fn skip_code_object_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
 fn skip_custom_tool_artifact_ref_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CustomToolArtifactRef";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73241,8 +73244,7 @@ fn skip_custom_tool_artifact_ref_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CustomToolArtifactRef",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -73275,6 +73277,7 @@ fn skip_blob_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_image_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Image";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73290,7 +73293,11 @@ fn skip_image_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Image", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -73299,6 +73306,7 @@ fn skip_image_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_video_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Video";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73311,7 +73319,11 @@ fn skip_video_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Video", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -73320,6 +73332,7 @@ fn skip_video_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_paste_source_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PasteSource";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73333,7 +73346,9 @@ fn skip_paste_source_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping PasteSource", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -73354,6 +73369,7 @@ fn skip_filter_color_adjust_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_paint_filter_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PaintFilterMessage";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73392,7 +73408,7 @@ fn skip_paint_filter_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PaintFilterMessage", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -73403,6 +73419,7 @@ fn skip_paint_filter_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_paint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Paint";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73541,7 +73558,11 @@ fn skip_paint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Paint", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -73562,6 +73583,7 @@ fn skip_pattern_alignment_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_font_meta_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "FontMetaData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73585,7 +73607,7 @@ fn skip_font_meta_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping FontMetaData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -73596,6 +73618,7 @@ fn skip_font_meta_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_font_variation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "FontVariation";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73613,7 +73636,7 @@ fn skip_font_variation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping FontVariation", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -73624,6 +73647,7 @@ fn skip_font_variation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_text_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TextData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73727,7 +73751,9 @@ fn skip_text_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping TextData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -73737,6 +73763,7 @@ fn skip_text_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_derived_text_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "DerivedTextData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73808,7 +73835,7 @@ fn skip_derived_text_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping DerivedTextData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -73819,6 +73846,7 @@ fn skip_derived_text_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_hyperlink_box_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "HyperlinkBox";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73845,7 +73873,7 @@ fn skip_hyperlink_box_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping HyperlinkBox", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -73856,6 +73884,7 @@ fn skip_hyperlink_box_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_mention_box_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "MentionBox";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73878,7 +73907,9 @@ fn skip_mention_box_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping MentionBox", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -73888,6 +73919,7 @@ fn skip_mention_box_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_baseline_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Baseline";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73919,7 +73951,9 @@ fn skip_baseline_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Baseline", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -73929,6 +73963,7 @@ fn skip_baseline_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_glyph_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Glyph";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73965,7 +74000,11 @@ fn skip_glyph_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Glyph", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -73974,6 +74013,7 @@ fn skip_glyph_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_decoration_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Decoration";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -73990,7 +74030,9 @@ fn skip_decoration_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Decoration", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -74000,6 +74042,7 @@ fn skip_decoration_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_blockquote_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Blockquote";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74016,7 +74059,9 @@ fn skip_blockquote_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Blockquote", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -74026,6 +74071,7 @@ fn skip_blockquote_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_vector_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VectorData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74045,7 +74091,9 @@ fn skip_vector_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping VectorData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -74055,6 +74103,7 @@ fn skip_vector_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_text_path_start_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TextPathStart";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74069,7 +74118,7 @@ fn skip_text_path_start_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TextPathStart", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74080,6 +74129,7 @@ fn skip_text_path_start_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_guid_path_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "GUIDPath";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74093,7 +74143,9 @@ fn skip_guid_path_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping GUIDPath", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -74103,6 +74155,7 @@ fn skip_guid_path_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_symbol_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SymbolData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74122,7 +74175,9 @@ fn skip_symbol_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping SymbolData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -74132,6 +74187,7 @@ fn skip_symbol_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_guid_path_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "GUIDPathMapping";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74146,7 +74202,7 @@ fn skip_guid_path_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping GUIDPathMapping", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74159,6 +74215,7 @@ fn skip_guid_path_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
 fn skip_derived_breakpoint_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "DerivedBreakpointData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74173,8 +74230,7 @@ fn skip_derived_breakpoint_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping DerivedBreakpointData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74185,6 +74241,7 @@ fn skip_derived_breakpoint_data_from_decoder(
     Ok(())
 }
 fn skip_node_generation_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeGenerationData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74208,7 +74265,7 @@ fn skip_node_generation_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeGenerationData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74221,6 +74278,7 @@ fn skip_node_generation_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
 fn skip_derived_immutable_frame_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "DerivedImmutableFrameData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74238,8 +74296,7 @@ fn skip_derived_immutable_frame_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping DerivedImmutableFrameData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74250,29 +74307,7 @@ fn skip_derived_immutable_frame_data_from_decoder(
     Ok(())
 }
 fn skip_jsx_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_node_change_from_decoder(decoder)?;
-                }
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping JsxData", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_derived_jsx_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "JsxData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74287,7 +74322,33 @@ fn skip_derived_jsx_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping DerivedJsxData", field
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_derived_jsx_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "DerivedJsxData";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74298,6 +74359,7 @@ fn skip_derived_jsx_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_asset_id_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AssetIdMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74311,7 +74373,9 @@ fn skip_asset_id_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping AssetIdMap", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -74321,6 +74385,7 @@ fn skip_asset_id_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_asset_id_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AssetIdEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74335,7 +74400,7 @@ fn skip_asset_id_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AssetIdEntry", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74346,6 +74411,7 @@ fn skip_asset_id_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_asset_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AssetRef";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74359,7 +74425,9 @@ fn skip_asset_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping AssetRef", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -74369,6 +74437,7 @@ fn skip_asset_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_asset_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AssetId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74397,7 +74466,9 @@ fn skip_asset_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping AssetId", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -74407,6 +74478,7 @@ fn skip_asset_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_state_group_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "StateGroupId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74421,7 +74493,7 @@ fn skip_state_group_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping StateGroupId", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74432,75 +74504,7 @@ fn skip_state_group_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_style_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            2 => {
-                skip_asset_ref_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping StyleId", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_symbol_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            2 => {
-                skip_asset_ref_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping SymbolId", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_variable_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            2 => {
-                skip_asset_ref_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping VariableID", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_variable_override_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "StyleId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74515,7 +74519,85 @@ fn skip_variable_override_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableOverrideId", field
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_symbol_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SymbolId";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableID";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_variable_override_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableOverrideId";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74526,6 +74608,7 @@ fn skip_variable_override_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_variable_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableSetID";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74540,7 +74623,7 @@ fn skip_variable_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableSetID", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74551,29 +74634,7 @@ fn skip_variable_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_module_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            2 => {
-                skip_asset_ref_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping ModuleId", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_responsive_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ModuleId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74588,7 +74649,33 @@ fn skip_responsive_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ResponsiveSetId", field
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_responsive_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ResponsiveSetId";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74599,52 +74686,7 @@ fn skip_responsive_set_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_webpage_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            2 => {
-                skip_asset_ref_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping WebpageId", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_theme_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            2 => {
-                skip_asset_ref_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping ThemeID", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_code_library_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "WebpageId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74659,7 +74701,59 @@ fn skip_code_library_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeLibraryId", field
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_theme_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ThemeID";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_library_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeLibraryId";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74670,29 +74764,7 @@ fn skip_code_library_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_code_file_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            2 => {
-                skip_asset_ref_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping CodeFileId", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_code_component_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeFileId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74707,7 +74779,33 @@ fn skip_code_component_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeComponentId", field
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_code_component_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeComponentId";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74718,6 +74816,7 @@ fn skip_code_component_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_canvas_node_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CanvasNodeId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74735,7 +74834,7 @@ fn skip_canvas_node_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CanvasNodeId", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74766,6 +74865,7 @@ fn skip_collaborative_text_op_type_from_decoder(
 fn skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CollaborativeTextStrippedOpRunWithIDs";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74792,8 +74892,7 @@ fn skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CollaborativeTextStrippedOpRunWithIDs",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74806,6 +74905,7 @@ fn skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder(
 fn skip_collaborative_text_stripped_op_run_with_loc_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CollaborativeTextStrippedOpRunWithLoc";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74829,8 +74929,7 @@ fn skip_collaborative_text_stripped_op_run_with_loc_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CollaborativeTextStrippedOpRunWithLoc",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74843,6 +74942,7 @@ fn skip_collaborative_text_stripped_op_run_with_loc_from_decoder(
 fn skip_collaborative_text_op_run_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CollaborativeTextOpRun";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74881,8 +74981,7 @@ fn skip_collaborative_text_op_run_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CollaborativeTextOpRun",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74895,6 +74994,7 @@ fn skip_collaborative_text_op_run_from_decoder(
 fn skip_collaborative_plain_text_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CollaborativePlainText";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74928,8 +75028,7 @@ fn skip_collaborative_plain_text_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CollaborativePlainText",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74942,6 +75041,7 @@ fn skip_collaborative_plain_text_from_decoder(
 fn skip_collaborative_text_selection_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CollaborativeTextSelection";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -74968,8 +75068,7 @@ fn skip_collaborative_text_selection_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CollaborativeTextSelection",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -74982,6 +75081,7 @@ fn skip_collaborative_text_selection_from_decoder(
 fn skip_responsive_text_style_variant_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ResponsiveTextStyleVariant";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75011,8 +75111,7 @@ fn skip_responsive_text_style_variant_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ResponsiveTextStyleVariant",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75027,6 +75126,7 @@ fn skip_flapp_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_slide_theme_props_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SlideThemeProps";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75062,7 +75162,7 @@ fn skip_slide_theme_props_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SlideThemeProps", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75073,6 +75173,7 @@ fn skip_slide_theme_props_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_slide_theme_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SlideThemeMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75087,7 +75188,7 @@ fn skip_slide_theme_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SlideThemeMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75098,6 +75199,7 @@ fn skip_slide_theme_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_slide_theme_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SlideThemeMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75112,7 +75214,7 @@ fn skip_slide_theme_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SlideThemeMapEntry", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75125,6 +75227,7 @@ fn skip_slide_theme_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
 fn skip_shared_symbol_reference_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "SharedSymbolReference";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75169,8 +75272,7 @@ fn skip_shared_symbol_reference_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SharedSymbolReference",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75183,6 +75285,7 @@ fn skip_shared_symbol_reference_from_decoder(
 fn skip_shared_component_master_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "SharedComponentMasterData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75203,8 +75306,7 @@ fn skip_shared_component_master_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SharedComponentMasterData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75217,6 +75319,7 @@ fn skip_shared_component_master_data_from_decoder(
 fn skip_instance_override_stash_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "InstanceOverrideStash";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75237,8 +75340,7 @@ fn skip_instance_override_stash_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping InstanceOverrideStash",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75251,6 +75353,7 @@ fn skip_instance_override_stash_from_decoder(
 fn skip_instance_override_stash_v2_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "InstanceOverrideStashV2";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75271,8 +75374,7 @@ fn skip_instance_override_stash_v2_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping InstanceOverrideStashV2",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75285,6 +75387,7 @@ fn skip_instance_override_stash_v2_from_decoder(
 fn skip_imported_code_file_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ImportedCodeFileEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75296,8 +75399,7 @@ fn skip_imported_code_file_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ImportedCodeFileEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75308,6 +75410,7 @@ fn skip_imported_code_file_entry_from_decoder(
     Ok(())
 }
 fn skip_imported_code_files_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ImportedCodeFiles";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75322,7 +75425,7 @@ fn skip_imported_code_files_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ImportedCodeFiles", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75353,6 +75456,7 @@ fn skip_effect_axis_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_effect_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Effect";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75528,7 +75632,9 @@ fn skip_effect_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Effect", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -75544,6 +75650,7 @@ fn skip_transform_modifier_type_from_decoder(
     Ok(())
 }
 fn skip_transform_modifier_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TransformModifier";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75582,7 +75689,7 @@ fn skip_transform_modifier_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransformModifier", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75618,6 +75725,7 @@ fn skip_matrix4f_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
 fn skip_fixed_order_transform3d_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "FixedOrderTransform3d";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75641,8 +75749,7 @@ fn skip_fixed_order_transform3d_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping FixedOrderTransform3d",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75657,6 +75764,7 @@ fn skip_transform_fn_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_transform_fn_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TransformFnValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75677,7 +75785,7 @@ fn skip_transform_fn_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransformFnValue", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75688,6 +75796,7 @@ fn skip_transform_fn_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_transform_fn_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TransformFn";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75701,7 +75810,9 @@ fn skip_transform_fn_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping TransformFn", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -75711,6 +75822,7 @@ fn skip_transform_fn_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_transform_schema_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TransformSchemaValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75728,8 +75840,7 @@ fn skip_transform_schema_value_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransformSchemaValue",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75740,6 +75851,7 @@ fn skip_transform_schema_value_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
     Ok(())
 }
 fn skip_transform3d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Transform3d";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75756,7 +75868,9 @@ fn skip_transform3d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Transform3d", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -75771,6 +75885,7 @@ fn skip_number_vector2_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_scene3d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Scene3d";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75787,7 +75902,9 @@ fn skip_scene3d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Scene3d", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -75797,6 +75914,7 @@ fn skip_scene3d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_transform_origin_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TransformOrigin";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75811,7 +75929,7 @@ fn skip_transform_origin_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransformOrigin", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75822,6 +75940,7 @@ fn skip_transform_origin_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_transition_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TransitionInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75836,7 +75955,7 @@ fn skip_transition_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransitionInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75855,6 +75974,7 @@ fn skip_device_rotation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_prototype_device_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PrototypeDevice";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75875,7 +75995,7 @@ fn skip_prototype_device_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PrototypeDevice", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75904,6 +76024,7 @@ fn skip_overlay_background_type_from_decoder(
 fn skip_overlay_background_appearance_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "OverlayBackgroundAppearance";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75918,8 +76039,7 @@ fn skip_overlay_background_appearance_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping OverlayBackgroundAppearance",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -75942,6 +76062,7 @@ fn skip_export_background_type_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
     Ok(())
 }
 fn skip_export_settings_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ExportSettings";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -75995,7 +76116,7 @@ fn skip_export_settings_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ExportSettings", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76010,6 +76131,7 @@ fn skip_export_svgid_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_layout_grid_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "LayoutGrid";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76056,7 +76178,9 @@ fn skip_layout_grid_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping LayoutGrid", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -76066,6 +76190,7 @@ fn skip_layout_grid_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_guide_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Guide";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76081,7 +76206,11 @@ fn skip_guide_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Guide", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -76090,6 +76219,7 @@ fn skip_guide_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_path_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Path";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76105,7 +76235,11 @@ fn skip_path_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Path", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -76128,6 +76262,7 @@ fn skip_brush_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
 fn skip_dynamic_stroke_settings_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "DynamicStrokeSettings";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76145,8 +76280,7 @@ fn skip_dynamic_stroke_settings_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping DynamicStrokeSettings",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76159,6 +76293,7 @@ fn skip_dynamic_stroke_settings_from_decoder(
 fn skip_scatter_stroke_settings_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ScatterStrokeSettings";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76182,8 +76317,7 @@ fn skip_scatter_stroke_settings_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ScatterStrokeSettings",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76196,6 +76330,7 @@ fn skip_scatter_stroke_settings_from_decoder(
 fn skip_stretch_stroke_settings_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "StretchStrokeSettings";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76207,8 +76342,7 @@ fn skip_stretch_stroke_settings_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping StretchStrokeSettings",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76219,6 +76353,7 @@ fn skip_stretch_stroke_settings_from_decoder(
     Ok(())
 }
 fn skip_stroke_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "StrokeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76235,7 +76370,9 @@ fn skip_stroke_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping StrokeData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -76245,6 +76382,7 @@ fn skip_stroke_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_stroke_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Stroke";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76300,7 +76438,9 @@ fn skip_stroke_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Stroke", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -76310,6 +76450,7 @@ fn skip_stroke_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_variable_width_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableWidthPoint";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76330,7 +76471,7 @@ fn skip_variable_width_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableWidthPoint", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76341,6 +76482,7 @@ fn skip_variable_width_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_shared_style_reference_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SharedStyleReference";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76355,8 +76497,7 @@ fn skip_shared_style_reference_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SharedStyleReference",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76369,6 +76510,7 @@ fn skip_shared_style_reference_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
 fn skip_shared_style_master_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "SharedStyleMasterData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76386,8 +76528,7 @@ fn skip_shared_style_master_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SharedStyleMasterData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76402,6 +76543,7 @@ fn skip_scroll_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_arc_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ArcData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76418,7 +76560,9 @@ fn skip_arc_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping ArcData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -76428,6 +76572,7 @@ fn skip_arc_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_symbol_link_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SymbolLink";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76444,7 +76589,9 @@ fn skip_symbol_link_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping SymbolLink", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -76454,6 +76601,7 @@ fn skip_symbol_link_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_plugin_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PluginData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76470,7 +76618,9 @@ fn skip_plugin_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping PluginData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -76480,6 +76630,7 @@ fn skip_plugin_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_plugin_relaunch_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PluginRelaunchData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76503,7 +76654,7 @@ fn skip_plugin_relaunch_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PluginRelaunchData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76516,6 +76667,7 @@ fn skip_plugin_relaunch_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
 fn skip_multiplayer_field_version_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "MultiplayerFieldVersion";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76530,8 +76682,7 @@ fn skip_multiplayer_field_version_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping MultiplayerFieldVersion",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76546,6 +76697,7 @@ fn skip_connector_magnet_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_connector_endpoint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ConnectorEndpoint";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76566,7 +76718,7 @@ fn skip_connector_endpoint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ConnectorEndpoint", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76579,6 +76731,7 @@ fn skip_connector_endpoint_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
 fn skip_connector_control_point_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ConnectorControlPoint";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76593,8 +76746,7 @@ fn skip_connector_control_point_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ConnectorControlPoint",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76617,6 +76769,7 @@ fn skip_connector_off_axis_offset_from_decoder(
 fn skip_connector_text_midpoint_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ConnectorTextMidpoint";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76634,8 +76787,7 @@ fn skip_connector_text_midpoint_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ConnectorTextMidpoint",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76660,6 +76812,7 @@ fn skip_annotation_property_type_from_decoder(
     Ok(())
 }
 fn skip_annotation_property_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AnnotationProperty";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76671,7 +76824,7 @@ fn skip_annotation_property_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnnotationProperty", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76696,6 +76849,7 @@ fn skip_annotation_category_color_from_decoder(
 fn skip_annotation_category_custom_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "AnnotationCategoryCustom";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76713,8 +76867,7 @@ fn skip_annotation_category_custom_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnnotationCategoryCustom",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76725,6 +76878,7 @@ fn skip_annotation_category_custom_from_decoder(
     Ok(())
 }
 fn skip_annotation_category_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AnnotationCategory";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76742,7 +76896,7 @@ fn skip_annotation_category_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnnotationCategory", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76753,6 +76907,7 @@ fn skip_annotation_category_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_annotation_categories_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AnnotationCategories";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76770,8 +76925,7 @@ fn skip_annotation_categories_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnnotationCategories",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76782,6 +76936,7 @@ fn skip_annotation_categories_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_annotation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Annotation";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76804,7 +76959,9 @@ fn skip_annotation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Annotation", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -76820,6 +76977,7 @@ fn skip_annotation_measurement_node_side_from_decoder(
     Ok(())
 }
 fn skip_annotation_measurement_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AnnotationMeasurement";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76855,8 +77013,7 @@ fn skip_annotation_measurement_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnnotationMeasurement",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76867,6 +77024,7 @@ fn skip_annotation_measurement_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
     Ok(())
 }
 fn skip_library_move_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "LibraryMoveInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76881,7 +77039,7 @@ fn skip_library_move_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping LibraryMoveInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76894,6 +77052,7 @@ fn skip_library_move_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
 fn skip_library_move_history_item_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "LibraryMoveHistoryItem";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76908,8 +77067,7 @@ fn skip_library_move_history_item_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping LibraryMoveHistoryItem",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76920,6 +77078,7 @@ fn skip_library_move_history_item_from_decoder(
     Ok(())
 }
 fn skip_developer_related_link_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "DeveloperRelatedLink";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76940,8 +77099,7 @@ fn skip_developer_related_link_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping DeveloperRelatedLink",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76952,6 +77110,7 @@ fn skip_developer_related_link_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
     Ok(())
 }
 fn skip_widget_pointer_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "WidgetPointer";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76963,7 +77122,7 @@ fn skip_widget_pointer_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping WidgetPointer", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -76974,6 +77133,7 @@ fn skip_widget_pointer_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_edit_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "EditInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -76993,7 +77153,9 @@ fn skip_edit_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping EditInfo", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -77019,6 +77181,7 @@ fn skip_section_status_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_section_status_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SectionStatusInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -77042,7 +77205,7 @@ fn skip_section_status_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SectionStatusInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -77055,6 +77218,7 @@ fn skip_section_status_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_buzz_approval_request_info_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "BuzzApprovalRequestInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -77090,8 +77254,7 @@ fn skip_buzz_approval_request_info_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping BuzzApprovalRequestInfo",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -77102,6 +77265,7 @@ fn skip_buzz_approval_request_info_from_decoder(
     Ok(())
 }
 fn skip_buzz_approval_requests_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "BuzzApprovalRequests";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -77116,8 +77280,7 @@ fn skip_buzz_approval_requests_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping BuzzApprovalRequests",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -77136,6 +77299,7 @@ fn skip_buzz_approval_node_status_from_decoder(
 fn skip_buzz_approval_node_status_info_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "BuzzApprovalNodeStatusInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -77156,8 +77320,7 @@ fn skip_buzz_approval_node_status_info_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping BuzzApprovalNodeStatusInfo",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -77168,6 +77331,7 @@ fn skip_buzz_approval_node_status_info_from_decoder(
     Ok(())
 }
 fn skip_code_embed_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeEmbedInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -77191,7 +77355,7 @@ fn skip_code_embed_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeEmbedInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -77208,6 +77372,7 @@ fn skip_variable_timing_display_unit_from_decoder(
     Ok(())
 }
 fn skip_node_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeChange";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79150,7 +79315,9 @@ fn skip_node_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping NodeChange", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -79164,6 +79331,7 @@ fn skip_git_repo_ref_provider_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_git_repo_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "GitRepoRef";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79180,7 +79348,9 @@ fn skip_git_repo_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping GitRepoRef", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -79190,6 +79360,7 @@ fn skip_git_repo_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_source_control_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SourceControlConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79204,7 +79375,7 @@ fn skip_source_control_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SourceControlConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79215,6 +79386,7 @@ fn skip_source_control_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_code_snapshot_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeSnapshot";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79247,7 +79419,7 @@ fn skip_code_snapshot_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeSnapshot", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79258,6 +79430,7 @@ fn skip_code_snapshot_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_code_output_layer_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeOutputLayer";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79269,7 +79442,7 @@ fn skip_code_output_layer_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeOutputLayer", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79280,6 +79453,7 @@ fn skip_code_output_layer_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_code_snapshot_layers_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeSnapshotLayers";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79300,7 +79474,7 @@ fn skip_code_snapshot_layers_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeSnapshotLayers", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79311,6 +79485,7 @@ fn skip_code_snapshot_layers_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_code_behavior_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeBehaviorData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79337,7 +79512,7 @@ fn skip_code_behavior_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeBehaviorData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79348,6 +79523,7 @@ fn skip_code_behavior_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_code_example_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeExample";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79361,7 +79537,9 @@ fn skip_code_example_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping CodeExample", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -79371,6 +79549,7 @@ fn skip_code_example_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_used_make_library_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "UsedMakeLibrary";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79382,7 +79561,7 @@ fn skip_used_make_library_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping UsedMakeLibrary", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79393,6 +79572,7 @@ fn skip_used_make_library_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_cookie_banner_text_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CookieBannerText";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79455,7 +79635,7 @@ fn skip_cookie_banner_text_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CookieBannerText", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79466,6 +79646,7 @@ fn skip_cookie_banner_text_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_cookie_banner_settings_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CookieBannerSettings";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79507,8 +79688,7 @@ fn skip_cookie_banner_settings_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CookieBannerSettings",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79539,6 +79719,7 @@ fn skip_cookie_y_alignment_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
 fn skip_responsive_set_settings_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ResponsiveSetSettings";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79610,8 +79791,7 @@ fn skip_responsive_set_settings_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ResponsiveSetSettings",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79628,6 +79808,7 @@ fn skip_responsive_scaling_mode_from_decoder(
     Ok(())
 }
 fn skip_cms_selector_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CMSSelector";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79650,7 +79831,9 @@ fn skip_cms_selector_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping CMSSelector", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -79660,6 +79843,7 @@ fn skip_cms_selector_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_cms_filter_critera_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CMSFilterCritera";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79677,7 +79861,7 @@ fn skip_cms_filter_critera_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSFilterCritera", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79694,6 +79878,7 @@ fn skip_cms_filter_criteria_match_type_from_decoder(
     Ok(())
 }
 fn skip_cms_selector_filter_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CMSSelectorFilter";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79711,7 +79896,7 @@ fn skip_cms_selector_filter_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSSelectorFilter", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79728,6 +79913,7 @@ fn skip_cms_selector_filter_operator_from_decoder(
     Ok(())
 }
 fn skip_cms_selector_sort_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CMSSelectorSort";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79742,7 +79928,7 @@ fn skip_cms_selector_sort_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSSelectorSort", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79757,6 +79943,7 @@ fn skip_cms_field_order_by_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_cms_consumption_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CMSConsumptionMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79771,7 +79958,7 @@ fn skip_cms_consumption_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSConsumptionMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79784,6 +79971,7 @@ fn skip_cms_consumption_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_cms_consumption_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CMSConsumptionMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79798,8 +79986,7 @@ fn skip_cms_consumption_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSConsumptionMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79816,6 +80003,7 @@ fn skip_cms_consumption_field_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
 fn skip_cms_rich_text_style_map_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CMSRichTextStyleMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79830,7 +80018,7 @@ fn skip_cms_rich_text_style_map_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSRichTextStyleMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79843,6 +80031,7 @@ fn skip_cms_rich_text_style_map_from_decoder(
 fn skip_cms_rich_text_style_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CMSRichTextStyleEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79857,8 +80046,7 @@ fn skip_cms_rich_text_style_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSRichTextStyleEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79877,6 +80065,7 @@ fn skip_cms_rich_text_style_class_from_decoder(
 fn skip_cms_rich_text_descriptor_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "CMSRichTextDescriptor";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79894,8 +80083,7 @@ fn skip_cms_rich_text_descriptor_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSRichTextDescriptor",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79908,6 +80096,7 @@ fn skip_cms_rich_text_descriptor_from_decoder(
 fn skip_repeater_cms_override_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "RepeaterCmsOverrideData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79922,8 +80111,7 @@ fn skip_repeater_cms_override_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping RepeaterCmsOverrideData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79934,6 +80122,7 @@ fn skip_repeater_cms_override_data_from_decoder(
     Ok(())
 }
 fn skip_repeater_override_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "RepeaterOverrideData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79948,8 +80137,7 @@ fn skip_repeater_override_data_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping RepeaterOverrideData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79962,6 +80150,7 @@ fn skip_repeater_override_data_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
 fn skip_repeater_symbol_override_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "RepeaterSymbolOverrideData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -79976,8 +80165,7 @@ fn skip_repeater_symbol_override_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping RepeaterSymbolOverrideData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -79990,6 +80178,7 @@ fn skip_repeater_symbol_override_data_from_decoder(
 fn skip_repeater_position_overrides_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "RepeaterPositionOverrides";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80007,8 +80196,7 @@ fn skip_repeater_position_overrides_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping RepeaterPositionOverrides",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80021,6 +80209,7 @@ fn skip_repeater_position_overrides_from_decoder(
 fn skip_inherited_variables_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "InheritedVariablesData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80035,8 +80224,7 @@ fn skip_inherited_variables_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping InheritedVariablesData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80049,6 +80237,7 @@ fn skip_inherited_variables_data_from_decoder(
 fn skip_inherited_variable_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "InheritedVariableEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80060,8 +80249,7 @@ fn skip_inherited_variable_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping InheritedVariableEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80072,6 +80260,7 @@ fn skip_inherited_variable_entry_from_decoder(
     Ok(())
 }
 fn skip_hub_file_attribution_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "HubFileAttribution";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80086,7 +80275,7 @@ fn skip_hub_file_attribution_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping HubFileAttribution", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80097,6 +80286,7 @@ fn skip_hub_file_attribution_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_managed_string_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ManagedStringData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80120,7 +80310,7 @@ fn skip_managed_string_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80143,6 +80333,7 @@ fn skip_managed_string_node_type_from_decoder(
     Ok(())
 }
 fn skip_managed_string_node_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ManagedStringNode";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80166,7 +80357,7 @@ fn skip_managed_string_node_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringNode", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80179,6 +80370,7 @@ fn skip_managed_string_node_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_managed_string_text_node_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ManagedStringTextNodeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80190,8 +80382,7 @@ fn skip_managed_string_text_node_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringTextNodeData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80204,6 +80395,7 @@ fn skip_managed_string_text_node_data_from_decoder(
 fn skip_managed_string_concatenate_ast_node_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ManagedStringConcatenateAstNodeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80218,8 +80410,7 @@ fn skip_managed_string_concatenate_ast_node_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringConcatenateAstNodeData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80238,6 +80429,7 @@ fn skip_managed_string_plural_type_from_decoder(
 fn skip_managed_string_plural_ast_node_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ManagedStringPluralAstNodeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80255,8 +80447,7 @@ fn skip_managed_string_plural_ast_node_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringPluralAstNodeData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80269,6 +80460,7 @@ fn skip_managed_string_plural_ast_node_data_from_decoder(
 fn skip_managed_string_plural_type_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ManagedStringPluralTypeMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80283,8 +80475,7 @@ fn skip_managed_string_plural_type_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringPluralTypeMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80303,6 +80494,7 @@ fn skip_managed_string_format_type_from_decoder(
 fn skip_managed_string_placeholder_ast_node_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ManagedStringPlaceholderAstNodeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80320,8 +80512,7 @@ fn skip_managed_string_placeholder_ast_node_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringPlaceholderAstNodeData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80332,6 +80523,7 @@ fn skip_managed_string_placeholder_ast_node_data_from_decoder(
     Ok(())
 }
 fn skip_cooper_revert_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CooperRevertData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80343,7 +80535,7 @@ fn skip_cooper_revert_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CooperRevertData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80354,6 +80546,7 @@ fn skip_cooper_revert_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_video_playback_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VideoPlayback";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80380,7 +80573,7 @@ fn skip_video_playback_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VideoPlayback", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80401,6 +80594,7 @@ fn skip_animation_timeline_action_from_decoder(
     Ok(())
 }
 fn skip_widget_hover_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "WidgetHoverStyle";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80433,7 +80627,7 @@ fn skip_widget_hover_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping WidgetHoverStyle", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80446,6 +80640,7 @@ fn skip_widget_hover_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
 fn skip_widget_derived_subtree_cursor_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "WidgetDerivedSubtreeCursor";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80460,8 +80655,7 @@ fn skip_widget_derived_subtree_cursor_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping WidgetDerivedSubtreeCursor",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80472,6 +80666,7 @@ fn skip_widget_derived_subtree_cursor_from_decoder(
     Ok(())
 }
 fn skip_multiplayer_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "MultiplayerMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80486,7 +80681,7 @@ fn skip_multiplayer_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping MultiplayerMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80497,6 +80692,7 @@ fn skip_multiplayer_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_multiplayer_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "MultiplayerMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80511,7 +80707,7 @@ fn skip_multiplayer_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping MultiplayerMapEntry", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80522,6 +80718,7 @@ fn skip_multiplayer_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_variable_data_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableDataMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80536,7 +80733,7 @@ fn skip_variable_data_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableDataMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80549,6 +80746,7 @@ fn skip_variable_data_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
 fn skip_variable_data_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "VariableDataMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80566,8 +80764,7 @@ fn skip_variable_data_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableDataMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80584,6 +80781,7 @@ fn skip_variable_field_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
 fn skip_variable_mode_by_set_map_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "VariableModeBySetMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80598,8 +80796,7 @@ fn skip_variable_mode_by_set_map_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableModeBySetMap",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80612,6 +80809,7 @@ fn skip_variable_mode_by_set_map_from_decoder(
 fn skip_variable_mode_by_set_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "VariableModeBySetMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80629,8 +80827,7 @@ fn skip_variable_mode_by_set_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableModeBySetMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80641,6 +80838,7 @@ fn skip_variable_mode_by_set_map_entry_from_decoder(
     Ok(())
 }
 fn skip_code_syntax_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeSyntaxMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80655,7 +80853,7 @@ fn skip_code_syntax_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeSyntaxMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80666,6 +80864,7 @@ fn skip_code_syntax_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_code_syntax_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeSyntaxMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80680,7 +80879,7 @@ fn skip_code_syntax_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeSyntaxMapEntry", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80691,6 +80890,7 @@ fn skip_code_syntax_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_table_merged_cell_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TableMergedCellMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80705,7 +80905,7 @@ fn skip_table_merged_cell_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TableMergedCellMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80718,6 +80918,7 @@ fn skip_table_merged_cell_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
 fn skip_table_merged_cell_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TableMergedCellMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80738,8 +80939,7 @@ fn skip_table_merged_cell_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TableMergedCellMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80752,6 +80952,7 @@ fn skip_table_merged_cell_map_entry_from_decoder(
 fn skip_table_row_column_position_map_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TableRowColumnPositionMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80766,8 +80967,7 @@ fn skip_table_row_column_position_map_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TableRowColumnPositionMap",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80780,6 +80980,7 @@ fn skip_table_row_column_position_map_from_decoder(
 fn skip_table_row_column_position_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TableRowColumnPositionMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80794,8 +80995,7 @@ fn skip_table_row_column_position_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TableRowColumnPositionMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80806,6 +81006,7 @@ fn skip_table_row_column_position_map_entry_from_decoder(
     Ok(())
 }
 fn skip_guid_position_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "GUIDPositionMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80820,7 +81021,7 @@ fn skip_guid_position_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping GUIDPositionMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80833,6 +81034,7 @@ fn skip_guid_position_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
 fn skip_guid_position_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "GUIDPositionMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80847,8 +81049,7 @@ fn skip_guid_position_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping GUIDPositionMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80861,6 +81062,7 @@ fn skip_guid_position_map_entry_from_decoder(
 fn skip_guid_grid_track_size_map_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "GUIDGridTrackSizeMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80875,8 +81077,7 @@ fn skip_guid_grid_track_size_map_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping GUIDGridTrackSizeMap",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80889,6 +81090,7 @@ fn skip_guid_grid_track_size_map_from_decoder(
 fn skip_guid_grid_track_size_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "GUIDGridTrackSizeMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80903,8 +81105,7 @@ fn skip_guid_grid_track_size_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping GUIDGridTrackSizeMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80915,6 +81116,7 @@ fn skip_guid_grid_track_size_map_entry_from_decoder(
     Ok(())
 }
 fn skip_object_animation_list_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ObjectAnimationList";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80929,7 +81131,7 @@ fn skip_object_animation_list_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ObjectAnimationList", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80942,6 +81144,7 @@ fn skip_object_animation_list_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
 fn skip_object_animation_list_item_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ObjectAnimationListItem";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80956,8 +81159,7 @@ fn skip_object_animation_list_item_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ObjectAnimationListItem",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80968,6 +81170,7 @@ fn skip_object_animation_list_item_from_decoder(
     Ok(())
 }
 fn skip_grid_track_size_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "GridTrackSize";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -80982,7 +81185,7 @@ fn skip_grid_track_size_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping GridTrackSize", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -80995,6 +81198,7 @@ fn skip_grid_track_size_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
 fn skip_grid_track_sizing_function_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "GridTrackSizingFunction";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81009,8 +81213,7 @@ fn skip_grid_track_sizing_function_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping GridTrackSizingFunction",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81027,6 +81230,7 @@ fn skip_grid_track_sizing_type_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
 fn skip_table_row_column_size_map_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TableRowColumnSizeMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81041,8 +81245,7 @@ fn skip_table_row_column_size_map_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TableRowColumnSizeMap",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81055,6 +81258,7 @@ fn skip_table_row_column_size_map_from_decoder(
 fn skip_table_row_column_size_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TableRowColumnSizeMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81069,8 +81273,7 @@ fn skip_table_row_column_size_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TableRowColumnSizeMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81081,6 +81284,7 @@ fn skip_table_row_column_size_map_entry_from_decoder(
     Ok(())
 }
 fn skip_agenda_position_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AgendaPositionMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81095,7 +81299,7 @@ fn skip_agenda_position_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AgendaPositionMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81108,6 +81312,7 @@ fn skip_agenda_position_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_agenda_position_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "AgendaPositionMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81122,8 +81327,7 @@ fn skip_agenda_position_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AgendaPositionMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81138,6 +81342,7 @@ fn skip_agenda_item_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_agenda_metadata_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AgendaMetadataMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81152,7 +81357,7 @@ fn skip_agenda_metadata_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AgendaMetadataMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81165,6 +81370,7 @@ fn skip_agenda_metadata_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_agenda_metadata_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "AgendaMetadataMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81179,8 +81385,7 @@ fn skip_agenda_metadata_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AgendaMetadataMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81191,6 +81396,7 @@ fn skip_agenda_metadata_map_entry_from_decoder(
     Ok(())
 }
 fn skip_agenda_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AgendaMetadata";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81217,7 +81423,7 @@ fn skip_agenda_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AgendaMetadata", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81228,6 +81434,7 @@ fn skip_agenda_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_agenda_timer_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AgendaTimerInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81239,7 +81446,7 @@ fn skip_agenda_timer_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AgendaTimerInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81250,6 +81457,7 @@ fn skip_agenda_timer_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_agenda_vote_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AgendaVoteInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81261,7 +81469,7 @@ fn skip_agenda_vote_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AgendaVoteInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81272,6 +81480,7 @@ fn skip_agenda_vote_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_agenda_music_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AgendaMusicInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81286,7 +81495,7 @@ fn skip_agenda_music_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AgendaMusicInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81312,6 +81521,7 @@ fn skip_diagram_layout_paused_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_component_prop_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ComponentPropRef";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81335,7 +81545,7 @@ fn skip_component_prop_ref_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ComponentPropRef", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81354,6 +81564,7 @@ fn skip_component_prop_node_field_from_decoder(
 fn skip_component_prop_assignment_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ComponentPropAssignment";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81374,8 +81585,7 @@ fn skip_component_prop_assignment_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ComponentPropAssignment",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81386,6 +81596,7 @@ fn skip_component_prop_assignment_from_decoder(
     Ok(())
 }
 fn skip_component_prop_def_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ComponentPropDef";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81433,7 +81644,7 @@ fn skip_component_prop_def_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ComponentPropDef", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81444,6 +81655,7 @@ fn skip_component_prop_def_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_component_prop_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ComponentPropValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81488,7 +81700,7 @@ fn skip_component_prop_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ComponentPropValue", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81499,6 +81711,7 @@ fn skip_component_prop_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_timeline_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TimelineData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81519,7 +81732,7 @@ fn skip_timeline_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TimelineData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81532,6 +81745,7 @@ fn skip_timeline_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
 fn skip_timeline_definitions_map_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TimelineDefinitionsMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81546,8 +81760,7 @@ fn skip_timeline_definitions_map_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TimelineDefinitionsMap",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81560,6 +81773,7 @@ fn skip_timeline_definitions_map_from_decoder(
 fn skip_timeline_definitions_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TimelineDefinitionsMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81574,8 +81788,7 @@ fn skip_timeline_definitions_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TimelineDefinitionsMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81588,6 +81801,7 @@ fn skip_timeline_definitions_map_entry_from_decoder(
 fn skip_timeline_assignment_key_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TimelineAssignmentKey";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81602,8 +81816,7 @@ fn skip_timeline_assignment_key_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TimelineAssignmentKey",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81614,6 +81827,7 @@ fn skip_timeline_assignment_key_from_decoder(
     Ok(())
 }
 fn skip_timeline_binding_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TimelineBindingData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81628,7 +81842,7 @@ fn skip_timeline_binding_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TimelineBindingData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81641,6 +81855,7 @@ fn skip_timeline_binding_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
 fn skip_timeline_assignments_map_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TimelineAssignmentsMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81655,8 +81870,7 @@ fn skip_timeline_assignments_map_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TimelineAssignmentsMap",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81669,6 +81883,7 @@ fn skip_timeline_assignments_map_from_decoder(
 fn skip_timeline_assignments_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TimelineAssignmentsMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81683,8 +81898,7 @@ fn skip_timeline_assignments_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TimelineAssignmentsMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81701,6 +81915,7 @@ fn skip_component_prop_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_component_prop_preferred_values_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ComponentPropPreferredValues";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81721,8 +81936,7 @@ fn skip_component_prop_preferred_values_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ComponentPropPreferredValues",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81733,6 +81947,7 @@ fn skip_component_prop_preferred_values_from_decoder(
     Ok(())
 }
 fn skip_parameter_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ParameterConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81780,7 +81995,7 @@ fn skip_parameter_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ParameterConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81797,6 +82012,7 @@ fn skip_parameter_config_control_from_decoder(
     Ok(())
 }
 fn skip_input_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "InputConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81813,7 +82029,9 @@ fn skip_input_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping InputConfig", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -81823,6 +82041,7 @@ fn skip_input_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_slider_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SliderConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81843,7 +82062,7 @@ fn skip_slider_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SliderConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81858,6 +82077,7 @@ fn skip_point_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PointConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81871,7 +82091,9 @@ fn skip_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping PointConfig", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -81881,6 +82103,7 @@ fn skip_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_line_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Line";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81893,7 +82116,11 @@ fn skip_line_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Line", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -81902,6 +82129,7 @@ fn skip_line_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_line_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "LineConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81915,7 +82143,9 @@ fn skip_line_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping LineConfig", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -81925,6 +82155,7 @@ fn skip_line_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_circle_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Circle";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81938,7 +82169,9 @@ fn skip_circle_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Circle", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -81948,6 +82181,7 @@ fn skip_circle_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_point_radius_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PointRadiusConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -81971,7 +82205,7 @@ fn skip_point_radius_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PointRadiusConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -81982,6 +82216,7 @@ fn skip_point_radius_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_rotation3_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Rotation3D";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82001,7 +82236,9 @@ fn skip_rotation3_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Rotation3D", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -82011,6 +82248,7 @@ fn skip_rotation3_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_rotation3_d_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Rotation3DConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82022,7 +82260,7 @@ fn skip_rotation3_d_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping Rotation3DConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82033,6 +82271,7 @@ fn skip_rotation3_d_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_circle_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CirclePoint";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82049,7 +82288,9 @@ fn skip_circle_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping CirclePoint", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -82059,6 +82300,7 @@ fn skip_circle_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_circle_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CirclePointConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82082,7 +82324,7 @@ fn skip_circle_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CirclePointConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82093,6 +82335,7 @@ fn skip_circle_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_color_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ColorPoint";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82106,7 +82349,9 @@ fn skip_color_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping ColorPoint", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -82116,6 +82361,7 @@ fn skip_color_point_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_color_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ColorPointConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82130,7 +82376,7 @@ fn skip_color_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ColorPointConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82141,6 +82387,7 @@ fn skip_color_point_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_gradient_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Gradient";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82154,7 +82401,9 @@ fn skip_gradient_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Gradient", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -82164,6 +82413,7 @@ fn skip_gradient_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_gradient_stop_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "GradientStop";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82178,7 +82428,7 @@ fn skip_gradient_stop_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping GradientStop", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82189,6 +82439,7 @@ fn skip_gradient_stop_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_select_option_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SelectOption";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82203,7 +82454,7 @@ fn skip_select_option_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SelectOption", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82214,6 +82465,7 @@ fn skip_select_option_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_select_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SelectConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82228,7 +82480,7 @@ fn skip_select_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SelectConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82239,6 +82491,7 @@ fn skip_select_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_color_array_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ColorArrayConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82253,7 +82506,7 @@ fn skip_color_array_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ColorArrayConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82264,6 +82517,7 @@ fn skip_color_array_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_slot_prop_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SlotPropConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82287,7 +82541,7 @@ fn skip_slot_prop_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SlotPropConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82298,6 +82552,7 @@ fn skip_slot_prop_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_number_prop_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NumberPropConfig";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82318,7 +82573,7 @@ fn skip_number_prop_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NumberPropConfig", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82331,6 +82586,7 @@ fn skip_number_prop_config_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
 fn skip_instance_swap_preferred_value_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "InstanceSwapPreferredValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82345,8 +82601,7 @@ fn skip_instance_swap_preferred_value_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping InstanceSwapPreferredValue",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82371,6 +82626,7 @@ fn skip_widget_input_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_widget_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "WidgetMetadata";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82394,7 +82650,7 @@ fn skip_widget_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping WidgetMetadata", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82413,6 +82669,7 @@ fn skip_widget_property_menu_item_type_from_decoder(
 fn skip_widget_property_menu_selector_option_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "WidgetPropertyMenuSelectorOption";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82427,8 +82684,7 @@ fn skip_widget_property_menu_selector_option_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping WidgetPropertyMenuSelectorOption",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82447,6 +82703,7 @@ fn skip_widget_input_text_node_type_from_decoder(
 fn skip_widget_property_menu_item_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "WidgetPropertyMenuItem";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82485,8 +82742,7 @@ fn skip_widget_property_menu_item_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping WidgetPropertyMenuItem",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82513,6 +82769,7 @@ fn skip_internal_enum_for_test_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
     Ok(())
 }
 fn skip_internal_data_for_test_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "InternalDataForTest";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82524,7 +82781,7 @@ fn skip_internal_data_for_test_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping InternalDataForTest", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82537,6 +82794,7 @@ fn skip_internal_data_for_test_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
 fn skip_state_group_property_value_order_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "StateGroupPropertyValueOrder";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82554,8 +82812,7 @@ fn skip_state_group_property_value_order_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping StateGroupPropertyValueOrder",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82572,6 +82829,7 @@ fn skip_backfill_error_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
 fn skip_partial_paste_annotation_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "PartialPasteAnnotation";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82589,8 +82847,7 @@ fn skip_partial_paste_annotation_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PartialPasteAnnotation",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82601,6 +82858,7 @@ fn skip_partial_paste_annotation_from_decoder(
     Ok(())
 }
 fn skip_variant_prop_spec_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariantPropSpec";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82615,7 +82873,7 @@ fn skip_variant_prop_spec_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariantPropSpec", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82626,6 +82884,7 @@ fn skip_variant_prop_spec_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_text_list_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TextListData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82646,7 +82905,7 @@ fn skip_text_list_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TextListData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82661,6 +82920,7 @@ fn skip_bullet_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_text_line_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TextLineData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82699,7 +82959,7 @@ fn skip_text_line_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TextLineData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82710,6 +82970,7 @@ fn skip_text_line_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_derived_text_line_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "DerivedTextLineData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82721,7 +82982,7 @@ fn skip_derived_text_line_data_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping DerivedTextLineData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82748,6 +83009,7 @@ fn skip_directionality_intent_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_prototype_interaction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PrototypeInteraction";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82774,8 +83036,7 @@ fn skip_prototype_interaction_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PrototypeInteraction",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82786,6 +83047,7 @@ fn skip_prototype_interaction_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_prototype_event_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PrototypeEvent";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82815,7 +83077,7 @@ fn skip_prototype_event_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PrototypeEvent", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82828,6 +83090,7 @@ fn skip_prototype_event_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
 fn skip_prototype_variable_target_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "PrototypeVariableTarget";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82842,8 +83105,7 @@ fn skip_prototype_variable_target_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PrototypeVariableTarget",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82854,6 +83116,7 @@ fn skip_prototype_variable_target_from_decoder(
     Ok(())
 }
 fn skip_conditional_actions_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ConditionalActions";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -82871,7 +83134,7 @@ fn skip_conditional_actions_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ConditionalActions", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -82882,6 +83145,7 @@ fn skip_conditional_actions_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_prototype_action_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PrototypeAction";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83025,7 +83289,7 @@ fn skip_prototype_action_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PrototypeAction", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83044,6 +83308,7 @@ fn skip_animation_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_animation_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AnimationState";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83058,7 +83323,7 @@ fn skip_animation_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnimationState", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83071,6 +83336,7 @@ fn skip_animation_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
 fn skip_prototype_starting_point_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "PrototypeStartingPoint";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83088,8 +83354,7 @@ fn skip_prototype_starting_point_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PrototypeStartingPoint",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83104,6 +83369,7 @@ fn skip_trigger_device_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_key_trigger_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "KeyTrigger";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83120,7 +83386,9 @@ fn skip_key_trigger_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping KeyTrigger", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -83130,6 +83398,7 @@ fn skip_key_trigger_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_hyperlink_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Hyperlink";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83149,7 +83418,9 @@ fn skip_hyperlink_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Hyperlink", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -83159,6 +83430,7 @@ fn skip_hyperlink_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_cms_item_page_target_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CMSItemPageTarget";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83176,7 +83448,7 @@ fn skip_cms_item_page_target_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CMSItemPageTarget", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83191,6 +83463,7 @@ fn skip_mention_source_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_mention_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Mention";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83222,7 +83495,9 @@ fn skip_mention_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Mention", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -83232,6 +83507,7 @@ fn skip_mention_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_embed_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "EmbedData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83281,7 +83557,9 @@ fn skip_embed_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping EmbedData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -83291,6 +83569,7 @@ fn skip_embed_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_stamp_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "StampData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83307,7 +83586,9 @@ fn skip_stamp_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping StampData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -83317,6 +83598,7 @@ fn skip_stamp_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_link_preview_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "LinkPreviewData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83349,7 +83631,7 @@ fn skip_link_preview_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping LinkPreviewData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83360,6 +83642,7 @@ fn skip_link_preview_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_viewport_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Viewport";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83379,7 +83662,9 @@ fn skip_viewport_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Viewport", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -83389,6 +83674,7 @@ fn skip_viewport_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_mouse_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Mouse";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83410,7 +83696,11 @@ fn skip_mouse_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Mouse", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -83435,6 +83725,7 @@ fn skip_triggered_overlay_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_triggered_overlay_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TriggeredOverlayData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83458,8 +83749,7 @@ fn skip_triggered_overlay_data_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TriggeredOverlayData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83472,6 +83762,7 @@ fn skip_triggered_overlay_data_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
 fn skip_triggered_set_variable_action_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TriggeredSetVariableActionData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83492,8 +83783,7 @@ fn skip_triggered_set_variable_action_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TriggeredSetVariableActionData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83506,6 +83796,7 @@ fn skip_triggered_set_variable_action_data_from_decoder(
 fn skip_triggered_set_variable_mode_action_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TriggeredSetVariableModeActionData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83526,8 +83817,7 @@ fn skip_triggered_set_variable_mode_action_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TriggeredSetVariableModeActionData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83540,6 +83830,7 @@ fn skip_triggered_set_variable_mode_action_data_from_decoder(
 fn skip_video_state_change_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "VideoStateChangeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83566,8 +83857,7 @@ fn skip_video_state_change_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VideoStateChangeData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83580,6 +83870,7 @@ fn skip_video_state_change_data_from_decoder(
 fn skip_embedded_prototype_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "EmbeddedPrototypeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83594,8 +83885,7 @@ fn skip_embedded_prototype_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping EmbeddedPrototypeData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83606,6 +83896,7 @@ fn skip_embedded_prototype_data_from_decoder(
     Ok(())
 }
 fn skip_presented_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PresentedState";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83623,7 +83914,7 @@ fn skip_presented_state_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PresentedState", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83640,6 +83931,7 @@ fn skip_transition_direction_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
 fn skip_top_level_playback_change_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TopLevelPlaybackChange";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83669,8 +83961,7 @@ fn skip_top_level_playback_change_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TopLevelPlaybackChange",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83681,6 +83972,7 @@ fn skip_top_level_playback_change_from_decoder(
     Ok(())
 }
 fn skip_instance_state_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "InstanceStateChange";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83704,7 +83996,7 @@ fn skip_instance_state_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping InstanceStateChange", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83715,6 +84007,7 @@ fn skip_instance_state_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_text_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TextCursor";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83731,7 +84024,9 @@ fn skip_text_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping TextCursor", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -83741,6 +84036,7 @@ fn skip_text_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_text_selection_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TextSelection";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83773,7 +84069,7 @@ fn skip_text_selection_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TextSelection", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83790,6 +84086,7 @@ fn skip_playback_change_phase_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
 fn skip_playback_change_keyframe_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "PlaybackChangeKeyframe";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83807,8 +84104,7 @@ fn skip_playback_change_keyframe_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PlaybackChangeKeyframe",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83819,6 +84115,7 @@ fn skip_playback_change_keyframe_from_decoder(
     Ok(())
 }
 fn skip_state_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "StateMapping";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83839,7 +84136,7 @@ fn skip_state_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping StateMapping", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83850,6 +84147,7 @@ fn skip_state_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_scroll_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ScrollMapping";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83867,7 +84165,7 @@ fn skip_scroll_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ScrollMapping", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83878,6 +84176,7 @@ fn skip_scroll_mapping_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_playback_update_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PlaybackUpdate";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83913,7 +84212,7 @@ fn skip_playback_update_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PlaybackUpdate", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83924,6 +84223,7 @@ fn skip_playback_update_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ChatMessage";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83937,7 +84237,9 @@ fn skip_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping ChatMessage", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -83947,6 +84249,7 @@ fn skip_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_voice_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VoiceMetadata";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83958,7 +84261,7 @@ fn skip_voice_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VoiceMetadata", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83969,6 +84272,7 @@ fn skip_voice_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_april_fun_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AprilFunCursor";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -83983,7 +84287,7 @@ fn skip_april_fun_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AprilFunCursor", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -83994,6 +84298,7 @@ fn skip_april_fun_cursor_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_april_fun_fig_pal_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AprilFunFigPal";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84008,7 +84313,7 @@ fn skip_april_fun_fig_pal_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AprilFunFigPal", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84033,6 +84338,7 @@ fn skip_design_full_page_view_state_from_decoder(
     Ok(())
 }
 fn skip_agent_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AgentInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84049,7 +84355,9 @@ fn skip_agent_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping AgentInfo", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -84059,6 +84367,7 @@ fn skip_agent_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_user_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "UserChange";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84246,7 +84555,9 @@ fn skip_user_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping UserChange", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -84258,6 +84569,7 @@ fn skip_user_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
 fn skip_interactive_slide_element_change_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "InteractiveSlideElementChange";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84278,8 +84590,7 @@ fn skip_interactive_slide_element_change_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping InteractiveSlideElementChange",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84290,6 +84601,7 @@ fn skip_interactive_slide_element_change_from_decoder(
     Ok(())
 }
 fn skip_node_status_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeStatusChange";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84307,7 +84619,7 @@ fn skip_node_status_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeStatusChange", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84320,6 +84632,7 @@ fn skip_node_status_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
 fn skip_buzz_approval_asset_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "BuzzApprovalAssetEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84334,8 +84647,7 @@ fn skip_buzz_approval_asset_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping BuzzApprovalAssetEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84346,6 +84658,7 @@ fn skip_buzz_approval_asset_entry_from_decoder(
     Ok(())
 }
 fn skip_buzz_approval_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "BuzzApprovalChange";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84366,7 +84679,7 @@ fn skip_buzz_approval_change_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping BuzzApprovalChange", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84387,6 +84700,7 @@ fn skip_scene_graph_query_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
     Ok(())
 }
 fn skip_scene_graph_query_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SceneGraphQuery";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84404,7 +84718,7 @@ fn skip_scene_graph_query_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SceneGraphQuery", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84415,6 +84729,7 @@ fn skip_scene_graph_query_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_node_changes_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeChangesMetadata";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84426,7 +84741,7 @@ fn skip_node_changes_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeChangesMetadata", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84437,6 +84752,7 @@ fn skip_node_changes_metadata_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_cursor_reaction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CursorReaction";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84448,7 +84764,7 @@ fn skip_cursor_reaction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CursorReaction", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84459,6 +84775,7 @@ fn skip_cursor_reaction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_timer_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TimerInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84490,7 +84807,9 @@ fn skip_timer_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping TimerInfo", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -84500,6 +84819,7 @@ fn skip_timer_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_music_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "MusicInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84522,7 +84842,9 @@ fn skip_music_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping MusicInfo", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -84532,6 +84854,7 @@ fn skip_music_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_presenter_nomination_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PresenterNomination";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84546,7 +84869,7 @@ fn skip_presenter_nomination_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PresenterNomination", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84557,6 +84880,7 @@ fn skip_presenter_nomination_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_presenter_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PresenterInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84574,7 +84898,7 @@ fn skip_presenter_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PresenterInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84585,6 +84909,7 @@ fn skip_presenter_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_client_broadcast_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ClientBroadcast";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84611,7 +84936,7 @@ fn skip_client_broadcast_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ClientBroadcast", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84626,6 +84951,7 @@ fn skip_paste_asset_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Message";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84798,7 +85124,9 @@ fn skip_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Message", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -84808,6 +85136,7 @@ fn skip_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_encoded_offsets_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "EncodedOffsetsIndex";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84831,7 +85160,7 @@ fn skip_encoded_offsets_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping EncodedOffsetsIndex", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -84849,6 +85178,7 @@ fn skip_guid_and_encoded_offset_from_decoder(
     Ok(())
 }
 fn skip_diff_chunk_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "DiffChunk";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84907,7 +85237,9 @@ fn skip_diff_chunk_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping DiffChunk", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -84921,6 +85253,7 @@ fn skip_diff_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_diff_payload_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "DiffPayload";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84967,7 +85300,9 @@ fn skip_diff_payload_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping DiffPayload", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -84981,6 +85316,7 @@ fn skip_rich_media_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_rich_media_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "RichMediaData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -84995,7 +85331,7 @@ fn skip_rich_media_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping RichMediaData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85016,6 +85352,7 @@ fn skip_variable_resolved_data_type_from_decoder(
     Ok(())
 }
 fn skip_variable_any_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableAnyValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85111,7 +85448,7 @@ fn skip_variable_any_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableAnyValue", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85126,6 +85463,7 @@ fn skip_expression_function_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_expression_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Expression";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85142,7 +85480,9 @@ fn skip_expression_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping Expression", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -85152,6 +85492,7 @@ fn skip_expression_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_variable_map_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableMapValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85169,7 +85510,7 @@ fn skip_variable_map_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableMapValue", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85180,6 +85521,7 @@ fn skip_variable_map_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_variable_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85193,7 +85535,9 @@ fn skip_variable_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping VariableMap", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -85203,6 +85547,7 @@ fn skip_variable_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_color_array_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ColorArray";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85216,7 +85561,9 @@ fn skip_color_array_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping ColorArray", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -85226,6 +85573,7 @@ fn skip_color_array_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_variable_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableFontStyle";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85243,7 +85591,7 @@ fn skip_variable_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableFontStyle", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85254,6 +85602,7 @@ fn skip_variable_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_image_parameter_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ImageParameterValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85283,7 +85632,7 @@ fn skip_image_parameter_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ImageParameterValue", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85294,6 +85643,7 @@ fn skip_image_parameter_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_thumbnail_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ThumbnailInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85308,7 +85658,7 @@ fn skip_thumbnail_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ThumbnailInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85319,6 +85669,7 @@ fn skip_thumbnail_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_ai_canvas_prompt_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AiCanvasPrompt";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85339,7 +85690,7 @@ fn skip_ai_canvas_prompt_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AiCanvasPrompt", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85350,6 +85701,7 @@ fn skip_ai_canvas_prompt_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_node_field_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeFieldAlias";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85367,7 +85719,7 @@ fn skip_node_field_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeFieldAlias", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85382,6 +85734,7 @@ fn skip_node_field_alias_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_cms_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CMSAlias";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85401,7 +85754,9 @@ fn skip_cms_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping CMSAlias", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -85411,6 +85766,7 @@ fn skip_cms_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_js_runtime_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "JsRuntimeAlias";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85422,7 +85778,7 @@ fn skip_js_runtime_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping JsRuntimeAlias", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85433,6 +85789,7 @@ fn skip_js_runtime_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_prop_ref_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PropRefValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85444,7 +85801,7 @@ fn skip_prop_ref_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PropRefValue", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85455,6 +85812,7 @@ fn skip_prop_ref_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_managed_string_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ManagedStringId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85469,7 +85827,7 @@ fn skip_managed_string_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringId", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85482,6 +85840,7 @@ fn skip_managed_string_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
 fn skip_managed_string_placeholder_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ManagedStringPlaceholderMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85496,8 +85855,7 @@ fn skip_managed_string_placeholder_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringPlaceholderMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85508,6 +85866,7 @@ fn skip_managed_string_placeholder_map_entry_from_decoder(
     Ok(())
 }
 fn skip_slot_content_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SlotContentId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85519,7 +85878,7 @@ fn skip_slot_content_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SlotContentId", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85530,6 +85889,7 @@ fn skip_slot_content_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_managed_string_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ManagedStringAlias";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85547,7 +85907,7 @@ fn skip_managed_string_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManagedStringAlias", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85558,6 +85918,7 @@ fn skip_managed_string_alias_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_keyframe_track_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "KeyframeTrackId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85572,7 +85933,7 @@ fn skip_keyframe_track_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping KeyframeTrackId", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85583,6 +85944,7 @@ fn skip_keyframe_track_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_animation_preset_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AnimationPresetId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85597,7 +85959,7 @@ fn skip_animation_preset_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnimationPresetId", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85608,29 +85970,7 @@ fn skip_animation_preset_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_tool_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            1 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            2 => {
-                skip_asset_ref_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while skipping ToolId", field),
-                        ),
-                    ),
-                );
-            }
-        }
-    }
-    Ok(())
-}
-fn skip_custom_effect_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ToolId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85645,7 +85985,33 @@ fn skip_custom_effect_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CustomEffectId", field
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(())
+}
+fn skip_custom_effect_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CustomEffectId";
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                skip_asset_ref_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85656,6 +86022,7 @@ fn skip_custom_effect_id_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_trss_transform2_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TRSSTransform2D";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85676,7 +86043,7 @@ fn skip_trss_transform2_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TRSSTransform2D", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85687,6 +86054,7 @@ fn skip_trss_transform2_d_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_variable_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85704,7 +86072,7 @@ fn skip_variable_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85715,6 +86083,7 @@ fn skip_variable_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_variable_set_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableSetMode";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85738,7 +86107,7 @@ fn skip_variable_set_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableSetMode", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85749,6 +86118,7 @@ fn skip_variable_set_mode_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_variable_data_values_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "VariableDataValues";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85763,7 +86133,7 @@ fn skip_variable_data_values_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableDataValues", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85776,6 +86146,7 @@ fn skip_variable_data_values_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
 fn skip_variable_data_values_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "VariableDataValuesEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85790,8 +86161,7 @@ fn skip_variable_data_values_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableDataValuesEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85806,6 +86176,7 @@ fn skip_variable_scope_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_keyframe_any_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "KeyframeAnyValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85826,7 +86197,7 @@ fn skip_keyframe_any_value_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping KeyframeAnyValue", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85841,6 +86212,7 @@ fn skip_keyframe_value_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_keyframe_value_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "KeyframeValueData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85855,7 +86227,7 @@ fn skip_keyframe_value_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping KeyframeValueData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85874,6 +86246,7 @@ fn skip_keyframe_track_parameter_type_from_decoder(
 fn skip_manual_keyframe_track_parameter_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ManualKeyframeTrackParameter";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85888,8 +86261,7 @@ fn skip_manual_keyframe_track_parameter_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ManualKeyframeTrackParameter",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85902,6 +86274,7 @@ fn skip_manual_keyframe_track_parameter_from_decoder(
 fn skip_animation_preset_keyframe_track_parameter_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "AnimationPresetKeyframeTrackParameter";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85919,8 +86292,7 @@ fn skip_animation_preset_keyframe_track_parameter_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnimationPresetKeyframeTrackParameter",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85933,6 +86305,7 @@ fn skip_animation_preset_keyframe_track_parameter_from_decoder(
 fn skip_keyframe_track_any_parameter_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "KeyframeTrackAnyParameter";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85950,8 +86323,7 @@ fn skip_keyframe_track_any_parameter_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping KeyframeTrackAnyParameter",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85964,6 +86336,7 @@ fn skip_keyframe_track_any_parameter_from_decoder(
 fn skip_keyframe_track_parameter_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "KeyframeTrackParameter";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -85978,8 +86351,7 @@ fn skip_keyframe_track_parameter_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping KeyframeTrackParameter",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -85992,6 +86364,7 @@ fn skip_keyframe_track_parameter_from_decoder(
 fn skip_keyframe_track_parameter_value_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "KeyframeTrackParameterValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86006,8 +86379,7 @@ fn skip_keyframe_track_parameter_value_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping KeyframeTrackParameterValue",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86018,6 +86390,7 @@ fn skip_keyframe_track_parameter_value_from_decoder(
     Ok(())
 }
 fn skip_animation_presets_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AnimationPresets";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86032,7 +86405,7 @@ fn skip_animation_presets_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnimationPresets", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86043,6 +86416,7 @@ fn skip_animation_presets_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_animation_preset_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AnimationPresetData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86057,7 +86431,7 @@ fn skip_animation_preset_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AnimationPresetData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86068,6 +86442,7 @@ fn skip_animation_preset_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_style_animation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "StyleAnimation";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86079,7 +86454,7 @@ fn skip_style_animation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping StyleAnimation", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86090,6 +86465,7 @@ fn skip_style_animation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_style_id_for_animation_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "StyleIdForAnimation";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86110,7 +86486,7 @@ fn skip_style_id_for_animation_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping StyleIdForAnimation", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86121,6 +86497,7 @@ fn skip_style_id_for_animation_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
     Ok(())
 }
 fn skip_tools_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "Tools";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86133,7 +86510,11 @@ fn skip_tools_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
             field => {
                 return Err(
                     Error::Term(
-                        Box::new(format!("unknown field {} while skipping Tools", field)),
+                        Box::new(
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
+                        ),
                     ),
                 );
             }
@@ -86142,6 +86523,7 @@ fn skip_tools_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_tool_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ToolData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86161,7 +86543,9 @@ fn skip_tool_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping ToolData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -86171,6 +86555,7 @@ fn skip_tool_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_custom_effects_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CustomEffects";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86185,7 +86570,7 @@ fn skip_custom_effects_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CustomEffects", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86196,6 +86581,7 @@ fn skip_custom_effects_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_custom_effect_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CustomEffectData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86207,7 +86593,7 @@ fn skip_custom_effect_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CustomEffectData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86218,6 +86604,7 @@ fn skip_custom_effect_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_spring_params_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SpringParams";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86235,7 +86622,7 @@ fn skip_spring_params_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SpringParams", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86248,6 +86635,7 @@ fn skip_spring_params_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
 fn skip_transition_easing_any_value_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TransitionEasingAnyValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86262,8 +86650,7 @@ fn skip_transition_easing_any_value_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransitionEasingAnyValue",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86274,6 +86661,7 @@ fn skip_transition_easing_any_value_from_decoder(
     Ok(())
 }
 fn skip_easing_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "EasingData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86287,7 +86675,9 @@ fn skip_easing_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping EasingData", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -86297,6 +86687,7 @@ fn skip_easing_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_transition_override_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "TransitionOverride";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86338,7 +86729,7 @@ fn skip_transition_override_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransitionOverride", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86351,6 +86742,7 @@ fn skip_transition_override_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_transition_override_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TransitionOverrideData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86368,8 +86760,7 @@ fn skip_transition_override_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransitionOverrideData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86394,6 +86785,7 @@ fn skip_transition_override_binding_top_level_field_from_decoder(
 fn skip_transition_override_binding_location_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TransitionOverrideBindingLocation";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86414,8 +86806,7 @@ fn skip_transition_override_binding_location_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransitionOverrideBindingLocation",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86434,6 +86825,7 @@ fn skip_keyframe_binding_effect_parametrized_field_from_decoder(
 fn skip_node_contents_keyframe_binding_location_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "NodeContentsKeyframeBindingLocation";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86454,8 +86846,7 @@ fn skip_node_contents_keyframe_binding_location_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeContentsKeyframeBindingLocation",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86468,6 +86859,7 @@ fn skip_node_contents_keyframe_binding_location_from_decoder(
 fn skip_transition_override_prop_map_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TransitionOverridePropMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86482,8 +86874,7 @@ fn skip_transition_override_prop_map_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransitionOverridePropMap",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86496,6 +86887,7 @@ fn skip_transition_override_prop_map_from_decoder(
 fn skip_transition_override_prop_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "TransitionOverridePropMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86519,8 +86911,7 @@ fn skip_transition_override_prop_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping TransitionOverridePropMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86535,6 +86926,7 @@ fn skip_code_syntax_platform_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_optional_vector_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "OptionalVector";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86546,7 +86938,7 @@ fn skip_optional_vector_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping OptionalVector", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86565,6 +86957,7 @@ fn skip_aria_role_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_migration_status_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "MigrationStatus";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86576,7 +86969,7 @@ fn skip_migration_status_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping MigrationStatus", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86587,6 +86980,7 @@ fn skip_migration_status_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_node_field_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeFieldMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86601,7 +86995,7 @@ fn skip_node_field_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeFieldMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86612,6 +87006,7 @@ fn skip_node_field_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_node_field_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeFieldMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86629,7 +87024,7 @@ fn skip_node_field_map_entry_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeFieldMapEntry", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86656,6 +87051,7 @@ fn skip_child_reading_direction_from_decoder(
 fn skip_aria_attribute_any_value_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ARIAAttributeAnyValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86682,8 +87078,7 @@ fn skip_aria_attribute_any_value_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ARIAAttributeAnyValue",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86700,6 +87095,7 @@ fn skip_aria_attribute_data_type_from_decoder(
     Ok(())
 }
 fn skip_aria_attribute_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ARIAAttributeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86714,7 +87110,7 @@ fn skip_aria_attribute_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ARIAAttributeData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86725,6 +87121,7 @@ fn skip_aria_attribute_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_aria_attributes_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ARIAAttributesMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86739,7 +87136,7 @@ fn skip_aria_attributes_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ARIAAttributesMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86752,6 +87149,7 @@ fn skip_aria_attributes_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_aria_attributes_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ARIAAttributesMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86766,8 +87164,7 @@ fn skip_aria_attributes_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ARIAAttributesMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86780,6 +87177,7 @@ fn skip_aria_attributes_map_entry_from_decoder(
 fn skip_handoff_status_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "HandoffStatusMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86794,8 +87192,7 @@ fn skip_handoff_status_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping HandoffStatusMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86806,6 +87203,7 @@ fn skip_handoff_status_map_entry_from_decoder(
     Ok(())
 }
 fn skip_handoff_status_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "HandoffStatusMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86820,7 +87218,7 @@ fn skip_handoff_status_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping HandoffStatusMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86831,6 +87229,7 @@ fn skip_handoff_status_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_edit_scope_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "EditScopeInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86851,7 +87250,7 @@ fn skip_edit_scope_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping EditScopeInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86862,6 +87261,7 @@ fn skip_edit_scope_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_edit_scope_snapshot_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "EditScopeSnapshot";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86882,7 +87282,7 @@ fn skip_edit_scope_snapshot_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping EditScopeSnapshot", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86893,6 +87293,7 @@ fn skip_edit_scope_snapshot_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_edit_scope_stack_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "EditScopeStack";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86907,7 +87308,7 @@ fn skip_edit_scope_stack_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping EditScopeStack", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86918,6 +87319,7 @@ fn skip_edit_scope_stack_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_edit_scope_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "EditScope";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86934,7 +87336,9 @@ fn skip_edit_scope_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping EditScope", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -86962,6 +87366,7 @@ fn skip_selection_region_focus_type_from_decoder(
     Ok(())
 }
 fn skip_section_preset_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SectionPresetInfo";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -86982,7 +87387,7 @@ fn skip_section_preset_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SectionPresetInfo", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -86995,6 +87400,7 @@ fn skip_section_preset_info_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
 fn skip_clipboard_selection_region_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ClipboardSelectionRegion";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87021,8 +87427,7 @@ fn skip_clipboard_selection_region_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ClipboardSelectionRegion",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87037,6 +87442,7 @@ fn skip_first_draft_kit_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_first_draft_kit_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "FirstDraftKit";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87051,7 +87457,7 @@ fn skip_first_draft_kit_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping FirstDraftKit", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87062,6 +87468,7 @@ fn skip_first_draft_kit_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_first_draft_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "FirstDraftData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87076,7 +87483,7 @@ fn skip_first_draft_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping FirstDraftData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87095,6 +87502,7 @@ fn skip_first_draft_kit_element_type_from_decoder(
 fn skip_first_draft_kit_element_data_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "FirstDraftKitElementData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87106,8 +87514,7 @@ fn skip_first_draft_kit_element_data_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping FirstDraftKitElementData",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87132,6 +87539,7 @@ fn skip_platform_shape_behavior_type_from_decoder(
 fn skip_platform_shape_property_map_entry_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "PlatformShapePropertyMapEntry";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87149,8 +87557,7 @@ fn skip_platform_shape_property_map_entry_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PlatformShapePropertyMapEntry",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87163,6 +87570,7 @@ fn skip_platform_shape_property_map_entry_from_decoder(
 fn skip_platform_shape_definition_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "PlatformShapeDefinition";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87183,8 +87591,7 @@ fn skip_platform_shape_definition_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PlatformShapeDefinition",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87195,6 +87602,7 @@ fn skip_platform_shape_definition_from_decoder(
     Ok(())
 }
 fn skip_node_behaviors_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeBehaviors";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87236,7 +87644,7 @@ fn skip_node_behaviors_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeBehaviors", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87247,6 +87655,7 @@ fn skip_node_behaviors_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_behavior_transition_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "BehaviorTransition";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87276,7 +87685,7 @@ fn skip_behavior_transition_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping BehaviorTransition", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87297,6 +87706,7 @@ fn skip_relative_direction_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_appear_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AppearBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87335,7 +87745,7 @@ fn skip_appear_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AppearBehavior", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87346,6 +87756,7 @@ fn skip_appear_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_hover_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "HoverBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87363,7 +87774,7 @@ fn skip_hover_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping HoverBehavior", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87374,6 +87785,7 @@ fn skip_hover_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_press_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "PressBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87391,7 +87803,7 @@ fn skip_press_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping PressBehavior", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87402,6 +87814,7 @@ fn skip_press_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     Ok(())
 }
 fn skip_focus_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "FocusBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87419,7 +87832,7 @@ fn skip_focus_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping FocusBehavior", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87432,6 +87845,7 @@ fn skip_focus_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
 fn skip_scroll_parallax_behavior_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ScrollParallaxBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87455,8 +87869,7 @@ fn skip_scroll_parallax_behavior_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ScrollParallaxBehavior",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87475,6 +87888,7 @@ fn skip_scroll_transform_behavior_trigger_from_decoder(
 fn skip_scroll_transform_behavior_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ScrollTransformBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87510,8 +87924,7 @@ fn skip_scroll_transform_behavior_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ScrollTransformBehavior",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87522,6 +87935,7 @@ fn skip_scroll_transform_behavior_from_decoder(
     Ok(())
 }
 fn skip_cursor_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CursorBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87542,7 +87956,7 @@ fn skip_cursor_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CursorBehavior", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87553,6 +87967,7 @@ fn skip_cursor_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_marquee_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "MarqueeBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87582,7 +87997,7 @@ fn skip_marquee_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping MarqueeBehavior", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87593,6 +88008,7 @@ fn skip_marquee_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_code_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CodeBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87613,7 +88029,7 @@ fn skip_code_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CodeBehavior", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87626,6 +88042,7 @@ fn skip_code_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
 fn skip_client_rendered_metadata_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "ClientRenderedMetadata";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87646,8 +88063,7 @@ fn skip_client_rendered_metadata_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ClientRenderedMetadata",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87662,6 +88078,7 @@ fn skip_link_behavior_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_link_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "LinkBehavior";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87682,7 +88099,7 @@ fn skip_link_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping LinkBehavior", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87695,6 +88112,7 @@ fn skip_link_behavior_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
 fn skip_variable_id_or_variable_override_id_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "VariableIdOrVariableOverrideId";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87709,8 +88127,7 @@ fn skip_variable_id_or_variable_override_id_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping VariableIdOrVariableOverrideId",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87738,6 +88155,7 @@ fn skip_index_font_variation_axis_value_from_decoder(
     Ok(())
 }
 fn skip_index_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "IndexFontStyle";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87767,7 +88185,7 @@ fn skip_index_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping IndexFontStyle", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87778,6 +88196,7 @@ fn skip_index_font_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_index_font_file_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "IndexFontFile";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87810,7 +88229,7 @@ fn skip_index_font_file_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping IndexFontFile", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87883,6 +88302,7 @@ fn skip_index_emojis_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_font_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "FontIndex";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87905,7 +88325,9 @@ fn skip_font_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping FontIndex", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -87915,6 +88337,7 @@ fn skip_font_index_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_slide_theme_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "SlideThemeData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87929,7 +88352,7 @@ fn skip_slide_theme_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping SlideThemeData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87948,6 +88371,7 @@ fn skip_node_chat_message_type_from_decoder(decoder: &mut Decoder<'_>) -> NifRes
     Ok(())
 }
 fn skip_node_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeChatMessage";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -87986,7 +88410,7 @@ fn skip_node_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeChatMessage", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -87997,6 +88421,7 @@ fn skip_node_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<(
     Ok(())
 }
 fn skip_node_chat_tool_call_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeChatToolCall";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88014,7 +88439,7 @@ fn skip_node_chat_tool_call_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeChatToolCall", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88025,6 +88450,7 @@ fn skip_node_chat_tool_call_from_decoder(decoder: &mut Decoder<'_>) -> NifResult
     Ok(())
 }
 fn skip_node_chat_tool_result_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeChatToolResult";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88042,7 +88468,7 @@ fn skip_node_chat_tool_result_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeChatToolResult", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88053,6 +88479,7 @@ fn skip_node_chat_tool_result_from_decoder(decoder: &mut Decoder<'_>) -> NifResu
     Ok(())
 }
 fn skip_node_chat_exchange_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "NodeChatExchange";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88079,7 +88506,7 @@ fn skip_node_chat_exchange_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeChatExchange", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88092,6 +88519,7 @@ fn skip_node_chat_exchange_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
 fn skip_node_chat_compression_state_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "NodeChatCompressionState";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88106,8 +88534,7 @@ fn skip_node_chat_compression_state_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping NodeChatCompressionState",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88118,6 +88545,7 @@ fn skip_node_chat_compression_state_from_decoder(
     Ok(())
 }
 fn skip_file_update_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "FileUpdate";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88134,7 +88562,9 @@ fn skip_file_update_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping FileUpdate", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -88144,6 +88574,7 @@ fn skip_file_update_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
     Ok(())
 }
 fn skip_ai_chat_content_part_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AIChatContentPart";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88158,7 +88589,7 @@ fn skip_ai_chat_content_part_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AIChatContentPart", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88177,6 +88608,7 @@ fn skip_ai_chat_content_part_type_from_decoder(
 fn skip_ai_chat_content_part_any_value_from_decoder(
     decoder: &mut Decoder<'_>,
 ) -> NifResult<()> {
+    let definition_name = "AIChatContentPartAnyValue";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88194,8 +88626,7 @@ fn skip_ai_chat_content_part_any_value_from_decoder(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AIChatContentPartAnyValue",
-                                field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88210,6 +88641,7 @@ fn skip_ai_chat_message_role_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_ai_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AIChatMessage";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88236,7 +88668,7 @@ fn skip_ai_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AIChatMessage", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88247,6 +88679,7 @@ fn skip_ai_chat_message_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()>
     Ok(())
 }
 fn skip_ai_chat_thread_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "AIChatThread";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88261,7 +88694,7 @@ fn skip_ai_chat_thread_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping AIChatThread", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88276,6 +88709,7 @@ fn skip_cooper_template_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_cooper_template_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "CooperTemplateData";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88287,7 +88721,7 @@ fn skip_cooper_template_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping CooperTemplateData", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88298,6 +88732,7 @@ fn skip_cooper_template_data_from_decoder(decoder: &mut Decoder<'_>) -> NifResul
     Ok(())
 }
 fn skip_image_import_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ImageImportMap";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88312,7 +88747,7 @@ fn skip_image_import_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping ImageImportMap", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),
@@ -88323,6 +88758,7 @@ fn skip_image_import_map_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()
     Ok(())
 }
 fn skip_image_import_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "ImageImport";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88336,7 +88772,9 @@ fn skip_image_import_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while skipping ImageImport", field),
+                            format!(
+                                "unknown field {} while skipping {}", field, definition_name
+                            ),
                         ),
                     ),
                 );
@@ -88350,6 +88788,7 @@ fn skip_interpolation_type_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<
     Ok(())
 }
 fn skip_bezier_handles_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    let definition_name = "BezierHandles";
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88370,7 +88809,7 @@ fn skip_bezier_handles_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while skipping BezierHandles", field
+                                "unknown field {} while skipping {}", field, definition_name
                             ),
                         ),
                     ),

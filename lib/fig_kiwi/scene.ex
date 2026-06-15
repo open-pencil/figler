@@ -46,6 +46,11 @@ defmodule FigKiwi.Scene do
   @doc """
   Queries a binary scene or reusable scene index with XPath.
 
+  Options:
+
+    * `:fields` - list of projected fields to keep in returned nodes. `:guid`
+      and `:node_type` are always kept. Defaults to all fields.
+
   Scene nodes are exposed as elements named by their Figma node type, for
   example `//canvas` or `//text`. Supported projected attributes are:
 
@@ -60,18 +65,20 @@ defmodule FigKiwi.Scene do
     * `@visible`
     * `@locked`
   """
-  @spec query(binary() | reference(), String.t()) :: [scene_node()]
-  def query(binary, xpath) when is_binary(binary) and is_binary(xpath) do
+  @spec query(binary() | reference(), String.t(), keyword()) :: [scene_node()]
+  def query(scene, xpath, opts \\ [])
+
+  def query(binary, xpath, opts) when is_binary(binary) and is_binary(xpath) and is_list(opts) do
     binary
     |> payload!()
     |> Native.query_scene_xpath(xpath)
-    |> nodes_from_maps()
+    |> nodes_from_maps(opts)
   end
 
-  def query(index, xpath) when is_binary(xpath) do
+  def query(index, xpath, opts) when is_binary(xpath) and is_list(opts) do
     index
     |> Native.query_scene_index(xpath)
-    |> nodes_from_maps()
+    |> nodes_from_maps(opts)
   end
 
   @doc """
@@ -183,7 +190,22 @@ defmodule FigKiwi.Scene do
     %Node{node | children: children}
   end
 
-  defp nodes_from_maps(nodes), do: Enum.map(nodes, &Node.from_map/1)
+  defp nodes_from_maps(nodes, opts), do: Enum.map(nodes, &node_from_map(&1, opts))
+
+  defp node_from_map(map, opts) do
+    fields = Keyword.get(opts, :fields, :all)
+
+    map
+    |> filter_node_fields(fields)
+    |> Node.from_map()
+  end
+
+  defp filter_node_fields(map, :all), do: map
+
+  defp filter_node_fields(map, fields) when is_list(fields) do
+    required_fields = [:guid, :node_type]
+    Map.take(map, Enum.uniq(required_fields ++ fields))
+  end
 
   defp xpath_literal(value) when is_atom(value), do: value |> Atom.to_string() |> xpath_literal()
 
