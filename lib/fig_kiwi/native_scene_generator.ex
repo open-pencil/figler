@@ -403,29 +403,65 @@ defmodule FigKiwi.NativeSceneGenerator do
     end
 
     [
-      {field_id.("name"), "name = Some(decoder.read_string_value()?)"},
-      {field_id.("visible"), "visible = Some(decoder.read_bool()?)"},
-      {field_id.("locked"), "locked = Some(decoder.read_bool()?)"},
-      {field_id.("size"), "size = Some(read_scene_size_value(decoder)?)"},
-      {field_id.("transform"), "transform = Some(read_scene_transform_value(decoder)?)"},
-      {field_id.("fontName"),
-       "{ let (family, style, postscript) = read_scene_font_name_value(decoder)?; font_family = family; font_style = style; font_postscript = postscript; }"},
-      {field_id.("textData"), "text = read_scene_text_data_value(decoder)?"},
-      {field_id.("componentKey"), "component_key = Some(decoder.read_string_value()?)"},
-      {field_id.("originComponentKey"),
-       "origin_component_key = Some(decoder.read_string_value()?)"},
-      {field_id.("styleIdForFill"), "fill_style_guid = read_scene_style_id_value(decoder)?"},
-      {field_id.("styleIdForStrokeFill"),
-       "stroke_style_guid = read_scene_style_id_value(decoder)?"},
-      {field_id.("styleIdForText"), "text_style_guid = read_scene_style_id_value(decoder)?"},
-      {field_id.("styleIdForEffect"), "effect_style_guid = read_scene_style_id_value(decoder)?"},
-      {field_id.("styleIdForGrid"), "grid_style_guid = read_scene_style_id_value(decoder)?"},
-      {field_id.("fillPaints"),
-       "fill_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"},
-      {field_id.("strokePaints"),
-       "stroke_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"}
+      scene_decode_arm(field_id.("name"), "name = Some(decoder.read_string_value()?)"),
+      scene_decode_arm(field_id.("visible"), "visible = Some(decoder.read_bool()?)"),
+      scene_decode_arm(field_id.("locked"), "locked = Some(decoder.read_bool()?)"),
+      scene_decode_arm(field_id.("size"), "size = Some(read_scene_size_value(decoder)?)"),
+      scene_decode_arm(
+        field_id.("transform"),
+        "transform = Some(read_scene_transform_value(decoder)?)"
+      ),
+      scene_decode_arm(field_id.("fontName"), [
+        "let (family, style, postscript) = read_scene_font_name_value(decoder)?;",
+        "font_family = family;",
+        "font_style = style;",
+        "font_postscript = postscript;"
+      ]),
+      scene_decode_arm(field_id.("textData"), "text = read_scene_text_data_value(decoder)?"),
+      scene_decode_arm(
+        field_id.("componentKey"),
+        "component_key = Some(decoder.read_string_value()?)"
+      ),
+      scene_decode_arm(
+        field_id.("originComponentKey"),
+        "origin_component_key = Some(decoder.read_string_value()?)"
+      ),
+      scene_decode_arm(
+        field_id.("styleIdForFill"),
+        "fill_style_guid = read_scene_style_id_value(decoder)?"
+      ),
+      scene_decode_arm(
+        field_id.("styleIdForStrokeFill"),
+        "stroke_style_guid = read_scene_style_id_value(decoder)?"
+      ),
+      scene_decode_arm(
+        field_id.("styleIdForText"),
+        "text_style_guid = read_scene_style_id_value(decoder)?"
+      ),
+      scene_decode_arm(
+        field_id.("styleIdForEffect"),
+        "effect_style_guid = read_scene_style_id_value(decoder)?"
+      ),
+      scene_decode_arm(
+        field_id.("styleIdForGrid"),
+        "grid_style_guid = read_scene_style_id_value(decoder)?"
+      ),
+      scene_decode_arm(
+        field_id.("fillPaints"),
+        "fill_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"
+      ),
+      scene_decode_arm(
+        field_id.("strokePaints"),
+        "stroke_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"
+      )
     ]
-    |> Enum.map(fn {id, expr} -> "#{id} => #{expr}," end)
+  end
+
+  defp scene_decode_arm(id, lines) do
+    Rust.arm(
+      Integer.to_string(id),
+      lines |> List.wrap() |> Rust.block() |> Rust.to_fragment()
+    )
   end
 
   defp scene_rust_field_type(:size), do: "Option<SceneSize>"

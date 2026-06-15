@@ -127,6 +127,14 @@ defmodule FigKiwi.Scene.Graph.Variables do
     end)
   end
 
+  defp apply_known_value(%Graph{} = graph, guid, :font_family, {:text, value}) do
+    update_node(graph, guid, :font_family, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :font_style, {:text, value}) do
+    update_node(graph, guid, :font_style, fn old -> {old, value, value} end)
+  end
+
   defp apply_known_value(%Graph{} = graph, guid, :x_position, {:float, value}) do
     update_node(graph, guid, :transform, fn transform ->
       transform = transform || %{}

@@ -445,6 +445,37 @@ defmodule FigKiwi.SceneTest do
            ] = Graph.explain(graph, "1:1").applied
   end
 
+  test "variables stage applies known font variable refs" do
+    graph =
+      [
+        %SeedNode{
+          guid: {1, 1},
+          node_type: "text",
+          font_family: "Inter",
+          variable_consumption: [
+            struct(FigKiwi.Schema.VariableDataMapEntry,
+              variable_field: :font_family,
+              variable_data:
+                struct(FigKiwi.Schema.VariableData,
+                  data_type: :string,
+                  resolved_data_type: :string,
+                  value: struct(FigKiwi.Schema.VariableAnyValue, text_value: "Roboto")
+                )
+            )
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:variables])
+      |> Resolver.resolve()
+
+    assert Scene.node(graph, "1:1").font_family == "Roboto"
+
+    assert [
+             {:variable_value_applied, :font_family, "Inter", "Roboto",
+              %{value: {:text, "Roboto"}, data_type: :string, resolved_data_type: :string}}
+           ] = Graph.explain(graph, "1:1").applied
+  end
+
   test "variables stage records known variable data values as provenance" do
     graph =
       [
