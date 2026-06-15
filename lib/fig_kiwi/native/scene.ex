@@ -6,6 +6,7 @@ defmodule FigKiwi.Native.Scene do
   @delegates [
     {:decode_summary, [:binary], :decode_scene_summary},
     {:build_index, [:binary], :build_scene_index},
+    {:build_index_with_summary, [:binary], :build_scene_index_with_summary},
     {:query_xpath, [:binary, :xpath], :query_scene_xpath},
     {:query_xpath_fields, [:binary, :xpath, :fields], :query_scene_xpath_fields},
     {:query_index, [:index, :xpath], :query_scene_index},

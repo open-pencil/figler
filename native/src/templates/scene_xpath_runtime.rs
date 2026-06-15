@@ -638,11 +638,44 @@ mod scene_xpath_runtime {
         let mut nodes = Vec::new();
         decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
         decoder.finish()?;
-        Ok(
-            ResourceArc::new(SceneIndexResource {
-                index: Arc::new(SceneIndex::new(nodes)),
-            }),
-        )
+        Ok(scene_index_resource(SceneIndex::new(nodes)))
+    }
+
+    pub fn build_scene_index_with_summary_value(
+        bytes: Binary<'_>,
+    ) -> NifResult<(ResourceArc<SceneIndexResource>, SceneSummary)> {
+        let mut decoder = Decoder::new(bytes.as_slice());
+        let mut nodes = Vec::new();
+        decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
+        decoder.finish()?;
+
+        let index = SceneIndex::new(nodes);
+        let summary = scene_index_summary(&index);
+        Ok((scene_index_resource(index), summary))
+    }
+
+    fn scene_index_resource(index: SceneIndex) -> ResourceArc<SceneIndexResource> {
+        ResourceArc::new(SceneIndexResource {
+            index: Arc::new(index),
+        })
+    }
+
+    fn scene_index_summary(index: &SceneIndex) -> SceneSummary {
+        let node_count = index.nodes.len();
+        let parented_count = node_count.saturating_sub(index.roots.len());
+        let mut type_counts = index
+            .by_type
+            .iter()
+            .map(|(node_type, nodes)| ((*node_type).to_string(), nodes.len()))
+            .collect::<Vec<_>>();
+        type_counts.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+
+        SceneSummary {
+            node_count,
+            parented_count,
+            root_count: index.roots.len(),
+            type_counts,
+        }
     }
     pub fn query_scene_xpath_value<'a>(
         env: Env<'a>,

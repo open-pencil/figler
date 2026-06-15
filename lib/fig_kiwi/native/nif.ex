@@ -18,6 +18,7 @@ defmodule FigKiwi.Native.Nif do
     {:decode_graph_focused_sparse_message, 2},
     {:decode_scene_summary, 1},
     {:build_scene_index, 1},
+    {:build_scene_index_with_summary, 1},
     {:query_scene_xpath, 2},
     {:query_scene_xpath_fields, 3},
     {:query_scene_index, 2},

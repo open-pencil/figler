@@ -13,12 +13,14 @@ defmodule FigKiwi.Scene.Graph do
   """
 
   alias FigKiwi.Native.Codec
+  alias FigKiwi.Native.Scene, as: NativeScene
   alias FigKiwi.Scene
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Index
   alias FigKiwi.Scene.Node
+  alias FigKiwi.Scene.Summary
 
   @enforce_keys [:resource]
   defstruct [
@@ -44,8 +46,8 @@ defmodule FigKiwi.Scene.Graph do
   Opaque effective scene graph resource.
   """
   @opaque t :: %__MODULE__{
-            resource: reference(),
-            source: Index.t() | nil,
+            resource: reference() | nil,
+            source: Index.t() | binary() | nil,
             mode: :projected | :resolved,
             stages: [atom()],
             options: keyword(),
@@ -69,6 +71,7 @@ defmodule FigKiwi.Scene.Graph do
     :component_props,
     :sync_component_props,
     :derived_symbol_data,
+    :stack_layout,
     :variables
   ]
 
@@ -113,16 +116,14 @@ defmodule FigKiwi.Scene.Graph do
   end
 
   def build(binary, opts) when is_binary(binary) and is_list(opts) do
-    index = Scene.index(binary)
-    summary = Scene.summary(binary)
-    seed_nodes = seed_nodes(binary, opts)
-    %__MODULE__{} = graph = build_from_seed(index, index.resource, opts, seed_nodes)
+    payload = Scene.payload!(binary)
+    seed_nodes = seed_nodes_from_payload(payload, opts)
 
-    %__MODULE__{
-      graph
-      | stats:
-          Map.merge(summary_stats(summary), Map.take(graph.stats, [:resolver, :resolved_stages]))
-    }
+    if focused?(opts) do
+      build_focused_from_seed(payload, opts, seed_nodes)
+    else
+      build_with_native_index(payload, opts, seed_nodes)
+    end
   end
 
   def build(resource, opts) when is_reference(resource) and is_list(opts) do
@@ -140,18 +141,9 @@ defmodule FigKiwi.Scene.Graph do
   end
 
   def seed_nodes(binary, opts) when is_binary(binary) do
-    payload = Scene.payload!(binary)
-    opts = normalize_focus(opts)
-
-    if Keyword.get(opts, :native, true) do
-      payload
-      |> sparse_message(opts)
-      |> SeedNode.from_message()
-    else
-      payload
-      |> FigKiwi.decode_message()
-      |> SeedNode.from_message(opts)
-    end
+    binary
+    |> Scene.payload!()
+    |> seed_nodes_from_payload(opts)
   end
 
   def seed_nodes(input, opts) when is_list(opts) do
@@ -179,10 +171,11 @@ defmodule FigKiwi.Scene.Graph do
   end
 
   @doc """
-  Explains how a node appears in the graph.
+  Explains how a node appears in the effective graph.
 
-  This is deliberately shaped for the future resolver. Today it reports the raw
-  projected node and no applied resolver operations.
+  The explanation includes the resolved node, projected source node when known,
+  provenance, applied resolver operations, unresolved diagnostics recorded on
+  the node, and instance metadata for instance nodes.
   """
   @spec explain(t(), String.t()) :: map() | nil
   def explain(%__MODULE__{} = graph, guid) when is_binary(guid) do
@@ -196,11 +189,19 @@ defmodule FigKiwi.Scene.Graph do
         %{
           guid: GUID.format(graph_guid),
           node: node,
+          source_node: source_node(graph, node.guid),
           source: Map.get(provenance(graph, graph_guid), :source, :projected_index),
           source_guid:
             graph |> provenance(graph_guid) |> Map.get(:source_guid, graph_guid) |> GUID.format(),
+          parent_guid: node.parent_guid,
+          child_guids:
+            graph
+            |> Map.get(:children, %{})
+            |> Map.get(graph_guid, [])
+            |> Enum.map(&GUID.format/1),
           applied: Map.get(provenance(graph, graph_guid), :applied, []),
           unresolved: Map.get(provenance(graph, graph_guid), :unresolved, []),
+          instance: instance(graph, node.guid),
           stages: graph.stages
         }
     end
@@ -220,6 +221,72 @@ defmodule FigKiwi.Scene.Graph do
   end
 
   @doc """
+  Returns a resolved tree from the effective graph.
+
+  Options:
+
+    * `:root` - graph GUID string/tuple to use as root. Defaults to all roots.
+    * `:depth` - maximum child depth. Defaults to `3`.
+  """
+  @spec tree(t(), keyword()) :: [Node.t()] | Node.t() | nil
+  def tree(%__MODULE__{} = graph, opts \\ []) when is_list(opts) do
+    depth = Keyword.get(opts, :depth, 3)
+
+    case Keyword.fetch(opts, :root) do
+      {:ok, guid} ->
+        graph_guid = GUID.parse!(guid)
+
+        if node = Map.get(graph.nodes, graph_guid) do
+          tree_node(graph, node, depth)
+        end
+
+      :error ->
+        graph
+        |> nodes_by_guids(graph.roots)
+        |> Enum.map(&tree_node(graph, &1, depth))
+    end
+  end
+
+  @doc """
+  Returns instance-specific effective graph metadata for a node.
+  """
+  @spec instance(t(), String.t()) :: map() | nil
+  def instance(%__MODULE__{} = graph, guid) when is_binary(guid) do
+    graph_guid = GUID.parse!(guid)
+
+    case Map.get(graph.nodes, graph_guid) do
+      %Node{node_type: "instance"} = node ->
+        seed = Map.get(graph.seed_nodes, graph_guid)
+        component_guid = instance_component_guid(seed)
+
+        %{
+          guid: node.guid,
+          component_guid: GUID.format(component_guid),
+          component: component_node(graph, component_guid),
+          component_prop_assignments: Map.get(seed || %{}, :component_prop_assignments, []),
+          symbol_overrides: Map.get(seed || %{}, :symbol_overrides, []),
+          derived_symbol_data: Map.get(seed || %{}, :derived_symbol_data, []),
+          provenance: provenance(graph, graph_guid)
+        }
+
+      _node ->
+        nil
+    end
+  end
+
+  @doc """
+  Diffs effective graph nodes against their projected source nodes.
+
+  Returns only nodes whose projected source differs from the effective node.
+  """
+  @spec diff(t(), keyword()) :: [map()]
+  def diff(%__MODULE__{} = graph, opts \\ []) when is_list(opts) do
+    graph
+    |> diff_guids(opts)
+    |> Enum.flat_map(&diff_guid(graph, &1))
+  end
+
+  @doc """
   Returns unresolved graph items.
   """
   @spec unresolved(t(), keyword()) :: [term()]
@@ -229,15 +296,6 @@ defmodule FigKiwi.Scene.Graph do
       limit when is_integer(limit) and limit >= 0 -> Enum.take(unresolved, limit)
     end
   end
-
-  @doc """
-  Diffs a raw index and graph node-by-node.
-
-  This placeholder returns an empty diff while the graph is backed directly by
-  the projected index.
-  """
-  @spec diff(Index.t() | reference(), t()) :: []
-  def diff(_index, %__MODULE__{}), do: []
 
   @doc """
   Diffs one raw index node against its graph counterpart.
@@ -254,6 +312,39 @@ defmodule FigKiwi.Scene.Graph do
     end
   end
 
+  defp build_focused_from_seed(payload, opts, seed_nodes) do
+    nil
+    |> build_from_seed(nil, opts, seed_nodes)
+    |> Map.put(:source, payload)
+  end
+
+  defp build_with_native_index(payload, opts, seed_nodes) do
+    {resource, summary_map} = NativeScene.build_index_with_summary(payload)
+    index = %Index{resource: resource}
+    summary = Summary.from_map(summary_map)
+    %__MODULE__{} = graph = build_from_seed(index, resource, opts, seed_nodes)
+
+    %__MODULE__{
+      graph
+      | stats:
+          Map.merge(summary_stats(summary), Map.take(graph.stats, [:resolver, :resolved_stages]))
+    }
+  end
+
+  defp seed_nodes_from_payload(payload, opts) do
+    opts = normalize_focus(opts)
+
+    if Keyword.get(opts, :native, true) do
+      payload
+      |> sparse_message(opts)
+      |> SeedNode.from_message()
+    else
+      payload
+      |> FigKiwi.decode_message()
+      |> SeedNode.from_message(opts)
+    end
+  end
+
   defp sparse_message(payload, opts) do
     case Keyword.get(opts, :focus) do
       nil -> Codec.decode_sparse_message(payload)
@@ -261,6 +352,8 @@ defmodule FigKiwi.Scene.Graph do
       focus -> Codec.decode_graph_focused_sparse_message(payload, Enum.map(focus, &GUID.format/1))
     end
   end
+
+  defp focused?(opts), do: Keyword.has_key?(opts, :focus) or Keyword.has_key?(opts, :root)
 
   defp build_from_seed(index, resource, opts, seed_nodes \\ nil) do
     stages = stages(opts)
@@ -294,6 +387,69 @@ defmodule FigKiwi.Scene.Graph do
       count + length(Map.get(provenance, :applied, []))
     end)
   end
+
+  defp nodes_by_guids(%__MODULE__{} = graph, guids) do
+    guids
+    |> Enum.map(&Map.get(graph.nodes, &1))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp tree_node(_graph, %Node{} = node, 0), do: %Node{node | children: []}
+
+  defp tree_node(graph, %Node{} = node, depth) do
+    child_nodes = nodes_by_guids(graph, child_guids(graph, node.guid))
+    %Node{node | children: Enum.map(child_nodes, &tree_node(graph, &1, depth - 1))}
+  end
+
+  defp child_guids(graph, guid), do: Map.get(graph.children, GUID.parse!(guid), [])
+
+  defp instance_component_guid(%SeedNode{component_guid: guid}) when is_tuple(guid), do: guid
+  defp instance_component_guid(%SeedNode{symbol_id: guid}) when is_tuple(guid), do: guid
+  defp instance_component_guid(_seed), do: nil
+
+  defp component_node(_graph, nil), do: nil
+  defp component_node(graph, guid), do: Map.get(graph.nodes, guid)
+
+  defp diff_guids(graph, opts) do
+    case Keyword.fetch(opts, :root) do
+      {:ok, root} ->
+        root_guid = GUID.parse!(root)
+        [root_guid | descendant_guids(graph, root_guid)]
+
+      :error ->
+        Map.keys(graph.nodes)
+    end
+  end
+
+  defp descendant_guids(graph, guid) do
+    graph.children
+    |> Map.get(guid, [])
+    |> Enum.flat_map(fn child_guid -> [child_guid | descendant_guids(graph, child_guid)] end)
+  end
+
+  defp diff_guid(graph, guid) do
+    with %Node{} = resolved <- Map.get(graph.nodes, guid),
+         %Node{} = source <- source_node(graph, GUID.format(guid)),
+         changes when changes != [] <- node_changes(source, resolved) do
+      [%{guid: GUID.format(guid), source: source, resolved: resolved, changed: changes}]
+    else
+      _value -> []
+    end
+  end
+
+  defp node_changes(source, resolved) do
+    Node.__struct__()
+    |> Map.keys()
+    |> Enum.reject(&(&1 in [:__struct__, :children]))
+    |> Enum.flat_map(fn field ->
+      field_change(field, Map.get(source, field), Map.get(resolved, field))
+    end)
+  end
+
+  defp field_change(_field, value, value), do: []
+
+  defp field_change(field, source, resolved),
+    do: [%{field: field, source: source, resolved: resolved}]
 
   defp provenance(graph, guid), do: Map.get(graph.provenance, guid, %{})
 

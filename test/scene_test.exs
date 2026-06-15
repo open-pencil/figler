@@ -133,7 +133,17 @@ defmodule FigKiwi.SceneTest do
 
     assert Graph.stats(graph).root_count == 1
 
-    assert Graph.explain(graph, "0:1") == %{
+    explanation = Graph.explain(graph, "0:1")
+
+    assert Map.take(explanation, [
+             :guid,
+             :node,
+             :source,
+             :source_guid,
+             :applied,
+             :unresolved,
+             :stages
+           ]) == %{
              guid: "0:1",
              node: scene_canvas(),
              source: :projected_index,
@@ -142,6 +152,14 @@ defmodule FigKiwi.SceneTest do
              unresolved: [],
              stages: [:populate_instances, :symbol_overrides, :component_props]
            }
+
+    assert explanation.source_node == scene_canvas()
+    assert explanation.parent_guid == "0:0"
+    assert explanation.child_guids == []
+    assert explanation.instance == nil
+
+    assert [%Node{guid: "0:1", children: []}] = Graph.tree(graph, root: "0:0", depth: 1).children
+    assert Graph.diff(graph) == []
 
     assert Graph.diff_node(Scene.index(message_payload()), graph, "0:1") == %{
              guid: "0:1",
@@ -231,7 +249,17 @@ defmodule FigKiwi.SceneTest do
     assert clone_guid == "clone:2:1/1:2"
     assert Scene.node(graph, "1:2").text == "Default"
 
-    assert Graph.explain(graph, clone_guid) == %{
+    explanation = Graph.explain(graph, clone_guid)
+
+    assert Map.take(explanation, [
+             :guid,
+             :node,
+             :source,
+             :source_guid,
+             :applied,
+             :unresolved,
+             :stages
+           ]) == %{
              guid: clone_guid,
              node: Scene.node(graph, clone_guid),
              source: :instance_clone,
@@ -240,6 +268,9 @@ defmodule FigKiwi.SceneTest do
              unresolved: [],
              stages: [:populate_instances, :symbol_overrides]
            }
+
+    assert [%{changed: [%{field: :text, source: "Default", resolved: "Submit"}]}] =
+             Graph.diff(graph, root: clone_guid)
   end
 
   test "does not populate invisible instances" do
@@ -579,6 +610,79 @@ defmodule FigKiwi.SceneTest do
              graph,
              "clone:2:1/1:2"
            ).applied
+
+    assert %{
+             guid: "clone:2:1/1:2",
+             component_guid: "3:1",
+             component: %Node{name: "New"},
+             provenance: %{source: :instance_clone}
+           } = Graph.instance(graph, "clone:2:1/1:2")
+  end
+
+  test "component swaps populate nested source instances" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Old"},
+        %SeedNode{
+          guid: {1, 2},
+          node_type: "instance",
+          parent_guid: {1, 1},
+          symbol_id: {3, 1},
+          component_prop_refs: [%ComponentPropRef{def_id: {9, 1}, field: :overridden_symbol_id}]
+        },
+        %SeedNode{guid: {4, 1}, node_type: "component", name: "Swapped"},
+        %SeedNode{guid: {4, 2}, node_type: "instance", parent_guid: {4, 1}, symbol_id: {5, 1}},
+        %SeedNode{guid: {5, 1}, node_type: "component", name: "Icon"},
+        %SeedNode{guid: {5, 2}, node_type: "vector", parent_guid: {5, 1}},
+        %SeedNode{
+          guid: {2, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          component_prop_assignments: [
+            %ComponentPropAssignment{def_id: {9, 1}, value: {:guid, {4, 1}}}
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:populate_instances, :component_props])
+      |> Resolver.resolve()
+
+    assert [%Node{guid: "clone:2:1/1:2/4:2"}] = Scene.children(graph, "clone:2:1/1:2")
+
+    assert [%Node{guid: "clone:2:1/1:2/4:2/5:2"}] =
+             Scene.children(graph, "clone:2:1/1:2/4:2")
+  end
+
+  test "component prop assignments apply to all matching refs" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Menu"},
+        %SeedNode{
+          guid: {1, 2},
+          node_type: "frame",
+          parent_guid: {1, 1},
+          visible: true,
+          component_prop_refs: [%ComponentPropRef{def_id: {9, 1}, field: :visible}]
+        },
+        %SeedNode{
+          guid: {1, 3},
+          node_type: "vector",
+          parent_guid: {1, 1},
+          visible: true,
+          component_prop_refs: [%ComponentPropRef{def_id: {9, 1}, field: :visible}]
+        },
+        %SeedNode{
+          guid: {2, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          component_prop_assignments: [
+            %ComponentPropAssignment{def_id: {9, 1}, value: {:bool, false}}
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:populate_instances, :component_props])
+      |> Resolver.resolve()
+
+    assert [%Node{visible: false}, %Node{visible: false}] = Scene.children(graph, "2:1")
   end
 
   test "applies derived symbol layout data to cloned children" do

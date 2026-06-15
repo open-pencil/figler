@@ -67,6 +67,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp run_stage(:component_props, graph), do: apply_component_props(graph)
   defp run_stage(:sync_component_props, graph), do: sync_component_props(graph)
   defp run_stage(:derived_symbol_data, graph), do: apply_derived_symbol_data(graph)
+  defp run_stage(:stack_layout, graph), do: apply_stack_layout(graph)
   defp run_stage(:variables, graph), do: resolve_variables(graph)
   defp run_stage(stage, graph), do: add_unresolved(graph, {:unknown_stage, stage})
 
@@ -82,6 +83,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
     graph
     |> reduce(seeds, &swap_from/2)
+    |> reduce(seeds, &component_props_from/2)
     |> reduce(seeds, &patch_from/2)
     |> mark_stage(:symbol_overrides)
   end
@@ -104,7 +106,123 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     |> mark_stage(:derived_symbol_data)
   end
 
+  defp apply_stack_layout(graph) do
+    graph.nodes
+    |> Map.keys()
+    |> Enum.reduce(graph, &layout_node/2)
+    |> mark_stage(:stack_layout)
+  end
+
   defp resolve_variables(graph), do: mark_stage(graph, :variables)
+
+  defp layout_node(parent_guid, graph) do
+    parent = Map.get(graph.seed_nodes, parent_guid)
+    effective_parent = Map.get(graph.nodes, parent_guid)
+
+    if horizontal_stack?(parent) and stack_left_padding(parent) != 0 and
+         relayout_stack?(graph, parent_guid, parent, effective_parent) do
+      graph
+      |> hide_overflowing_stack_accessories(parent_guid, parent, effective_parent)
+      |> position_horizontal_stack(parent_guid, parent)
+    else
+      graph
+    end
+  end
+
+  defp horizontal_stack?(%{stack_mode: mode}), do: mode in [:horizontal, "horizontal"]
+  defp horizontal_stack?(_node), do: false
+
+  defp relayout_stack?(graph, parent_guid, parent, effective_parent) do
+    children = stack_children(graph, parent_guid)
+
+    Enum.any?(children, &(&1.visible == false)) or
+      tight_text_stack?(children, parent, effective_parent)
+  end
+
+  defp tight_text_stack?(children, parent, effective_parent) do
+    visible_text = Enum.filter(children, &(&1.visible != false and &1.node_type == "text"))
+
+    match?([_text], visible_text) and
+      close?(node_width(hd(visible_text)), stack_inner_width(parent, effective_parent))
+  end
+
+  defp hide_overflowing_stack_accessories(graph, parent_guid, parent, effective_parent) do
+    children = stack_children(graph, parent_guid)
+    text_children = Enum.filter(children, &(&1.node_type == "text" and &1.visible != false))
+
+    case {children, text_children, stack_inner_width(parent, effective_parent)} do
+      {children, [text], width} when is_number(width) ->
+        if close?(node_width(text), width) and stack_width(children) > width do
+          hide_non_text_children(graph, children)
+        else
+          graph
+        end
+
+      _other ->
+        graph
+    end
+  end
+
+  defp hide_non_text_children(graph, children) do
+    Enum.reduce(children, graph, fn
+      %{node_type: "text"}, acc ->
+        acc
+
+      %{guid: guid}, acc ->
+        Patch.apply_all(acc, Patch.set(GUID.parse!(guid), :visible, false, source: :stack_layout))
+    end)
+  end
+
+  defp position_horizontal_stack(graph, parent_guid, parent) do
+    {graph, _cursor} =
+      graph
+      |> stack_children(parent_guid)
+      |> Enum.filter(&(&1.visible != false))
+      |> Enum.reduce({graph, stack_left_padding(parent)}, &position_stack_child(&2, &1, parent))
+
+    graph
+  end
+
+  defp position_stack_child({graph, cursor}, child, parent) do
+    transform = Map.put(child.transform || %{}, :m02, cursor)
+
+    graph =
+      Patch.apply_all(
+        graph,
+        Patch.set(GUID.parse!(child.guid), :transform, transform, source: :stack_layout)
+      )
+
+    {graph, cursor + node_width(child) + stack_spacing(parent)}
+  end
+
+  defp stack_children(graph, parent_guid) do
+    graph.children
+    |> Map.get(parent_guid, [])
+    |> Enum.map(&Map.get(graph.nodes, &1))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp stack_width(children) do
+    children
+    |> Enum.filter(&(&1.visible != false))
+    |> Enum.reduce(0.0, fn child, sum -> sum + node_width(child) end)
+  end
+
+  defp stack_inner_width(parent, effective_parent) do
+    with %{x: width} <- effective_parent.size do
+      width - stack_left_padding(parent) - stack_right_padding(parent)
+    end
+  end
+
+  defp stack_left_padding(parent), do: parent.stack_horizontal_padding || 0.0
+
+  defp stack_right_padding(parent),
+    do: parent.stack_padding_right || parent.stack_horizontal_padding || 0.0
+
+  defp stack_spacing(parent), do: parent.stack_spacing || 0.0
+  defp node_width(%{size: %{x: width}}) when is_number(width), do: width
+  defp node_width(_node), do: 0.0
+  defp close?(left, right), do: abs(left - right) < 0.01
 
   defp swap_from(%SeedNode{symbol_overrides: []}, graph), do: graph
 
@@ -112,6 +230,14 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     seed.symbol_overrides
     |> Enum.filter(& &1.overridden_symbol_id)
     |> Enum.reduce(graph, &swap(seed, &1, &2))
+  end
+
+  defp component_props_from(%SeedNode{symbol_overrides: []}, graph), do: graph
+
+  defp component_props_from(%SeedNode{} = seed, graph) do
+    seed.symbol_overrides
+    |> Enum.reject(&(&1.component_prop_assignments == []))
+    |> Enum.reduce(graph, &component_props(seed, &1, &2))
   end
 
   defp patch_from(%SeedNode{symbol_overrides: []}, graph), do: graph
@@ -125,11 +251,20 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp swap(seed, override, graph) do
     case Target.resolve(graph, seed.guid, override.guid_path) do
       {:ok, target_guid} ->
-        graph
-        |> Patch.apply_all(
+        Patch.apply_all(
+          graph,
           Patch.swap(target_guid, override.overridden_symbol_id, source: :symbol_override)
         )
-        |> ComponentProps.apply_assignments(target_guid, override.component_prop_assignments)
+
+      {:error, reason} ->
+        add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
+    end
+  end
+
+  defp component_props(seed, override, graph) do
+    case Target.resolve(graph, seed.guid, override.guid_path) do
+      {:ok, target_guid} ->
+        ComponentProps.apply_assignments(graph, target_guid, override.component_prop_assignments)
 
       {:error, reason} ->
         add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
@@ -249,28 +384,50 @@ defmodule FigKiwi.Scene.Graph.Resolver do
         add_unresolved(graph, {:instance_component, instance.guid, component_guid})
 
       true ->
-        clone_children(graph, instance.guid, instance.guid, component_guid, component_guid)
+        clone_children(
+          graph,
+          instance.guid,
+          instance.guid,
+          component_guid,
+          component_guid,
+          {1.0, 1.0}
+        )
     end
   end
 
   defp populate_seed_instance(_seed, graph), do: graph
 
-  defp clone_children(graph, instance_guid, clone_parent_guid, source_parent_guid, component_guid) do
+  defp clone_children(
+         graph,
+         instance_guid,
+         clone_parent_guid,
+         source_parent_guid,
+         component_guid,
+         scale
+       ) do
     graph.children
     |> Map.get(source_parent_guid, [])
     |> Enum.reduce(graph, fn source_child_guid, acc ->
-      clone_subtree(acc, instance_guid, clone_parent_guid, source_child_guid, component_guid)
+      clone_subtree(
+        acc,
+        instance_guid,
+        clone_parent_guid,
+        source_child_guid,
+        component_guid,
+        scale
+      )
     end)
   end
 
-  defp clone_subtree(graph, instance_guid, clone_parent_guid, source_guid, component_guid) do
+  defp clone_subtree(graph, instance_guid, clone_parent_guid, source_guid, component_guid, scale) do
     source_node = Map.fetch!(graph.nodes, source_guid)
     clone_guid = GUID.append(clone_parent_guid, source_guid)
 
     cloned_node = %{
       source_node
       | guid: GUID.format(clone_guid),
-        parent_guid: GUID.format(clone_parent_guid)
+        parent_guid: GUID.format(clone_parent_guid),
+        transform: scale_transform(source_node.transform, scale)
     }
 
     source_seed = Map.get(graph.seed_nodes, source_guid)
@@ -280,7 +437,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     |> put_clone_node(clone_guid, cloned_node, cloned_seed, instance_guid, source_guid)
     |> Nodes.child(clone_parent_guid, clone_guid)
     |> put_clone_provenance(clone_guid, source_guid, instance_guid, component_guid)
-    |> clone_children(instance_guid, clone_guid, source_guid, component_guid)
+    |> clone_children(instance_guid, clone_guid, source_guid, component_guid, scale)
     |> populate_nested_clone(source_seed, instance_guid, clone_guid)
   end
 
@@ -293,12 +450,15 @@ defmodule FigKiwi.Scene.Graph.Resolver do
        when is_tuple(nested_component_guid) do
     if source_seed.visible != false and Map.get(graph.children, clone_guid, []) == [] and
          Map.has_key?(graph.nodes, nested_component_guid) do
+      scale = nested_instance_scale(graph, source_seed, nested_component_guid)
+
       clone_children(
         graph,
         root_instance_guid,
         clone_guid,
         nested_component_guid,
-        nested_component_guid
+        nested_component_guid,
+        scale
       )
     else
       graph
@@ -306,6 +466,44 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp populate_nested_clone(graph, _source_seed, _root_instance_guid, _clone_guid), do: graph
+
+  defp nested_instance_scale(graph, source_seed, component_guid) do
+    case Map.get(graph.children, component_guid, []) do
+      [_single_child] -> scale(source_seed, Map.get(graph.nodes, component_guid))
+      _children -> {1.0, 1.0}
+    end
+  end
+
+  defp scale(source, target) do
+    with %{x: sx, y: sy} <- size(source),
+         %{x: tx, y: ty} <- size(target),
+         true <- usable_dimension?(tx),
+         true <- usable_dimension?(ty) do
+      {sx / tx, sy / ty}
+    else
+      _value -> {1.0, 1.0}
+    end
+  end
+
+  defp size(%{size: size}), do: size
+  defp size(_node), do: nil
+
+  defp usable_dimension?(value), do: value not in [nil, 0]
+
+  defp scale_transform(nil, _scale), do: nil
+
+  defp scale_transform(transform, scale) do
+    transform
+    |> scaled_offset(:m02, elem(scale, 0))
+    |> scaled_offset(:m12, elem(scale, 1))
+  end
+
+  defp scaled_offset(transform, key, scale) do
+    Map.update(transform, key, nil, fn
+      nil -> nil
+      value -> value * scale
+    end)
+  end
 
   defp put_clone_node(
          %Graph{} = graph,
@@ -484,7 +682,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp add_component_prop_ref(seed, prop_ref, refs) do
     with def_id when not is_nil(def_id) <- prop_ref.def_id,
          field when not is_nil(field) <- ComponentProps.field(prop_ref.field) do
-      Map.put_new(refs, def_id, {seed.guid, field})
+      Map.update(refs, def_id, [{seed.guid, field}], &[{seed.guid, field} | &1])
     else
       _value -> refs
     end

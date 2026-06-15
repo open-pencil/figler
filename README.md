@@ -58,14 +58,18 @@ components = Scene.components(index)
 filled_nodes = Scene.with_fills(index)
 tree = Scene.tree(index, depth: 3)
 
-# A graph is the separate effective-scene surface for resolved Figma semantics.
-# It accepts the same query/navigation helpers as an index. The initial graph
-# handle is backed by the projected native index while native resolver stages
-# for instances, overrides, component props, derived symbol data, and variables
-# are added incrementally.
-graph = Scene.graph(index) # %FigKiwi.Scene.Graph{}
+# A graph is the separate effective-scene surface for resolved Figma semantics:
+# populated instances, overrides, component props, swaps, derived symbol data,
+# and layout adjustments. Use `root:`/`focus:` for fast focused inspection.
+graph = Scene.graph(fig_binary, root: "0:123") # %FigKiwi.Scene.Graph{}
 text = Scene.text_contains(graph, "Submit")
+
+# Graph-specific helpers expose resolved trees, provenance, diffs, and instance
+# metadata for Figma debugging/tooling.
+tree = Scene.Graph.tree(graph, root: "0:123", depth: 3)
 explanation = Scene.Graph.explain(graph, "0:123")
+changes = Scene.Graph.diff(graph, root: "0:123")
+instance = Scene.Graph.instance(graph, "0:123")
 ```
 
 For dynamic values, prefer native helpers instead of interpolating XPath strings:

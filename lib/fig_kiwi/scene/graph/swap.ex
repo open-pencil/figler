@@ -97,6 +97,7 @@ defmodule FigKiwi.Scene.Graph.Swap do
     |> put_index(GUID.root(instance_guid), source_guid, clone_guid)
     |> put_provenance(clone_guid, source_guid, instance_guid, component_guid)
     |> fill_child(instance_guid, clone_guid, source_guid, component_guid, scale)
+    |> fill_nested_instance(cloned_seed, clone_guid)
   end
 
   defp fill_child(graph, instance_guid, parent_guid, source_guid, component_guid, scale) do
@@ -105,6 +106,34 @@ defmodule FigKiwi.Scene.Graph.Swap do
     |> Enum.reduce(graph, fn child_guid, acc ->
       clone(acc, instance_guid, parent_guid, child_guid, component_guid, scale)
     end)
+  end
+
+  defp fill_nested_instance(
+         graph,
+         %SeedNode{component_guid: nested_component_guid, visible: visible},
+         clone_guid
+       )
+       when is_tuple(nested_component_guid) do
+    if visible != false and Map.get(graph.children, clone_guid, []) == [] and
+         Map.has_key?(graph.nodes, nested_component_guid) do
+      fill(
+        graph,
+        clone_guid,
+        nested_component_guid,
+        nested_scale(graph, clone_guid, nested_component_guid)
+      )
+    else
+      graph
+    end
+  end
+
+  defp fill_nested_instance(graph, _seed, _clone_guid), do: graph
+
+  defp nested_scale(graph, target_guid, component_guid) do
+    case Map.get(graph.children, component_guid, []) do
+      [_single_child] -> scale(graph, target_guid, component_guid)
+      _children -> {1.0, 1.0}
+    end
   end
 
   defp scale(%Graph{} = graph, target_guid, component_guid) do

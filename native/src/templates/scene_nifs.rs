@@ -60,6 +60,11 @@ pub fn build_scene_index(bytes: Binary<'_>) -> NifResult<rustler::ResourceArc<sc
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
+pub fn build_scene_index_with_summary(bytes: Binary<'_>) -> NifResult<(rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>, SceneSummary)> {
+    scene_xpath_runtime::build_scene_index_with_summary_value(bytes)
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_xpath<'a>(env: Env<'a>, bytes: Binary<'a>, xpath: String) -> NifResult<Term<'a>> {
     scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
 }

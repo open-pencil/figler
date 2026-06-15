@@ -29,10 +29,13 @@ figma =
   |> File.read!()
   |> Jason.decode!()
 
-graph =
-  fixture
-  |> File.read!()
-  |> FigKiwi.Scene.graph(root: node_guid, until: :derived_symbol_data)
+{graph_build_us, graph} =
+  :timer.tc(fn ->
+    fixture
+    |> File.read!()
+    |> FigKiwi.Scene.payload!()
+    |> FigKiwi.Scene.graph(root: node_guid, until: :stack_layout)
+  end)
 
 serialize = fn rec, node, remaining_depth ->
   children =
@@ -139,6 +142,7 @@ diffs = compare.(compare, figma, figkiwi, node_guid)
 summary = %{
   node: node_guid,
   depth: depth,
+  graph_build_ms: System.convert_time_unit(graph_build_us, :microsecond, :millisecond),
   graph:
     FigKiwi.Scene.Graph.stats(graph)
     |> Map.take([:node_count, :clone_count, :unresolved_count, :applied_count]),

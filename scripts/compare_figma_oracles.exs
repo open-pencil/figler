@@ -29,7 +29,20 @@ defmodule FigKiwi.OracleComparison do
     "childCount"
   ]
 
-  def run(fixture, base_dir, entry) do
+  def run(fixture_binary, base_dir, entry) when is_binary(fixture_binary) do
+    node_guid = fetch_string!(entry, "node")
+
+    {build_us, graph} =
+      :timer.tc(fn ->
+        FigKiwi.Scene.graph(fixture_binary, root: node_guid, until: :stack_layout)
+      end)
+
+    graph
+    |> run(base_dir, entry)
+    |> Map.put(:graph_build_ms, System.convert_time_unit(build_us, :microsecond, :millisecond))
+  end
+
+  def run(graph, base_dir, entry) do
     node_guid = fetch_string!(entry, "node")
     depth = Map.get(entry, "depth", 2)
     epsilon = Map.get(entry, "epsilon", 0.0001)
@@ -41,11 +54,6 @@ defmodule FigKiwi.OracleComparison do
       |> expand_path(base_dir)
 
     figma = oracle_json |> File.read!() |> Jason.decode!()
-
-    graph =
-      fixture
-      |> File.read!()
-      |> FigKiwi.Scene.graph(root: node_guid, until: :derived_symbol_data)
 
     figkiwi =
       graph
@@ -175,11 +183,44 @@ entries =
     _other -> raise "oracle manifest must be a JSON array or an object with a comparisons array"
   end
 
-results = Enum.map(entries, &FigKiwi.OracleComparison.run(fixture, base_dir, &1))
+fixture_payload = fixture |> File.read!() |> FigKiwi.Scene.payload!()
+shared_graph? = System.get_env("FIG_KIWI_ORACLE_SHARED_GRAPH") in ["1", "true", "TRUE"]
+
+{build_us, compare_us, results} =
+  if shared_graph? do
+    node_guids = Enum.map(entries, &Map.fetch!(&1, "node"))
+
+    {build_us, graph} =
+      :timer.tc(fn ->
+        FigKiwi.Scene.graph(fixture_payload, root: node_guids, until: :stack_layout)
+      end)
+
+    {compare_us, results} =
+      :timer.tc(fn -> Enum.map(entries, &FigKiwi.OracleComparison.run(graph, base_dir, &1)) end)
+
+    {build_us, compare_us, results}
+  else
+    {total_us, results} =
+      :timer.tc(fn ->
+        Enum.map(entries, &FigKiwi.OracleComparison.run(fixture_payload, base_dir, &1))
+      end)
+
+    build_us =
+      results
+      |> Enum.map(&Map.get(&1, :graph_build_ms, 0))
+      |> Enum.sum()
+      |> System.convert_time_unit(:millisecond, :microsecond)
+
+    compare_us = max(total_us - build_us, 0)
+    {build_us, compare_us, results}
+  end
 
 summary = %{
   fixture: fixture,
   comparison_count: length(results),
+  shared_graph: shared_graph?,
+  graph_build_ms: System.convert_time_unit(build_us, :microsecond, :millisecond),
+  compare_ms: System.convert_time_unit(compare_us, :microsecond, :millisecond),
   failed_count: Enum.count(results, &(&1.diff_count > 0)),
   results: Enum.map(results, &Map.delete(&1, :diffs))
 }

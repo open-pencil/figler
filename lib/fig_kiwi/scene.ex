@@ -513,6 +513,10 @@ defmodule FigKiwi.Scene do
   end
 
   defp reusable_index(scene) when is_binary(scene), do: scene |> index() |> reusable_index()
+
+  defp reusable_index(%Graph{resource: nil, source: source}) when is_binary(source),
+    do: source |> index() |> reusable_index()
+
   defp reusable_index(%Graph{resource: resource}), do: resource
   defp reusable_index(%Index{resource: resource}), do: resource
   defp reusable_index(index), do: index
