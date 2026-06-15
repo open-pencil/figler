@@ -15,8 +15,9 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
   def apply(%Graph{} = graph, %SeedNode{component_prop_assignments: []}), do: graph
 
   def apply(%Graph{} = graph, %SeedNode{} = instance) do
-    instance.component_prop_assignments
-    |> Enum.reduce(graph, &apply_assignment(instance, &1, &2))
+    graph
+    |> reduce(instance, &swap?/1)
+    |> reduce(instance, &(not swap?(&1)))
   end
 
   @doc """
@@ -35,6 +36,14 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
       end
     end)
   end
+
+  defp reduce(graph, instance, predicate) do
+    instance.component_prop_assignments
+    |> Enum.filter(predicate)
+    |> Enum.reduce(graph, &apply_assignment(instance, &1, &2))
+  end
+
+  defp swap?(assignment), do: match?({:guid, _guid}, assignment.value)
 
   defp apply_assignment(instance, assignment, graph) do
     with {source_guid, field} <- ref(graph, assignment.def_id),

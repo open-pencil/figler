@@ -318,7 +318,7 @@ defmodule FigKiwi.SceneTest do
     assert {:component_prop, :visible, true, false} in applied
   end
 
-  test "materializes symbol override component swaps" do
+  test "materializes symbol override component swaps before field patches" do
     graph =
       [
         %SeedNode{guid: {1, 1}, node_type: "component", name: "Old"},
@@ -330,7 +330,8 @@ defmodule FigKiwi.SceneTest do
           node_type: "instance",
           symbol_id: {1, 1},
           symbol_overrides: [
-            %SymbolOverride{guid_path: [{2, 1}], overridden_symbol_id: {3, 1}}
+            %SymbolOverride{guid_path: [{2, 1}], overridden_symbol_id: {3, 1}},
+            %SymbolOverride{guid_path: [{3, 1}, {3, 2}], fields: %{text: "Patched label"}}
           ]
         }
       ]
@@ -342,10 +343,14 @@ defmodule FigKiwi.SceneTest do
 
     assert graph.seed_nodes[{2, 1}].symbol_id == {3, 1}
     assert Scene.node(graph, "clone:2:1/1:2") == nil
-    assert [%Node{guid: "clone:2:1/3:2", text: "New label"}] = Scene.children(graph, "2:1")
+    assert [%Node{guid: "clone:2:1/3:2", text: "Patched label"}] = Scene.children(graph, "2:1")
 
     assert Graph.explain(graph, "2:1").applied == [
              {:symbol_override, :component_guid, {1, 1}, {3, 1}}
+           ]
+
+    assert Graph.explain(graph, "clone:2:1/3:2").applied == [
+             {:symbol_override, :text, "New label", "Patched label"}
            ]
   end
 

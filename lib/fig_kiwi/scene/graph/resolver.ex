@@ -75,9 +75,11 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp apply_symbol_overrides(graph) do
-    graph.seed_nodes
-    |> Map.values()
-    |> Enum.reduce(graph, &apply_seed_symbol_overrides/2)
+    seeds = Map.values(graph.seed_nodes)
+
+    graph
+    |> reduce(seeds, &swap_from/2)
+    |> reduce(seeds, &patch_from/2)
     |> mark_stage(:symbol_overrides)
   end
 
@@ -101,37 +103,52 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   defp resolve_variables(graph), do: mark_stage(graph, :variables)
 
-  defp apply_seed_symbol_overrides(%SeedNode{symbol_overrides: []}, graph), do: graph
+  defp swap_from(%SeedNode{symbol_overrides: []}, graph), do: graph
 
-  defp apply_seed_symbol_overrides(%SeedNode{} = seed, graph) do
-    Enum.reduce(seed.symbol_overrides, graph, &apply_symbol_override(seed, &1, &2))
+  defp swap_from(%SeedNode{} = seed, graph) do
+    seed.symbol_overrides
+    |> Enum.filter(& &1.overridden_symbol_id)
+    |> Enum.reduce(graph, &swap(seed, &1, &2))
   end
 
-  defp apply_symbol_override(seed, override, graph) do
+  defp patch_from(%SeedNode{symbol_overrides: []}, graph), do: graph
+
+  defp patch_from(%SeedNode{} = seed, graph) do
+    seed.symbol_overrides
+    |> Enum.reject(&(&1.fields == %{}))
+    |> Enum.reduce(graph, &patch(seed, &1, &2))
+  end
+
+  defp swap(seed, override, graph) do
     case Target.resolve(graph, seed.guid, override.guid_path) do
       {:ok, target_guid} ->
-        graph
-        |> Patch.apply_all(symbol_override_patches(target_guid, override))
+        Patch.apply_all(
+          graph,
+          Patch.swap(target_guid, override.overridden_symbol_id, source: :symbol_override)
+        )
 
       {:error, reason} ->
         add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
     end
   end
 
-  defp symbol_override_patches(target_guid, override) do
-    field_patches =
-      Enum.map(override.fields, fn {field, value} ->
-        Patch.set(target_guid, field, value, source: :symbol_override)
-      end)
+  defp patch(seed, override, graph) do
+    case Target.resolve(graph, seed.guid, override.guid_path) do
+      {:ok, target_guid} ->
+        Patch.apply_all(graph, field_patches(target_guid, override.fields))
 
-    case override.overridden_symbol_id do
-      nil ->
-        field_patches
-
-      component_guid ->
-        [Patch.swap(target_guid, component_guid, source: :symbol_override) | field_patches]
+      {:error, reason} ->
+        add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
     end
   end
+
+  defp field_patches(target_guid, fields) do
+    Enum.map(fields, fn {field, value} ->
+      Patch.set(target_guid, field, value, source: :symbol_override)
+    end)
+  end
+
+  defp reduce(graph, values, fun), do: Enum.reduce(values, graph, fun)
 
   defp populate_seed_instance(
          %SeedNode{node_type: "instance", symbol_id: component_guid} = instance,
