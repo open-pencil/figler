@@ -5,6 +5,7 @@ defmodule FigKiwi.SceneTest do
   alias FigKiwi.Scene.Graph
   alias FigKiwi.Scene.Graph.ComponentPropAssignment
   alias FigKiwi.Scene.Graph.ComponentPropRef
+  alias FigKiwi.Scene.Graph.DerivedSymbolData
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.SymbolOverride
@@ -313,6 +314,47 @@ defmodule FigKiwi.SceneTest do
     applied = Graph.explain(graph, clone_guid).applied
     assert {:component_prop, :text, "Default", "Submit"} in applied
     assert {:component_prop, :visible, true, false} in applied
+  end
+
+  test "applies derived symbol layout data to cloned children" do
+    transform = %{m00: 1.0, m01: 0.0, m02: 10.0, m10: 0.0, m11: 1.0, m12: 20.0}
+
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Card"},
+        %SeedNode{
+          guid: {1, 2},
+          node_type: "frame",
+          parent_guid: {1, 1},
+          size: %{x: 100.0, y: 40.0}
+        },
+        %SeedNode{
+          guid: {2, 1},
+          node_type: "instance",
+          symbol_id: {1, 1},
+          derived_symbol_data: [
+            %DerivedSymbolData{
+              guid_path: [{1, 1}, {1, 2}],
+              size: %{x: 120.0, y: 50.0},
+              transform: transform
+            }
+          ]
+        }
+      ]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances, :derived_symbol_data]
+      )
+      |> Resolver.resolve()
+
+    assert [%Node{guid: clone_guid, size: %{x: 120.0, y: 50.0}, transform: ^transform}] =
+             Scene.children(graph, "2:1")
+
+    assert clone_guid == "clone:2:1/1:2"
+
+    applied = Graph.explain(graph, clone_guid).applied
+    assert {:derived_symbol_data, :size, %{x: 100.0, y: 40.0}, %{x: 120.0, y: 50.0}} in applied
+    assert {:derived_symbol_data, :transform, nil, transform} in applied
   end
 
   test "navigates projected scene indexes" do

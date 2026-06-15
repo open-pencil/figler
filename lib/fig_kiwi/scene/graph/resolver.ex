@@ -10,6 +10,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   alias FigKiwi.Scene.Graph
   alias FigKiwi.Scene.Graph.ComponentProps
+  alias FigKiwi.Scene.Graph.DerivedData
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.SeedNode
@@ -89,7 +90,14 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp sync_component_props(graph), do: mark_stage(graph, :sync_component_props)
-  defp apply_derived_symbol_data(graph), do: mark_stage(graph, :derived_symbol_data)
+
+  defp apply_derived_symbol_data(graph) do
+    graph.seed_nodes
+    |> Map.values()
+    |> Enum.reduce(graph, &DerivedData.apply(&2, &1))
+    |> mark_stage(:derived_symbol_data)
+  end
+
   defp resolve_variables(graph), do: mark_stage(graph, :variables)
 
   defp apply_seed_symbol_overrides(%SeedNode{symbol_overrides: []}, graph), do: graph
