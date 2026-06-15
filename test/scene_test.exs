@@ -239,6 +239,26 @@ defmodule FigKiwi.SceneTest do
            }
   end
 
+  test "focuses resolver stages on selected source subtrees" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Button"},
+        %SeedNode{guid: {1, 2}, node_type: "text", parent_guid: {1, 1}, text: "Default"},
+        %SeedNode{guid: {2, 1}, node_type: "instance", symbol_id: {1, 1}},
+        %SeedNode{guid: {2, 2}, node_type: "instance", symbol_id: {1, 1}}
+      ]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances],
+        options: [focus: [{2, 1}]]
+      )
+      |> Resolver.resolve()
+
+    assert [%Node{guid: "clone:2:1/1:2"}] = Scene.children(graph, "2:1")
+    assert Scene.children(graph, "2:2") == []
+    assert Graph.stats(graph).clone_count == 1
+  end
+
   test "validates nested source paths when resolving symbol overrides" do
     graph =
       [

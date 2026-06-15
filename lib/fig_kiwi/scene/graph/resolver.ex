@@ -152,10 +152,28 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp reduce(graph, values, fun), do: Enum.reduce(values, graph, fun)
 
   defp source_instances(graph) do
+    focus = focus_set(graph)
+
     Enum.flat_map(graph.seed_nodes, fn
-      {_guid, %{origin: :source, node_type: "instance"} = seed} -> [seed]
-      _entry -> []
+      {guid, %{origin: :source, node_type: "instance"} = seed} ->
+        if is_nil(focus) or MapSet.member?(focus, guid), do: [seed], else: []
+
+      _entry ->
+        []
     end)
+  end
+
+  defp focus_set(graph) do
+    case Keyword.get(graph.options, :focus) do
+      nil -> nil
+      [] -> nil
+      focus -> focus |> Enum.flat_map(&source_subtree(graph, &1)) |> MapSet.new()
+    end
+  end
+
+  defp source_subtree(graph, guid) do
+    children = Map.get(graph.children, guid, [])
+    [guid | Enum.flat_map(children, &source_subtree(graph, &1))]
   end
 
   defp populate_seed_instance(

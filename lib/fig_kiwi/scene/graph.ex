@@ -89,6 +89,9 @@ defmodule FigKiwi.Scene.Graph do
     * `:only` - alias for `:stages`, useful for focused debugging.
     * `:until` - include default stages through this stage.
     * `:skip` - remove stages from the selected pipeline.
+    * `:focus` - one or more source GUIDs to resolve. When set, resolver stages
+      only run from matching source instances and their source descendants.
+    * `:root` - alias for `:focus`, useful for resolving one subtree.
     * `:resolve_variables` - `false`, `:known`, or `:preserve`. Defaults to `:known`.
     * `:resolve_styles` - `false`, `:refs`, or `:known`. Defaults to `false`.
     * `:fields` - optional projected fields hint for future graph materialization.
@@ -287,8 +290,26 @@ defmodule FigKiwi.Scene.Graph do
 
   defp normalize_options(opts) do
     opts
+    |> normalize_focus()
     |> Keyword.put_new(:resolve_variables, :known)
     |> Keyword.put_new(:resolve_styles, false)
+  end
+
+  defp normalize_focus(opts) do
+    focus = Keyword.get(opts, :focus, Keyword.get(opts, :root))
+
+    if is_nil(focus) do
+      opts
+    else
+      Keyword.put(opts, :focus, parse_focus(focus))
+    end
+  end
+
+  defp parse_focus(focus) do
+    focus
+    |> List.wrap()
+    |> Enum.map(&GUID.parse!/1)
+    |> Enum.uniq()
   end
 
   defp stages(opts) do
