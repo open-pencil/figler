@@ -9,7 +9,7 @@ defmodule FigKiwi.Scene.Node do
   """
 
   @source_module FigKiwi.Schema.NodeChange
-  @source_fields [:guid, :type, :name, :parent_index]
+  @source_fields [:guid, :type, :name, :parent_index, :size, :transform, :visible, :locked]
   @parent_index_source_fields [:guid, :position]
 
   @source_props @source_module.__kiwi_props__()
@@ -32,7 +32,18 @@ defmodule FigKiwi.Scene.Node do
   end
 
   @enforce_keys [:guid, :node_type]
-  defstruct [:guid, :node_type, :name, :parent_guid, :position, children: nil]
+  defstruct [
+    :guid,
+    :node_type,
+    :name,
+    :parent_guid,
+    :position,
+    :size,
+    :transform,
+    :visible,
+    :locked,
+    children: nil
+  ]
 
   @type t :: %__MODULE__{
           guid: String.t(),
@@ -40,6 +51,10 @@ defmodule FigKiwi.Scene.Node do
           name: String.t() | nil,
           parent_guid: String.t() | nil,
           position: String.t() | nil,
+          size: map() | nil,
+          transform: map() | nil,
+          visible: boolean() | nil,
+          locked: boolean() | nil,
           children: [t()] | nil
         }
 
@@ -64,6 +79,19 @@ defmodule FigKiwi.Scene.Node do
   @doc false
   @spec from_map(map()) :: t()
   def from_map(map) when is_map(map) do
-    struct!(__MODULE__, Map.take(map, [:guid, :node_type, :name, :parent_guid, :position]))
+    struct!(
+      __MODULE__,
+      Map.take(map, [
+        :guid,
+        :node_type,
+        :name,
+        :parent_guid,
+        :position,
+        :size,
+        :transform,
+        :visible,
+        :locked
+      ])
+    )
   end
 end

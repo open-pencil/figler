@@ -54,6 +54,11 @@ defmodule FigKiwi.Scene do
     * `@name`
     * `@parent_guid`
     * `@position`
+    * `@x` / `@width`
+    * `@y` / `@height`
+    * `@transform`
+    * `@visible`
+    * `@locked`
   """
   @spec query(binary() | reference(), String.t()) :: [scene_node()]
   def query(binary, xpath) when is_binary(binary) and is_binary(xpath) do

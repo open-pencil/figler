@@ -17,12 +17,27 @@ defmodule FigKiwi.SceneTest do
 
   test "scene node projection is backed by generated Kiwi schema metadata" do
     assert Node.source_module() == FigKiwi.Schema.NodeChange
-    assert Node.source_fields() == [:guid, :type, :name, :parent_index]
+
+    assert Node.source_fields() == [
+             :guid,
+             :type,
+             :name,
+             :parent_index,
+             :size,
+             :transform,
+             :visible,
+             :locked
+           ]
+
     assert Node.parent_index_source_fields() == [:guid, :position]
   end
 
   test "queries raw message payloads" do
     assert Scene.query(message_payload(), "//canvas[@name='Page 1']") == [scene_canvas()]
+
+    assert Scene.query(message_payload(), "//canvas[@width='100' and @visible='true']") == [
+             scene_canvas()
+           ]
   end
 
   test "reuses projected scene indexes across XPath queries" do
@@ -69,7 +84,11 @@ defmodule FigKiwi.SceneTest do
       node_type: "canvas",
       name: "Page 1",
       parent_guid: "0:0",
-      position: "!"
+      position: "!",
+      size: %{x: 100.0, y: 50.0},
+      transform: %{m00: 1.0, m01: 0.0, m02: 10.0, m10: 0.0, m11: 1.0, m12: 20.0},
+      visible: true,
+      locked: false
     }
   end
 
@@ -104,7 +123,19 @@ defmodule FigKiwi.SceneTest do
             guid: struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 1),
             parent_index: struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!"),
             type: :canvas,
-            name: "Page 1"
+            name: "Page 1",
+            size: struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0),
+            transform:
+              struct(FigKiwi.Schema.Matrix,
+                m00: 1.0,
+                m01: 0.0,
+                m02: 10.0,
+                m10: 0.0,
+                m11: 1.0,
+                m12: 20.0
+              ),
+            visible: true,
+            locked: false
           )
         ]
       )

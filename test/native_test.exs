@@ -91,7 +91,11 @@ defmodule FigKiwi.NativeTest do
                node_type: "canvas",
                name: "Page 1",
                parent_guid: "0:0",
-               position: "!"
+               position: "!",
+               size: nil,
+               transform: nil,
+               visible: nil,
+               locked: nil
              }
            ]
   end

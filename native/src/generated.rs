@@ -31077,6 +31077,20 @@ pub struct SceneSummary {
     root_count: usize,
     type_counts: Vec<(String, usize)>,
 }
+#[derive(Clone, Debug, rustler::NifMap)]
+pub struct SceneSize {
+    x: f64,
+    y: f64,
+}
+#[derive(Clone, Debug, rustler::NifMap)]
+pub struct SceneTransform {
+    m00: f64,
+    m01: f64,
+    m02: f64,
+    m10: f64,
+    m11: f64,
+    m12: f64,
+}
 #[derive(rustler::NifMap)]
 pub struct SceneQueryNode {
     guid: String,
@@ -31084,6 +31098,10 @@ pub struct SceneQueryNode {
     name: Option<String>,
     parent_guid: Option<String>,
     position: Option<String>,
+    size: Option<SceneSize>,
+    transform: Option<SceneTransform>,
+    visible: Option<bool>,
+    locked: Option<bool>,
 }
 fn scene_node_type_name(value: u32) -> &'static str {
     match value {
@@ -87918,6 +87936,10 @@ mod scene_xpath_runtime {
         name: Option<String>,
         parent_guid: Option<String>,
         position: Option<String>,
+        size: Option<SceneSize>,
+        transform: Option<SceneTransform>,
+        visible: Option<bool>,
+        locked: Option<bool>,
         parent: Option<usize>,
         children: Vec<usize>,
     }
@@ -87967,23 +87989,45 @@ mod scene_xpath_runtime {
     impl Resource for SceneIndexResource {}
     struct SceneDom;
     impl SceneNodeRecord {
-        fn attrs(&self) -> Vec<(&'static str, &str)> {
+        fn attrs(&self) -> Vec<(&'static str, String)> {
             let mut attrs = vec![
-                ("guid", self.guid.as_str()), ("type", self.node_type.as_str())
+                ("guid", self.guid.clone()), ("type", self.node_type.clone())
             ];
-            if let Some(value) = self.name.as_deref() {
-                attrs.push(("name", value));
+            if let Some(value) = self.name.as_ref() {
+                attrs.push(("name", value.clone()));
             }
-            if let Some(value) = self.parent_guid.as_deref() {
-                attrs.push(("parent_guid", value));
+            if let Some(value) = self.parent_guid.as_ref() {
+                attrs.push(("parent_guid", value.clone()));
             }
-            if let Some(value) = self.position.as_deref() {
-                attrs.push(("position", value));
+            if let Some(value) = self.position.as_ref() {
+                attrs.push(("position", value.clone()));
+            }
+            if let Some(value) = self.size.as_ref() {
+                attrs.push(("x", value.x.to_string()));
+                attrs.push(("y", value.y.to_string()));
+                attrs.push(("width", value.x.to_string()));
+                attrs.push(("height", value.y.to_string()));
+            }
+            if let Some(value) = self.transform.as_ref() {
+                attrs
+                    .push((
+                        "transform",
+                        format!(
+                            "{},{},{},{},{},{}", value.m00, value.m01, value.m02, value
+                            .m10, value.m11, value.m12
+                        ),
+                    ));
+            }
+            if let Some(value) = self.visible {
+                attrs.push(("visible", value.to_string()));
+            }
+            if let Some(value) = self.locked {
+                attrs.push(("locked", value.to_string()));
             }
             attrs
         }
-        fn attr(&self, index: usize) -> Option<(&'static str, &str)> {
-            self.attrs().get(index).copied()
+        fn attr(&self, index: usize) -> Option<(&'static str, String)> {
+            self.attrs().get(index).cloned()
         }
         fn attr_count(&self) -> usize {
             self.attrs().len()
@@ -88153,7 +88197,7 @@ mod scene_xpath_runtime {
                     self.scene
                         .nodes[owner]
                         .attr(index)
-                        .map(|(_, value)| value.to_owned())
+                        .map(|(_, value)| value)
                         .unwrap_or_default()
                 }
             }
@@ -88380,6 +88424,24 @@ mod scene_xpath_runtime {
         let position = decoder.read_string_value()?;
         Ok((guid, position))
     }
+    fn read_scene_size_value(decoder: &mut Decoder<'_>) -> NifResult<SceneSize> {
+        Ok(SceneSize {
+            x: decoder.read_var_float_value()? as f64,
+            y: decoder.read_var_float_value()? as f64,
+        })
+    }
+    fn read_scene_transform_value(
+        decoder: &mut Decoder<'_>,
+    ) -> NifResult<SceneTransform> {
+        Ok(SceneTransform {
+            m00: decoder.read_var_float_value()? as f64,
+            m01: decoder.read_var_float_value()? as f64,
+            m02: decoder.read_var_float_value()? as f64,
+            m10: decoder.read_var_float_value()? as f64,
+            m11: decoder.read_var_float_value()? as f64,
+            m12: decoder.read_var_float_value()? as f64,
+        })
+    }
     fn scene_query_node(index: &SceneIndex, node_index: usize) -> SceneQueryNode {
         let node = &index.nodes[node_index];
         SceneQueryNode {
@@ -88388,6 +88450,10 @@ mod scene_xpath_runtime {
             name: node.name.clone(),
             parent_guid: node.parent_guid.clone(),
             position: node.position.clone(),
+            size: node.size.clone(),
+            transform: node.transform.clone(),
+            visible: node.visible,
+            locked: node.locked,
         }
     }
     pub fn build_scene_index_value(
@@ -88647,6 +88713,10 @@ mod scene_xpath_runtime {
         let mut name = None;
         let mut parent_guid = None;
         let mut position = None;
+        let mut size = None;
+        let mut transform = None;
+        let mut visible = None;
+        let mut locked = None;
         loop {
             match decoder.read_var_uint()? {
                 0 => break,
@@ -88662,6 +88732,10 @@ mod scene_xpath_runtime {
                     );
                 }
                 5 => name = Some(decoder.read_string_value()?),
+                6 => visible = Some(decoder.read_bool()?),
+                7 => locked = Some(decoder.read_bool()?),
+                11 => size = Some(read_scene_size_value(decoder)?),
+                12 => transform = Some(read_scene_transform_value(decoder)?),
                 53 => {
                     decoder.read_var_uint()?;
                 }
@@ -89115,14 +89189,8 @@ mod scene_xpath_runtime {
                 392 => {
                     decoder.skip_string()?;
                 }
-                6 => {
-                    decoder.read_bool()?;
-                }
                 58 => {
                     decoder.read_var_uint()?;
-                }
-                7 => {
-                    decoder.read_bool()?;
                 }
                 59 => {
                     decoder.read_var_uint()?;
@@ -89142,14 +89210,8 @@ mod scene_xpath_runtime {
                 61 => {
                     decoder.read_var_uint()?;
                 }
-                11 => {
-                    skip_vector_from_decoder(decoder)?;
-                }
                 63 => {
                     decoder.read_var_uint()?;
-                }
-                12 => {
-                    skip_matrix_from_decoder(decoder)?;
                 }
                 64 => {
                     decoder.read_var_uint()?;
@@ -90604,6 +90666,10 @@ mod scene_xpath_runtime {
             name,
             parent_guid,
             position,
+            size,
+            transform,
+            visible,
+            locked,
             parent: None,
             children: Vec::new(),
         })
@@ -90875,6 +90941,18 @@ fn decode_scene_node_change_from_decoder(
                 *type_counts.entry(name).or_insert(0) += 1;
             }
             5 => decoder.skip_string()?,
+            6 => {
+                decoder.read_bool()?;
+            }
+            7 => {
+                decoder.read_bool()?;
+            }
+            11 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            12 => {
+                skip_matrix_from_decoder(decoder)?;
+            }
             53 => {
                 decoder.read_var_uint()?;
             }
@@ -91328,14 +91406,8 @@ fn decode_scene_node_change_from_decoder(
             392 => {
                 decoder.skip_string()?;
             }
-            6 => {
-                decoder.read_bool()?;
-            }
             58 => {
                 decoder.read_var_uint()?;
-            }
-            7 => {
-                decoder.read_bool()?;
             }
             59 => {
                 decoder.read_var_uint()?;
@@ -91355,14 +91427,8 @@ fn decode_scene_node_change_from_decoder(
             61 => {
                 decoder.read_var_uint()?;
             }
-            11 => {
-                skip_vector_from_decoder(decoder)?;
-            }
             63 => {
                 decoder.read_var_uint()?;
-            }
-            12 => {
-                skip_matrix_from_decoder(decoder)?;
             }
             64 => {
                 decoder.read_var_uint()?;
