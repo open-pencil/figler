@@ -13,7 +13,7 @@ defmodule FigKiwi.Scene do
   """
 
   alias FigKiwi.Container
-  alias FigKiwi.Native
+  alias FigKiwi.Native.Scene, as: NativeScene
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Summary
 
@@ -27,7 +27,7 @@ defmodule FigKiwi.Scene do
   def summary(binary) when is_binary(binary) do
     binary
     |> payload!()
-    |> Native.decode_scene_summary()
+    |> NativeScene.decode_summary()
     |> Summary.from_map()
   end
 
@@ -40,7 +40,7 @@ defmodule FigKiwi.Scene do
   def index(binary) when is_binary(binary) do
     binary
     |> payload!()
-    |> Native.build_scene_index()
+    |> NativeScene.build_index()
   end
 
   @doc """
@@ -74,8 +74,8 @@ defmodule FigKiwi.Scene do
 
     nodes =
       case fields do
-        :all -> Native.query_scene_xpath(payload, xpath)
-        fields -> Native.query_scene_xpath_fields(payload, xpath, fields)
+        :all -> NativeScene.query_xpath(payload, xpath)
+        fields -> NativeScene.query_xpath_fields(payload, xpath, fields)
       end
 
     nodes_from_maps(nodes)
@@ -86,8 +86,8 @@ defmodule FigKiwi.Scene do
 
     nodes =
       case fields do
-        :all -> Native.query_scene_index(index, xpath)
-        fields -> Native.query_scene_index_fields(index, xpath, fields)
+        :all -> NativeScene.query_index(index, xpath)
+        fields -> NativeScene.query_index_fields(index, xpath, fields)
       end
 
     nodes_from_maps(nodes)

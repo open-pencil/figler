@@ -20,6 +20,8 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
 
   use Mix.Task
 
+  alias FigKiwi.Native.{Codec, Scene}
+
   @shortdoc "Benchmarks projected scene operations against .fig fixtures"
   @requirements ["app.start"]
 
@@ -44,28 +46,28 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
       {full_decode_us, full_decode_mem} =
         maybe_measured(
           full_decode?,
-          fn -> FigKiwi.Native.decode_message(payload) end,
+          fn -> Codec.decode_message(payload) end,
           &message_info/1
         )
 
       {sparse_decode_us, sparse_decode_mem} =
         maybe_measured(
           sparse_decode?,
-          fn -> FigKiwi.Native.decode_sparse_message(payload) end,
+          fn -> Codec.decode_sparse_message(payload) end,
           &sparse_message_info/1
         )
 
-      {summary_us, summary} = timed(fn -> FigKiwi.Native.decode_scene_summary(payload) end)
-      {index_us, index} = timed(fn -> FigKiwi.Native.build_scene_index(payload) end)
+      {summary_us, summary} = timed(fn -> Scene.decode_summary(payload) end)
+      {index_us, index} = timed(fn -> Scene.build_index(payload) end)
 
       {query_us, canvases} =
-        timed(fn -> FigKiwi.Native.query_scene_xpath(payload, "//canvas") end)
+        timed(fn -> Scene.query_xpath(payload, "//canvas") end)
 
       {indexed_query_us, indexed_canvases} =
-        timed(fn -> FigKiwi.Native.query_scene_index(index, "//canvas") end)
+        timed(fn -> Scene.query_index(index, "//canvas") end)
 
       {indexed_fields_query_us, indexed_fields_canvases} =
-        timed(fn -> FigKiwi.Native.query_scene_index_fields(index, "//canvas", ["name"]) end)
+        timed(fn -> Scene.query_index_fields(index, "//canvas", ["name"]) end)
 
       unless length(canvases) == length(indexed_canvases) do
         Mix.raise("indexed query mismatch for #{path}")

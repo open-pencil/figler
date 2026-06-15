@@ -1,6 +1,8 @@
 defmodule FigKiwi.NativeTest do
   use ExUnit.Case, async: true
 
+  alias FigKiwi.Native.{Codec, Scene}
+
   test "decodes generated primitive structs" do
     guid = struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34)
     vector = struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0)
@@ -9,9 +11,9 @@ defmodule FigKiwi.NativeTest do
     image = struct(FigKiwi.Schema.Image, hash: <<1, 2, 3>>, name: "Preview", data_blob: 7)
     partial_image = struct(FigKiwi.Schema.Image, name: "Preview")
 
-    assert FigKiwi.Native.decode_guid(KiwiCodec.encode(guid)) == guid
-    assert FigKiwi.Native.decode_vector(KiwiCodec.encode(vector)) == vector
-    assert FigKiwi.Native.decode_parent_index(KiwiCodec.encode(parent_index)) == parent_index
+    assert Codec.decode_guid(KiwiCodec.encode(guid)) == guid
+    assert Codec.decode_vector(KiwiCodec.encode(vector)) == vector
+    assert Codec.decode_parent_index(KiwiCodec.encode(parent_index)) == parent_index
 
     node_change =
       struct(FigKiwi.Schema.NodeChange,
@@ -33,13 +35,13 @@ defmodule FigKiwi.NativeTest do
     partial_message = struct(FigKiwi.Schema.Message, session_id: 12)
     unknown_enum_message = struct(FigKiwi.Schema.Message, type: 999)
 
-    assert FigKiwi.Native.decode_image(KiwiCodec.encode(image)) == image
-    assert FigKiwi.Native.decode_image(KiwiCodec.encode(partial_image)) == partial_image
-    assert FigKiwi.Native.decode_node_change(KiwiCodec.encode(node_change)) == node_change
-    assert FigKiwi.Native.decode_message(KiwiCodec.encode(message)) == message
-    assert FigKiwi.Native.decode_message(KiwiCodec.encode(partial_message)) == partial_message
+    assert Codec.decode_image(KiwiCodec.encode(image)) == image
+    assert Codec.decode_image(KiwiCodec.encode(partial_image)) == partial_image
+    assert Codec.decode_node_change(KiwiCodec.encode(node_change)) == node_change
+    assert Codec.decode_message(KiwiCodec.encode(message)) == message
+    assert Codec.decode_message(KiwiCodec.encode(partial_message)) == partial_message
 
-    assert FigKiwi.Native.decode_message(KiwiCodec.encode(unknown_enum_message)) ==
+    assert Codec.decode_message(KiwiCodec.encode(unknown_enum_message)) ==
              unknown_enum_message
   end
 
@@ -73,7 +75,7 @@ defmodule FigKiwi.NativeTest do
   test "decodes scene summary without materializing schema structs" do
     message = scene_message()
 
-    assert FigKiwi.Native.decode_scene_summary(KiwiCodec.encode(message)) == %{
+    assert Scene.decode_summary(KiwiCodec.encode(message)) == %{
              node_count: 2,
              parented_count: 1,
              root_count: 1,
@@ -82,7 +84,7 @@ defmodule FigKiwi.NativeTest do
   end
 
   test "queries projected scene index with XPath" do
-    assert FigKiwi.Native.query_scene_xpath(
+    assert Scene.query_xpath(
              KiwiCodec.encode(scene_message()),
              "//canvas[@name='Page 1']"
            ) == [
