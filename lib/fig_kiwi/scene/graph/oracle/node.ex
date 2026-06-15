@@ -3,21 +3,19 @@ defmodule FigKiwi.Scene.Graph.Oracle.Node do
 
   use JSONCodec, case: :camel, fast_path: :json
 
-  defstruct [
-    :guid,
-    :type,
-    :name,
-    :visible,
-    :locked,
-    :x,
-    :y,
-    :width,
-    :height,
-    :characters,
-    :parent,
-    child_count: 0,
-    children: []
-  ]
+  defstruct guid: nil,
+            type: nil,
+            name: nil,
+            visible: nil,
+            locked: nil,
+            x: nil,
+            y: nil,
+            width: nil,
+            height: nil,
+            characters: nil,
+            parent: nil,
+            child_count: 0,
+            children: []
 
   @type number_or_nil :: number() | nil
 

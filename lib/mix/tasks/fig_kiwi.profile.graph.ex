@@ -15,6 +15,10 @@ defmodule Mix.Tasks.FigKiwi.Profile.Graph do
 
   alias FigKiwi.Scene
   alias FigKiwi.Scene.Graph
+  alias FigKiwi.Scene.Graph.Profile.FinalGraphStats
+  alias FigKiwi.Scene.Graph.Profile.GraphStats
+  alias FigKiwi.Scene.Graph.Profile.Stage
+  alias FigKiwi.Scene.Graph.Profile.Summary
 
   @shortdoc "Profiles FigKiwi effective graph construction"
 
@@ -49,24 +53,18 @@ defmodule Mix.Tasks.FigKiwi.Profile.Graph do
     profile_opts = [root: roots, until: stage_atom(until_stage)]
     profile = Graph.profile(payload, profile_opts)
 
-    summary = %{
+    summary = %Summary{
       fixture: fixture,
       roots: roots,
       until: until_stage,
       payload_ms: ms(payload_us),
       initial_ms: profile.initial_ms,
       total_ms: profile.total_ms,
-      final_graph:
-        Map.take(Graph.stats(profile.graph), [
-          :node_count,
-          :clone_count,
-          :unresolved_count,
-          :applied_count
-        ]),
-      stages: profile.stages
+      final_graph: final_graph_stats(profile.graph),
+      stages: Enum.map(profile.stages, &stage_summary/1)
     }
 
-    json = Jason.encode!(summary, pretty: true)
+    json = summary |> JSONCodec.dump() |> Jason.encode!(pretty: true)
 
     case option(opts, :output, nil) do
       nil -> IO.puts(json)
@@ -97,6 +95,21 @@ defmodule Mix.Tasks.FigKiwi.Profile.Graph do
 
   defp raise_fixture! do
     raise "pass --fixture or set FIG_KIWI_PROFILE_FIXTURE"
+  end
+
+  defp final_graph_stats(graph) do
+    graph
+    |> Graph.stats()
+    |> Map.take([:node_count, :clone_count, :unresolved_count, :applied_count])
+    |> FinalGraphStats.from_map!()
+  end
+
+  defp stage_summary(stage) do
+    %Stage{
+      stage: stage.stage,
+      ms: stage.ms,
+      graph: GraphStats.from_map!(stage.graph)
+    }
   end
 
   defp stage_atom(stage) do

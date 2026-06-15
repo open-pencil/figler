@@ -393,6 +393,40 @@ defmodule FigKiwi.SceneTest do
     assert Graph.unresolved(graph) == []
   end
 
+  test "variables stage preserves refs as unresolved provenance" do
+    graph =
+      [
+        %SeedNode{
+          guid: {1, 1},
+          node_type: "rectangle",
+          variable_consumption: [%{field: :width, variable: "var:1"}]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:variables])
+      |> Resolver.resolve()
+
+    assert Graph.unresolved(graph) == [
+             {:variable_ref_preserved, %{field: :width, variable: "var:1"}}
+           ]
+
+    assert Graph.explain(graph, "1:1").unresolved == [
+             {:variable_ref_preserved, %{field: :width, variable: "var:1"}}
+           ]
+  end
+
+  test "variables stage preserves style refs when style resolution is requested" do
+    graph =
+      [%SeedNode{guid: {1, 1}, node_type: "text", text_style_guid: "2:1"}]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:variables],
+        options: [resolve_styles: :refs]
+      )
+      |> Resolver.resolve()
+
+    assert Graph.unresolved(graph) == [{:style_ref_preserved, :text_style_guid, "2:1"}]
+  end
+
   test "does not run resolver stages from cloned seeds" do
     graph =
       [

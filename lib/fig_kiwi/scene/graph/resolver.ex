@@ -18,6 +18,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   alias FigKiwi.Scene.Graph.SourceInstances
   alias FigKiwi.Scene.Graph.StackLayout
   alias FigKiwi.Scene.Graph.SymbolOverrides
+  alias FigKiwi.Scene.Graph.Variables
 
   @doc """
   Builds the initial graph working set from seed nodes.
@@ -109,7 +110,11 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     |> mark_stage(:stack_layout)
   end
 
-  defp resolve_variables(graph), do: mark_stage(graph, :variables)
+  defp resolve_variables(graph) do
+    graph
+    |> Variables.apply()
+    |> mark_stage(:variables)
+  end
 
   defp mark_stage(%Graph{} = graph, stage) do
     update_in(graph.stats[:resolved_stages], fn stages -> [stage | stages || []] end)
