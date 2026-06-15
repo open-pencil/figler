@@ -48,12 +48,14 @@ summary = Scene.summary(fig_binary)
 canvases = Scene.query(fig_binary, "//canvas")
 text = Scene.query(fig_binary, "//text[@text]", fields: [:name, :text])
 
-index = Scene.index(fig_binary)
+index = Scene.index(fig_binary) # %FigKiwi.Scene.Index{}
 canvases = Scene.pages(index)
 node = Scene.node(index, "0:123")
 children = Scene.children(index, "0:123")
 descendants = Scene.descendants(index, "0:123")
 frames = Scene.find(index, type: :frame, name_contains: "Card")
+components = Scene.components(index)
+filled_nodes = Scene.with_fills(index)
 tree = Scene.tree(index, depth: 3)
 ```
 
@@ -64,6 +66,17 @@ text_nodes = Scene.by_type(index, :text)
 buttons = Scene.name_contains(index, "Button")
 labels = Scene.text_contains(index, "Label")
 named = Scene.named(index, "Primary action")
+
+button_labels =
+  index
+  |> Scene.by_type(:text)
+  |> Scene.name_contains("Button")
+  |> Scene.attribute(:text)
+
+all_text =
+  index
+  |> Scene.text_nodes()
+  |> Scene.text(sep: "\n")
 ```
 
 Projected XPath nodes are returned as `%FigKiwi.Scene.Node{}` structs and expose `@guid`, `@type`, `@name`, `@parent_guid`, `@position`, geometry, visibility, text, font, and text-style attributes to XPath. Summaries are returned as `%FigKiwi.Scene.Summary{}` structs. Use `Scene.query/2` for raw XPath and build a reusable scene index when running multiple queries over the same file.

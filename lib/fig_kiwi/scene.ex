@@ -190,6 +190,11 @@ defmodule FigKiwi.Scene do
   Returns nodes of a given projected node type without constructing XPath.
   """
   @spec by_type(binary() | Index.t() | reference(), atom() | String.t()) :: [scene_node()]
+  def by_type(nodes, type) when is_list(nodes) and (is_atom(type) or is_binary(type)) do
+    node_type = type |> to_string() |> Macro.underscore()
+    Enum.filter(nodes, &(&1.node_type == node_type))
+  end
+
   def by_type(scene, type) when is_atom(type) or is_binary(type) do
     scene
     |> reusable_index()
@@ -201,6 +206,10 @@ defmodule FigKiwi.Scene do
   Returns nodes with an exact projected name without constructing XPath.
   """
   @spec named(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
+  def named(nodes, name) when is_list(nodes) and is_binary(name) do
+    Enum.filter(nodes, &(&1.name == name))
+  end
+
   def named(scene, name) when is_binary(name) do
     scene
     |> reusable_index()
@@ -212,6 +221,10 @@ defmodule FigKiwi.Scene do
   Returns nodes whose projected name contains `needle` without constructing XPath.
   """
   @spec name_contains(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
+  def name_contains(nodes, needle) when is_list(nodes) and is_binary(needle) do
+    Enum.filter(nodes, &(is_binary(&1.name) and String.contains?(&1.name, needle)))
+  end
+
   def name_contains(scene, needle) when is_binary(needle) do
     scene
     |> reusable_index()
@@ -220,14 +233,71 @@ defmodule FigKiwi.Scene do
   end
 
   @doc """
+  Returns text nodes.
+  """
+  @spec text_nodes(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
+  def text_nodes(scene_or_nodes), do: by_type(scene_or_nodes, :text)
+
+  @doc """
+  Returns nodes with component keys.
+  """
+  @spec components(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
+  def components(nodes) when is_list(nodes), do: Enum.filter(nodes, &present?(&1.component_key))
+  def components(scene), do: query(scene, "//*[@component_key]")
+
+  @doc """
+  Returns nodes with one or more fill paints.
+  """
+  @spec with_fills(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
+  def with_fills(nodes) when is_list(nodes), do: Enum.filter(nodes, &positive?(&1.fill_count))
+  def with_fills(scene), do: query(scene, "//*[@fill_count]")
+
+  @doc """
+  Returns nodes with one or more stroke paints.
+  """
+  @spec with_strokes(binary() | Index.t() | reference() | [scene_node()]) :: [scene_node()]
+  def with_strokes(nodes) when is_list(nodes), do: Enum.filter(nodes, &positive?(&1.stroke_count))
+  def with_strokes(scene), do: query(scene, "//*[@stroke_count]")
+
+  @doc """
   Returns text nodes whose projected text contains `needle` without constructing XPath.
   """
   @spec text_contains(binary() | Index.t() | reference(), String.t()) :: [scene_node()]
+  def text_contains(nodes, needle) when is_list(nodes) and is_binary(needle) do
+    Enum.filter(nodes, &(is_binary(&1.text) and String.contains?(&1.text, needle)))
+  end
+
   def text_contains(scene, needle) when is_binary(needle) do
     scene
     |> reusable_index()
     |> NativeScene.index_text_contains(needle)
     |> nodes_from_maps()
+  end
+
+  @doc """
+  Returns projected field values from nodes, similar to `Floki.attribute/2`.
+  """
+  @spec attribute([scene_node()], atom() | String.t()) :: [term()]
+  def attribute(nodes, field) when is_list(nodes) and (is_atom(field) or is_binary(field)) do
+    field = node_field(field)
+
+    nodes
+    |> Enum.map(&Map.get(&1, field))
+    |> Enum.reject(&is_nil/1)
+  end
+
+  @doc """
+  Returns projected text from nodes, similar to `Floki.text/2`.
+
+  Options:
+
+    * `:sep` - separator between text values. Defaults to `""`.
+  """
+  @spec text([scene_node()], keyword()) :: String.t()
+  def text(nodes, opts \\ []) when is_list(nodes) and is_list(opts) do
+    nodes
+    |> attribute(:text)
+    |> Enum.join(Keyword.get(opts, :sep, ""))
   end
 
   @doc """
@@ -328,6 +398,9 @@ defmodule FigKiwi.Scene do
 
   defp nodes_from_maps(nodes), do: Enum.map(nodes, &Node.from_map/1)
 
+  defp present?(value), do: is_binary(value) and value != ""
+  defp positive?(value), do: is_integer(value) and value > 0
+
   defp maybe_node_from_map(nil), do: nil
   defp maybe_node_from_map(map), do: Node.from_map(map)
 
@@ -340,6 +413,16 @@ defmodule FigKiwi.Scene do
 
   defp field_name(field) when is_atom(field), do: Atom.to_string(field)
   defp field_name(field) when is_binary(field), do: field
+
+  defp node_field(:type), do: :node_type
+  defp node_field("type"), do: :node_type
+  defp node_field(field) when is_atom(field), do: field
+
+  defp node_field(field) when is_binary(field) do
+    String.to_existing_atom(field)
+  rescue
+    ArgumentError -> :__unknown_field__
+  end
 
   defp unzip_canvas!(zip_binary) do
     case :zip.extract(zip_binary, [:memory]) do

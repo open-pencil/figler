@@ -374,14 +374,14 @@ defmodule FigKiwi.NativeSceneGenerator do
     accessor =
       if Keyword.get(opts, :by_ref?, true), do: "self.#{field}.as_ref()", else: "self.#{field}"
 
-    increment = unless Keyword.get(opts, :last?, false), do: "cursor += 1;"
+    increment = unless Keyword.get(opts, :last?, false), do: "cursor += 1"
 
     """
     if let Some(value) = #{accessor} {
         if index == cursor {
             return Some(("#{attr}", #{value_expr}));
         }
-        #{increment}
+        #{increment && "#{increment};"}
     }
     """
   end

@@ -9,5 +9,5 @@ defmodule FigKiwi.Scene.Index do
   @enforce_keys [:resource]
   defstruct [:resource]
 
-  @type t :: %__MODULE__{resource: reference()}
+  @opaque t :: %__MODULE__{resource: reference()}
 end
