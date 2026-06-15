@@ -74,6 +74,11 @@ elixir bench/message_bench.exs
 
 FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
   mix fig_kiwi.bench.fixtures
+
+# Skip expensive full materialization on large fixtures.
+FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
+FIG_KIWI_BENCH_FULL_DECODE=0 \
+  mix fig_kiwi.bench.fixtures nuxtui.fig
 ```
 
 ## Development
