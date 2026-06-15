@@ -45,6 +45,8 @@ defmodule FigKiwi.NativeTest do
 
   test "decodes sparse messages without absent fields" do
     guid = struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34)
+    parent_index = struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!")
+    size = struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0)
 
     message =
       struct(FigKiwi.Schema.Message,
@@ -53,29 +55,19 @@ defmodule FigKiwi.NativeTest do
         node_changes: [
           struct(FigKiwi.Schema.NodeChange,
             guid: guid,
+            phase: :created,
+            parent_index: parent_index,
             type: :rectangle,
-            name: "Rect 1"
+            name: "Rect 1",
+            size: size
           )
         ]
       )
 
-    assert FigKiwi.decode_sparse_message(KiwiCodec.encode(message)) == %{
-             __kiwi_module__: FigKiwi.Schema.Message,
-             type: :node_changes,
-             session_id: 12,
-             node_changes: [
-               %{
-                 __kiwi_module__: FigKiwi.Schema.NodeChange,
-                 guid: %{
-                   __kiwi_module__: FigKiwi.Schema.GUID,
-                   session_id: 12,
-                   local_id: 34
-                 },
-                 type: :rectangle,
-                 name: "Rect 1"
-               }
-             ]
-           }
+    sparse = FigKiwi.decode_sparse_message(KiwiCodec.encode(message))
+
+    assert sparse == sparse_equivalent(message)
+    refute Map.has_key?(hd(sparse.node_changes), :description)
   end
 
   test "decodes scene summary without materializing schema structs" do
@@ -103,6 +95,17 @@ defmodule FigKiwi.NativeTest do
              }
            ]
   end
+
+  defp sparse_equivalent(%module{} = struct) do
+    struct
+    |> Map.from_struct()
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new(fn {key, value} -> {key, sparse_equivalent(value)} end)
+    |> Map.put(:__kiwi_module__, module)
+  end
+
+  defp sparse_equivalent(values) when is_list(values), do: Enum.map(values, &sparse_equivalent/1)
+  defp sparse_equivalent(value), do: value
 
   defp scene_message do
     guid = struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 0)

@@ -622,6 +622,7 @@ defmodule FigKiwi.NativeSceneGenerator do
 
   defp sparse_definition(%Definition{kind: :struct, name: name, fields: fields}, definition_map) do
     body = Enum.map_join(fields, "\n", &sparse_struct_field(&1, definition_map))
+    capacity = length(fields) + 1
 
     """
     fn decode_sparse_#{rust_ident(name)}_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
@@ -629,8 +630,10 @@ defmodule FigKiwi.NativeSceneGenerator do
         static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
         let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.#{name}");
         let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
-        let mut keys = vec![module_key_atom.encode(env)];
-        let mut values = vec![module_atom.encode(env)];
+        let mut keys = Vec::with_capacity(#{capacity});
+        let mut values = Vec::with_capacity(#{capacity});
+        keys.push(module_key_atom.encode(env));
+        values.push(module_atom.encode(env));
     #{indent(body, 4)}
         Term::map_from_term_arrays(env, &keys, &values)
     }
@@ -655,6 +658,7 @@ defmodule FigKiwi.NativeSceneGenerator do
 
   defp sparse_definition(%Definition{kind: :message, name: name, fields: fields}, definition_map) do
     arms = Enum.map_join(fields, "\n", &sparse_message_arm(&1, definition_map))
+    capacity = length(fields) + 1
 
     """
     fn decode_sparse_#{rust_ident(name)}_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
@@ -662,8 +666,10 @@ defmodule FigKiwi.NativeSceneGenerator do
         static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
         let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.#{name}");
         let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
-        let mut keys = vec![module_key_atom.encode(env)];
-        let mut values = vec![module_atom.encode(env)];
+        let mut keys = Vec::with_capacity(#{capacity});
+        let mut values = Vec::with_capacity(#{capacity});
+        keys.push(module_key_atom.encode(env));
+        values.push(module_atom.encode(env));
 
         loop {
             match decoder.read_var_uint()? {
@@ -695,7 +701,8 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp sparse_struct_field(field, definition_map) do
     """
     {
-        let field_atom = Atom::from_str(env, "#{Macro.underscore(field.name)}").unwrap();
+        static FIELD_ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new();
+        let field_atom = cached_atom(env, &FIELD_ATOM_#{field.value}, "#{Macro.underscore(field.name)}");
     #{indent(sparse_decode_field(field, definition_map), 4)}
         keys.push(field_atom.encode(env));
         values.push(value);
@@ -706,7 +713,8 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp sparse_message_arm(field, definition_map) do
     """
     #{field.value} => {
-        let field_atom = Atom::from_str(env, "#{Macro.underscore(field.name)}").unwrap();
+        static FIELD_ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new();
+        let field_atom = cached_atom(env, &FIELD_ATOM_#{field.value}, "#{Macro.underscore(field.name)}");
     #{indent(sparse_decode_field(field, definition_map), 4)}
         keys.push(field_atom.encode(env));
         values.push(value);
