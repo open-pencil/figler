@@ -1,4 +1,6 @@
 defmodule FigKiwi.Scene.Graph.DerivedSymbolData do
+  alias FigKiwi.Scene.Graph.GUID
+
   @moduledoc """
   Figma-derived symbol metadata used by graph resolution.
   """
@@ -15,7 +17,7 @@ defmodule FigKiwi.Scene.Graph.DerivedSymbolData do
             stroke_geometry: []
 
   @type t :: %__MODULE__{
-          guid_path: [String.t()],
+          guid_path: [GUID.figma_guid()],
           size: map() | nil,
           transform: map() | nil,
           font_size: number() | nil,

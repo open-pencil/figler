@@ -1,4 +1,6 @@
 defmodule FigKiwi.Scene.Graph.SymbolOverride do
+  alias FigKiwi.Scene.Graph.GUID
+
   @moduledoc """
   Structured symbol override metadata used by the Elixir graph resolver.
   """
@@ -10,8 +12,8 @@ defmodule FigKiwi.Scene.Graph.SymbolOverride do
             variable_consumption: []
 
   @type t :: %__MODULE__{
-          guid_path: [String.t()],
-          overridden_symbol_id: String.t() | nil,
+          guid_path: [GUID.figma_guid()],
+          overridden_symbol_id: GUID.figma_guid() | nil,
           fields: map(),
           component_prop_assignments: [FigKiwi.Scene.Graph.ComponentPropAssignment.t()],
           variable_consumption: [term()]

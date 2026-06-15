@@ -9,6 +9,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   """
 
   alias FigKiwi.Scene.Graph
+  alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.SeedNode
 
@@ -121,7 +122,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
          %SeedNode{node_type: "instance", symbol_id: component_guid} = instance,
          graph
        )
-       when is_binary(component_guid) do
+       when is_tuple(component_guid) do
     cond do
       Map.get(graph.children, instance.guid, []) != [] ->
         graph
@@ -146,14 +147,19 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   defp clone_subtree(graph, instance_guid, clone_parent_guid, source_guid, component_guid) do
     source_node = Map.fetch!(graph.nodes, source_guid)
-    clone_guid = clone_guid(instance_guid, source_guid)
-    cloned_node = %{source_node | guid: clone_guid, parent_guid: clone_parent_guid}
+    clone_guid = GUID.clone(instance_guid, source_guid)
+
+    cloned_node = %{
+      source_node
+      | guid: GUID.format(clone_guid),
+        parent_guid: GUID.format(clone_parent_guid)
+    }
 
     source_seed = Map.get(graph.seed_nodes, source_guid)
     cloned_seed = clone_seed(source_seed, clone_guid, clone_parent_guid)
 
     graph
-    |> put_clone_node(clone_guid, cloned_node, cloned_seed)
+    |> put_clone_node(clone_guid, cloned_node, cloned_seed, instance_guid, source_guid)
     |> add_child(clone_parent_guid, clone_guid)
     |> put_clone_provenance(clone_guid, source_guid, instance_guid, component_guid)
     |> clone_children(instance_guid, clone_guid, source_guid, component_guid)
@@ -165,19 +171,21 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     %SeedNode{seed | guid: clone_guid, parent_guid: clone_parent_guid, source: seed}
   end
 
-  defp put_clone_node(%Graph{} = graph, clone_guid, cloned_node, cloned_seed) do
+  defp put_clone_node(
+         %Graph{} = graph,
+         clone_guid,
+         cloned_node,
+         cloned_seed,
+         instance_guid,
+         source_guid
+       ) do
     %Graph{
       graph
       | nodes: Map.put(graph.nodes, clone_guid, cloned_node),
         seed_nodes: put_if_present(graph.seed_nodes, clone_guid, cloned_seed),
         by_type: append_group(graph.by_type, cloned_node.node_type, clone_guid),
         by_name: append_group(graph.by_name, cloned_node.name, clone_guid),
-        clone_index:
-          Map.put(
-            graph.clone_index,
-            {instance_guid_from_clone(clone_guid), source_guid_from_clone(clone_guid)},
-            clone_guid
-          )
+        clone_index: Map.put(graph.clone_index, {instance_guid, source_guid}, clone_guid)
     }
   end
 
@@ -205,16 +213,6 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     }
 
     %Graph{graph | provenance: Map.put(graph.provenance, clone_guid, provenance)}
-  end
-
-  defp clone_guid(instance_guid, source_guid), do: "#{instance_guid}/#{source_guid}"
-
-  defp instance_guid_from_clone(clone_guid), do: clone_guid |> String.split("/", parts: 2) |> hd()
-
-  defp source_guid_from_clone(clone_guid) do
-    clone_guid
-    |> String.split("/", parts: 2)
-    |> List.last()
   end
 
   defp put_if_present(map, _key, nil), do: map

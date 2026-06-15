@@ -84,14 +84,14 @@ defmodule FigKiwi.SceneTest do
            } = graph
 
     assert [document_seed, canvas_seed] = Graph.seed_nodes(graph)
-    assert %SeedNode{guid: "0:0", node_type: "document", name: "Document"} = document_seed
+    assert %SeedNode{guid: {0, 0}, node_type: "document", name: "Document"} = document_seed
     assert %Node{} = document_seed.source
 
     assert %SeedNode{
-             guid: "0:1",
+             guid: {0, 1},
              node_type: "canvas",
              name: "Page 1",
-             parent_guid: "0:0",
+             parent_guid: {0, 0},
              position: "!",
              size: %{x: 100.0, y: 50.0},
              visible: true,
@@ -167,14 +167,14 @@ defmodule FigKiwi.SceneTest do
       |> SeedNode.from_node_change()
 
     assert %SeedNode{
-             guid: "2:1",
+             guid: {2, 1},
              node_type: "instance",
              name: "Button instance",
-             symbol_id: "1:1",
-             component_guid: "1:1",
-             override_key: "2:9",
+             symbol_id: {1, 1},
+             component_guid: {1, 1},
+             override_key: {2, 9},
              symbol_overrides: [
-               %SymbolOverride{guid_path: ["1:2"], fields: %{text: "Submit", visible: false}}
+               %SymbolOverride{guid_path: [{1, 2}], fields: %{text: "Submit", visible: false}}
              ]
            } = seed
   end
@@ -182,14 +182,14 @@ defmodule FigKiwi.SceneTest do
   test "applies basic symbol override patches in Elixir graph resolver" do
     graph =
       [
-        %SeedNode{guid: "1:1", node_type: "component", name: "Button"},
-        %SeedNode{guid: "1:2", node_type: "text", parent_guid: "1:1", text: "Default"},
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Button"},
+        %SeedNode{guid: {1, 2}, node_type: "text", parent_guid: {1, 1}, text: "Default"},
         %SeedNode{
-          guid: "2:1",
+          guid: {2, 1},
           node_type: "instance",
-          symbol_id: "1:1",
+          symbol_id: {1, 1},
           symbol_overrides: [
-            %SymbolOverride{guid_path: ["1:2"], fields: %{text: "Submit", visible: false}}
+            %SymbolOverride{guid_path: [{1, 2}], fields: %{text: "Submit", visible: false}}
           ]
         }
       ]
@@ -206,13 +206,13 @@ defmodule FigKiwi.SceneTest do
   test "populates instance clones and applies overrides to cloned children" do
     graph =
       [
-        %SeedNode{guid: "1:1", node_type: "component", name: "Button"},
-        %SeedNode{guid: "1:2", node_type: "text", parent_guid: "1:1", text: "Default"},
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Button"},
+        %SeedNode{guid: {1, 2}, node_type: "text", parent_guid: {1, 1}, text: "Default"},
         %SeedNode{
-          guid: "2:1",
+          guid: {2, 1},
           node_type: "instance",
-          symbol_id: "1:1",
-          symbol_overrides: [%SymbolOverride{guid_path: ["1:2"], fields: %{text: "Submit"}}]
+          symbol_id: {1, 1},
+          symbol_overrides: [%SymbolOverride{guid_path: [{1, 2}], fields: %{text: "Submit"}}]
         }
       ]
       |> Resolver.from_seed(
@@ -222,7 +222,7 @@ defmodule FigKiwi.SceneTest do
       |> Resolver.resolve()
 
     assert [%Node{guid: clone_guid, text: "Submit"}] = Scene.children(graph, "2:1")
-    assert clone_guid == "2:1/1:2"
+    assert clone_guid == "clone:2:1/1:2"
     assert Scene.node(graph, "1:2").text == "Default"
 
     assert Graph.explain(graph, clone_guid) == %{

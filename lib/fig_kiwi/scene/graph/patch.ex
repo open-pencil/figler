@@ -8,13 +8,14 @@ defmodule FigKiwi.Scene.Graph.Patch do
   """
 
   alias FigKiwi.Scene.Graph
+  alias FigKiwi.Scene.Graph.GUID
 
   @enforce_keys [:op, :target, :source]
   defstruct [:op, :target, :field, :value, :source, meta: %{}]
 
   @type t :: %__MODULE__{
           op: :set,
-          target: String.t(),
+          target: GUID.graph_guid(),
           field: atom() | nil,
           value: term(),
           source: atom(),
@@ -24,8 +25,8 @@ defmodule FigKiwi.Scene.Graph.Patch do
   @doc """
   Creates a field assignment patch.
   """
-  @spec set(String.t(), atom(), term(), keyword()) :: t()
-  def set(target, field, value, opts \\ []) when is_binary(target) and is_atom(field) do
+  @spec set(GUID.graph_guid(), atom(), term(), keyword()) :: t()
+  def set(target, field, value, opts \\ []) when is_tuple(target) and is_atom(field) do
     %__MODULE__{
       op: :set,
       target: target,

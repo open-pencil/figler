@@ -15,6 +15,7 @@ defmodule FigKiwi.Scene do
   alias FigKiwi.Container
   alias FigKiwi.Native.Scene, as: NativeScene
   alias FigKiwi.Scene.Graph
+  alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Index
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Summary
@@ -130,7 +131,8 @@ defmodule FigKiwi.Scene do
   Looks up a projected scene node by GUID.
   """
   @spec node(binary() | Index.t() | Graph.t() | reference(), String.t()) :: scene_node() | nil
-  def node(%Graph{} = graph, guid) when is_binary(guid), do: Map.get(graph.nodes, guid)
+  def node(%Graph{} = graph, guid) when is_binary(guid),
+    do: Map.get(graph.nodes, GUID.parse!(guid))
 
   def node(scene, guid) when is_binary(guid) do
     scene
@@ -175,7 +177,7 @@ defmodule FigKiwi.Scene do
   """
   @spec children(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
   def children(%Graph{} = graph, parent_guid) when is_binary(parent_guid) do
-    nodes_by_guids(graph, Map.get(graph.children, parent_guid, []))
+    nodes_by_guids(graph, Map.get(graph.children, GUID.parse!(parent_guid), []))
   end
 
   def children(scene, parent_guid) when is_binary(parent_guid) do

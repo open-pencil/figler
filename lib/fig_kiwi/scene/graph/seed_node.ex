@@ -14,6 +14,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   alias FigKiwi.Scene.Graph.ComponentPropDef
   alias FigKiwi.Scene.Graph.ComponentPropRef
   alias FigKiwi.Scene.Graph.DerivedSymbolData
+  alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.SymbolOverride
   alias FigKiwi.Scene.Node
 
@@ -55,10 +56,10 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   ]
 
   @type t :: %__MODULE__{
-          guid: String.t(),
+          guid: GUID.graph_guid(),
           node_type: String.t(),
           name: String.t() | nil,
-          parent_guid: String.t() | nil,
+          parent_guid: GUID.graph_guid() | nil,
           position: String.t() | nil,
           size: map() | nil,
           transform: map() | nil,
@@ -77,9 +78,9 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
           grid_style_guid: String.t() | nil,
           fill_count: non_neg_integer() | nil,
           stroke_count: non_neg_integer() | nil,
-          component_guid: String.t() | nil,
-          symbol_id: String.t() | nil,
-          override_key: String.t() | nil,
+          component_guid: GUID.figma_guid() | nil,
+          symbol_id: GUID.figma_guid() | nil,
+          override_key: GUID.figma_guid() | nil,
           symbol_overrides: [SymbolOverride.t()],
           component_prop_defs: [ComponentPropDef.t()],
           component_prop_refs: [ComponentPropRef.t()],
@@ -129,10 +130,10 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   @spec from_node(Node.t()) :: t()
   def from_node(%Node{} = node) do
     %__MODULE__{
-      guid: node.guid,
+      guid: GUID.parse!(node.guid),
       node_type: node.node_type,
       name: node.name,
-      parent_guid: node.parent_guid,
+      parent_guid: GUID.parse(node.parent_guid),
       position: node.position,
       size: node.size,
       transform: node.transform,
@@ -161,10 +162,10 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   @spec to_node(t()) :: Node.t()
   def to_node(%__MODULE__{} = seed) do
     %Node{
-      guid: seed.guid,
+      guid: GUID.format(seed.guid),
       node_type: seed.node_type,
       name: seed.name,
-      parent_guid: seed.parent_guid,
+      parent_guid: GUID.format(seed.parent_guid),
       position: seed.position,
       size: seed.size,
       transform: seed.transform,
@@ -188,10 +189,10 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
 
   defp public_node_from_change(node_change) do
     %Node{
-      guid: guid(node_change.guid),
+      guid: GUID.format(guid(node_change.guid)),
       node_type: node_change.type |> to_string() |> Macro.underscore(),
       name: node_change.name,
-      parent_guid: guid(node_change.parent_index && node_change.parent_index.guid),
+      parent_guid: GUID.format(guid(node_change.parent_index && node_change.parent_index.guid)),
       position: node_change.parent_index && node_change.parent_index.position,
       size: vector(node_change.size),
       transform: matrix(node_change.transform),
@@ -318,8 +319,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
 
   defp guid(nil), do: nil
 
-  defp guid(%FigKiwi.Schema.GUID{session_id: session_id, local_id: local_id}),
-    do: "#{session_id}:#{local_id}"
+  defp guid(%FigKiwi.Schema.GUID{} = guid), do: GUID.from_schema(guid)
 
   defp guid_path(nil), do: []
   defp guid_path(%{guids: guids}) when is_list(guids), do: Enum.map(guids, &guid/1)
@@ -334,7 +334,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   end
 
   defp style_guid(nil), do: nil
-  defp style_guid(%{guid: guid}), do: guid(guid)
+  defp style_guid(%{guid: guid}), do: guid |> guid() |> GUID.format()
 
   defp count(nil), do: nil
   defp count(values) when is_list(values), do: length(values)

@@ -13,6 +13,7 @@ defmodule FigKiwi.Scene.Graph do
   """
 
   alias FigKiwi.Scene
+  alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Index
@@ -46,14 +47,14 @@ defmodule FigKiwi.Scene.Graph do
             mode: :projected | :resolved,
             stages: [atom()],
             options: keyword(),
-            seed_nodes: %{optional(String.t()) => SeedNode.t()},
-            nodes: %{optional(String.t()) => Node.t()},
-            children: %{optional(String.t()) => [String.t()]},
-            roots: [String.t()],
-            by_type: %{optional(String.t()) => [String.t()]},
-            by_name: %{optional(String.t()) => [String.t()]},
-            clone_index: %{optional({String.t(), String.t()}) => String.t()},
-            provenance: %{optional(String.t()) => map()},
+            seed_nodes: %{optional(GUID.graph_guid()) => SeedNode.t()},
+            nodes: %{optional(GUID.graph_guid()) => Node.t()},
+            children: %{optional(GUID.graph_guid()) => [GUID.graph_guid()]},
+            roots: [GUID.graph_guid()],
+            by_type: %{optional(String.t()) => [GUID.graph_guid()]},
+            by_name: %{optional(String.t()) => [GUID.graph_guid()]},
+            clone_index: %{optional({GUID.figma_guid(), GUID.figma_guid()}) => GUID.graph_guid()},
+            provenance: %{optional(GUID.graph_guid()) => map()},
             unresolved: [term()],
             stats: map()
           }
@@ -159,18 +160,21 @@ defmodule FigKiwi.Scene.Graph do
   """
   @spec explain(t(), String.t()) :: map() | nil
   def explain(%__MODULE__{} = graph, guid) when is_binary(guid) do
-    case Map.get(graph.nodes, guid) do
+    graph_guid = GUID.parse!(guid)
+
+    case Map.get(graph.nodes, graph_guid) do
       nil ->
         nil
 
       %Node{} = node ->
         %{
-          guid: guid,
+          guid: GUID.format(graph_guid),
           node: node,
-          source: Map.get(provenance(graph, guid), :source, :projected_index),
-          source_guid: Map.get(provenance(graph, guid), :source_guid, node.guid),
-          applied: Map.get(provenance(graph, guid), :applied, []),
-          unresolved: Map.get(provenance(graph, guid), :unresolved, []),
+          source: Map.get(provenance(graph, graph_guid), :source, :projected_index),
+          source_guid:
+            graph |> provenance(graph_guid) |> Map.get(:source_guid, graph_guid) |> GUID.format(),
+          applied: Map.get(provenance(graph, graph_guid), :applied, []),
+          unresolved: Map.get(provenance(graph, graph_guid), :unresolved, []),
           stages: graph.stages
         }
     end
@@ -182,7 +186,7 @@ defmodule FigKiwi.Scene.Graph do
   @spec source_node(t(), String.t()) :: Node.t() | nil
   def source_node(%__MODULE__{} = graph, guid) when is_binary(guid) do
     graph.seed_nodes
-    |> Map.get(guid)
+    |> Map.get(GUID.parse!(guid))
     |> case do
       nil -> nil
       seed -> SeedNode.to_node(seed)
@@ -210,7 +214,7 @@ defmodule FigKiwi.Scene.Graph do
   @spec diff_node(Index.t() | reference(), t(), String.t()) :: map() | nil
   def diff_node(index, %__MODULE__{} = graph, guid) when is_binary(guid) do
     raw = Scene.node(index, guid)
-    resolved = Map.get(graph.nodes, guid)
+    resolved = Map.get(graph.nodes, GUID.parse!(guid))
 
     cond do
       is_nil(raw) and is_nil(resolved) -> nil
