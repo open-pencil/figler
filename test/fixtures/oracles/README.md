@@ -35,5 +35,11 @@ FIG_KIWI_EXTERNAL_ORACLE_DIR=/path/to/oracle-fixtures \
   mise exec rust@1.96.0 -- mix test test/oracle_fixture_test.exs
 ```
 
+or directly with:
+
+```sh
+mise exec rust@1.96.0 -- mix fig_kiwi.oracles --dir /path/to/oracle-fixtures
+```
+
 Each external fixture directory should contain a `.fig`, a `manifest.json`, and
 oracle JSON files referenced by that manifest.

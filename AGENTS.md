@@ -24,3 +24,4 @@ GitHub CI uses the shared `elixir-vibe/actions/.github/workflows/elixir-rustler-
 - Prefer templates under `native/src/templates/` plus `RustQ.Rust` fragments over ad-hoc multiline Rust string interpolation.
 - Keep Figma semantics in Elixir under `FigKiwi.Scene.Graph`: instance population, overrides, component props, swaps, stack/layout, variables/styles, provenance, and unresolved diagnostics.
 - Do not add one-off native parsers for `.fig`, ZIP, or Kiwi containers in FigKiwi. Reusable parsing/container speedups belong upstream in `kiwi_codec` or another shared package.
+- Keep large real `.fig` oracle fixtures outside git. Use `mix fig_kiwi.oracles --dir /path/to/oracle-fixtures` or `FIG_KIWI_EXTERNAL_ORACLE_DIR` for external oracle runs.

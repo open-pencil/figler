@@ -13,19 +13,8 @@ defmodule FigKiwi.OracleFixtureTest do
   test "optional external oracle fixtures match effective graph projection" do
     fixture_dir = System.get_env("FIG_KIWI_EXTERNAL_ORACLE_DIR")
 
-    if is_nil(fixture_dir) or fixture_dir == "" do
-      :ok
-    else
-      manifests = Path.wildcard(Path.join(fixture_dir, "**/manifest.json"))
-      assert manifests != []
-
-      for manifest <- manifests do
-        fixture =
-          manifest |> Path.dirname() |> Path.join("*.fig") |> Path.wildcard() |> List.first()
-
-        assert is_binary(fixture), "no .fig fixture found next to #{manifest}"
-        assert_manifest(fixture, manifest)
-      end
+    if is_binary(fixture_dir) and fixture_dir != "" do
+      Mix.Task.rerun("fig_kiwi.oracles", ["--dir", fixture_dir])
     end
   end
 
