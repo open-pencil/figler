@@ -11,6 +11,10 @@ impl<'a> Decoder<'a> {
         Self { data, index: 0 }
     }
 
+    pub fn position(&self) -> usize {
+        self.index
+    }
+
     pub fn finish(&self) -> NifResult<()> {
         if self.index == self.data.len() {
             Ok(())

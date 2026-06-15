@@ -24,9 +24,7 @@ pub fn decode_graph_focused_sparse_message<'a>(
     index_decoder.finish()?;
     let wanted = graph_focus_wanted(&metas, &focus);
 
-    let mut decoder = Decoder::new(bytes.as_slice());
-    let value = graph_focus_sparse_message_from_decoder(env, &mut decoder, &metas, &wanted)?;
-    decoder.finish()?;
+    let value = graph_focus_sparse_message_from_slices(env, bytes.as_slice(), &metas, &wanted)?;
     Ok(value)
 }
 

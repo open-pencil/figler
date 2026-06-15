@@ -89014,6 +89014,8 @@ struct GraphFocusMeta {
     parent_guid: Option<GraphFocusGuid>,
     symbol_id: Option<GraphFocusGuid>,
     swap_ids: Vec<GraphFocusGuid>,
+    byte_start: usize,
+    byte_end: usize,
 }
 struct GraphFocusSymbolData {
     symbol_id: Option<GraphFocusGuid>,
@@ -91131,6 +91133,8 @@ fn graph_focus_index_node_change(
         parent_guid,
         symbol_id,
         swap_ids,
+        byte_start: 0,
+        byte_end: 0,
     })
 }
 fn graph_focus_index_message(
@@ -91144,7 +91148,11 @@ fn graph_focus_index_message(
                 let len = decoder.read_var_uint()? as usize;
                 nodes.reserve(len);
                 for _ in 0..len {
-                    nodes.push(graph_focus_index_node_change(decoder)?);
+                    let byte_start = decoder.position();
+                    let mut meta = graph_focus_index_node_change(decoder)?;
+                    meta.byte_start = byte_start;
+                    meta.byte_end = decoder.position();
+                    nodes.push(meta);
                 }
             }
             1 => {
@@ -91400,204 +91408,22 @@ fn graph_focus_wanted(
     }
     wanted
 }
-fn graph_focus_sparse_message_from_decoder<'a>(
+fn graph_focus_sparse_message_from_slices<'a>(
     env: Env<'a>,
-    decoder: &mut Decoder<'_>,
+    bytes: &[u8],
     metas: &[GraphFocusMeta],
     wanted: &std::collections::HashSet<GraphFocusGuid>,
 ) -> NifResult<Term<'a>> {
     static NODE_CHANGES_ATOM: OnceLock<Atom> = OnceLock::new();
     let node_changes_atom = cached_atom(env, &NODE_CHANGES_ATOM, "node_changes");
     let mut node_changes = Vec::new();
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            4 => {
-                let len = decoder.read_var_uint()? as usize;
-                for index in 0..len {
-                    let keep = metas
-                        .get(index)
-                        .and_then(|meta| meta.guid)
-                        .map(|guid| wanted.contains(&guid))
-                        .unwrap_or(false);
-                    if keep {
-                        node_changes
-                            .push(decode_sparse_node_change_from_decoder(env, decoder)?);
-                    } else {
-                        skip_node_change_from_decoder(decoder)?;
-                    }
-                }
-            }
-            1 => {
-                skip_message_type_from_decoder(decoder)?;
-            }
-            2 => {
-                decoder.read_var_uint()?;
-            }
-            42 => {
-                decoder.skip_string()?;
-            }
-            3 => {
-                decoder.read_var_uint()?;
-            }
-            37 => {
-                decoder.read_bool()?;
-            }
-            5 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_user_change_from_decoder(decoder)?;
-                }
-            }
-            32 => {
-                skip_interactive_slide_element_change_from_decoder(decoder)?;
-            }
-            36 => {
-                skip_node_status_change_from_decoder(decoder)?;
-            }
-            44 => {
-                skip_buzz_approval_change_from_decoder(decoder)?;
-            }
-            6 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_blob_from_decoder(decoder)?;
-                }
-            }
-            30 => {
-                decoder.read_var_uint()?;
-            }
-            7 => {
-                decoder.skip_string()?;
-            }
-            8 => {
-                skip_access_from_decoder(decoder)?;
-            }
-            9 => {
-                decoder.skip_string()?;
-            }
-            10 => {
-                skip_style_set_type_from_decoder(decoder)?;
-            }
-            11 => {
-                skip_style_set_content_type_from_decoder(decoder)?;
-            }
-            12 => {
-                decoder.read_var_int()?;
-            }
-            13 => {
-                skip_vector_from_decoder(decoder)?;
-            }
-            14 => {
-                decoder.skip_string()?;
-            }
-            15 => {
-                decoder.skip_string()?;
-            }
-            16 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_scene_graph_query_from_decoder(decoder)?;
-                }
-            }
-            17 => {
-                skip_node_changes_metadata_from_decoder(decoder)?;
-            }
-            18 => {
-                decoder.read_var_uint()?;
-            }
-            19 => {
-                decoder.read_bool()?;
-            }
-            20 => {
-                skip_guid_from_decoder(decoder)?;
-            }
-            21 => {
-                decoder.read_bool()?;
-            }
-            22 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_message_from_decoder(decoder)?;
-                }
-            }
-            23 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_message_from_decoder(decoder)?;
-                }
-            }
-            24 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_client_broadcast_from_decoder(decoder)?;
-                }
-            }
-            25 => {
-                decoder.read_var_uint()?;
-            }
-            26 => {
-                decoder.skip_string()?;
-            }
-            27 => {
-                skip_editor_type_from_decoder(decoder)?;
-            }
-            28 => {
-                decoder.skip_string()?;
-            }
-            29 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_guid_from_decoder(decoder)?;
-                }
-            }
-            31 => {
-                decoder.read_bool()?;
-            }
-            33 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_clipboard_selection_region_from_decoder(decoder)?;
-                }
-            }
-            34 => {
-                skip_encoded_offsets_index_from_decoder(decoder)?;
-            }
-            35 => {
-                decoder.read_bool()?;
-            }
-            38 => {
-                decoder.read_var_uint64()?;
-            }
-            39 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_annotation_category_from_decoder(decoder)?;
-                }
-            }
-            40 => {
-                skip_client_rendered_metadata_from_decoder(decoder)?;
-            }
-            41 => {
-                skip_paste_asset_type_from_decoder(decoder)?;
-            }
-            43 => {
-                skip_object_animation_list_from_decoder(decoder)?;
-            }
-            45 => {
-                skip_scene_graph_query_mode_from_decoder(decoder)?;
-            }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!(
-                                "unknown field {} while decoding focused Message", field
-                            ),
-                        ),
-                    ),
-                );
-            }
+    for meta in metas {
+        let keep = meta.guid.map(|guid| wanted.contains(&guid)).unwrap_or(false);
+        if keep {
+            let mut decoder = Decoder::new(&bytes[meta.byte_start..meta.byte_end]);
+            node_changes
+                .push(decode_sparse_node_change_from_decoder(env, &mut decoder)?);
+            decoder.finish()?;
         }
     }
     Term::map_from_term_arrays(
@@ -97424,14 +97250,12 @@ pub fn decode_graph_focused_sparse_message<'a>(
     let metas = graph_focus_index_message(&mut index_decoder)?;
     index_decoder.finish()?;
     let wanted = graph_focus_wanted(&metas, &focus);
-    let mut decoder = Decoder::new(bytes.as_slice());
-    let value = graph_focus_sparse_message_from_decoder(
+    let value = graph_focus_sparse_message_from_slices(
         env,
-        &mut decoder,
+        bytes.as_slice(),
         &metas,
         &wanted,
     )?;
-    decoder.finish()?;
     Ok(value)
 }
 pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {

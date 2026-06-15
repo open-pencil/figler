@@ -5,6 +5,14 @@ defmodule FigKiwi.Scene.Graph.Focus do
 
   @doc false
   def materialize(seed_nodes, options) do
+    if Keyword.get(options, :pre_focused, false) do
+      seed_nodes
+    else
+      materialize_focused(seed_nodes, options)
+    end
+  end
+
+  defp materialize_focused(seed_nodes, options) do
     case Keyword.get(options, :focus) do
       nil -> seed_nodes
       [] -> seed_nodes

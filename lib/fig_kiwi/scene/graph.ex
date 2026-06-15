@@ -119,6 +119,7 @@ defmodule FigKiwi.Scene.Graph do
   def build(binary, opts) when is_binary(binary) and is_list(opts) do
     payload = Scene.payload!(binary)
     seed_nodes = seed_nodes_from_payload(payload, opts)
+    opts = maybe_pre_focused_opts(opts)
 
     if focused?(opts) do
       build_focused_from_seed(payload, opts, seed_nodes)
@@ -392,6 +393,10 @@ defmodule FigKiwi.Scene.Graph do
   end
 
   defp focused?(opts), do: Keyword.has_key?(opts, :focus) or Keyword.has_key?(opts, :root)
+
+  defp maybe_pre_focused_opts(opts) do
+    if focused?(opts), do: Keyword.put(opts, :pre_focused, true), else: opts
+  end
 
   defp stage_profile_opts(opts, stage) do
     opts
