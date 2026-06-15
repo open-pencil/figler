@@ -316,8 +316,10 @@ defmodule FigKiwi.NativeSceneGenerator do
               5,
               6,
               7,
+              8,
               11,
               12,
+              21,
               38,
               39,
               41,
@@ -374,9 +376,14 @@ defmodule FigKiwi.NativeSceneGenerator do
 
       value =
         cond do
-          field == :parent_guid -> "node.parent_guid.map(|guid| guid.to_string())"
-          field in [:visible, :locked, :fill_count, :stroke_count] -> "node.#{name}"
-          true -> "node.#{name}.clone()"
+          field == :parent_guid ->
+            "node.parent_guid.map(|guid| guid.to_string())"
+
+          field in [:visible, :locked, :opacity, :font_size, :fill_count, :stroke_count] ->
+            "node.#{name}"
+
+          true ->
+            "node.#{name}.clone()"
         end
 
       "#{name}: #{value},"
@@ -406,6 +413,7 @@ defmodule FigKiwi.NativeSceneGenerator do
       scene_decode_arm(field_id.("name"), "name = Some(decoder.read_string_value()?)"),
       scene_decode_arm(field_id.("visible"), "visible = Some(decoder.read_bool()?)"),
       scene_decode_arm(field_id.("locked"), "locked = Some(decoder.read_bool()?)"),
+      scene_decode_arm(field_id.("opacity"), "opacity = Some(decoder.read_var_float_value()?)"),
       scene_decode_arm(field_id.("size"), "size = Some(read_scene_size_value(decoder)?)"),
       scene_decode_arm(
         field_id.("transform"),
@@ -418,6 +426,10 @@ defmodule FigKiwi.NativeSceneGenerator do
         "font_postscript = postscript;"
       ]),
       scene_decode_arm(field_id.("textData"), "text = read_scene_text_data_value(decoder)?"),
+      scene_decode_arm(
+        field_id.("fontSize"),
+        "font_size = Some(decoder.read_var_float_value()?)"
+      ),
       scene_decode_arm(
         field_id.("componentKey"),
         "component_key = Some(decoder.read_string_value()?)"
@@ -468,6 +480,8 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp scene_rust_field_type(:transform), do: "Option<SceneTransform>"
   defp scene_rust_field_type(:visible), do: "Option<bool>"
   defp scene_rust_field_type(:locked), do: "Option<bool>"
+  defp scene_rust_field_type(:opacity), do: "Option<f32>"
+  defp scene_rust_field_type(:font_size), do: "Option<f32>"
   defp scene_rust_field_type(:fill_count), do: "Option<usize>"
   defp scene_rust_field_type(:stroke_count), do: "Option<usize>"
   defp scene_rust_field_type(_field), do: "Option<String>"
@@ -491,7 +505,8 @@ defmodule FigKiwi.NativeSceneGenerator do
              []}
           ]
 
-        field when field in [:visible, :locked, :fill_count, :stroke_count] ->
+        field
+        when field in [:visible, :locked, :opacity, :font_size, :fill_count, :stroke_count] ->
           [{field, Atom.to_string(field), "value.to_string()", by_ref?: false}]
 
         :parent_guid ->

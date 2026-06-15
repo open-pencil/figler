@@ -17,10 +17,12 @@ defmodule FigKiwi.Scene.Projection do
     %{name: :transform, source: {:node_change, :transform}, xpath_attrs: [:transform]},
     %{name: :visible, source: {:node_change, :visible}, xpath_attrs: [:visible]},
     %{name: :locked, source: {:node_change, :locked}, xpath_attrs: [:locked]},
+    %{name: :opacity, source: {:node_change, :opacity}, xpath_attrs: [:opacity]},
     %{name: :text, source: {:text_data, :characters}, xpath_attrs: [:text]},
     %{name: :font_family, source: {:font_name, :family}, xpath_attrs: [:font_family]},
     %{name: :font_style, source: {:font_name, :style}, xpath_attrs: [:font_style]},
     %{name: :font_postscript, source: {:font_name, :postscript}, xpath_attrs: [:font_postscript]},
+    %{name: :font_size, source: {:node_change, :font_size}, xpath_attrs: [:font_size]},
     %{name: :text_style_guid, source: {:style_id, :guid}, xpath_attrs: [:text_style_guid]},
     %{
       name: :component_key,

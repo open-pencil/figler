@@ -135,6 +135,34 @@ defmodule FigKiwi.Scene.Graph.Variables do
     update_node(graph, guid, :font_style, fn old -> {old, value, value} end)
   end
 
+  defp apply_known_value(%Graph{} = graph, guid, :font_size, {:float, value}) do
+    update_node(graph, guid, :font_size, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :opacity, {:float, value}) do
+    update_node(graph, guid, :opacity, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :stack_spacing, {:float, value}) do
+    update_seed_node(graph, guid, :stack_spacing, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :stack_padding_left, {:float, value}) do
+    update_seed_node(graph, guid, :stack_horizontal_padding, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :stack_padding_top, {:float, value}) do
+    update_seed_node(graph, guid, :stack_vertical_padding, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :stack_padding_right, {:float, value}) do
+    update_seed_node(graph, guid, :stack_padding_right, fn old -> {old, value, value} end)
+  end
+
+  defp apply_known_value(%Graph{} = graph, guid, :stack_padding_bottom, {:float, value}) do
+    update_seed_node(graph, guid, :stack_padding_bottom, fn old -> {old, value, value} end)
+  end
+
   defp apply_known_value(%Graph{} = graph, guid, :x_position, {:float, value}) do
     update_node(graph, guid, :transform, fn transform ->
       transform = transform || %{}
@@ -159,6 +187,31 @@ defmodule FigKiwi.Scene.Graph.Variables do
 
         {:ok, %Graph{graph | nodes: Map.put(graph.nodes, guid, next_node)}, old,
          new_applied_value}
+
+      :error ->
+        :unknown
+    end
+  end
+
+  defp update_seed_node(%Graph{} = graph, guid, field, fun) do
+    case Map.fetch(graph.seed_nodes, guid) do
+      {:ok, seed} ->
+        {old, new_field_value, new_applied_value} = fun.(Map.get(seed, field))
+        next_seed = Map.put(seed, field, new_field_value)
+
+        next_nodes =
+          if Map.has_key?(graph.nodes, guid) do
+            Map.update!(graph.nodes, guid, &Map.put(&1, field, new_field_value))
+          else
+            graph.nodes
+          end
+
+        {:ok,
+         %Graph{
+           graph
+           | seed_nodes: Map.put(graph.seed_nodes, guid, next_seed),
+             nodes: next_nodes
+         }, old, new_applied_value}
 
       :error ->
         :unknown

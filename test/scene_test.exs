@@ -37,8 +37,10 @@ defmodule FigKiwi.SceneTest do
              :transform,
              :visible,
              :locked,
+             :opacity,
              :text_data,
              :font_name,
+             :font_size,
              :style_id_for_text,
              :component_key,
              :origin_component_key,
@@ -474,6 +476,48 @@ defmodule FigKiwi.SceneTest do
              {:variable_value_applied, :font_family, "Inter", "Roboto",
               %{value: {:text, "Roboto"}, data_type: :string, resolved_data_type: :string}}
            ] = Graph.explain(graph, "1:1").applied
+  end
+
+  test "variables stage applies known numeric style and stack variable refs" do
+    graph =
+      [
+        %SeedNode{
+          guid: {1, 1},
+          node_type: "text",
+          font_size: 12.0,
+          opacity: 1.0,
+          stack_spacing: 4.0,
+          stack_horizontal_padding: 8.0,
+          variable_consumption: [
+            variable_ref(:font_size, 16.0),
+            variable_ref(:opacity, 0.5),
+            variable_ref(:stack_spacing, 12.0),
+            variable_ref(:stack_padding_left, 20.0)
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:variables])
+      |> Resolver.resolve()
+
+    node = Scene.node(graph, "1:1")
+
+    assert node.font_size == 16.0
+    assert node.opacity == 0.5
+    assert Map.get(node, :stack_spacing) == 12.0
+    assert Map.get(node, :stack_horizontal_padding) == 20.0
+
+    assert graph.seed_nodes[{1, 1}].stack_spacing == 12.0
+    assert graph.seed_nodes[{1, 1}].stack_horizontal_padding == 20.0
+
+    assert Enum.any?(
+             Graph.explain(graph, "1:1").applied,
+             &match?({:variable_value_applied, :font_size, 12.0, 16.0, _}, &1)
+           )
+
+    assert Enum.any?(
+             Graph.explain(graph, "1:1").applied,
+             &match?({:variable_value_applied, :stack_padding_left, 8.0, 20.0, _}, &1)
+           )
   end
 
   test "variables stage records known variable data values as provenance" do
@@ -941,6 +985,18 @@ defmodule FigKiwi.SceneTest do
       font_postscript: "Inter-Regular",
       text_style_guid: "0:2"
     }
+  end
+
+  defp variable_ref(field, value) do
+    struct(FigKiwi.Schema.VariableDataMapEntry,
+      variable_field: field,
+      variable_data:
+        struct(FigKiwi.Schema.VariableData,
+          data_type: :float,
+          resolved_data_type: :float,
+          value: struct(FigKiwi.Schema.VariableAnyValue, float_value: value)
+        )
+    )
   end
 
   defp fig_zip do

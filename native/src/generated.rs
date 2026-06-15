@@ -69,10 +69,12 @@ pub struct SceneQueryNode {
     transform: Option<SceneTransform>,
     visible: Option<bool>,
     locked: Option<bool>,
+    opacity: Option<f32>,
     text: Option<String>,
     font_family: Option<String>,
     font_style: Option<String>,
     font_postscript: Option<String>,
+    font_size: Option<f32>,
     text_style_guid: Option<String>,
     component_key: Option<String>,
     origin_component_key: Option<String>,
@@ -91486,10 +91488,12 @@ mod scene_xpath_runtime {
         transform: Option<SceneTransform>,
         visible: Option<bool>,
         locked: Option<bool>,
+        opacity: Option<f32>,
         text: Option<String>,
         font_family: Option<String>,
         font_style: Option<String>,
         font_postscript: Option<String>,
+        font_size: Option<f32>,
         text_style_guid: Option<String>,
         component_key: Option<String>,
         origin_component_key: Option<String>,
@@ -91627,6 +91631,12 @@ mod scene_xpath_runtime {
                 }
                 cursor += 1;
             }
+            if let Some(value) = self.opacity {
+                if index == cursor {
+                    return Some(("opacity", value.to_string()));
+                }
+                cursor += 1;
+            }
             if let Some(value) = self.text.as_ref() {
                 if index == cursor {
                     return Some(("text", value.clone()));
@@ -91648,6 +91658,12 @@ mod scene_xpath_runtime {
             if let Some(value) = self.font_postscript.as_ref() {
                 if index == cursor {
                     return Some(("font_postscript", value.clone()));
+                }
+                cursor += 1;
+            }
+            if let Some(value) = self.font_size {
+                if index == cursor {
+                    return Some(("font_size", value.to_string()));
                 }
                 cursor += 1;
             }
@@ -91729,6 +91745,9 @@ mod scene_xpath_runtime {
             if self.locked.is_some() {
                 count += 1;
             }
+            if self.opacity.is_some() {
+                count += 1;
+            }
             if self.text.is_some() {
                 count += 1;
             }
@@ -91739,6 +91758,9 @@ mod scene_xpath_runtime {
                 count += 1;
             }
             if self.font_postscript.is_some() {
+                count += 1;
+            }
+            if self.font_size.is_some() {
                 count += 1;
             }
             if self.text_style_guid.is_some() {
@@ -92365,10 +92387,12 @@ mod scene_xpath_runtime {
             transform: node.transform.clone(),
             visible: node.visible,
             locked: node.locked,
+            opacity: node.opacity,
             text: node.text.clone(),
             font_family: node.font_family.clone(),
             font_style: node.font_style.clone(),
             font_postscript: node.font_postscript.clone(),
+            font_size: node.font_size,
             text_style_guid: node.text_style_guid.clone(),
             component_key: node.component_key.clone(),
             origin_component_key: node.origin_component_key.clone(),
@@ -92398,10 +92422,12 @@ mod scene_xpath_runtime {
         static TRANSFORM_ATOM: OnceLock<Atom> = OnceLock::new();
         static VISIBLE_ATOM: OnceLock<Atom> = OnceLock::new();
         static LOCKED_ATOM: OnceLock<Atom> = OnceLock::new();
+        static OPACITY_ATOM: OnceLock<Atom> = OnceLock::new();
         static TEXT_ATOM: OnceLock<Atom> = OnceLock::new();
         static FONT_FAMILY_ATOM: OnceLock<Atom> = OnceLock::new();
         static FONT_STYLE_ATOM: OnceLock<Atom> = OnceLock::new();
         static FONT_POSTSCRIPT_ATOM: OnceLock<Atom> = OnceLock::new();
+        static FONT_SIZE_ATOM: OnceLock<Atom> = OnceLock::new();
         static TEXT_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
         static COMPONENT_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
         static ORIGIN_COMPONENT_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
@@ -92446,6 +92472,10 @@ mod scene_xpath_runtime {
             keys.push(cached_atom(env, &LOCKED_ATOM, "locked").encode(env));
             values.push(node.locked.encode(env));
         }
+        if wants_field(fields, "opacity") {
+            keys.push(cached_atom(env, &OPACITY_ATOM, "opacity").encode(env));
+            values.push(node.opacity.encode(env));
+        }
         if wants_field(fields, "text") {
             keys.push(cached_atom(env, &TEXT_ATOM, "text").encode(env));
             values.push(node.text.encode(env));
@@ -92463,6 +92493,10 @@ mod scene_xpath_runtime {
                 cached_atom(env, &FONT_POSTSCRIPT_ATOM, "font_postscript").encode(env),
             );
             values.push(node.font_postscript.encode(env));
+        }
+        if wants_field(fields, "font_size") {
+            keys.push(cached_atom(env, &FONT_SIZE_ATOM, "font_size").encode(env));
+            values.push(node.font_size.encode(env));
         }
         if wants_field(fields, "text_style_guid") {
             keys.push(
@@ -93120,10 +93154,12 @@ mod scene_xpath_runtime {
         let mut transform = None;
         let mut visible = None;
         let mut locked = None;
+        let mut opacity = None;
         let mut text = None;
         let mut font_family = None;
         let mut font_style = None;
         let mut font_postscript = None;
+        let mut font_size = None;
         let mut text_style_guid = None;
         let mut component_key = None;
         let mut origin_component_key = None;
@@ -93148,6 +93184,7 @@ mod scene_xpath_runtime {
                 5 => name = Some(decoder.read_string_value()?),
                 6 => visible = Some(decoder.read_bool()?),
                 7 => locked = Some(decoder.read_bool()?),
+                8 => opacity = Some(decoder.read_var_float_value()?),
                 11 => size = Some(read_scene_size_value(decoder)?),
                 12 => transform = Some(read_scene_transform_value(decoder)?),
                 41 => {
@@ -93159,6 +93196,7 @@ mod scene_xpath_runtime {
                     font_postscript = postscript;
                 }
                 42 => text = read_scene_text_data_value(decoder)?,
+                21 => font_size = Some(decoder.read_var_float_value()?),
                 216 => component_key = Some(decoder.read_string_value()?),
                 252 => origin_component_key = Some(decoder.read_string_value()?),
                 332 => fill_style_guid = read_scene_style_id_value(decoder)?,
@@ -93436,9 +93474,6 @@ mod scene_xpath_runtime {
                 495 => {
                     decoder.read_bool()?;
                 }
-                21 => {
-                    decoder.read_var_float_value()?;
-                }
                 73 => {
                     decoder.read_var_uint()?;
                 }
@@ -93612,9 +93647,6 @@ mod scene_xpath_runtime {
                 }
                 434 => {
                     skip_lock_mode_from_decoder(decoder)?;
-                }
-                8 => {
-                    decoder.read_var_float_value()?;
                 }
                 60 => {
                     decoder.read_var_uint()?;
@@ -95073,10 +95105,12 @@ mod scene_xpath_runtime {
             transform,
             visible,
             locked,
+            opacity,
             text,
             font_family,
             font_style,
             font_postscript,
+            font_size,
             text_style_guid,
             component_key,
             origin_component_key,
@@ -95611,9 +95645,6 @@ fn decode_scene_node_change_from_decoder(
             495 => {
                 decoder.read_bool()?;
             }
-            21 => {
-                decoder.read_var_float_value()?;
-            }
             73 => {
                 decoder.read_var_uint()?;
             }
@@ -95787,9 +95818,6 @@ fn decode_scene_node_change_from_decoder(
             }
             434 => {
                 skip_lock_mode_from_decoder(decoder)?;
-            }
-            8 => {
-                decoder.read_var_float_value()?;
             }
             60 => {
                 decoder.read_var_uint()?;
