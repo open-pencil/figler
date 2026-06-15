@@ -31,6 +31,7 @@ defmodule FigKiwi.Scene.Graph do
     roots: [],
     by_type: %{},
     by_name: %{},
+    clone_index: %{},
     provenance: %{},
     unresolved: [],
     stats: %{}
@@ -51,6 +52,7 @@ defmodule FigKiwi.Scene.Graph do
             roots: [String.t()],
             by_type: %{optional(String.t()) => [String.t()]},
             by_name: %{optional(String.t()) => [String.t()]},
+            clone_index: %{optional({String.t(), String.t()}) => String.t()},
             provenance: %{optional(String.t()) => map()},
             unresolved: [term()],
             stats: map()
@@ -106,8 +108,8 @@ defmodule FigKiwi.Scene.Graph do
   def build(binary, opts) when is_binary(binary) and is_list(opts) do
     index = Scene.index(binary)
     summary = Scene.summary(binary)
-
-    %__MODULE__{} = graph = build(index, opts)
+    seed_nodes = seed_nodes(binary)
+    %__MODULE__{} = graph = build_from_seed(index, index.resource, opts, seed_nodes)
 
     %__MODULE__{
       graph
@@ -128,6 +130,13 @@ defmodule FigKiwi.Scene.Graph do
 
   def seed_nodes(%__MODULE__{seed_nodes: seed_nodes}, _opts) do
     Map.values(seed_nodes)
+  end
+
+  def seed_nodes(binary, _opts) when is_binary(binary) do
+    binary
+    |> Scene.payload!()
+    |> FigKiwi.decode_message()
+    |> SeedNode.from_message()
   end
 
   def seed_nodes(input, opts) when is_list(opts) do
@@ -210,10 +219,10 @@ defmodule FigKiwi.Scene.Graph do
     end
   end
 
-  defp build_from_seed(index, resource, opts) do
+  defp build_from_seed(index, resource, opts, seed_nodes \\ nil) do
     stages = stages(opts)
     options = normalize_options(opts)
-    seed_nodes = seed_nodes(index || resource)
+    seed_nodes = seed_nodes || seed_nodes(index || resource)
 
     seed_nodes
     |> Resolver.from_seed(resource: resource, source: index, stages: stages, options: options)

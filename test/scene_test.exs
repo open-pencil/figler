@@ -3,7 +3,9 @@ defmodule FigKiwi.SceneTest do
 
   alias FigKiwi.Scene
   alias FigKiwi.Scene.Graph
+  alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
+  alias FigKiwi.Scene.Graph.SymbolOverride
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Summary
   alias KiwiCodec.Schema.Binary, as: SchemaBinary
@@ -138,6 +140,99 @@ defmodule FigKiwi.SceneTest do
     assert Graph.diff_node(Scene.index(message_payload()), graph, "0:1") == %{
              guid: "0:1",
              changed: []
+           }
+  end
+
+  test "extracts graph seed metadata from generated node changes" do
+    target_guid = struct(FigKiwi.Schema.GUID, session_id: 1, local_id: 2)
+
+    seed =
+      struct(FigKiwi.Schema.NodeChange,
+        guid: struct(FigKiwi.Schema.GUID, session_id: 2, local_id: 1),
+        type: :instance,
+        name: "Button instance",
+        override_key: struct(FigKiwi.Schema.GUID, session_id: 2, local_id: 9),
+        symbol_data:
+          struct(FigKiwi.Schema.SymbolData,
+            symbol_id: struct(FigKiwi.Schema.GUID, session_id: 1, local_id: 1),
+            symbol_overrides: [
+              struct(FigKiwi.Schema.NodeChange,
+                guid_path: struct(FigKiwi.Schema.GUIDPath, guids: [target_guid]),
+                text_data: struct(FigKiwi.Schema.TextData, characters: "Submit"),
+                visible: false
+              )
+            ]
+          )
+      )
+      |> SeedNode.from_node_change()
+
+    assert %SeedNode{
+             guid: "2:1",
+             node_type: "instance",
+             name: "Button instance",
+             symbol_id: "1:1",
+             component_guid: "1:1",
+             override_key: "2:9",
+             symbol_overrides: [
+               %SymbolOverride{guid_path: ["1:2"], fields: %{text: "Submit", visible: false}}
+             ]
+           } = seed
+  end
+
+  test "applies basic symbol override patches in Elixir graph resolver" do
+    graph =
+      [
+        %SeedNode{guid: "1:1", node_type: "component", name: "Button"},
+        %SeedNode{guid: "1:2", node_type: "text", parent_guid: "1:1", text: "Default"},
+        %SeedNode{
+          guid: "2:1",
+          node_type: "instance",
+          symbol_id: "1:1",
+          symbol_overrides: [
+            %SymbolOverride{guid_path: ["1:2"], fields: %{text: "Submit", visible: false}}
+          ]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:symbol_overrides])
+      |> Resolver.resolve()
+
+    assert Scene.node(graph, "1:2").text == "Submit"
+    assert Scene.node(graph, "1:2").visible == false
+
+    assert {:symbol_override, :text, "Default", "Submit"} in Graph.explain(graph, "1:2").applied
+    assert {:symbol_override, :visible, nil, false} in Graph.explain(graph, "1:2").applied
+  end
+
+  test "populates instance clones and applies overrides to cloned children" do
+    graph =
+      [
+        %SeedNode{guid: "1:1", node_type: "component", name: "Button"},
+        %SeedNode{guid: "1:2", node_type: "text", parent_guid: "1:1", text: "Default"},
+        %SeedNode{
+          guid: "2:1",
+          node_type: "instance",
+          symbol_id: "1:1",
+          symbol_overrides: [%SymbolOverride{guid_path: ["1:2"], fields: %{text: "Submit"}}]
+        }
+      ]
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:populate_instances, :symbol_overrides]
+      )
+      |> Resolver.resolve()
+
+    assert [%Node{guid: clone_guid, text: "Submit"}] = Scene.children(graph, "2:1")
+    assert clone_guid == "2:1/1:2"
+    assert Scene.node(graph, "1:2").text == "Default"
+
+    assert Graph.explain(graph, clone_guid) == %{
+             guid: clone_guid,
+             node: Scene.node(graph, clone_guid),
+             source: :instance_clone,
+             source_guid: "1:2",
+             applied: [{:symbol_override, :text, "Default", "Submit"}],
+             unresolved: [],
+             stages: [:populate_instances, :symbol_overrides]
            }
   end
 

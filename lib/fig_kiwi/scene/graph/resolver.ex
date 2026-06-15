@@ -9,6 +9,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   """
 
   alias FigKiwi.Scene.Graph
+  alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.SeedNode
 
   @doc """
@@ -33,6 +34,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
       roots: roots,
       by_type: group_guids(seed_nodes, & &1.node_type),
       by_name: group_guids(seed_nodes, & &1.name),
+      clone_index: %{},
       provenance: initial_provenance(seed_nodes),
       unresolved: [],
       stats: stats(seed_nodes, children, roots)
@@ -60,13 +62,167 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp run_stage(:variables, graph), do: resolve_variables(graph)
   defp run_stage(stage, graph), do: add_unresolved(graph, {:unknown_stage, stage})
 
-  defp populate_instances(graph), do: mark_stage(graph, :populate_instances)
-  defp apply_symbol_overrides(graph), do: mark_stage(graph, :symbol_overrides)
+  defp populate_instances(graph) do
+    graph.seed_nodes
+    |> Map.values()
+    |> Enum.reduce(graph, &populate_seed_instance/2)
+    |> mark_stage(:populate_instances)
+  end
+
+  defp apply_symbol_overrides(graph) do
+    graph.seed_nodes
+    |> Map.values()
+    |> Enum.reduce(graph, &apply_seed_symbol_overrides/2)
+    |> mark_stage(:symbol_overrides)
+  end
+
   defp sync_overrides(graph), do: mark_stage(graph, :sync_overrides)
   defp apply_component_props(graph), do: mark_stage(graph, :component_props)
   defp sync_component_props(graph), do: mark_stage(graph, :sync_component_props)
   defp apply_derived_symbol_data(graph), do: mark_stage(graph, :derived_symbol_data)
   defp resolve_variables(graph), do: mark_stage(graph, :variables)
+
+  defp apply_seed_symbol_overrides(%SeedNode{symbol_overrides: []}, graph), do: graph
+
+  defp apply_seed_symbol_overrides(%SeedNode{} = seed, graph) do
+    Enum.reduce(seed.symbol_overrides, graph, &apply_symbol_override(seed, &1, &2))
+  end
+
+  defp apply_symbol_override(seed, override, graph) do
+    case resolve_override_target(graph, seed, override.guid_path) do
+      nil ->
+        add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path})
+
+      target_guid ->
+        graph
+        |> Patch.apply_all(symbol_override_patches(target_guid, override.fields))
+    end
+  end
+
+  defp symbol_override_patches(target_guid, fields) do
+    Enum.map(fields, fn {field, value} ->
+      Patch.set(target_guid, field, value, source: :symbol_override)
+    end)
+  end
+
+  defp resolve_override_target(graph, seed, []),
+    do: if(Map.has_key?(graph.nodes, seed.guid), do: seed.guid)
+
+  defp resolve_override_target(graph, seed, guid_path) do
+    guid_path
+    |> Enum.reverse()
+    |> Enum.find_value(fn source_guid ->
+      Map.get(graph.clone_index, {seed.guid, source_guid}) ||
+        if(Map.has_key?(graph.nodes, source_guid), do: source_guid)
+    end)
+  end
+
+  defp populate_seed_instance(
+         %SeedNode{node_type: "instance", symbol_id: component_guid} = instance,
+         graph
+       )
+       when is_binary(component_guid) do
+    cond do
+      Map.get(graph.children, instance.guid, []) != [] ->
+        graph
+
+      not Map.has_key?(graph.nodes, component_guid) ->
+        add_unresolved(graph, {:instance_component, instance.guid, component_guid})
+
+      true ->
+        clone_children(graph, instance.guid, instance.guid, component_guid, component_guid)
+    end
+  end
+
+  defp populate_seed_instance(_seed, graph), do: graph
+
+  defp clone_children(graph, instance_guid, clone_parent_guid, source_parent_guid, component_guid) do
+    graph.children
+    |> Map.get(source_parent_guid, [])
+    |> Enum.reduce(graph, fn source_child_guid, acc ->
+      clone_subtree(acc, instance_guid, clone_parent_guid, source_child_guid, component_guid)
+    end)
+  end
+
+  defp clone_subtree(graph, instance_guid, clone_parent_guid, source_guid, component_guid) do
+    source_node = Map.fetch!(graph.nodes, source_guid)
+    clone_guid = clone_guid(instance_guid, source_guid)
+    cloned_node = %{source_node | guid: clone_guid, parent_guid: clone_parent_guid}
+
+    source_seed = Map.get(graph.seed_nodes, source_guid)
+    cloned_seed = clone_seed(source_seed, clone_guid, clone_parent_guid)
+
+    graph
+    |> put_clone_node(clone_guid, cloned_node, cloned_seed)
+    |> add_child(clone_parent_guid, clone_guid)
+    |> put_clone_provenance(clone_guid, source_guid, instance_guid, component_guid)
+    |> clone_children(instance_guid, clone_guid, source_guid, component_guid)
+  end
+
+  defp clone_seed(nil, _clone_guid, _clone_parent_guid), do: nil
+
+  defp clone_seed(%SeedNode{} = seed, clone_guid, clone_parent_guid) do
+    %SeedNode{seed | guid: clone_guid, parent_guid: clone_parent_guid, source: seed}
+  end
+
+  defp put_clone_node(%Graph{} = graph, clone_guid, cloned_node, cloned_seed) do
+    %Graph{
+      graph
+      | nodes: Map.put(graph.nodes, clone_guid, cloned_node),
+        seed_nodes: put_if_present(graph.seed_nodes, clone_guid, cloned_seed),
+        by_type: append_group(graph.by_type, cloned_node.node_type, clone_guid),
+        by_name: append_group(graph.by_name, cloned_node.name, clone_guid),
+        clone_index:
+          Map.put(
+            graph.clone_index,
+            {instance_guid_from_clone(clone_guid), source_guid_from_clone(clone_guid)},
+            clone_guid
+          )
+    }
+  end
+
+  defp add_child(%Graph{} = graph, parent_guid, child_guid) do
+    %Graph{
+      graph
+      | children: Map.update(graph.children, parent_guid, [child_guid], &(&1 ++ [child_guid]))
+    }
+  end
+
+  defp put_clone_provenance(
+         %Graph{} = graph,
+         clone_guid,
+         source_guid,
+         instance_guid,
+         component_guid
+       ) do
+    provenance = %{
+      source: :instance_clone,
+      source_guid: source_guid,
+      instance_guid: instance_guid,
+      component_guid: component_guid,
+      applied: [],
+      unresolved: []
+    }
+
+    %Graph{graph | provenance: Map.put(graph.provenance, clone_guid, provenance)}
+  end
+
+  defp clone_guid(instance_guid, source_guid), do: "#{instance_guid}/#{source_guid}"
+
+  defp instance_guid_from_clone(clone_guid), do: clone_guid |> String.split("/", parts: 2) |> hd()
+
+  defp source_guid_from_clone(clone_guid) do
+    clone_guid
+    |> String.split("/", parts: 2)
+    |> List.last()
+  end
+
+  defp put_if_present(map, _key, nil), do: map
+  defp put_if_present(map, key, value), do: Map.put(map, key, value)
+
+  defp append_group(groups, nil, _guid), do: groups
+  defp append_group(groups, "", _guid), do: groups
+  defp append_group(groups, key, guid), do: Map.update(groups, key, [guid], &(&1 ++ [guid]))
 
   defp mark_stage(%Graph{} = graph, stage) do
     update_in(graph.stats[:resolved_stages], fn stages -> [stage | stages || []] end)
