@@ -15,61 +15,23 @@ defmodule FigKiwi.NativeSceneGenerator do
     "uint64" => "decoder.read_var_uint64()?;"
   }
 
-  def render(%Schema{} = schema) do
+  def render_splices(%Schema{} = schema) do
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
-    summary_structs() ++
-      [node_type_name(definition_map)] ++
-      Enum.map(schema.definitions, &sparse_definition(&1, definition_map)) ++
-      Enum.map(schema.definitions, &skip_definition(&1, definition_map)) ++
-      sparse_entrypoints() ++
-      scene_summary(definition_map)
+    [
+      node_type_name: [node_type_name(definition_map)],
+      sparse_decoders: Enum.map(schema.definitions, &sparse_definition(&1, definition_map)),
+      skip_decoders: Enum.map(schema.definitions, &skip_definition(&1, definition_map)),
+      sparse_entrypoints: sparse_entrypoints(),
+      scene_runtime: scene_summary(definition_map)
+    ]
   end
 
-  defp summary_structs do
-    [
-      """
-      #[derive(rustler::NifMap)]
-      pub struct SceneSummary {
-          node_count: usize,
-          parented_count: usize,
-          root_count: usize,
-          type_counts: Vec<(String, usize)>,
-      }
-      """,
-      """
-      #[derive(Clone, Debug, rustler::NifMap)]
-      pub struct SceneSize {
-          x: f64,
-          y: f64,
-      }
-      """,
-      """
-      #[derive(Clone, Debug, rustler::NifMap)]
-      pub struct SceneTransform {
-          m00: f64,
-          m01: f64,
-          m02: f64,
-          m10: f64,
-          m11: f64,
-          m12: f64,
-      }
-      """,
-      """
-      #[derive(rustler::NifMap)]
-      pub struct SceneQueryNode {
-          guid: String,
-          node_type: String,
-          name: Option<String>,
-          parent_guid: Option<String>,
-          position: Option<String>,
-          size: Option<SceneSize>,
-          transform: Option<SceneTransform>,
-          visible: Option<bool>,
-          locked: Option<bool>,
-      }
-      """
-    ]
+  def render(%Schema{} = schema) do
+    schema
+    |> render_splices()
+    |> Keyword.values()
+    |> List.flatten()
   end
 
   defp scene_xpath_runtime(message_arms, node_change_arms) do
