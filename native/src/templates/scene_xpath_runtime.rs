@@ -535,6 +535,67 @@ mod scene_xpath_runtime {
             locked: node.locked,
         }
     }
+
+    fn wants_field(fields: &[String], field: &str) -> bool {
+        fields.iter().any(|selected| selected == field)
+    }
+
+    fn scene_query_node_term<'a>(
+        env: Env<'a>,
+        index: &SceneIndex,
+        node_index: usize,
+        fields: &[String],
+    ) -> NifResult<Term<'a>> {
+        static GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+        static NODE_TYPE_ATOM: OnceLock<Atom> = OnceLock::new();
+        static NAME_ATOM: OnceLock<Atom> = OnceLock::new();
+        static PARENT_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+        static POSITION_ATOM: OnceLock<Atom> = OnceLock::new();
+        static SIZE_ATOM: OnceLock<Atom> = OnceLock::new();
+        static TRANSFORM_ATOM: OnceLock<Atom> = OnceLock::new();
+        static VISIBLE_ATOM: OnceLock<Atom> = OnceLock::new();
+        static LOCKED_ATOM: OnceLock<Atom> = OnceLock::new();
+
+        let node = &index.nodes[node_index];
+        let mut keys = Vec::with_capacity(fields.len().max(2));
+        let mut values = Vec::with_capacity(fields.len().max(2));
+
+        keys.push(cached_atom(env, &GUID_ATOM, "guid").encode(env));
+        values.push(node.guid.encode(env));
+        keys.push(cached_atom(env, &NODE_TYPE_ATOM, "node_type").encode(env));
+        values.push(node.node_type.encode(env));
+
+        if wants_field(fields, "name") {
+            keys.push(cached_atom(env, &NAME_ATOM, "name").encode(env));
+            values.push(node.name.encode(env));
+        }
+        if wants_field(fields, "parent_guid") {
+            keys.push(cached_atom(env, &PARENT_GUID_ATOM, "parent_guid").encode(env));
+            values.push(node.parent_guid.encode(env));
+        }
+        if wants_field(fields, "position") {
+            keys.push(cached_atom(env, &POSITION_ATOM, "position").encode(env));
+            values.push(node.position.encode(env));
+        }
+        if wants_field(fields, "size") {
+            keys.push(cached_atom(env, &SIZE_ATOM, "size").encode(env));
+            values.push(node.size.encode(env));
+        }
+        if wants_field(fields, "transform") {
+            keys.push(cached_atom(env, &TRANSFORM_ATOM, "transform").encode(env));
+            values.push(node.transform.encode(env));
+        }
+        if wants_field(fields, "visible") {
+            keys.push(cached_atom(env, &VISIBLE_ATOM, "visible").encode(env));
+            values.push(node.visible.encode(env));
+        }
+        if wants_field(fields, "locked") {
+            keys.push(cached_atom(env, &LOCKED_ATOM, "locked").encode(env));
+            values.push(node.locked.encode(env));
+        }
+
+        Term::map_from_term_arrays(env, &keys, &values)
+    }
     pub fn build_scene_index_value(
         bytes: Binary<'_>,
     ) -> NifResult<ResourceArc<SceneIndexResource>> {
@@ -556,6 +617,17 @@ mod scene_xpath_runtime {
         let resource = build_scene_index_value(bytes)?;
         query_scene_index_value(env, resource, xpath)
     }
+
+    pub fn query_scene_xpath_fields_value<'a>(
+        env: Env<'a>,
+        bytes: Binary<'a>,
+        xpath: String,
+        fields: Vec<String>,
+    ) -> NifResult<Term<'a>> {
+        let resource = build_scene_index_value(bytes)?;
+        query_scene_index_fields_value(env, resource, xpath, fields)
+    }
+
     pub fn query_scene_index_value<'a>(
         env: Env<'a>,
         resource: ResourceArc<SceneIndexResource>,
@@ -590,6 +662,47 @@ mod scene_xpath_runtime {
                         SceneHandleKind::Document => None,
                     })
                     .collect::<Vec<_>>()
+            }
+            _ => Vec::new(),
+        };
+        Ok(matched.encode(env))
+    }
+
+    pub fn query_scene_index_fields_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        xpath: String,
+        fields: Vec<String>,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        let root = SceneHandle::document(index.clone());
+        let mut cx = ();
+        let expression = servo_xpath::parse::<
+            SceneNamespaceResolver,
+        >(&mut cx, &xpath, None, false)
+            .map_err(|error| Error::Term(
+                Box::new(format!("invalid XPath: {:?}", error)),
+            ))?;
+        let value = servo_xpath::evaluate_parsed_xpath::<
+            SceneDom,
+        >(&mut cx, &expression, root)
+            .map_err(|error| Error::Term(
+                Box::new(format!("XPath evaluation failed: {:?}", error)),
+            ))?;
+        let matched = match value {
+            Value::NodeSet(node_set) => {
+                let mut out = Vec::new();
+                for handle in node_set {
+                    let node_index = match handle.kind {
+                        SceneHandleKind::Element(node_index) => Some(node_index),
+                        SceneHandleKind::Attribute { owner, .. } => Some(owner),
+                        SceneHandleKind::Document => None,
+                    };
+                    if let Some(node_index) = node_index {
+                        out.push(scene_query_node_term(env, &index, node_index, &fields)?);
+                    }
+                }
+                out
             }
             _ => Vec::new(),
         };

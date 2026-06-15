@@ -69,16 +69,28 @@ defmodule FigKiwi.Scene do
   def query(scene, xpath, opts \\ [])
 
   def query(binary, xpath, opts) when is_binary(binary) and is_binary(xpath) and is_list(opts) do
-    binary
-    |> payload!()
-    |> Native.query_scene_xpath(xpath)
-    |> nodes_from_maps(opts)
+    fields = query_fields(opts)
+    payload = payload!(binary)
+
+    nodes =
+      case fields do
+        :all -> Native.query_scene_xpath(payload, xpath)
+        fields -> Native.query_scene_xpath_fields(payload, xpath, fields)
+      end
+
+    nodes_from_maps(nodes)
   end
 
   def query(index, xpath, opts) when is_binary(xpath) and is_list(opts) do
-    index
-    |> Native.query_scene_index(xpath)
-    |> nodes_from_maps(opts)
+    fields = query_fields(opts)
+
+    nodes =
+      case fields do
+        :all -> Native.query_scene_index(index, xpath)
+        fields -> Native.query_scene_index_fields(index, xpath, fields)
+      end
+
+    nodes_from_maps(nodes)
   end
 
   @doc """
@@ -190,22 +202,17 @@ defmodule FigKiwi.Scene do
     %Node{node | children: children}
   end
 
-  defp nodes_from_maps(nodes, opts), do: Enum.map(nodes, &node_from_map(&1, opts))
+  defp nodes_from_maps(nodes), do: Enum.map(nodes, &Node.from_map/1)
 
-  defp node_from_map(map, opts) do
-    fields = Keyword.get(opts, :fields, :all)
-
-    map
-    |> filter_node_fields(fields)
-    |> Node.from_map()
+  defp query_fields(opts) do
+    case Keyword.get(opts, :fields, :all) do
+      :all -> :all
+      fields when is_list(fields) -> fields |> Enum.map(&field_name/1) |> Enum.uniq()
+    end
   end
 
-  defp filter_node_fields(map, :all), do: map
-
-  defp filter_node_fields(map, fields) when is_list(fields) do
-    required_fields = [:guid, :node_type]
-    Map.take(map, Enum.uniq(required_fields ++ fields))
-  end
+  defp field_name(field) when is_atom(field), do: Atom.to_string(field)
+  defp field_name(field) when is_binary(field), do: field
 
   defp xpath_literal(value) when is_atom(value), do: value |> Atom.to_string() |> xpath_literal()
 

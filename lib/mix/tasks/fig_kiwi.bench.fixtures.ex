@@ -34,7 +34,7 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
     sparse_decode? = env_enabled?("FIG_KIWI_BENCH_SPARSE_DECODE", default: true)
 
     Mix.shell().info(
-      "Fixture\tSize\tPayload\tFull Decode\tFull Mem\tSparse Decode\tSparse Mem\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tNodes\tCanvases"
+      "Fixture\tSize\tPayload\tFull Decode\tFull Mem\tSparse Decode\tSparse Mem\tSummary\tIndex\tCanvas XPath\tIndexed //canvas\tIndexed fields //canvas\tNodes\tCanvases"
     )
 
     Enum.each(fixtures, fn path ->
@@ -64,8 +64,15 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
       {indexed_query_us, indexed_canvases} =
         timed(fn -> FigKiwi.Native.query_scene_index(index, "//canvas") end)
 
+      {indexed_fields_query_us, indexed_fields_canvases} =
+        timed(fn -> FigKiwi.Native.query_scene_index_fields(index, "//canvas", ["name"]) end)
+
       unless length(canvases) == length(indexed_canvases) do
         Mix.raise("indexed query mismatch for #{path}")
+      end
+
+      unless length(canvases) == length(indexed_fields_canvases) do
+        Mix.raise("indexed fields query mismatch for #{path}")
       end
 
       Mix.shell().info(
@@ -82,6 +89,7 @@ defmodule Mix.Tasks.FigKiwi.Bench.Fixtures do
             format_us(index_us),
             format_us(query_us),
             format_us(indexed_query_us),
+            format_us(indexed_fields_query_us),
             summary.node_count,
             length(canvases)
           ],

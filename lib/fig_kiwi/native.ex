@@ -17,5 +17,7 @@ defmodule FigKiwi.Native do
   def decode_scene_summary(_binary), do: :erlang.nif_error(:nif_not_loaded)
   def build_scene_index(_binary), do: :erlang.nif_error(:nif_not_loaded)
   def query_scene_xpath(_binary, _xpath), do: :erlang.nif_error(:nif_not_loaded)
+  def query_scene_xpath_fields(_binary, _xpath, _fields), do: :erlang.nif_error(:nif_not_loaded)
   def query_scene_index(_index, _xpath), do: :erlang.nif_error(:nif_not_loaded)
+  def query_scene_index_fields(_index, _xpath, _fields), do: :erlang.nif_error(:nif_not_loaded)
 end

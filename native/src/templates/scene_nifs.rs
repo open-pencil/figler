@@ -41,10 +41,30 @@ pub fn query_scene_xpath<'a>(env: Env<'a>, bytes: Binary<'a>, xpath: String) -> 
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
+pub fn query_scene_xpath_fields<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    xpath: String,
+    fields: Vec<String>,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_xpath_fields_value(env, bytes, xpath, fields)
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_index<'a>(
     env: Env<'a>,
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     xpath: String,
 ) -> NifResult<Term<'a>> {
     scene_xpath_runtime::query_scene_index_value(env, resource, xpath)
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn query_scene_index_fields<'a>(
+    env: Env<'a>,
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    xpath: String,
+    fields: Vec<String>,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_index_fields_value(env, resource, xpath, fields)
 }
