@@ -3,10 +3,27 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
   Component property assignment support for the graph resolver.
   """
 
+  import Kernel, except: [apply: 2]
+
   alias FigKiwi.Scene.Graph
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.SeedNode
+
+  @doc false
+  def index(seed_nodes) do
+    Enum.reduce(seed_nodes, %{}, &add_refs/2)
+  end
+
+  @doc """
+  Applies component property assignments from all instance seeds in the graph.
+  """
+  @spec apply_all(Graph.t()) :: Graph.t()
+  def apply_all(%Graph{} = graph) do
+    graph
+    |> instances()
+    |> Enum.reduce(graph, &apply(&2, &1))
+  end
 
   @doc """
   Applies component property assignments from an instance seed.
@@ -33,6 +50,31 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
     graph
     |> refs(def_id)
     |> List.first()
+  end
+
+  defp add_refs(seed, refs) do
+    Enum.reduce(seed.component_prop_refs, refs, &add_ref(seed, &1, &2))
+  end
+
+  defp add_ref(seed, prop_ref, refs) do
+    with def_id when not is_nil(def_id) <- prop_ref.def_id,
+         field when not is_nil(field) <- field(prop_ref.field) do
+      Map.update(refs, def_id, [{seed.guid, field}], &[{seed.guid, field} | &1])
+    else
+      _value -> refs
+    end
+  end
+
+  defp instances(graph) do
+    graph.seed_nodes
+    |> Enum.flat_map(fn
+      {_guid, %{node_type: "instance", component_prop_assignments: assignments} = seed}
+      when assignments != [] ->
+        [seed]
+
+      _entry ->
+        []
+    end)
   end
 
   defp reduce(graph, instance_guid, assignments, predicate) do

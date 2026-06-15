@@ -14,11 +14,10 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   alias FigKiwi.Scene.Graph.DerivedData
   alias FigKiwi.Scene.Graph.Focus
   alias FigKiwi.Scene.Graph.GUID
-  alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.Provenance
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.StackLayout
-  alias FigKiwi.Scene.Graph.Target
+  alias FigKiwi.Scene.Graph.SymbolOverrides
 
   @doc """
   Builds the initial graph working set from seed nodes.
@@ -45,7 +44,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
       by_type: group_guids(seed_nodes, & &1.node_type),
       by_name: group_guids(seed_nodes, & &1.name),
       clone_index: %{},
-      component_prop_refs: component_prop_refs(seed_nodes),
+      component_prop_refs: ComponentProps.index(seed_nodes),
       provenance: Provenance.initial(seed_nodes),
       unresolved: [],
       stats: stats(seed_nodes, children, roots)
@@ -82,12 +81,8 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp apply_symbol_overrides(graph) do
-    seeds = source_instances(graph)
-
     graph
-    |> reduce(seeds, &swap_from/2)
-    |> reduce(seeds, &component_props_from/2)
-    |> reduce(seeds, &patch_from/2)
+    |> SymbolOverrides.apply(source_instances(graph))
     |> mark_stage(:symbol_overrides)
   end
 
@@ -95,8 +90,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   defp apply_component_props(graph) do
     graph
-    |> component_prop_instances()
-    |> Enum.reduce(graph, &ComponentProps.apply(&2, &1))
+    |> ComponentProps.apply_all()
     |> mark_stage(:component_props)
   end
 
@@ -116,83 +110,6 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp resolve_variables(graph), do: mark_stage(graph, :variables)
-
-  defp swap_from(%SeedNode{symbol_overrides: []}, graph), do: graph
-
-  defp swap_from(%SeedNode{} = seed, graph) do
-    seed.symbol_overrides
-    |> Enum.filter(& &1.overridden_symbol_id)
-    |> Enum.reduce(graph, &swap(seed, &1, &2))
-  end
-
-  defp component_props_from(%SeedNode{symbol_overrides: []}, graph), do: graph
-
-  defp component_props_from(%SeedNode{} = seed, graph) do
-    seed.symbol_overrides
-    |> Enum.reject(&(&1.component_prop_assignments == []))
-    |> Enum.reduce(graph, &component_props(seed, &1, &2))
-  end
-
-  defp patch_from(%SeedNode{symbol_overrides: []}, graph), do: graph
-
-  defp patch_from(%SeedNode{} = seed, graph) do
-    seed.symbol_overrides
-    |> Enum.reject(&(&1.fields == %{}))
-    |> Enum.reduce(graph, &patch(seed, &1, &2))
-  end
-
-  defp swap(seed, override, graph) do
-    case Target.resolve(graph, seed.guid, override.guid_path) do
-      {:ok, target_guid} ->
-        Patch.apply_all(
-          graph,
-          Patch.swap(target_guid, override.overridden_symbol_id, source: :symbol_override)
-        )
-
-      {:error, reason} ->
-        add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
-    end
-  end
-
-  defp component_props(seed, override, graph) do
-    case Target.resolve(graph, seed.guid, override.guid_path) do
-      {:ok, target_guid} ->
-        ComponentProps.apply_assignments(graph, target_guid, override.component_prop_assignments)
-
-      {:error, reason} ->
-        add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
-    end
-  end
-
-  defp patch(seed, override, graph) do
-    case Target.resolve(graph, seed.guid, override.guid_path) do
-      {:ok, target_guid} ->
-        Patch.apply_all(graph, field_patches(target_guid, override.fields))
-
-      {:error, reason} ->
-        add_unresolved(graph, {:symbol_override_target, seed.guid, override.guid_path, reason})
-    end
-  end
-
-  defp field_patches(target_guid, fields) do
-    Enum.map(fields, fn {field, value} ->
-      Patch.set(target_guid, field, value, source: :symbol_override)
-    end)
-  end
-
-  defp reduce(graph, values, fun), do: Enum.reduce(values, graph, fun)
-
-  defp component_prop_instances(graph) do
-    graph.seed_nodes
-    |> Enum.flat_map(fn
-      {_guid, %{node_type: "instance", component_prop_assignments: assignments} = seed}
-      when assignments != [] ->
-        [seed]
-
-      _entry ->
-        []
-    end)
-  end
 
   defp source_instances(graph) do
     focus = focus_set(graph)
@@ -295,23 +212,6 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     seed_nodes
     |> Enum.filter(&(is_nil(&1.parent_guid) or not MapSet.member?(guids, &1.parent_guid)))
     |> Enum.map(& &1.guid)
-  end
-
-  defp component_prop_refs(seed_nodes) do
-    Enum.reduce(seed_nodes, %{}, &add_component_prop_refs/2)
-  end
-
-  defp add_component_prop_refs(seed, refs) do
-    Enum.reduce(seed.component_prop_refs, refs, &add_component_prop_ref(seed, &1, &2))
-  end
-
-  defp add_component_prop_ref(seed, prop_ref, refs) do
-    with def_id when not is_nil(def_id) <- prop_ref.def_id,
-         field when not is_nil(field) <- ComponentProps.field(prop_ref.field) do
-      Map.update(refs, def_id, [{seed.guid, field}], &[{seed.guid, field} | &1])
-    else
-      _value -> refs
-    end
   end
 
   defp group_guids(seed_nodes, key_fun) do
