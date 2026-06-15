@@ -31,8 +31,7 @@ defmodule FigKiwi.Container do
   """
   @spec data(binary()) :: binary()
   def data(binary) when is_binary(binary) do
-    %{chunks: [_schema_chunk, data_chunk | _rest]} = parse(binary)
-    inflate(data_chunk)
+    KiwiCodec.Container.data(binary, "fig-kiwi", &inflate/1)
   end
 
   @spec build([iodata()], keyword()) :: binary()
