@@ -9,11 +9,12 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   """
 
   alias FigKiwi.Scene.Graph
+  alias FigKiwi.Scene.Graph.ClonePopulation
   alias FigKiwi.Scene.Graph.ComponentProps
   alias FigKiwi.Scene.Graph.DerivedData
   alias FigKiwi.Scene.Graph.GUID
-  alias FigKiwi.Scene.Graph.Nodes
   alias FigKiwi.Scene.Graph.Patch
+  alias FigKiwi.Scene.Graph.Provenance
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.StackLayout
   alias FigKiwi.Scene.Graph.Target
@@ -44,7 +45,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
       by_name: group_guids(seed_nodes, & &1.name),
       clone_index: %{},
       component_prop_refs: component_prop_refs(seed_nodes),
-      provenance: initial_provenance(seed_nodes),
+      provenance: Provenance.initial(seed_nodes),
       unresolved: [],
       stats: stats(seed_nodes, children, roots)
     }
@@ -75,7 +76,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp populate_instances(graph) do
     graph
     |> source_instances()
-    |> Enum.reduce(graph, &populate_seed_instance/2)
+    |> Enum.reduce(graph, &ClonePopulation.apply(&2, &1))
     |> mark_stage(:populate_instances)
   end
 
@@ -259,179 +260,6 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     [guid | Enum.flat_map(children, &source_subtree(graph, &1))]
   end
 
-  defp populate_seed_instance(
-         %SeedNode{node_type: "instance", symbol_id: component_guid} = instance,
-         graph
-       )
-       when is_tuple(component_guid) do
-    cond do
-      instance.visible == false ->
-        graph
-
-      Map.get(graph.children, instance.guid, []) != [] ->
-        graph
-
-      not Map.has_key?(graph.nodes, component_guid) ->
-        add_unresolved(graph, {:instance_component, instance.guid, component_guid})
-
-      true ->
-        clone_children(
-          graph,
-          instance.guid,
-          instance.guid,
-          component_guid,
-          component_guid,
-          {1.0, 1.0}
-        )
-    end
-  end
-
-  defp populate_seed_instance(_seed, graph), do: graph
-
-  defp clone_children(
-         graph,
-         instance_guid,
-         clone_parent_guid,
-         source_parent_guid,
-         component_guid,
-         scale
-       ) do
-    graph.children
-    |> Map.get(source_parent_guid, [])
-    |> Enum.reduce(graph, fn source_child_guid, acc ->
-      clone_subtree(
-        acc,
-        instance_guid,
-        clone_parent_guid,
-        source_child_guid,
-        component_guid,
-        scale
-      )
-    end)
-  end
-
-  defp clone_subtree(graph, instance_guid, clone_parent_guid, source_guid, component_guid, scale) do
-    source_node = Map.fetch!(graph.nodes, source_guid)
-    clone_guid = GUID.append(clone_parent_guid, source_guid)
-
-    cloned_node = %{
-      source_node
-      | guid: GUID.format(clone_guid),
-        parent_guid: GUID.format(clone_parent_guid),
-        transform: scale_transform(source_node.transform, scale)
-    }
-
-    source_seed = Map.get(graph.seed_nodes, source_guid)
-    cloned_seed = SeedNode.clone(source_seed, clone_guid, clone_parent_guid)
-
-    graph
-    |> put_clone_node(clone_guid, cloned_node, cloned_seed, instance_guid, source_guid)
-    |> Nodes.child(clone_parent_guid, clone_guid)
-    |> put_clone_provenance(clone_guid, source_guid, instance_guid, component_guid)
-    |> clone_children(instance_guid, clone_guid, source_guid, component_guid, scale)
-    |> populate_nested_clone(source_seed, instance_guid, clone_guid)
-  end
-
-  defp populate_nested_clone(
-         graph,
-         %SeedNode{node_type: "instance", symbol_id: nested_component_guid} = source_seed,
-         root_instance_guid,
-         clone_guid
-       )
-       when is_tuple(nested_component_guid) do
-    if source_seed.visible != false and Map.get(graph.children, clone_guid, []) == [] and
-         Map.has_key?(graph.nodes, nested_component_guid) do
-      scale = nested_instance_scale(graph, source_seed, nested_component_guid)
-
-      clone_children(
-        graph,
-        root_instance_guid,
-        clone_guid,
-        nested_component_guid,
-        nested_component_guid,
-        scale
-      )
-    else
-      graph
-    end
-  end
-
-  defp populate_nested_clone(graph, _source_seed, _root_instance_guid, _clone_guid), do: graph
-
-  defp nested_instance_scale(graph, source_seed, component_guid) do
-    case Map.get(graph.children, component_guid, []) do
-      [_single_child] -> scale(source_seed, Map.get(graph.nodes, component_guid))
-      _children -> {1.0, 1.0}
-    end
-  end
-
-  defp scale(source, target) do
-    with %{x: sx, y: sy} <- size(source),
-         %{x: tx, y: ty} <- size(target),
-         true <- usable_dimension?(tx),
-         true <- usable_dimension?(ty) do
-      {sx / tx, sy / ty}
-    else
-      _value -> {1.0, 1.0}
-    end
-  end
-
-  defp size(%{size: size}), do: size
-  defp size(_node), do: nil
-
-  defp usable_dimension?(value), do: value not in [nil, 0]
-
-  defp scale_transform(nil, _scale), do: nil
-
-  defp scale_transform(transform, scale) do
-    transform
-    |> scaled_offset(:m02, elem(scale, 0))
-    |> scaled_offset(:m12, elem(scale, 1))
-  end
-
-  defp scaled_offset(transform, key, scale) do
-    Map.update(transform, key, nil, fn
-      nil -> nil
-      value -> value * scale
-    end)
-  end
-
-  defp put_clone_node(
-         %Graph{} = graph,
-         clone_guid,
-         cloned_node,
-         cloned_seed,
-         instance_guid,
-         source_guid
-       ) do
-    %Graph{} = graph = Nodes.put(graph, clone_guid, cloned_node, cloned_seed)
-
-    %Graph{
-      graph
-      | clone_index:
-          Map.put(graph.clone_index, {GUID.root(instance_guid), source_guid}, clone_guid)
-    }
-  end
-
-  defp put_clone_provenance(
-         %Graph{} = graph,
-         clone_guid,
-         source_guid,
-         instance_guid,
-         component_guid
-       ) do
-    provenance = %{
-      source: :instance_clone,
-      source_guid: source_guid,
-      instance_guid: instance_guid,
-      component_guid: component_guid,
-      applied: [],
-      unresolved: []
-    }
-
-    %Graph{graph | provenance: Map.put(graph.provenance, clone_guid, provenance)}
-  end
-
   defp mark_stage(%Graph{} = graph, stage) do
     update_in(graph.stats[:resolved_stages], fn stages -> [stage | stages || []] end)
   end
@@ -593,18 +421,6 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   defp reverse_group_values(groups) do
     Map.new(groups, fn {key, values} -> {key, Enum.reverse(values)} end)
-  end
-
-  defp initial_provenance(seed_nodes) do
-    Map.new(seed_nodes, fn seed ->
-      {seed.guid,
-       %{
-         source: :projected_index,
-         source_guid: seed.guid,
-         applied: [],
-         unresolved: []
-       }}
-    end)
   end
 
   defp stats(seed_nodes, children, roots) do

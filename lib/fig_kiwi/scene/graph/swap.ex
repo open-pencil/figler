@@ -7,6 +7,7 @@ defmodule FigKiwi.Scene.Graph.Swap do
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Nodes
   alias FigKiwi.Scene.Graph.Patch
+  alias FigKiwi.Scene.Graph.Provenance
   alias FigKiwi.Scene.Graph.SeedNode
 
   @doc """
@@ -95,7 +96,7 @@ defmodule FigKiwi.Scene.Graph.Swap do
     |> Nodes.put(clone_guid, cloned_node, cloned_seed)
     |> Nodes.child(parent_guid, clone_guid)
     |> put_index(GUID.root(instance_guid), source_guid, clone_guid)
-    |> put_provenance(clone_guid, source_guid, instance_guid, component_guid)
+    |> Provenance.put_clone(clone_guid, source_guid, instance_guid, component_guid)
     |> fill_child(instance_guid, clone_guid, source_guid, component_guid, scale)
     |> fill_nested_instance(cloned_seed, clone_guid)
   end
@@ -168,18 +169,5 @@ defmodule FigKiwi.Scene.Graph.Swap do
       graph
       | clone_index: Map.put(graph.clone_index, {instance_guid, source_guid}, clone_guid)
     }
-  end
-
-  defp put_provenance(%Graph{} = graph, clone_guid, source_guid, instance_guid, component_guid) do
-    provenance = %{
-      source: :instance_clone,
-      source_guid: source_guid,
-      instance_guid: instance_guid,
-      component_guid: component_guid,
-      applied: [],
-      unresolved: []
-    }
-
-    %Graph{graph | provenance: Map.put(graph.provenance, clone_guid, provenance)}
   end
 end

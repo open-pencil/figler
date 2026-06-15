@@ -15,6 +15,7 @@ defmodule FigKiwi.Scene.Graph do
   alias FigKiwi.Native.Codec
   alias FigKiwi.Native.Scene, as: NativeScene
   alias FigKiwi.Scene
+  alias FigKiwi.Scene.Graph.Diff
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
@@ -290,9 +291,7 @@ defmodule FigKiwi.Scene.Graph do
   """
   @spec diff(t(), keyword()) :: [map()]
   def diff(%__MODULE__{} = graph, opts \\ []) when is_list(opts) do
-    graph
-    |> diff_guids(opts)
-    |> Enum.flat_map(&diff_guid(graph, &1))
+    Diff.run(graph, opts)
   end
 
   @doc """
@@ -418,47 +417,6 @@ defmodule FigKiwi.Scene.Graph do
 
   defp component_node(_graph, nil), do: nil
   defp component_node(graph, guid), do: Map.get(graph.nodes, guid)
-
-  defp diff_guids(graph, opts) do
-    case Keyword.fetch(opts, :root) do
-      {:ok, root} ->
-        root_guid = GUID.parse!(root)
-        [root_guid | descendant_guids(graph, root_guid)]
-
-      :error ->
-        Map.keys(graph.nodes)
-    end
-  end
-
-  defp descendant_guids(graph, guid) do
-    graph.children
-    |> Map.get(guid, [])
-    |> Enum.flat_map(fn child_guid -> [child_guid | descendant_guids(graph, child_guid)] end)
-  end
-
-  defp diff_guid(graph, guid) do
-    with %Node{} = resolved <- Map.get(graph.nodes, guid),
-         %Node{} = source <- source_node(graph, GUID.format(guid)),
-         changes when changes != [] <- node_changes(source, resolved) do
-      [%{guid: GUID.format(guid), source: source, resolved: resolved, changed: changes}]
-    else
-      _value -> []
-    end
-  end
-
-  defp node_changes(source, resolved) do
-    Node.__struct__()
-    |> Map.keys()
-    |> Enum.reject(&(&1 in [:__struct__, :children]))
-    |> Enum.flat_map(fn field ->
-      field_change(field, Map.get(source, field), Map.get(resolved, field))
-    end)
-  end
-
-  defp field_change(_field, value, value), do: []
-
-  defp field_change(field, source, resolved),
-    do: [%{field: field, source: source, resolved: resolved}]
 
   defp provenance(graph, guid), do: Map.get(graph.provenance, guid, %{})
 
