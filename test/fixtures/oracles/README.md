@@ -24,3 +24,7 @@ Run with:
 FIG_KIWI_ORACLE_FIXTURE=/path/to/fixture.fig \
   mise exec rust@1.96.0 -- mix run scripts/compare_figma_oracles.exs manifest.json
 ```
+
+The `basic/` fixture is a tiny generated `.fig` used by CI as a smoke test for
+committed oracle manifests. Larger oracle fixtures should be real exported
+Figma files with matching JSON captures from the same source document.

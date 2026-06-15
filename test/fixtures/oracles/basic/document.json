@@ -1,0 +1,31 @@
+{
+  "guid": "0:0",
+  "type": "DOCUMENT",
+  "name": "Document",
+  "visible": null,
+  "locked": false,
+  "x": null,
+  "y": null,
+  "width": null,
+  "height": null,
+  "characters": "",
+  "parent": null,
+  "childCount": 1,
+  "children": [
+    {
+      "guid": "0:1",
+      "type": "CANVAS",
+      "name": "Page 1",
+      "visible": true,
+      "locked": false,
+      "x": 10.0,
+      "y": 20.0,
+      "width": 100.0,
+      "height": 50.0,
+      "characters": "Hello world",
+      "parent": "0:0",
+      "childCount": 0,
+      "children": []
+    }
+  ]
+}

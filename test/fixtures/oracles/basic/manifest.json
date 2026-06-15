@@ -1,0 +1,9 @@
+{
+  "comparisons": [
+    {
+      "node": "0:0",
+      "depth": 2,
+      "json": "document.json"
+    }
+  ]
+}
