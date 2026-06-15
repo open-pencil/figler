@@ -4,6 +4,7 @@ defmodule FigKiwi.NativeSceneGenerator do
   alias FigKiwi.Scene.Projection
   alias KiwiCodec.Schema
   alias KiwiCodec.Schema.Definition
+  alias RustQ.Rust
 
   @primitive_skip %{
     "bool" => "decoder.read_bool()?;",
@@ -39,7 +40,7 @@ defmodule FigKiwi.NativeSceneGenerator do
     |> Map.fetch!("NodeType")
     |> then(& &1.fields)
     |> Enum.map(fn field ->
-      "#{field.value} => \"#{Macro.underscore(field.name)}\","
+      Rust.arm(Integer.to_string(field.value), ~s("#{Macro.underscore(field.name)}"))
     end)
   end
 
@@ -57,7 +58,10 @@ defmodule FigKiwi.NativeSceneGenerator do
       splice: [
         sparse_enum_arms:
           Enum.map(fields, fn field ->
-            "#{field.value} => { static ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new(); Ok(cached_atom(env, &ATOM_#{field.value}, \"#{Macro.underscore(field.name)}\").encode(env)) },"
+            Rust.arm(
+              Integer.to_string(field.value),
+              "{ static ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new(); Ok(cached_atom(env, &ATOM_#{field.value}, \"#{Macro.underscore(field.name)}\").encode(env)) }"
+            )
           end)
       ]
     )
@@ -203,7 +207,7 @@ defmodule FigKiwi.NativeSceneGenerator do
     message_skip_arms =
       message_fields
       |> Enum.reject(&(&1.name == "nodeChanges"))
-      |> Enum.map_join("\n", &skip_message_arm(&1, definition_map))
+      |> Enum.map_join("\n", &skip_message_arm_text(&1, definition_map))
 
     node_focus_arms =
       Enum.map_join(node_fields, "\n", fn field ->
@@ -224,14 +228,14 @@ defmodule FigKiwi.NativeSceneGenerator do
             "#{field.value} => { let len = decoder.read_var_uint()? as usize; for _ in 0..len { let next = graph_focus_read_component_prop_assignment(decoder)?; graph_focus_extend_refs(&mut refs, next); } },"
 
           _other ->
-            skip_message_arm(field, definition_map)
+            skip_message_arm_text(field, definition_map)
         end
       end)
 
     symbol_focus_arms =
       symbol_fields
       |> Enum.reject(&(&1.name in ["symbolID", "symbolOverrides"]))
-      |> Enum.map_join("\n", &skip_message_arm(&1, definition_map))
+      |> Enum.map_join("\n", &skip_message_arm_text(&1, definition_map))
 
     prop_assignment_arms =
       graph_focus_prop_assignment_arms(prop_assignment_fields, definition_map)
@@ -468,7 +472,7 @@ defmodule FigKiwi.NativeSceneGenerator do
           "#{field.value} => { let next = graph_focus_read_component_prop_value(decoder)?; graph_focus_extend_refs(&mut refs, next); },"
 
         _other ->
-          skip_message_arm(field, definition_map)
+          skip_message_arm_text(field, definition_map)
       end
     end)
   end
@@ -480,7 +484,7 @@ defmodule FigKiwi.NativeSceneGenerator do
           "#{field.value} => { graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?); },"
 
         _other ->
-          skip_message_arm(field, definition_map)
+          skip_message_arm_text(field, definition_map)
       end
     end)
   end
@@ -798,7 +802,13 @@ defmodule FigKiwi.NativeSceneGenerator do
   end
 
   defp skip_message_arm(field, definition_map) do
-    "#{field.value} => { #{skip_field(field, definition_map)} },"
+    Rust.arm(Integer.to_string(field.value), "{ #{skip_field(field, definition_map)} }")
+  end
+
+  defp skip_message_arm_text(field, definition_map) do
+    field
+    |> skip_message_arm(definition_map)
+    |> Rust.to_fragment()
   end
 
   defp skip_field(%{array?: true, type: "byte"}, _definition_map) do
