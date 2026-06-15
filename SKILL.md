@@ -194,6 +194,39 @@ Notes:
   oracle comparisons so the Kiwi payload and browser scene graph are the same
   file version.
 
+## Run multiple oracle comparisons
+
+Use `scripts/compare_figma_oracles.exs` with a small JSON manifest when checking
+several nodes from the same exported file.
+
+Example manifest:
+
+```json
+[
+  {
+    "node": "3740:112537",
+    "depth": 4,
+    "json": "/tmp/figma_3740_112537_depth4.json"
+  },
+  {
+    "node": "1706:44411",
+    "depth": 3,
+    "json": "/tmp/figma_1706_44411_d3.json"
+  }
+]
+```
+
+Run it against the current browser export:
+
+```sh
+FIG_KIWI_ORACLE_FIXTURE=/tmp/figma-current.fig \
+  mise exec rust@1.96.0 -- mix run scripts/compare_figma_oracles.exs /tmp/oracles.json
+```
+
+The script prints a per-node summary and exits non-zero with the collected diffs
+if any comparison fails. Relative `json` paths are resolved from the manifest's
+directory.
+
 ## Comparison fields for FigKiwi
 
 Good oracle fields for `fig_kiwi` tests:
