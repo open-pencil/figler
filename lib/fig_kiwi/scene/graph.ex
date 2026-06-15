@@ -146,7 +146,7 @@ defmodule FigKiwi.Scene.Graph do
     if Keyword.get(opts, :native, true) do
       payload
       |> sparse_message(opts)
-      |> SeedNode.from_message(opts)
+      |> SeedNode.from_message()
     else
       payload
       |> FigKiwi.decode_message()

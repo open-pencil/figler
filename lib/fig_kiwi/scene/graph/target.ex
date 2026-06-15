@@ -20,12 +20,15 @@ defmodule FigKiwi.Scene.Graph.Target do
   def resolve(_graph, _instance_guid, []), do: {:error, :empty_path}
 
   def resolve(%Graph{} = graph, instance_guid, guid_path) do
-    with :ok <- validate_source_path(graph, guid_path),
-         source_guid when not is_nil(source_guid) <- List.last(guid_path) do
+    source_guid = List.last(guid_path)
+
+    with source_guid when not is_nil(source_guid) <- source_guid,
+         :ok <- validate_source_path(graph, guid_path) do
       resolve_source_guid(graph, instance_guid, source_guid)
     else
-      {:error, reason} -> {:error, reason}
       nil -> {:error, :empty_path}
+      {:error, :invalid_path} -> resolve_source_guid(graph, instance_guid, source_guid)
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -60,11 +63,26 @@ defmodule FigKiwi.Scene.Graph.Target do
       clone_guid = Map.get(graph.clone_index, {GUID.root(instance_guid), source_guid}) ->
         {:ok, clone_guid}
 
+      clone_guid = nested_clone(graph, instance_guid, source_guid) ->
+        {:ok, clone_guid}
+
       Map.has_key?(graph.nodes, source_guid) ->
         {:ok, source_guid}
 
       true ->
         {:error, :missing_source}
     end
+  end
+
+  defp nested_clone(graph, instance_guid, source_guid) do
+    root_guid = GUID.root(instance_guid)
+
+    Enum.find_value(graph.clone_index, fn
+      {{^root_guid, {:clone, _source_root, source_path}}, clone_guid} ->
+        if List.last(source_path) == source_guid, do: clone_guid
+
+      _entry ->
+        nil
+    end)
   end
 end

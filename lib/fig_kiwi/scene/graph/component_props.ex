@@ -52,6 +52,9 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
 
   defp target(graph, instance_guid, source_guid) do
     cond do
+      clone_guid = nested_clone(graph, instance_guid, source_guid) ->
+        {:ok, clone_guid}
+
       clone_guid = Map.get(graph.clone_index, {GUID.root(instance_guid), source_guid}) ->
         {:ok, clone_guid}
 
@@ -62,6 +65,13 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
         {:error, :missing_target}
     end
   end
+
+  defp nested_clone(graph, {:clone, _root, _path} = instance_guid, source_guid) do
+    clone_guid = GUID.append(instance_guid, source_guid)
+    if Map.has_key?(graph.nodes, clone_guid), do: clone_guid
+  end
+
+  defp nested_clone(_graph, _instance_guid, _source_guid), do: nil
 
   @doc false
   def field(:visible), do: :visible

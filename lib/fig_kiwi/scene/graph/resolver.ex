@@ -90,7 +90,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
 
   defp apply_component_props(graph) do
     graph
-    |> source_instances()
+    |> component_prop_instances()
     |> Enum.reduce(graph, &ComponentProps.apply(&2, &1))
     |> mark_stage(:component_props)
   end
@@ -152,6 +152,18 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   end
 
   defp reduce(graph, values, fun), do: Enum.reduce(values, graph, fun)
+
+  defp component_prop_instances(graph) do
+    graph.seed_nodes
+    |> Enum.flat_map(fn
+      {_guid, %{node_type: "instance", component_prop_assignments: assignments} = seed}
+      when assignments != [] ->
+        [seed]
+
+      _entry ->
+        []
+    end)
+  end
 
   defp source_instances(graph) do
     focus = focus_set(graph)
@@ -319,9 +331,10 @@ defmodule FigKiwi.Scene.Graph.Resolver do
     next =
       Enum.reduce(guids, guids, fn guid, acc ->
         case Map.get(seed_by_guid, guid) do
-          %SeedNode{node_type: "instance", symbol_id: component_guid}
-          when is_tuple(component_guid) ->
-            collect_subtree(acc, component_guid, seed_by_guid, children)
+          %SeedNode{node_type: "instance"} = seed ->
+            seed
+            |> referenced_components()
+            |> Enum.reduce(acc, &collect_subtree(&2, &1, seed_by_guid, children))
 
           _seed ->
             acc
@@ -334,6 +347,32 @@ defmodule FigKiwi.Scene.Graph.Resolver do
       collect_instance_components(next, seed_by_guid, children)
     end
   end
+
+  defp referenced_components(seed) do
+    symbol_ids = if is_tuple(seed.symbol_id), do: [seed.symbol_id], else: []
+
+    swap_ids =
+      seed.symbol_overrides
+      |> Enum.flat_map(fn override ->
+        assignment_ids =
+          override.component_prop_assignments
+          |> Enum.map(&component_assignment_guid/1)
+          |> Enum.filter(&is_tuple/1)
+
+        [override.overridden_symbol_id | assignment_ids]
+      end)
+      |> Enum.filter(&is_tuple/1)
+
+    assignment_ids =
+      seed.component_prop_assignments
+      |> Enum.map(&component_assignment_guid/1)
+      |> Enum.filter(&is_tuple/1)
+
+    symbol_ids ++ swap_ids ++ assignment_ids
+  end
+
+  defp component_assignment_guid(%{value: {:guid, guid}}), do: guid
+  defp component_assignment_guid(_assignment), do: nil
 
   defp collect_subtree(guids, guid, seed_by_guid, children) do
     if Map.has_key?(seed_by_guid, guid) do

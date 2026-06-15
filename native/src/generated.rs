@@ -88853,6 +88853,11 @@ struct GraphFocusMeta {
     guid: Option<GraphFocusGuid>,
     parent_guid: Option<GraphFocusGuid>,
     symbol_id: Option<GraphFocusGuid>,
+    swap_ids: Vec<GraphFocusGuid>,
+}
+struct GraphFocusSymbolData {
+    symbol_id: Option<GraphFocusGuid>,
+    swap_ids: Vec<GraphFocusGuid>,
 }
 fn graph_focus_parse_guid(value: &str) -> Option<GraphFocusGuid> {
     let (session_id, local_id) = value.split_once(':')?;
@@ -88872,10 +88877,11 @@ fn graph_focus_read_parent_guid(decoder: &mut Decoder<'_>) -> NifResult<GraphFoc
     decoder.skip_string()?;
     Ok(guid)
 }
-fn graph_focus_read_symbol_id(
+fn graph_focus_read_symbol_data(
     decoder: &mut Decoder<'_>,
-) -> NifResult<Option<GraphFocusGuid>> {
+) -> NifResult<GraphFocusSymbolData> {
     let mut symbol_id = None;
+    let mut swap_ids = Vec::new();
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -88885,7 +88891,8 @@ fn graph_focus_read_symbol_id(
             2 => {
                 let len = decoder.read_var_uint()? as usize;
                 for _ in 0..len {
-                    skip_node_change_from_decoder(decoder)?;
+                    let meta = graph_focus_index_node_change(decoder)?;
+                    swap_ids.extend(meta.swap_ids);
                 }
             }
             3 => {
@@ -88902,7 +88909,103 @@ fn graph_focus_read_symbol_id(
             }
         }
     }
-    Ok(symbol_id)
+    Ok(GraphFocusSymbolData {
+        symbol_id,
+        swap_ids,
+    })
+}
+fn graph_focus_read_component_prop_value(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Vec<GraphFocusGuid>> {
+    let mut swap_ids = Vec::new();
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                decoder.read_bool()?;
+            }
+            2 => {
+                skip_text_data_from_decoder(decoder)?;
+            }
+            3 => {
+                swap_ids.push(graph_focus_read_guid(decoder)?);
+            }
+            4 => {
+                decoder.read_var_float_value()?;
+            }
+            5 => {
+                skip_easing_data_from_decoder(decoder)?;
+            }
+            6 => {
+                skip_vector_from_decoder(decoder)?;
+            }
+            7 => {
+                skip_line_from_decoder(decoder)?;
+            }
+            8 => {
+                skip_circle_from_decoder(decoder)?;
+            }
+            9 => {
+                skip_rotation3_d_from_decoder(decoder)?;
+            }
+            10 => {
+                skip_circle_point_from_decoder(decoder)?;
+            }
+            11 => {
+                skip_gradient_from_decoder(decoder)?;
+            }
+            12 => {
+                skip_color_point_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while indexing ComponentPropValue", field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(swap_ids)
+}
+fn graph_focus_read_component_prop_assignment(
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Vec<GraphFocusGuid>> {
+    let mut swap_ids = Vec::new();
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                skip_guid_from_decoder(decoder)?;
+            }
+            2 => {
+                swap_ids.extend(graph_focus_read_component_prop_value(decoder)?);
+            }
+            3 => {
+                skip_variable_data_from_decoder(decoder)?;
+            }
+            4 => {
+                skip_derived_text_data_from_decoder(decoder)?;
+            }
+            field => {
+                return Err(
+                    Error::Term(
+                        Box::new(
+                            format!(
+                                "unknown field {} while indexing ComponentPropAssignment",
+                                field
+                            ),
+                        ),
+                    ),
+                );
+            }
+        }
+    }
+    Ok(swap_ids)
 }
 fn graph_focus_index_node_change(
     decoder: &mut Decoder<'_>,
@@ -88910,6 +89013,7 @@ fn graph_focus_index_node_change(
     let mut guid = None;
     let mut parent_guid = None;
     let mut symbol_id = None;
+    let mut swap_ids = Vec::new();
     loop {
         match decoder.read_var_uint()? {
             0 => break,
@@ -89148,7 +89252,9 @@ fn graph_focus_index_node_change(
                 }
             }
             113 => {
-                symbol_id = graph_focus_read_symbol_id(decoder)?;
+                let data = graph_focus_read_symbol_data(decoder)?;
+                symbol_id = data.symbol_id;
+                swap_ids.extend(data.swap_ids);
             }
             114 => {
                 decoder.read_var_uint()?;
@@ -89163,12 +89269,13 @@ fn graph_focus_index_node_change(
                 decoder.read_bool()?;
             }
             143 => {
-                skip_guid_from_decoder(decoder)?;
+                swap_ids.push(graph_focus_read_guid(decoder)?);
             }
             268 => {
                 let len = decoder.read_var_uint()? as usize;
                 for _ in 0..len {
-                    skip_component_prop_assignment_from_decoder(decoder)?;
+                    swap_ids
+                        .extend(graph_focus_read_component_prop_assignment(decoder)?);
                 }
             }
             305 => {
@@ -90863,6 +90970,7 @@ fn graph_focus_index_node_change(
         guid,
         parent_guid,
         symbol_id,
+        swap_ids,
     })
 }
 fn graph_focus_index_message(
@@ -91093,6 +91201,14 @@ fn graph_focus_wanted(
                     graph_focus_collect_subtree(
                         &mut wanted,
                         symbol_id,
+                        &by_guid,
+                        &children,
+                    );
+                }
+                for swap_id in &metas[*index].swap_ids {
+                    graph_focus_collect_subtree(
+                        &mut wanted,
+                        *swap_id,
                         &by_guid,
                         &children,
                     );

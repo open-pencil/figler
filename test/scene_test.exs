@@ -6,9 +6,11 @@ defmodule FigKiwi.SceneTest do
   alias FigKiwi.Scene.Graph.ComponentPropAssignment
   alias FigKiwi.Scene.Graph.ComponentPropRef
   alias FigKiwi.Scene.Graph.DerivedSymbolData
+  alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.SymbolOverride
+  alias FigKiwi.Scene.Graph.Target
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Summary
   alias KiwiCodec.Schema.Binary, as: SchemaBinary
@@ -273,6 +275,22 @@ defmodule FigKiwi.SceneTest do
     assert Graph.stats(graph).clone_count == 1
   end
 
+  test "falls back to deepest source target for invalid nested override paths" do
+    graph =
+      [
+        %SeedNode{guid: {1, 1}, node_type: "component", name: "Wrapper"},
+        %SeedNode{guid: {1, 2}, node_type: "instance", parent_guid: {1, 1}, symbol_id: {3, 1}},
+        %SeedNode{guid: {2, 1}, node_type: "instance", symbol_id: {1, 1}},
+        %SeedNode{guid: {3, 1}, node_type: "component", name: "Leaf"},
+        %SeedNode{guid: {3, 2}, node_type: "text", parent_guid: {3, 1}, text: "Default"}
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:populate_instances])
+      |> Resolver.resolve()
+
+    assert {:ok, target} = Target.resolve(graph, {2, 1}, [{1, 2}, {3, 2}])
+    assert GUID.format(target) == "clone:2:1/1:2/3:2"
+  end
+
   test "validates nested source paths when resolving symbol overrides" do
     graph =
       [
@@ -301,12 +319,11 @@ defmodule FigKiwi.SceneTest do
              Scene.children(graph, "clone:2:1/1:2")
 
     assert Graph.explain(graph, "clone:2:1/1:2/1:3").applied == [
+             {:symbol_override, :visible, nil, false},
              {:symbol_override, :text, "Default", "Submit"}
            ]
 
-    assert Graph.unresolved(graph) == [
-             {:symbol_override_target, {2, 1}, [{1, 1}, {1, 3}], :invalid_path}
-           ]
+    assert Graph.unresolved(graph) == []
   end
 
   test "does not run resolver stages from cloned seeds" do
@@ -407,6 +424,7 @@ defmodule FigKiwi.SceneTest do
     assert [%Node{guid: "clone:2:1/3:2", text: "Patched label"}] = Scene.children(graph, "2:1")
 
     assert Graph.explain(graph, "2:1").applied == [
+             {:component_swap, :name, nil, "New"},
              {:symbol_override, :component_guid, {1, 1}, {3, 1}}
            ]
 

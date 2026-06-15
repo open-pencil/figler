@@ -195,6 +195,11 @@ defmodule FigKiwi.NativeSceneGenerator do
     node_fields = definition_map |> Map.fetch!("NodeChange") |> then(& &1.fields)
     symbol_fields = definition_map |> Map.fetch!("SymbolData") |> then(& &1.fields)
 
+    prop_assignment_fields =
+      definition_map |> Map.fetch!("ComponentPropAssignment") |> then(& &1.fields)
+
+    prop_value_fields = definition_map |> Map.fetch!("ComponentPropValue") |> then(& &1.fields)
+
     message_skip_arms =
       message_fields
       |> Enum.reject(&(&1.name == "nodeChanges"))
@@ -210,7 +215,13 @@ defmodule FigKiwi.NativeSceneGenerator do
             "#{field.value} => { parent_guid = Some(graph_focus_read_parent_guid(decoder)?); },"
 
           "symbolData" ->
-            "#{field.value} => { symbol_id = graph_focus_read_symbol_id(decoder)?; },"
+            "#{field.value} => { let data = graph_focus_read_symbol_data(decoder)?; symbol_id = data.symbol_id; swap_ids.extend(data.swap_ids); },"
+
+          "overriddenSymbolID" ->
+            "#{field.value} => { swap_ids.push(graph_focus_read_guid(decoder)?); },"
+
+          "componentPropAssignments" ->
+            "#{field.value} => { let len = decoder.read_var_uint()? as usize; for _ in 0..len { swap_ids.extend(graph_focus_read_component_prop_assignment(decoder)?); } },"
 
           _other ->
             skip_message_arm(field, definition_map)
@@ -218,15 +229,14 @@ defmodule FigKiwi.NativeSceneGenerator do
       end)
 
     symbol_focus_arms =
-      Enum.map_join(symbol_fields, "\n", fn field ->
-        case field.name do
-          "symbolID" ->
-            "#{field.value} => { symbol_id = Some(graph_focus_read_guid(decoder)?); },"
+      symbol_fields
+      |> Enum.reject(&(&1.name in ["symbolID", "symbolOverrides"]))
+      |> Enum.map_join("\n", &skip_message_arm(&1, definition_map))
 
-          _other ->
-            skip_message_arm(field, definition_map)
-        end
-      end)
+    prop_assignment_arms =
+      graph_focus_prop_assignment_arms(prop_assignment_fields, definition_map)
+
+    prop_value_arms = graph_focus_prop_value_arms(prop_value_fields, definition_map)
 
     [
       """
@@ -237,6 +247,12 @@ defmodule FigKiwi.NativeSceneGenerator do
           guid: Option<GraphFocusGuid>,
           parent_guid: Option<GraphFocusGuid>,
           symbol_id: Option<GraphFocusGuid>,
+          swap_ids: Vec<GraphFocusGuid>,
+      }
+
+      struct GraphFocusSymbolData {
+          symbol_id: Option<GraphFocusGuid>,
+          swap_ids: Vec<GraphFocusGuid>,
       }
 
       fn graph_focus_parse_guid(value: &str) -> Option<GraphFocusGuid> {
@@ -254,22 +270,56 @@ defmodule FigKiwi.NativeSceneGenerator do
           Ok(guid)
       }
 
-      fn graph_focus_read_symbol_id(decoder: &mut Decoder<'_>) -> NifResult<Option<GraphFocusGuid>> {
+      fn graph_focus_read_symbol_data(decoder: &mut Decoder<'_>) -> NifResult<GraphFocusSymbolData> {
           let mut symbol_id = None;
+          let mut swap_ids = Vec::new();
           loop {
               match decoder.read_var_uint()? {
                   0 => break,
+                  1 => { symbol_id = Some(graph_focus_read_guid(decoder)?); },
+                  2 => {
+                      let len = decoder.read_var_uint()? as usize;
+                      for _ in 0..len {
+                          let meta = graph_focus_index_node_change(decoder)?;
+                          swap_ids.extend(meta.swap_ids);
+                      }
+                  },
                   #{symbol_focus_arms}
                   field => return Err(Error::Term(Box::new(format!("unknown field {} while indexing SymbolData", field)))),
               }
           }
-          Ok(symbol_id)
+          Ok(GraphFocusSymbolData { symbol_id, swap_ids })
+      }
+
+      fn graph_focus_read_component_prop_value(decoder: &mut Decoder<'_>) -> NifResult<Vec<GraphFocusGuid>> {
+          let mut swap_ids = Vec::new();
+          loop {
+              match decoder.read_var_uint()? {
+                  0 => break,
+                  #{prop_value_arms}
+                  field => return Err(Error::Term(Box::new(format!("unknown field {} while indexing ComponentPropValue", field)))),
+              }
+          }
+          Ok(swap_ids)
+      }
+
+      fn graph_focus_read_component_prop_assignment(decoder: &mut Decoder<'_>) -> NifResult<Vec<GraphFocusGuid>> {
+          let mut swap_ids = Vec::new();
+          loop {
+              match decoder.read_var_uint()? {
+                  0 => break,
+                  #{prop_assignment_arms}
+                  field => return Err(Error::Term(Box::new(format!("unknown field {} while indexing ComponentPropAssignment", field)))),
+              }
+          }
+          Ok(swap_ids)
       }
 
       fn graph_focus_index_node_change(decoder: &mut Decoder<'_>) -> NifResult<GraphFocusMeta> {
           let mut guid = None;
           let mut parent_guid = None;
           let mut symbol_id = None;
+          let mut swap_ids = Vec::new();
           loop {
               match decoder.read_var_uint()? {
                   0 => break,
@@ -277,7 +327,7 @@ defmodule FigKiwi.NativeSceneGenerator do
                   field => return Err(Error::Term(Box::new(format!("unknown field {} while indexing NodeChange", field)))),
               }
           }
-          Ok(GraphFocusMeta { guid, parent_guid, symbol_id })
+          Ok(GraphFocusMeta { guid, parent_guid, symbol_id, swap_ids })
       }
 
       fn graph_focus_index_message(decoder: &mut Decoder<'_>) -> NifResult<Vec<GraphFocusMeta>> {
@@ -338,6 +388,9 @@ defmodule FigKiwi.NativeSceneGenerator do
                       if let Some(symbol_id) = metas[*index].symbol_id {
                           graph_focus_collect_subtree(&mut wanted, symbol_id, &by_guid, &children);
                       }
+                      for swap_id in &metas[*index].swap_ids {
+                          graph_focus_collect_subtree(&mut wanted, *swap_id, &by_guid, &children);
+                      }
                   }
               }
               if wanted.len() == before { break; }
@@ -373,6 +426,30 @@ defmodule FigKiwi.NativeSceneGenerator do
       }
       """
     ]
+  end
+
+  defp graph_focus_prop_assignment_arms(fields, definition_map) do
+    Enum.map_join(fields, "\n", fn field ->
+      case field.name do
+        "value" ->
+          "#{field.value} => { swap_ids.extend(graph_focus_read_component_prop_value(decoder)?); },"
+
+        _other ->
+          skip_message_arm(field, definition_map)
+      end
+    end)
+  end
+
+  defp graph_focus_prop_value_arms(fields, definition_map) do
+    Enum.map_join(fields, "\n", fn field ->
+      case field.name do
+        "guidValue" ->
+          "#{field.value} => { swap_ids.push(graph_focus_read_guid(decoder)?); },"
+
+        _other ->
+          skip_message_arm(field, definition_map)
+      end
+    end)
   end
 
   defp scene_splices(definition_map) do

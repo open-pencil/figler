@@ -6,6 +6,7 @@ defmodule FigKiwi.Scene.Graph.Swap do
   alias FigKiwi.Scene.Graph
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.Nodes
+  alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.SeedNode
 
   @doc """
@@ -15,8 +16,40 @@ defmodule FigKiwi.Scene.Graph.Swap do
   def run(%Graph{} = graph, target_guid, component_guid) do
     graph
     |> clear(target_guid)
+    |> update_target(target_guid, component_guid)
     |> fill(target_guid, component_guid)
   end
+
+  defp update_target(%Graph{} = graph, target_guid, component_guid) do
+    case Map.fetch(graph.nodes, component_guid) do
+      {:ok, component} ->
+        patches =
+          []
+          |> maybe_name_patch(target_guid, component.name)
+          |> maybe_visible_patch(target_guid, component.visible)
+
+        Patch.apply_all(graph, patches)
+
+      _other ->
+        graph
+    end
+  end
+
+  defp maybe_name_patch(patches, _target_guid, nil), do: patches
+
+  defp maybe_name_patch(patches, target_guid, name) do
+    if rename_component?(name),
+      do: [Patch.set(target_guid, :name, name, source: :component_swap) | patches],
+      else: patches
+  end
+
+  defp maybe_visible_patch(patches, _target_guid, nil), do: patches
+
+  defp maybe_visible_patch(patches, target_guid, visible) do
+    [Patch.set(target_guid, :visible, visible, source: :component_swap) | patches]
+  end
+
+  defp rename_component?(name), do: not String.contains?(name, "=")
 
   @doc """
   Removes current children under an instance target.
