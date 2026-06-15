@@ -33301,6 +33301,7 @@ fn decode_sparse_color_stop_var_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ColorStopVar",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ColorStopVar";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -33334,7 +33335,8 @@ fn decode_sparse_color_stop_var_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ColorStopVar", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -33715,6 +33717,7 @@ fn decode_sparse_code_source_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeSourceInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeSourceInfo";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -33772,8 +33775,8 @@ fn decode_sparse_code_source_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeSourceInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -33839,6 +33842,7 @@ fn decode_sparse_custom_tool_artifact_ref_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CustomToolArtifactRef",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CustomToolArtifactRef";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -33887,8 +33891,8 @@ fn decode_sparse_custom_tool_artifact_ref_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CustomToolArtifactRef",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -34935,6 +34939,7 @@ fn decode_sparse_image_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Image");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Image";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -34968,7 +34973,8 @@ fn decode_sparse_image_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Image", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -34986,6 +34992,7 @@ fn decode_sparse_video_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Video");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Video";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -35012,7 +35019,8 @@ fn decode_sparse_video_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Video", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -35034,6 +35042,7 @@ fn decode_sparse_paste_source_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PasteSource",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PasteSource";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -35060,7 +35069,8 @@ fn decode_sparse_paste_source_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PasteSource", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -35156,6 +35166,7 @@ fn decode_sparse_paint_filter_message_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PaintFilterMessage",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PaintFilterMessage";
     let mut keys = Vec::with_capacity(11);
     let mut values = Vec::with_capacity(11);
     keys.push(module_key_atom.encode(env));
@@ -35238,8 +35249,8 @@ fn decode_sparse_paint_filter_message_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PaintFilterMessage",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -35257,6 +35268,7 @@ fn decode_sparse_paint_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Paint");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Paint";
     let mut keys = Vec::with_capacity(41);
     let mut values = Vec::with_capacity(41);
     keys.push(module_key_atom.encode(env));
@@ -35602,7 +35614,8 @@ fn decode_sparse_paint_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Paint", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -35684,6 +35697,7 @@ fn decode_sparse_font_meta_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FontMetaData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FontMetaData";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -35731,7 +35745,8 @@ fn decode_sparse_font_meta_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FontMetaData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -35753,6 +35768,7 @@ fn decode_sparse_font_variation_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FontVariation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FontVariation";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -35786,8 +35802,8 @@ fn decode_sparse_font_variation_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FontVariation",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -35805,6 +35821,7 @@ fn decode_sparse_text_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TextData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TextData";
     let mut keys = Vec::with_capacity(20);
     let mut values = Vec::with_capacity(20);
     keys.push(module_key_atom.encode(env));
@@ -36039,7 +36056,8 @@ fn decode_sparse_text_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TextData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36061,6 +36079,7 @@ fn decode_sparse_derived_text_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DerivedTextData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DerivedTextData";
     let mut keys = Vec::with_capacity(13);
     let mut values = Vec::with_capacity(13);
     keys.push(module_key_atom.encode(env));
@@ -36222,8 +36241,8 @@ fn decode_sparse_derived_text_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DerivedTextData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36245,6 +36264,7 @@ fn decode_sparse_hyperlink_box_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.HyperlinkBox",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "HyperlinkBox";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -36302,7 +36322,8 @@ fn decode_sparse_hyperlink_box_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse HyperlinkBox", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36320,6 +36341,7 @@ fn decode_sparse_mention_box_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.MentionBox");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "MentionBox";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -36367,7 +36389,8 @@ fn decode_sparse_mention_box_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse MentionBox", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36385,6 +36408,7 @@ fn decode_sparse_baseline_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Baseline");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Baseline";
     let mut keys = Vec::with_capacity(9);
     let mut values = Vec::with_capacity(9);
     keys.push(module_key_atom.encode(env));
@@ -36453,7 +36477,8 @@ fn decode_sparse_baseline_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Baseline", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36471,6 +36496,7 @@ fn decode_sparse_glyph_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Glyph");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Glyph";
     let mut keys = Vec::with_capacity(10);
     let mut values = Vec::with_capacity(10);
     keys.push(module_key_atom.encode(env));
@@ -36552,7 +36578,8 @@ fn decode_sparse_glyph_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Glyph", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36570,6 +36597,7 @@ fn decode_sparse_decoration_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Decoration");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Decoration";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -36602,7 +36630,8 @@ fn decode_sparse_decoration_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Decoration", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36620,6 +36649,7 @@ fn decode_sparse_blockquote_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Blockquote");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Blockquote";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -36653,7 +36683,8 @@ fn decode_sparse_blockquote_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Blockquote", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36671,6 +36702,7 @@ fn decode_sparse_vector_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VectorData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VectorData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -36710,7 +36742,8 @@ fn decode_sparse_vector_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VectorData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36732,6 +36765,7 @@ fn decode_sparse_text_path_start_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TextPathStart",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TextPathStart";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -36758,8 +36792,8 @@ fn decode_sparse_text_path_start_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TextPathStart",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36777,6 +36811,7 @@ fn decode_sparse_guid_path_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GUIDPath");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GUIDPath";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -36802,7 +36837,8 @@ fn decode_sparse_guid_path_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GUIDPath", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36820,6 +36856,7 @@ fn decode_sparse_symbol_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SymbolData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SymbolData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -36859,7 +36896,8 @@ fn decode_sparse_symbol_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SymbolData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36881,6 +36919,7 @@ fn decode_sparse_guid_path_mapping_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDPathMapping",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GUIDPathMapping";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -36907,8 +36946,8 @@ fn decode_sparse_guid_path_mapping_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GUIDPathMapping",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36930,6 +36969,7 @@ fn decode_sparse_derived_breakpoint_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DerivedBreakpointData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DerivedBreakpointData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -36955,8 +36995,8 @@ fn decode_sparse_derived_breakpoint_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DerivedBreakpointData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -36978,6 +37018,7 @@ fn decode_sparse_node_generation_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeGenerationData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeGenerationData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -37027,8 +37068,8 @@ fn decode_sparse_node_generation_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeGenerationData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37050,6 +37091,7 @@ fn decode_sparse_derived_immutable_frame_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DerivedImmutableFrameData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DerivedImmutableFrameData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37082,8 +37124,8 @@ fn decode_sparse_derived_immutable_frame_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DerivedImmutableFrameData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37101,6 +37143,7 @@ fn decode_sparse_jsx_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.JsxData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "JsxData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -37126,7 +37169,8 @@ fn decode_sparse_jsx_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse JsxData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37148,6 +37192,7 @@ fn decode_sparse_derived_jsx_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DerivedJsxData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DerivedJsxData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -37173,8 +37218,8 @@ fn decode_sparse_derived_jsx_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DerivedJsxData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37192,6 +37237,7 @@ fn decode_sparse_asset_id_map_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AssetIdMap");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AssetIdMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -37217,7 +37263,8 @@ fn decode_sparse_asset_id_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AssetIdMap", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37239,6 +37286,7 @@ fn decode_sparse_asset_id_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AssetIdEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AssetIdEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37265,7 +37313,8 @@ fn decode_sparse_asset_id_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AssetIdEntry", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37283,6 +37332,7 @@ fn decode_sparse_asset_ref_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AssetRef");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AssetRef";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37309,7 +37359,8 @@ fn decode_sparse_asset_ref_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AssetRef", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37327,6 +37378,7 @@ fn decode_sparse_asset_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AssetId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AssetId";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -37388,7 +37440,8 @@ fn decode_sparse_asset_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AssetId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37410,6 +37463,7 @@ fn decode_sparse_state_group_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StateGroupId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StateGroupId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37436,7 +37490,8 @@ fn decode_sparse_state_group_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StateGroupId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37454,6 +37509,7 @@ fn decode_sparse_style_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StyleId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StyleId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37480,7 +37536,8 @@ fn decode_sparse_style_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StyleId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37498,6 +37555,7 @@ fn decode_sparse_symbol_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SymbolId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SymbolId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37524,7 +37582,8 @@ fn decode_sparse_symbol_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SymbolId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37542,6 +37601,7 @@ fn decode_sparse_variable_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableID");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableID";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37568,7 +37628,8 @@ fn decode_sparse_variable_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableID", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37590,6 +37651,7 @@ fn decode_sparse_variable_override_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableOverrideId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableOverrideId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37616,8 +37678,8 @@ fn decode_sparse_variable_override_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableOverrideId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37639,6 +37701,7 @@ fn decode_sparse_variable_set_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableSetID",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableSetID";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37665,8 +37728,8 @@ fn decode_sparse_variable_set_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableSetID",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37684,6 +37747,7 @@ fn decode_sparse_module_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ModuleId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ModuleId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37710,7 +37774,8 @@ fn decode_sparse_module_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ModuleId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37732,6 +37797,7 @@ fn decode_sparse_responsive_set_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ResponsiveSetId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ResponsiveSetId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37758,8 +37824,8 @@ fn decode_sparse_responsive_set_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ResponsiveSetId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37777,6 +37843,7 @@ fn decode_sparse_webpage_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.WebpageId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "WebpageId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37803,7 +37870,8 @@ fn decode_sparse_webpage_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse WebpageId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37821,6 +37889,7 @@ fn decode_sparse_theme_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ThemeID");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ThemeID";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37847,7 +37916,8 @@ fn decode_sparse_theme_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ThemeID", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37869,6 +37939,7 @@ fn decode_sparse_code_library_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeLibraryId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeLibraryId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37895,8 +37966,8 @@ fn decode_sparse_code_library_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeLibraryId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37914,6 +37985,7 @@ fn decode_sparse_code_file_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeFileId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeFileId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37940,7 +38012,8 @@ fn decode_sparse_code_file_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeFileId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -37962,6 +38035,7 @@ fn decode_sparse_code_component_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeComponentId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeComponentId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -37988,8 +38062,8 @@ fn decode_sparse_code_component_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeComponentId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38011,6 +38085,7 @@ fn decode_sparse_canvas_node_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CanvasNodeId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CanvasNodeId";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -38044,7 +38119,8 @@ fn decode_sparse_canvas_node_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CanvasNodeId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38142,6 +38218,7 @@ fn decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CollaborativeTextStrippedOpRunWithIDs",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CollaborativeTextStrippedOpRunWithIDs";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -38203,8 +38280,8 @@ fn decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CollaborativeTextStrippedOpRunWithIDs",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38226,6 +38303,7 @@ fn decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CollaborativeTextStrippedOpRunWithLoc",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CollaborativeTextStrippedOpRunWithLoc";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -38284,8 +38362,8 @@ fn decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CollaborativeTextStrippedOpRunWithLoc",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38307,6 +38385,7 @@ fn decode_sparse_collaborative_text_op_run_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CollaborativeTextOpRun",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CollaborativeTextOpRun";
     let mut keys = Vec::with_capacity(9);
     let mut values = Vec::with_capacity(9);
     keys.push(module_key_atom.encode(env));
@@ -38403,8 +38482,8 @@ fn decode_sparse_collaborative_text_op_run_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CollaborativeTextOpRun",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38426,6 +38505,7 @@ fn decode_sparse_collaborative_plain_text_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CollaborativePlainText",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CollaborativePlainText";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -38497,8 +38577,8 @@ fn decode_sparse_collaborative_plain_text_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CollaborativePlainText",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38520,6 +38600,7 @@ fn decode_sparse_collaborative_text_selection_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CollaborativeTextSelection",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CollaborativeTextSelection";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -38576,8 +38657,8 @@ fn decode_sparse_collaborative_text_selection_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CollaborativeTextSelection",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38599,6 +38680,7 @@ fn decode_sparse_responsive_text_style_variant_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ResponsiveTextStyleVariant",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ResponsiveTextStyleVariant";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -38668,8 +38750,8 @@ fn decode_sparse_responsive_text_style_variant_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ResponsiveTextStyleVariant",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38719,6 +38801,7 @@ fn decode_sparse_slide_theme_props_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlideThemeProps",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SlideThemeProps";
     let mut keys = Vec::with_capacity(9);
     let mut values = Vec::with_capacity(9);
     keys.push(module_key_atom.encode(env));
@@ -38805,8 +38888,8 @@ fn decode_sparse_slide_theme_props_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SlideThemeProps",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38828,6 +38911,7 @@ fn decode_sparse_slide_theme_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlideThemeMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SlideThemeMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -38856,8 +38940,8 @@ fn decode_sparse_slide_theme_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SlideThemeMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38879,6 +38963,7 @@ fn decode_sparse_slide_theme_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlideThemeMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SlideThemeMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -38905,8 +38990,8 @@ fn decode_sparse_slide_theme_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SlideThemeMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -38928,6 +39013,7 @@ fn decode_sparse_shared_symbol_reference_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SharedSymbolReference",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SharedSymbolReference";
     let mut keys = Vec::with_capacity(10);
     let mut values = Vec::with_capacity(10);
     keys.push(module_key_atom.encode(env));
@@ -39035,8 +39121,8 @@ fn decode_sparse_shared_symbol_reference_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SharedSymbolReference",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -39058,6 +39144,7 @@ fn decode_sparse_shared_component_master_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SharedComponentMasterData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SharedComponentMasterData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -39104,8 +39191,8 @@ fn decode_sparse_shared_component_master_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SharedComponentMasterData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -39127,6 +39214,7 @@ fn decode_sparse_instance_override_stash_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InstanceOverrideStash",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InstanceOverrideStash";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -39170,8 +39258,8 @@ fn decode_sparse_instance_override_stash_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InstanceOverrideStash",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -39193,6 +39281,7 @@ fn decode_sparse_instance_override_stash_v2_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InstanceOverrideStashV2",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InstanceOverrideStashV2";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -39236,8 +39325,8 @@ fn decode_sparse_instance_override_stash_v2_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InstanceOverrideStashV2",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -39259,6 +39348,7 @@ fn decode_sparse_imported_code_file_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ImportedCodeFileEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ImportedCodeFileEntry";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -39278,8 +39368,8 @@ fn decode_sparse_imported_code_file_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ImportedCodeFileEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -39301,6 +39391,7 @@ fn decode_sparse_imported_code_files_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ImportedCodeFiles",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ImportedCodeFiles";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -39329,8 +39420,8 @@ fn decode_sparse_imported_code_files_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ImportedCodeFiles",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -39432,6 +39523,7 @@ fn decode_sparse_effect_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Effect");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Effect";
     let mut keys = Vec::with_capacity(56);
     let mut values = Vec::with_capacity(56);
     keys.push(module_key_atom.encode(env));
@@ -39870,7 +39962,8 @@ fn decode_sparse_effect_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Effect", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -39912,6 +40005,7 @@ fn decode_sparse_transform_modifier_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransformModifier",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransformModifier";
     let mut keys = Vec::with_capacity(11);
     let mut values = Vec::with_capacity(11);
     keys.push(module_key_atom.encode(env));
@@ -39997,8 +40091,8 @@ fn decode_sparse_transform_modifier_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransformModifier",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40166,6 +40260,7 @@ fn decode_sparse_fixed_order_transform3d_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FixedOrderTransform3d",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FixedOrderTransform3d";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -40213,8 +40308,8 @@ fn decode_sparse_fixed_order_transform3d_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FixedOrderTransform3d",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40272,6 +40367,7 @@ fn decode_sparse_transform_fn_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransformFnValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransformFnValue";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -40312,8 +40408,8 @@ fn decode_sparse_transform_fn_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransformFnValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40335,6 +40431,7 @@ fn decode_sparse_transform_fn_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransformFn",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransformFn";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -40361,7 +40458,8 @@ fn decode_sparse_transform_fn_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransformFn", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40383,6 +40481,7 @@ fn decode_sparse_transform_schema_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransformSchemaValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransformSchemaValue";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -40422,8 +40521,8 @@ fn decode_sparse_transform_schema_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransformSchemaValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40445,6 +40544,7 @@ fn decode_sparse_transform3d_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.Transform3d",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Transform3d";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -40484,7 +40584,8 @@ fn decode_sparse_transform3d_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Transform3d", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40534,6 +40635,7 @@ fn decode_sparse_scene3d_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Scene3d");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Scene3d";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -40567,7 +40669,8 @@ fn decode_sparse_scene3d_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Scene3d", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40589,6 +40692,7 @@ fn decode_sparse_transform_origin_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransformOrigin",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransformOrigin";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -40615,8 +40719,8 @@ fn decode_sparse_transform_origin_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransformOrigin",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40638,6 +40742,7 @@ fn decode_sparse_transition_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransitionInfo";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -40664,8 +40769,8 @@ fn decode_sparse_transition_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransitionInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40727,6 +40832,7 @@ fn decode_sparse_prototype_device_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PrototypeDevice",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PrototypeDevice";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -40770,8 +40876,8 @@ fn decode_sparse_prototype_device_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PrototypeDevice",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40865,6 +40971,7 @@ fn decode_sparse_overlay_background_appearance_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.OverlayBackgroundAppearance",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "OverlayBackgroundAppearance";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -40894,8 +41001,8 @@ fn decode_sparse_overlay_background_appearance_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse OverlayBackgroundAppearance",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -40989,6 +41096,7 @@ fn decode_sparse_export_settings_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ExportSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ExportSettings";
     let mut keys = Vec::with_capacity(16);
     let mut values = Vec::with_capacity(16);
     keys.push(module_key_atom.encode(env));
@@ -41116,8 +41224,8 @@ fn decode_sparse_export_settings_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ExportSettings",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41151,6 +41259,7 @@ fn decode_sparse_layout_grid_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.LayoutGrid");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "LayoutGrid";
     let mut keys = Vec::with_capacity(14);
     let mut values = Vec::with_capacity(14);
     keys.push(module_key_atom.encode(env));
@@ -41257,7 +41366,8 @@ fn decode_sparse_layout_grid_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse LayoutGrid", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41275,6 +41385,7 @@ fn decode_sparse_guide_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Guide");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Guide";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -41308,7 +41419,8 @@ fn decode_sparse_guide_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Guide", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41326,6 +41438,7 @@ fn decode_sparse_path_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Path");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Path";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -41358,7 +41471,10 @@ fn decode_sparse_path_from_decoder<'a>(
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while decoding sparse Path", field),
+                            format!(
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
+                            ),
                         ),
                     ),
                 );
@@ -41451,6 +41567,7 @@ fn decode_sparse_dynamic_stroke_settings_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DynamicStrokeSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DynamicStrokeSettings";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -41484,8 +41601,8 @@ fn decode_sparse_dynamic_stroke_settings_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DynamicStrokeSettings",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41507,6 +41624,7 @@ fn decode_sparse_scatter_stroke_settings_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ScatterStrokeSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ScatterStrokeSettings";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -41554,8 +41672,8 @@ fn decode_sparse_scatter_stroke_settings_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ScatterStrokeSettings",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41577,6 +41695,7 @@ fn decode_sparse_stretch_stroke_settings_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StretchStrokeSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StretchStrokeSettings";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -41596,8 +41715,8 @@ fn decode_sparse_stretch_stroke_settings_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StretchStrokeSettings",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41615,6 +41734,7 @@ fn decode_sparse_stroke_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StrokeData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StrokeData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -41647,7 +41767,8 @@ fn decode_sparse_stroke_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StrokeData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41665,6 +41786,7 @@ fn decode_sparse_stroke_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Stroke");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Stroke";
     let mut keys = Vec::with_capacity(15);
     let mut values = Vec::with_capacity(15);
     keys.push(module_key_atom.encode(env));
@@ -41791,7 +41913,8 @@ fn decode_sparse_stroke_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Stroke", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41813,6 +41936,7 @@ fn decode_sparse_variable_width_point_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableWidthPoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableWidthPoint";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -41853,8 +41977,8 @@ fn decode_sparse_variable_width_point_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableWidthPoint",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41876,6 +42000,7 @@ fn decode_sparse_shared_style_reference_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SharedStyleReference",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SharedStyleReference";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -41902,8 +42027,8 @@ fn decode_sparse_shared_style_reference_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SharedStyleReference",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -41925,6 +42050,7 @@ fn decode_sparse_shared_style_master_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SharedStyleMasterData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SharedStyleMasterData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -41958,8 +42084,8 @@ fn decode_sparse_shared_style_master_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SharedStyleMasterData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42000,6 +42126,7 @@ fn decode_sparse_arc_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ArcData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ArcData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -42033,7 +42160,8 @@ fn decode_sparse_arc_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ArcData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42051,6 +42179,7 @@ fn decode_sparse_symbol_link_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SymbolLink");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SymbolLink";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -42084,7 +42213,8 @@ fn decode_sparse_symbol_link_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SymbolLink", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42102,6 +42232,7 @@ fn decode_sparse_plugin_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PluginData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PluginData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -42135,7 +42266,8 @@ fn decode_sparse_plugin_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PluginData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42157,6 +42289,7 @@ fn decode_sparse_plugin_relaunch_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PluginRelaunchData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PluginRelaunchData";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -42204,8 +42337,8 @@ fn decode_sparse_plugin_relaunch_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PluginRelaunchData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42227,6 +42360,7 @@ fn decode_sparse_multiplayer_field_version_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.MultiplayerFieldVersion",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "MultiplayerFieldVersion";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -42253,8 +42387,8 @@ fn decode_sparse_multiplayer_field_version_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse MultiplayerFieldVersion",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42324,6 +42458,7 @@ fn decode_sparse_connector_endpoint_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ConnectorEndpoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ConnectorEndpoint";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -42364,8 +42499,8 @@ fn decode_sparse_connector_endpoint_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ConnectorEndpoint",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42387,6 +42522,7 @@ fn decode_sparse_connector_control_point_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ConnectorControlPoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ConnectorControlPoint";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -42413,8 +42549,8 @@ fn decode_sparse_connector_control_point_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ConnectorControlPoint",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42472,6 +42608,7 @@ fn decode_sparse_connector_text_midpoint_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ConnectorTextMidpoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ConnectorTextMidpoint";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -42511,8 +42648,8 @@ fn decode_sparse_connector_text_midpoint_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ConnectorTextMidpoint",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42710,6 +42847,7 @@ fn decode_sparse_annotation_property_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnnotationProperty",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnnotationProperty";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -42732,8 +42870,8 @@ fn decode_sparse_annotation_property_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnnotationProperty",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42827,6 +42965,7 @@ fn decode_sparse_annotation_category_custom_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnnotationCategoryCustom",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnnotationCategoryCustom";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -42863,8 +43002,8 @@ fn decode_sparse_annotation_category_custom_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnnotationCategoryCustom",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42886,6 +43025,7 @@ fn decode_sparse_annotation_category_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnnotationCategory",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnnotationCategory";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -42925,8 +43065,8 @@ fn decode_sparse_annotation_category_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnnotationCategory",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -42948,6 +43088,7 @@ fn decode_sparse_annotation_categories_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnnotationCategories",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnnotationCategories";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -42983,8 +43124,8 @@ fn decode_sparse_annotation_categories_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnnotationCategories",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43002,6 +43143,7 @@ fn decode_sparse_annotation_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Annotation");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Annotation";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -43051,7 +43193,8 @@ fn decode_sparse_annotation_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Annotation", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43097,6 +43240,7 @@ fn decode_sparse_annotation_measurement_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnnotationMeasurement",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnnotationMeasurement";
     let mut keys = Vec::with_capacity(10);
     let mut values = Vec::with_capacity(10);
     keys.push(module_key_atom.encode(env));
@@ -43179,8 +43323,8 @@ fn decode_sparse_annotation_measurement_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnnotationMeasurement",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43202,6 +43346,7 @@ fn decode_sparse_library_move_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.LibraryMoveInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "LibraryMoveInfo";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -43228,8 +43373,8 @@ fn decode_sparse_library_move_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse LibraryMoveInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43251,6 +43396,7 @@ fn decode_sparse_library_move_history_item_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.LibraryMoveHistoryItem",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "LibraryMoveHistoryItem";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -43277,8 +43423,8 @@ fn decode_sparse_library_move_history_item_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse LibraryMoveHistoryItem",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43300,6 +43446,7 @@ fn decode_sparse_developer_related_link_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DeveloperRelatedLink",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DeveloperRelatedLink";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -43340,8 +43487,8 @@ fn decode_sparse_developer_related_link_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DeveloperRelatedLink",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43363,6 +43510,7 @@ fn decode_sparse_widget_pointer_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.WidgetPointer",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "WidgetPointer";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -43382,8 +43530,8 @@ fn decode_sparse_widget_pointer_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse WidgetPointer",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43401,6 +43549,7 @@ fn decode_sparse_edit_info_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EditInfo");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EditInfo";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -43441,7 +43590,8 @@ fn decode_sparse_edit_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EditInfo", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43567,6 +43717,7 @@ fn decode_sparse_section_status_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SectionStatusInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SectionStatusInfo";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -43618,8 +43769,8 @@ fn decode_sparse_section_status_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SectionStatusInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43641,6 +43792,7 @@ fn decode_sparse_buzz_approval_request_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.BuzzApprovalRequestInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "BuzzApprovalRequestInfo";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -43714,8 +43866,8 @@ fn decode_sparse_buzz_approval_request_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse BuzzApprovalRequestInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43737,6 +43889,7 @@ fn decode_sparse_buzz_approval_requests_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.BuzzApprovalRequests",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "BuzzApprovalRequests";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -43765,8 +43918,8 @@ fn decode_sparse_buzz_approval_requests_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse BuzzApprovalRequests",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43812,6 +43965,7 @@ fn decode_sparse_buzz_approval_node_status_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.BuzzApprovalNodeStatusInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "BuzzApprovalNodeStatusInfo";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -43862,8 +44016,8 @@ fn decode_sparse_buzz_approval_node_status_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse BuzzApprovalNodeStatusInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43885,6 +44039,7 @@ fn decode_sparse_code_embed_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeEmbedInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeEmbedInfo";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -43932,8 +44087,8 @@ fn decode_sparse_code_embed_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeEmbedInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -43967,6 +44122,7 @@ fn decode_sparse_node_change_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NodeChange");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeChange";
     let mut keys = Vec::with_capacity(591);
     let mut values = Vec::with_capacity(591);
     keys.push(module_key_atom.encode(env));
@@ -49879,7 +50035,8 @@ fn decode_sparse_node_change_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeChange", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -49917,6 +50074,7 @@ fn decode_sparse_git_repo_ref_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GitRepoRef");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GitRepoRef";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -49953,7 +50111,8 @@ fn decode_sparse_git_repo_ref_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GitRepoRef", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -49975,6 +50134,7 @@ fn decode_sparse_source_control_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SourceControlConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SourceControlConfig";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -50001,8 +50161,8 @@ fn decode_sparse_source_control_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SourceControlConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50024,6 +50184,7 @@ fn decode_sparse_code_snapshot_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeSnapshot",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeSnapshot";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -50094,7 +50255,8 @@ fn decode_sparse_code_snapshot_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeSnapshot", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50116,6 +50278,7 @@ fn decode_sparse_code_output_layer_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeOutputLayer",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeOutputLayer";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -50135,8 +50298,8 @@ fn decode_sparse_code_output_layer_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeOutputLayer",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50158,6 +50321,7 @@ fn decode_sparse_code_snapshot_layers_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeSnapshotLayers",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeSnapshotLayers";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -50203,8 +50367,8 @@ fn decode_sparse_code_snapshot_layers_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeSnapshotLayers",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50226,6 +50390,7 @@ fn decode_sparse_code_behavior_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeBehaviorData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeBehaviorData";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -50279,8 +50444,8 @@ fn decode_sparse_code_behavior_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeBehaviorData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50302,6 +50467,7 @@ fn decode_sparse_code_example_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeExample",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeExample";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -50328,7 +50494,8 @@ fn decode_sparse_code_example_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeExample", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50350,6 +50517,7 @@ fn decode_sparse_used_make_library_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.UsedMakeLibrary",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "UsedMakeLibrary";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -50369,8 +50537,8 @@ fn decode_sparse_used_make_library_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse UsedMakeLibrary",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50392,6 +50560,7 @@ fn decode_sparse_cookie_banner_text_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CookieBannerText",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CookieBannerText";
     let mut keys = Vec::with_capacity(19);
     let mut values = Vec::with_capacity(19);
     keys.push(module_key_atom.encode(env));
@@ -50554,8 +50723,8 @@ fn decode_sparse_cookie_banner_text_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CookieBannerText",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50577,6 +50746,7 @@ fn decode_sparse_cookie_banner_settings_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CookieBannerSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CookieBannerSettings";
     let mut keys = Vec::with_capacity(12);
     let mut values = Vec::with_capacity(12);
     keys.push(module_key_atom.encode(env));
@@ -50676,8 +50846,8 @@ fn decode_sparse_cookie_banner_settings_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CookieBannerSettings",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -50771,6 +50941,7 @@ fn decode_sparse_responsive_set_settings_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ResponsiveSetSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ResponsiveSetSettings";
     let mut keys = Vec::with_capacity(22);
     let mut values = Vec::with_capacity(22);
     keys.push(module_key_atom.encode(env));
@@ -50976,8 +51147,8 @@ fn decode_sparse_responsive_set_settings_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ResponsiveSetSettings",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51015,6 +51186,7 @@ fn decode_sparse_cms_selector_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSSelector",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSSelector";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -51064,7 +51236,8 @@ fn decode_sparse_cms_selector_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSSelector", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51086,6 +51259,7 @@ fn decode_sparse_cms_filter_critera_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSFilterCritera",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSFilterCritera";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -51124,8 +51298,8 @@ fn decode_sparse_cms_filter_critera_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSFilterCritera",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51163,6 +51337,7 @@ fn decode_sparse_cms_selector_filter_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSSelectorFilter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSSelectorFilter";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -51199,8 +51374,8 @@ fn decode_sparse_cms_selector_filter_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSSelectorFilter",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51234,6 +51409,7 @@ fn decode_sparse_cms_selector_sort_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSSelectorSort",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSSelectorSort";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -51260,8 +51436,8 @@ fn decode_sparse_cms_selector_sort_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSSelectorSort",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51299,6 +51475,7 @@ fn decode_sparse_cms_consumption_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSConsumptionMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSConsumptionMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -51327,8 +51504,8 @@ fn decode_sparse_cms_consumption_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSConsumptionMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51350,6 +51527,7 @@ fn decode_sparse_cms_consumption_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSConsumptionMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSConsumptionMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -51379,8 +51557,8 @@ fn decode_sparse_cms_consumption_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSConsumptionMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51418,6 +51596,7 @@ fn decode_sparse_cms_rich_text_style_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSRichTextStyleMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSRichTextStyleMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -51446,8 +51625,8 @@ fn decode_sparse_cms_rich_text_style_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSRichTextStyleMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51469,6 +51648,7 @@ fn decode_sparse_cms_rich_text_style_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSRichTextStyleEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSRichTextStyleEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -51501,8 +51681,8 @@ fn decode_sparse_cms_rich_text_style_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSRichTextStyleEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51568,6 +51748,7 @@ fn decode_sparse_cms_rich_text_descriptor_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSRichTextDescriptor",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSRichTextDescriptor";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -51600,8 +51781,8 @@ fn decode_sparse_cms_rich_text_descriptor_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSRichTextDescriptor",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51623,6 +51804,7 @@ fn decode_sparse_repeater_cms_override_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.RepeaterCmsOverrideData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "RepeaterCmsOverrideData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -51648,8 +51830,8 @@ fn decode_sparse_repeater_cms_override_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse RepeaterCmsOverrideData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51671,6 +51853,7 @@ fn decode_sparse_repeater_override_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.RepeaterOverrideData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "RepeaterOverrideData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -51700,8 +51883,8 @@ fn decode_sparse_repeater_override_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse RepeaterOverrideData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51723,6 +51906,7 @@ fn decode_sparse_repeater_symbol_override_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.RepeaterSymbolOverrideData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "RepeaterSymbolOverrideData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -51755,8 +51939,8 @@ fn decode_sparse_repeater_symbol_override_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse RepeaterSymbolOverrideData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51778,6 +51962,7 @@ fn decode_sparse_repeater_position_overrides_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.RepeaterPositionOverrides",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "RepeaterPositionOverrides";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -51810,8 +51995,8 @@ fn decode_sparse_repeater_position_overrides_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse RepeaterPositionOverrides",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51833,6 +52018,7 @@ fn decode_sparse_inherited_variables_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InheritedVariablesData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InheritedVariablesData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -51861,8 +52047,8 @@ fn decode_sparse_inherited_variables_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InheritedVariablesData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51884,6 +52070,7 @@ fn decode_sparse_inherited_variable_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InheritedVariableEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InheritedVariableEntry";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -51903,8 +52090,8 @@ fn decode_sparse_inherited_variable_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InheritedVariableEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51926,6 +52113,7 @@ fn decode_sparse_hub_file_attribution_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.HubFileAttribution",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "HubFileAttribution";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -51952,8 +52140,8 @@ fn decode_sparse_hub_file_attribution_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse HubFileAttribution",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -51975,6 +52163,7 @@ fn decode_sparse_managed_string_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringData";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -52028,8 +52217,8 @@ fn decode_sparse_managed_string_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52087,6 +52276,7 @@ fn decode_sparse_managed_string_node_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringNode",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringNode";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -52157,8 +52347,8 @@ fn decode_sparse_managed_string_node_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringNode",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52180,6 +52370,7 @@ fn decode_sparse_managed_string_text_node_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringTextNodeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringTextNodeData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -52199,8 +52390,8 @@ fn decode_sparse_managed_string_text_node_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringTextNodeData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52222,6 +52413,7 @@ fn decode_sparse_managed_string_concatenate_ast_node_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringConcatenateAstNodeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringConcatenateAstNodeData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -52250,8 +52442,8 @@ fn decode_sparse_managed_string_concatenate_ast_node_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringConcatenateAstNodeData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52305,6 +52497,7 @@ fn decode_sparse_managed_string_plural_ast_node_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringPluralAstNodeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringPluralAstNodeData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -52340,8 +52533,8 @@ fn decode_sparse_managed_string_plural_ast_node_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringPluralAstNodeData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52363,6 +52556,7 @@ fn decode_sparse_managed_string_plural_type_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringPluralTypeMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringPluralTypeMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -52395,8 +52589,8 @@ fn decode_sparse_managed_string_plural_type_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringPluralTypeMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52442,6 +52636,7 @@ fn decode_sparse_managed_string_placeholder_ast_node_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringPlaceholderAstNodeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringPlaceholderAstNodeData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -52478,8 +52673,8 @@ fn decode_sparse_managed_string_placeholder_ast_node_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringPlaceholderAstNodeData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52501,6 +52696,7 @@ fn decode_sparse_cooper_revert_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CooperRevertData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CooperRevertData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -52520,8 +52716,8 @@ fn decode_sparse_cooper_revert_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CooperRevertData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52543,6 +52739,7 @@ fn decode_sparse_video_playback_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VideoPlayback",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VideoPlayback";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -52597,8 +52794,8 @@ fn decode_sparse_video_playback_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VideoPlayback",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52692,6 +52889,7 @@ fn decode_sparse_widget_hover_style_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.WidgetHoverStyle",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "WidgetHoverStyle";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -52762,8 +52960,8 @@ fn decode_sparse_widget_hover_style_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse WidgetHoverStyle",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52785,6 +52983,7 @@ fn decode_sparse_widget_derived_subtree_cursor_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.WidgetDerivedSubtreeCursor",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "WidgetDerivedSubtreeCursor";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -52811,8 +53010,8 @@ fn decode_sparse_widget_derived_subtree_cursor_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse WidgetDerivedSubtreeCursor",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52834,6 +53033,7 @@ fn decode_sparse_multiplayer_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.MultiplayerMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "MultiplayerMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -52862,8 +53062,8 @@ fn decode_sparse_multiplayer_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse MultiplayerMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52885,6 +53085,7 @@ fn decode_sparse_multiplayer_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.MultiplayerMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "MultiplayerMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -52911,8 +53112,8 @@ fn decode_sparse_multiplayer_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse MultiplayerMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52934,6 +53135,7 @@ fn decode_sparse_variable_data_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableDataMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableDataMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -52962,8 +53164,8 @@ fn decode_sparse_variable_data_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableDataMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -52985,6 +53187,7 @@ fn decode_sparse_variable_data_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableDataMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableDataMapEntry";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -53018,8 +53221,8 @@ fn decode_sparse_variable_data_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableDataMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53325,6 +53528,7 @@ fn decode_sparse_variable_mode_by_set_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableModeBySetMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableModeBySetMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -53353,8 +53557,8 @@ fn decode_sparse_variable_mode_by_set_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableModeBySetMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53376,6 +53580,7 @@ fn decode_sparse_variable_mode_by_set_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableModeBySetMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableModeBySetMapEntry";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -53413,8 +53618,8 @@ fn decode_sparse_variable_mode_by_set_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableModeBySetMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53436,6 +53641,7 @@ fn decode_sparse_code_syntax_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeSyntaxMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeSyntaxMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -53464,8 +53670,8 @@ fn decode_sparse_code_syntax_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeSyntaxMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53487,6 +53693,7 @@ fn decode_sparse_code_syntax_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeSyntaxMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeSyntaxMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -53516,8 +53723,8 @@ fn decode_sparse_code_syntax_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeSyntaxMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53539,6 +53746,7 @@ fn decode_sparse_table_merged_cell_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TableMergedCellMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TableMergedCellMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -53567,8 +53775,8 @@ fn decode_sparse_table_merged_cell_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TableMergedCellMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53590,6 +53798,7 @@ fn decode_sparse_table_merged_cell_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TableMergedCellMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TableMergedCellMapEntry";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -53630,8 +53839,8 @@ fn decode_sparse_table_merged_cell_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TableMergedCellMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53653,6 +53862,7 @@ fn decode_sparse_table_row_column_position_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TableRowColumnPositionMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TableRowColumnPositionMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -53681,8 +53891,8 @@ fn decode_sparse_table_row_column_position_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TableRowColumnPositionMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53704,6 +53914,7 @@ fn decode_sparse_table_row_column_position_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TableRowColumnPositionMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TableRowColumnPositionMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -53730,8 +53941,8 @@ fn decode_sparse_table_row_column_position_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TableRowColumnPositionMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53753,6 +53964,7 @@ fn decode_sparse_guid_position_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDPositionMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GUIDPositionMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -53781,8 +53993,8 @@ fn decode_sparse_guid_position_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GUIDPositionMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53804,6 +54016,7 @@ fn decode_sparse_guid_position_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDPositionMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GUIDPositionMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -53830,8 +54043,8 @@ fn decode_sparse_guid_position_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GUIDPositionMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53853,6 +54066,7 @@ fn decode_sparse_guid_grid_track_size_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDGridTrackSizeMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GUIDGridTrackSizeMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -53881,8 +54095,8 @@ fn decode_sparse_guid_grid_track_size_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GUIDGridTrackSizeMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53904,6 +54118,7 @@ fn decode_sparse_guid_grid_track_size_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDGridTrackSizeMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GUIDGridTrackSizeMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -53930,8 +54145,8 @@ fn decode_sparse_guid_grid_track_size_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GUIDGridTrackSizeMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -53953,6 +54168,7 @@ fn decode_sparse_object_animation_list_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ObjectAnimationList",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ObjectAnimationList";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -53981,8 +54197,8 @@ fn decode_sparse_object_animation_list_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ObjectAnimationList",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54004,6 +54220,7 @@ fn decode_sparse_object_animation_list_item_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ObjectAnimationListItem",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ObjectAnimationListItem";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -54030,8 +54247,8 @@ fn decode_sparse_object_animation_list_item_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ObjectAnimationListItem",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54053,6 +54270,7 @@ fn decode_sparse_grid_track_size_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GridTrackSize",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GridTrackSize";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -54085,8 +54303,8 @@ fn decode_sparse_grid_track_size_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GridTrackSize",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54108,6 +54326,7 @@ fn decode_sparse_grid_track_sizing_function_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GridTrackSizingFunction",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GridTrackSizingFunction";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -54137,8 +54356,8 @@ fn decode_sparse_grid_track_sizing_function_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GridTrackSizingFunction",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54180,6 +54399,7 @@ fn decode_sparse_table_row_column_size_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TableRowColumnSizeMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TableRowColumnSizeMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -54208,8 +54428,8 @@ fn decode_sparse_table_row_column_size_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TableRowColumnSizeMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54231,6 +54451,7 @@ fn decode_sparse_table_row_column_size_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TableRowColumnSizeMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TableRowColumnSizeMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -54257,8 +54478,8 @@ fn decode_sparse_table_row_column_size_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TableRowColumnSizeMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54280,6 +54501,7 @@ fn decode_sparse_agenda_position_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaPositionMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgendaPositionMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -54308,8 +54530,8 @@ fn decode_sparse_agenda_position_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgendaPositionMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54331,6 +54553,7 @@ fn decode_sparse_agenda_position_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaPositionMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgendaPositionMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -54357,8 +54580,8 @@ fn decode_sparse_agenda_position_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgendaPositionMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54396,6 +54619,7 @@ fn decode_sparse_agenda_metadata_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaMetadataMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgendaMetadataMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -54424,8 +54648,8 @@ fn decode_sparse_agenda_metadata_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgendaMetadataMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54447,6 +54671,7 @@ fn decode_sparse_agenda_metadata_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaMetadataMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgendaMetadataMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -54473,8 +54698,8 @@ fn decode_sparse_agenda_metadata_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgendaMetadataMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54496,6 +54721,7 @@ fn decode_sparse_agenda_metadata_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgendaMetadata";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -54550,8 +54776,8 @@ fn decode_sparse_agenda_metadata_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgendaMetadata",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54573,6 +54799,7 @@ fn decode_sparse_agenda_timer_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaTimerInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgendaTimerInfo";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -54592,8 +54819,8 @@ fn decode_sparse_agenda_timer_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgendaTimerInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54615,6 +54842,7 @@ fn decode_sparse_agenda_vote_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaVoteInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgendaVoteInfo";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -54634,8 +54862,8 @@ fn decode_sparse_agenda_vote_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgendaVoteInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54657,6 +54885,7 @@ fn decode_sparse_agenda_music_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaMusicInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgendaMusicInfo";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -54683,8 +54912,8 @@ fn decode_sparse_agenda_music_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgendaMusicInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54770,6 +54999,7 @@ fn decode_sparse_component_prop_ref_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ComponentPropRef",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ComponentPropRef";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -54824,8 +55054,8 @@ fn decode_sparse_component_prop_ref_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ComponentPropRef",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54875,6 +55105,7 @@ fn decode_sparse_component_prop_assignment_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ComponentPropAssignment",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ComponentPropAssignment";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -54922,8 +55153,8 @@ fn decode_sparse_component_prop_assignment_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ComponentPropAssignment",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -54945,6 +55176,7 @@ fn decode_sparse_component_prop_def_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ComponentPropDef",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ComponentPropDef";
     let mut keys = Vec::with_capacity(14);
     let mut values = Vec::with_capacity(14);
     keys.push(module_key_atom.encode(env));
@@ -55057,8 +55289,8 @@ fn decode_sparse_component_prop_def_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ComponentPropDef",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55080,6 +55312,7 @@ fn decode_sparse_component_prop_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ComponentPropValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ComponentPropValue";
     let mut keys = Vec::with_capacity(13);
     let mut values = Vec::with_capacity(13);
     keys.push(module_key_atom.encode(env));
@@ -55176,8 +55409,8 @@ fn decode_sparse_component_prop_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ComponentPropValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55199,6 +55432,7 @@ fn decode_sparse_timeline_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TimelineData";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -55243,7 +55477,8 @@ fn decode_sparse_timeline_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TimelineData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55265,6 +55500,7 @@ fn decode_sparse_timeline_definitions_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineDefinitionsMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TimelineDefinitionsMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -55293,8 +55529,8 @@ fn decode_sparse_timeline_definitions_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TimelineDefinitionsMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55316,6 +55552,7 @@ fn decode_sparse_timeline_definitions_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineDefinitionsMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TimelineDefinitionsMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -55342,8 +55579,8 @@ fn decode_sparse_timeline_definitions_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TimelineDefinitionsMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55365,6 +55602,7 @@ fn decode_sparse_timeline_assignment_key_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineAssignmentKey",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TimelineAssignmentKey";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -55395,8 +55633,8 @@ fn decode_sparse_timeline_assignment_key_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TimelineAssignmentKey",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55418,6 +55656,7 @@ fn decode_sparse_timeline_binding_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineBindingData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TimelineBindingData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -55444,8 +55683,8 @@ fn decode_sparse_timeline_binding_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TimelineBindingData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55467,6 +55706,7 @@ fn decode_sparse_timeline_assignments_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineAssignmentsMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TimelineAssignmentsMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -55495,8 +55735,8 @@ fn decode_sparse_timeline_assignments_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TimelineAssignmentsMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55518,6 +55758,7 @@ fn decode_sparse_timeline_assignments_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineAssignmentsMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TimelineAssignmentsMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -55550,8 +55791,8 @@ fn decode_sparse_timeline_assignments_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TimelineAssignmentsMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55649,6 +55890,7 @@ fn decode_sparse_component_prop_preferred_values_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ComponentPropPreferredValues",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ComponentPropPreferredValues";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -55690,8 +55932,8 @@ fn decode_sparse_component_prop_preferred_values_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ComponentPropPreferredValues",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55713,6 +55955,7 @@ fn decode_sparse_parameter_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ParameterConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ParameterConfig";
     let mut keys = Vec::with_capacity(14);
     let mut values = Vec::with_capacity(14);
     keys.push(module_key_atom.encode(env));
@@ -55825,8 +56068,8 @@ fn decode_sparse_parameter_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ParameterConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55872,6 +56115,7 @@ fn decode_sparse_input_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InputConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InputConfig";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -55905,7 +56149,8 @@ fn decode_sparse_input_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InputConfig", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -55927,6 +56172,7 @@ fn decode_sparse_slider_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SliderConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SliderConfig";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -55967,7 +56213,8 @@ fn decode_sparse_slider_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SliderConfig", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56009,6 +56256,7 @@ fn decode_sparse_point_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PointConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PointConfig";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56035,7 +56283,8 @@ fn decode_sparse_point_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PointConfig", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56053,6 +56302,7 @@ fn decode_sparse_line_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Line");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Line";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56078,7 +56328,10 @@ fn decode_sparse_line_from_decoder<'a>(
                 return Err(
                     Error::Term(
                         Box::new(
-                            format!("unknown field {} while decoding sparse Line", field),
+                            format!(
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
+                            ),
                         ),
                     ),
                 );
@@ -56095,6 +56348,7 @@ fn decode_sparse_line_config_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.LineConfig");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "LineConfig";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56121,7 +56375,8 @@ fn decode_sparse_line_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse LineConfig", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56139,6 +56394,7 @@ fn decode_sparse_circle_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Circle");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Circle";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56165,7 +56421,8 @@ fn decode_sparse_circle_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Circle", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56187,6 +56444,7 @@ fn decode_sparse_point_radius_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PointRadiusConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PointRadiusConfig";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -56234,8 +56492,8 @@ fn decode_sparse_point_radius_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PointRadiusConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56253,6 +56511,7 @@ fn decode_sparse_rotation3_d_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Rotation3D");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Rotation3D";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -56293,7 +56552,8 @@ fn decode_sparse_rotation3_d_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Rotation3D", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56315,6 +56575,7 @@ fn decode_sparse_rotation3_d_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.Rotation3DConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Rotation3DConfig";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -56334,8 +56595,8 @@ fn decode_sparse_rotation3_d_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Rotation3DConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56357,6 +56618,7 @@ fn decode_sparse_circle_point_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CirclePoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CirclePoint";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -56390,7 +56652,8 @@ fn decode_sparse_circle_point_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CirclePoint", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56412,6 +56675,7 @@ fn decode_sparse_circle_point_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CirclePointConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CirclePointConfig";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -56459,8 +56723,8 @@ fn decode_sparse_circle_point_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CirclePointConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56478,6 +56742,7 @@ fn decode_sparse_color_point_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorPoint");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ColorPoint";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56504,7 +56769,8 @@ fn decode_sparse_color_point_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ColorPoint", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56526,6 +56792,7 @@ fn decode_sparse_color_point_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ColorPointConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ColorPointConfig";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56552,8 +56819,8 @@ fn decode_sparse_color_point_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ColorPointConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56571,6 +56838,7 @@ fn decode_sparse_gradient_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Gradient");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Gradient";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -56596,7 +56864,8 @@ fn decode_sparse_gradient_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Gradient", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56618,6 +56887,7 @@ fn decode_sparse_gradient_stop_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GradientStop",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "GradientStop";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56644,7 +56914,8 @@ fn decode_sparse_gradient_stop_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse GradientStop", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56666,6 +56937,7 @@ fn decode_sparse_select_option_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SelectOption",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SelectOption";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56692,7 +56964,8 @@ fn decode_sparse_select_option_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SelectOption", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56714,6 +56987,7 @@ fn decode_sparse_select_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SelectConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SelectConfig";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -56739,7 +57013,8 @@ fn decode_sparse_select_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SelectConfig", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56761,6 +57036,7 @@ fn decode_sparse_color_array_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ColorArrayConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ColorArrayConfig";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56787,8 +57063,8 @@ fn decode_sparse_color_array_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ColorArrayConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56810,6 +57086,7 @@ fn decode_sparse_slot_prop_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlotPropConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SlotPropConfig";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -56865,8 +57142,8 @@ fn decode_sparse_slot_prop_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SlotPropConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56888,6 +57165,7 @@ fn decode_sparse_number_prop_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NumberPropConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NumberPropConfig";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -56931,8 +57209,8 @@ fn decode_sparse_number_prop_config_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NumberPropConfig",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -56954,6 +57232,7 @@ fn decode_sparse_instance_swap_preferred_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InstanceSwapPreferredValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InstanceSwapPreferredValue";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -56983,8 +57262,8 @@ fn decode_sparse_instance_swap_preferred_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InstanceSwapPreferredValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57070,6 +57349,7 @@ fn decode_sparse_widget_metadata_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.WidgetMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "WidgetMetadata";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -57117,8 +57397,8 @@ fn decode_sparse_widget_metadata_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse WidgetMetadata",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57176,6 +57456,7 @@ fn decode_sparse_widget_property_menu_selector_option_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.WidgetPropertyMenuSelectorOption",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "WidgetPropertyMenuSelectorOption";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -57202,8 +57483,8 @@ fn decode_sparse_widget_property_menu_selector_option_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse WidgetPropertyMenuSelectorOption",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57241,6 +57522,7 @@ fn decode_sparse_widget_property_menu_item_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.WidgetPropertyMenuItem",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "WidgetPropertyMenuItem";
     let mut keys = Vec::with_capacity(10);
     let mut values = Vec::with_capacity(10);
     keys.push(module_key_atom.encode(env));
@@ -57328,8 +57610,8 @@ fn decode_sparse_widget_property_menu_item_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse WidgetPropertyMenuItem",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57567,6 +57849,7 @@ fn decode_sparse_internal_data_for_test_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InternalDataForTest",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InternalDataForTest";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -57586,8 +57869,8 @@ fn decode_sparse_internal_data_for_test_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InternalDataForTest",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57609,6 +57892,7 @@ fn decode_sparse_state_group_property_value_order_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StateGroupPropertyValueOrder",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StateGroupPropertyValueOrder";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -57641,8 +57925,8 @@ fn decode_sparse_state_group_property_value_order_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StateGroupPropertyValueOrder",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57688,6 +57972,7 @@ fn decode_sparse_partial_paste_annotation_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PartialPasteAnnotation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PartialPasteAnnotation";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -57721,8 +58006,8 @@ fn decode_sparse_partial_paste_annotation_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PartialPasteAnnotation",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57744,6 +58029,7 @@ fn decode_sparse_variant_prop_spec_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariantPropSpec",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariantPropSpec";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -57770,8 +58056,8 @@ fn decode_sparse_variant_prop_spec_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariantPropSpec",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57793,6 +58079,7 @@ fn decode_sparse_text_list_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TextListData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TextListData";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -57833,7 +58120,8 @@ fn decode_sparse_text_list_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TextListData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -57879,6 +58167,7 @@ fn decode_sparse_text_line_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TextLineData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TextLineData";
     let mut keys = Vec::with_capacity(11);
     let mut values = Vec::with_capacity(11);
     keys.push(module_key_atom.encode(env));
@@ -57979,7 +58268,8 @@ fn decode_sparse_text_line_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TextLineData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -58001,6 +58291,7 @@ fn decode_sparse_derived_text_line_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DerivedTextLineData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DerivedTextLineData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -58020,8 +58311,8 @@ fn decode_sparse_derived_text_line_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DerivedTextLineData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -58123,6 +58414,7 @@ fn decode_sparse_prototype_interaction_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PrototypeInteraction",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PrototypeInteraction";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -58183,8 +58475,8 @@ fn decode_sparse_prototype_interaction_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PrototypeInteraction",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -58206,6 +58498,7 @@ fn decode_sparse_prototype_event_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PrototypeEvent",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PrototypeEvent";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -58271,8 +58564,8 @@ fn decode_sparse_prototype_event_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PrototypeEvent",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -58294,6 +58587,7 @@ fn decode_sparse_prototype_variable_target_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PrototypeVariableTarget",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PrototypeVariableTarget";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -58320,8 +58614,8 @@ fn decode_sparse_prototype_variable_target_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PrototypeVariableTarget",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -58343,6 +58637,7 @@ fn decode_sparse_conditional_actions_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ConditionalActions",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ConditionalActions";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -58378,8 +58673,8 @@ fn decode_sparse_conditional_actions_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ConditionalActions",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -58401,6 +58696,7 @@ fn decode_sparse_prototype_action_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PrototypeAction",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PrototypeAction";
     let mut keys = Vec::with_capacity(43);
     let mut values = Vec::with_capacity(43);
     keys.push(module_key_atom.encode(env));
@@ -58805,8 +59101,8 @@ fn decode_sparse_prototype_action_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PrototypeAction",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -58876,6 +59172,7 @@ fn decode_sparse_animation_state_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnimationState",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnimationState";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -58902,8 +59199,8 @@ fn decode_sparse_animation_state_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnimationState",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -58925,6 +59222,7 @@ fn decode_sparse_prototype_starting_point_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PrototypeStartingPoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PrototypeStartingPoint";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -58958,8 +59256,8 @@ fn decode_sparse_prototype_starting_point_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PrototypeStartingPoint",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59005,6 +59303,7 @@ fn decode_sparse_key_trigger_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.KeyTrigger");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "KeyTrigger";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -59037,7 +59336,8 @@ fn decode_sparse_key_trigger_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse KeyTrigger", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59055,6 +59355,7 @@ fn decode_sparse_hyperlink_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Hyperlink");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Hyperlink";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -59098,7 +59399,8 @@ fn decode_sparse_hyperlink_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Hyperlink", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59120,6 +59422,7 @@ fn decode_sparse_cms_item_page_target_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSItemPageTarget",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSItemPageTarget";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -59153,8 +59456,8 @@ fn decode_sparse_cms_item_page_target_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSItemPageTarget",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59192,6 +59495,7 @@ fn decode_sparse_mention_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Mention");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Mention";
     let mut keys = Vec::with_capacity(9);
     let mut values = Vec::with_capacity(9);
     keys.push(module_key_atom.encode(env));
@@ -59272,7 +59576,8 @@ fn decode_sparse_mention_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Mention", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59290,6 +59595,7 @@ fn decode_sparse_embed_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EmbedData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EmbedData";
     let mut keys = Vec::with_capacity(15);
     let mut values = Vec::with_capacity(15);
     keys.push(module_key_atom.encode(env));
@@ -59400,7 +59706,8 @@ fn decode_sparse_embed_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EmbedData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59418,6 +59725,7 @@ fn decode_sparse_stamp_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StampData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StampData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -59451,7 +59759,8 @@ fn decode_sparse_stamp_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StampData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59473,6 +59782,7 @@ fn decode_sparse_link_preview_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.LinkPreviewData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "LinkPreviewData";
     let mut keys = Vec::with_capacity(9);
     let mut values = Vec::with_capacity(9);
     keys.push(module_key_atom.encode(env));
@@ -59549,8 +59859,8 @@ fn decode_sparse_link_preview_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse LinkPreviewData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59568,6 +59878,7 @@ fn decode_sparse_viewport_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Viewport");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Viewport";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -59608,7 +59919,8 @@ fn decode_sparse_viewport_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Viewport", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59626,6 +59938,7 @@ fn decode_sparse_mouse_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Mouse");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Mouse";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -59681,7 +59994,8 @@ fn decode_sparse_mouse_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Mouse", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59802,6 +60116,7 @@ fn decode_sparse_triggered_overlay_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TriggeredOverlayData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TriggeredOverlayData";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -59853,8 +60168,8 @@ fn decode_sparse_triggered_overlay_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TriggeredOverlayData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59876,6 +60191,7 @@ fn decode_sparse_triggered_set_variable_action_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TriggeredSetVariableActionData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TriggeredSetVariableActionData";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -59924,8 +60240,8 @@ fn decode_sparse_triggered_set_variable_action_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TriggeredSetVariableActionData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -59947,6 +60263,7 @@ fn decode_sparse_triggered_set_variable_mode_action_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TriggeredSetVariableModeActionData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TriggeredSetVariableModeActionData";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -60003,8 +60320,8 @@ fn decode_sparse_triggered_set_variable_mode_action_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TriggeredSetVariableModeActionData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60026,6 +60343,7 @@ fn decode_sparse_video_state_change_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VideoStateChangeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VideoStateChangeData";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -60083,8 +60401,8 @@ fn decode_sparse_video_state_change_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VideoStateChangeData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60106,6 +60424,7 @@ fn decode_sparse_embedded_prototype_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.EmbeddedPrototypeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EmbeddedPrototypeData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -60132,8 +60451,8 @@ fn decode_sparse_embedded_prototype_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EmbeddedPrototypeData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60155,6 +60474,7 @@ fn decode_sparse_presented_state_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PresentedState",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PresentedState";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -60190,8 +60510,8 @@ fn decode_sparse_presented_state_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PresentedState",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60229,6 +60549,7 @@ fn decode_sparse_top_level_playback_change_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TopLevelPlaybackChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TopLevelPlaybackChange";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -60297,8 +60618,8 @@ fn decode_sparse_top_level_playback_change_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TopLevelPlaybackChange",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60320,6 +60641,7 @@ fn decode_sparse_instance_state_change_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InstanceStateChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InstanceStateChange";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -60370,8 +60692,8 @@ fn decode_sparse_instance_state_change_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InstanceStateChange",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60389,6 +60711,7 @@ fn decode_sparse_text_cursor_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TextCursor");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TextCursor";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -60422,7 +60745,8 @@ fn decode_sparse_text_cursor_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TextCursor", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60444,6 +60768,7 @@ fn decode_sparse_text_selection_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TextSelection",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TextSelection";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -60515,8 +60840,8 @@ fn decode_sparse_text_selection_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TextSelection",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60558,6 +60883,7 @@ fn decode_sparse_playback_change_keyframe_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PlaybackChangeKeyframe",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PlaybackChangeKeyframe";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -60594,8 +60920,8 @@ fn decode_sparse_playback_change_keyframe_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PlaybackChangeKeyframe",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60617,6 +60943,7 @@ fn decode_sparse_state_mapping_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StateMapping",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StateMapping";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -60671,7 +60998,8 @@ fn decode_sparse_state_mapping_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StateMapping", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60693,6 +61021,7 @@ fn decode_sparse_scroll_mapping_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ScrollMapping",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ScrollMapping";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -60726,8 +61055,8 @@ fn decode_sparse_scroll_mapping_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ScrollMapping",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60749,6 +61078,7 @@ fn decode_sparse_playback_update_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PlaybackUpdate",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PlaybackUpdate";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -60840,8 +61170,8 @@ fn decode_sparse_playback_update_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PlaybackUpdate",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60863,6 +61193,7 @@ fn decode_sparse_chat_message_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ChatMessage",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ChatMessage";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -60889,7 +61220,8 @@ fn decode_sparse_chat_message_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ChatMessage", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60911,6 +61243,7 @@ fn decode_sparse_voice_metadata_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VoiceMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VoiceMetadata";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -60930,8 +61263,8 @@ fn decode_sparse_voice_metadata_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VoiceMetadata",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -60953,6 +61286,7 @@ fn decode_sparse_april_fun_cursor_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AprilFunCursor",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AprilFunCursor";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -60979,8 +61313,8 @@ fn decode_sparse_april_fun_cursor_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AprilFunCursor",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -61002,6 +61336,7 @@ fn decode_sparse_april_fun_fig_pal_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AprilFunFigPal",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AprilFunFigPal";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -61028,8 +61363,8 @@ fn decode_sparse_april_fun_fig_pal_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AprilFunFigPal",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -61115,6 +61450,7 @@ fn decode_sparse_agent_info_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgentInfo");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AgentInfo";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -61148,7 +61484,8 @@ fn decode_sparse_agent_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AgentInfo", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -61166,6 +61503,7 @@ fn decode_sparse_user_change_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.UserChange");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "UserChange";
     let mut keys = Vec::with_capacity(47);
     let mut values = Vec::with_capacity(47);
     keys.push(module_key_atom.encode(env));
@@ -61674,7 +62012,8 @@ fn decode_sparse_user_change_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse UserChange", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -61696,6 +62035,7 @@ fn decode_sparse_interactive_slide_element_change_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InteractiveSlideElementChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "InteractiveSlideElementChange";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -61736,8 +62076,8 @@ fn decode_sparse_interactive_slide_element_change_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse InteractiveSlideElementChange",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -61759,6 +62099,7 @@ fn decode_sparse_node_status_change_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeStatusChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeStatusChange";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -61794,8 +62135,8 @@ fn decode_sparse_node_status_change_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeStatusChange",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -61817,6 +62158,7 @@ fn decode_sparse_buzz_approval_asset_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.BuzzApprovalAssetEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "BuzzApprovalAssetEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -61843,8 +62185,8 @@ fn decode_sparse_buzz_approval_asset_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse BuzzApprovalAssetEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -61866,6 +62208,7 @@ fn decode_sparse_buzz_approval_change_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.BuzzApprovalChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "BuzzApprovalChange";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -61908,8 +62251,8 @@ fn decode_sparse_buzz_approval_change_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse BuzzApprovalChange",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -61967,6 +62310,7 @@ fn decode_sparse_scene_graph_query_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SceneGraphQuery",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SceneGraphQuery";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -62003,8 +62347,8 @@ fn decode_sparse_scene_graph_query_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SceneGraphQuery",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62026,6 +62370,7 @@ fn decode_sparse_node_changes_metadata_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeChangesMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeChangesMetadata";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -62045,8 +62390,8 @@ fn decode_sparse_node_changes_metadata_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeChangesMetadata",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62068,6 +62413,7 @@ fn decode_sparse_cursor_reaction_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CursorReaction",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CursorReaction";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -62087,8 +62433,8 @@ fn decode_sparse_cursor_reaction_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CursorReaction",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62106,6 +62452,7 @@ fn decode_sparse_timer_info_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TimerInfo");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TimerInfo";
     let mut keys = Vec::with_capacity(9);
     let mut values = Vec::with_capacity(9);
     keys.push(module_key_atom.encode(env));
@@ -62178,7 +62525,8 @@ fn decode_sparse_timer_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TimerInfo", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62196,6 +62544,7 @@ fn decode_sparse_music_info_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.MusicInfo");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "MusicInfo";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -62247,7 +62596,8 @@ fn decode_sparse_music_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse MusicInfo", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62269,6 +62619,7 @@ fn decode_sparse_presenter_nomination_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PresenterNomination",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PresenterNomination";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -62295,8 +62646,8 @@ fn decode_sparse_presenter_nomination_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PresenterNomination",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62318,6 +62669,7 @@ fn decode_sparse_presenter_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PresenterInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PresenterInfo";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -62354,8 +62706,8 @@ fn decode_sparse_presenter_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PresenterInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62377,6 +62729,7 @@ fn decode_sparse_client_broadcast_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ClientBroadcast",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ClientBroadcast";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -62431,8 +62784,8 @@ fn decode_sparse_client_broadcast_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ClientBroadcast",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62466,6 +62819,7 @@ fn decode_sparse_message_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Message");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Message";
     let mut keys = Vec::with_capacity(46);
     let mut values = Vec::with_capacity(46);
     keys.push(module_key_atom.encode(env));
@@ -62949,7 +63303,8 @@ fn decode_sparse_message_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Message", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -62971,6 +63326,7 @@ fn decode_sparse_encoded_offsets_index_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.EncodedOffsetsIndex",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EncodedOffsetsIndex";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -63028,8 +63384,8 @@ fn decode_sparse_encoded_offsets_index_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EncodedOffsetsIndex",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -63079,6 +63435,7 @@ fn decode_sparse_diff_chunk_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.DiffChunk");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DiffChunk";
     let mut keys = Vec::with_capacity(12);
     let mut values = Vec::with_capacity(12);
     keys.push(module_key_atom.encode(env));
@@ -63220,7 +63577,8 @@ fn decode_sparse_diff_chunk_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DiffChunk", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -63258,6 +63616,7 @@ fn decode_sparse_diff_payload_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DiffPayload",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "DiffPayload";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -63359,7 +63718,8 @@ fn decode_sparse_diff_payload_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse DiffPayload", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -63397,6 +63757,7 @@ fn decode_sparse_rich_media_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.RichMediaData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "RichMediaData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -63423,8 +63784,8 @@ fn decode_sparse_rich_media_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse RichMediaData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -63686,6 +64047,7 @@ fn decode_sparse_variable_any_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableAnyValue";
     let mut keys = Vec::with_capacity(30);
     let mut values = Vec::with_capacity(30);
     keys.push(module_key_atom.encode(env));
@@ -63937,8 +64299,8 @@ fn decode_sparse_variable_any_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableAnyValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64044,6 +64406,7 @@ fn decode_sparse_expression_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Expression");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Expression";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -64079,7 +64442,8 @@ fn decode_sparse_expression_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Expression", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64101,6 +64465,7 @@ fn decode_sparse_variable_map_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableMapValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableMapValue";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -64134,8 +64499,8 @@ fn decode_sparse_variable_map_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableMapValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64157,6 +64522,7 @@ fn decode_sparse_variable_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -64185,7 +64551,8 @@ fn decode_sparse_variable_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableMap", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64203,6 +64570,7 @@ fn decode_sparse_color_array_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorArray");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ColorArray";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -64228,7 +64596,8 @@ fn decode_sparse_color_array_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ColorArray", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64250,6 +64619,7 @@ fn decode_sparse_variable_font_style_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableFontStyle",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableFontStyle";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -64283,8 +64653,8 @@ fn decode_sparse_variable_font_style_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableFontStyle",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64306,6 +64676,7 @@ fn decode_sparse_image_parameter_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ImageParameterValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ImageParameterValue";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -64371,8 +64742,8 @@ fn decode_sparse_image_parameter_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ImageParameterValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64394,6 +64765,7 @@ fn decode_sparse_thumbnail_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ThumbnailInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ThumbnailInfo";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -64420,8 +64792,8 @@ fn decode_sparse_thumbnail_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ThumbnailInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64443,6 +64815,7 @@ fn decode_sparse_ai_canvas_prompt_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AiCanvasPrompt",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AiCanvasPrompt";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -64482,8 +64855,8 @@ fn decode_sparse_ai_canvas_prompt_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AiCanvasPrompt",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64505,6 +64878,7 @@ fn decode_sparse_node_field_alias_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeFieldAlias",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeFieldAlias";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -64541,8 +64915,8 @@ fn decode_sparse_node_field_alias_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeFieldAlias",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64576,6 +64950,7 @@ fn decode_sparse_cms_alias_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CMSAlias");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CMSAlias";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -64616,7 +64991,8 @@ fn decode_sparse_cms_alias_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CMSAlias", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64638,6 +65014,7 @@ fn decode_sparse_js_runtime_alias_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.JsRuntimeAlias",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "JsRuntimeAlias";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -64657,8 +65034,8 @@ fn decode_sparse_js_runtime_alias_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse JsRuntimeAlias",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64680,6 +65057,7 @@ fn decode_sparse_prop_ref_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PropRefValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PropRefValue";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -64699,7 +65077,8 @@ fn decode_sparse_prop_ref_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PropRefValue", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64721,6 +65100,7 @@ fn decode_sparse_managed_string_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -64747,8 +65127,8 @@ fn decode_sparse_managed_string_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64770,6 +65150,7 @@ fn decode_sparse_managed_string_placeholder_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringPlaceholderMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringPlaceholderMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -64796,8 +65177,8 @@ fn decode_sparse_managed_string_placeholder_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringPlaceholderMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64819,6 +65200,7 @@ fn decode_sparse_slot_content_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlotContentId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SlotContentId";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -64838,8 +65220,8 @@ fn decode_sparse_slot_content_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SlotContentId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64861,6 +65243,7 @@ fn decode_sparse_managed_string_alias_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringAlias",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManagedStringAlias";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -64896,8 +65279,8 @@ fn decode_sparse_managed_string_alias_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManagedStringAlias",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64919,6 +65302,7 @@ fn decode_sparse_keyframe_track_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.KeyframeTrackId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "KeyframeTrackId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -64945,8 +65329,8 @@ fn decode_sparse_keyframe_track_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse KeyframeTrackId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -64968,6 +65352,7 @@ fn decode_sparse_animation_preset_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnimationPresetId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnimationPresetId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -64994,8 +65379,8 @@ fn decode_sparse_animation_preset_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnimationPresetId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65013,6 +65398,7 @@ fn decode_sparse_tool_id_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ToolId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ToolId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -65039,7 +65425,8 @@ fn decode_sparse_tool_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ToolId", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65061,6 +65448,7 @@ fn decode_sparse_custom_effect_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CustomEffectId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CustomEffectId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -65087,8 +65475,8 @@ fn decode_sparse_custom_effect_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CustomEffectId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65110,6 +65498,7 @@ fn decode_sparse_trss_transform2_d_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TRSSTransform2D",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TRSSTransform2D";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -65150,8 +65539,8 @@ fn decode_sparse_trss_transform2_d_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TRSSTransform2D",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65173,6 +65562,7 @@ fn decode_sparse_variable_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -65209,7 +65599,8 @@ fn decode_sparse_variable_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65231,6 +65622,7 @@ fn decode_sparse_variable_set_mode_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableSetMode",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableSetMode";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -65282,8 +65674,8 @@ fn decode_sparse_variable_set_mode_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableSetMode",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65305,6 +65697,7 @@ fn decode_sparse_variable_data_values_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableDataValues",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableDataValues";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -65333,8 +65726,8 @@ fn decode_sparse_variable_data_values_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableDataValues",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65356,6 +65749,7 @@ fn decode_sparse_variable_data_values_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableDataValuesEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableDataValuesEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -65382,8 +65776,8 @@ fn decode_sparse_variable_data_values_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableDataValuesEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65505,6 +65899,7 @@ fn decode_sparse_keyframe_any_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.KeyframeAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "KeyframeAnyValue";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -65545,8 +65940,8 @@ fn decode_sparse_keyframe_any_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse KeyframeAnyValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65596,6 +65991,7 @@ fn decode_sparse_keyframe_value_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.KeyframeValueData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "KeyframeValueData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -65625,8 +66021,8 @@ fn decode_sparse_keyframe_value_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse KeyframeValueData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65668,6 +66064,7 @@ fn decode_sparse_manual_keyframe_track_parameter_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManualKeyframeTrackParameter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ManualKeyframeTrackParameter";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -65694,8 +66091,8 @@ fn decode_sparse_manual_keyframe_track_parameter_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ManualKeyframeTrackParameter",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65717,6 +66114,7 @@ fn decode_sparse_animation_preset_keyframe_track_parameter_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnimationPresetKeyframeTrackParameter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnimationPresetKeyframeTrackParameter";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -65753,8 +66151,8 @@ fn decode_sparse_animation_preset_keyframe_track_parameter_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnimationPresetKeyframeTrackParameter",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65776,6 +66174,7 @@ fn decode_sparse_keyframe_track_any_parameter_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.KeyframeTrackAnyParameter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "KeyframeTrackAnyParameter";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -65819,8 +66218,8 @@ fn decode_sparse_keyframe_track_any_parameter_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse KeyframeTrackAnyParameter",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65842,6 +66241,7 @@ fn decode_sparse_keyframe_track_parameter_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.KeyframeTrackParameter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "KeyframeTrackParameter";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -65874,8 +66274,8 @@ fn decode_sparse_keyframe_track_parameter_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse KeyframeTrackParameter",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65897,6 +66297,7 @@ fn decode_sparse_keyframe_track_parameter_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.KeyframeTrackParameterValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "KeyframeTrackParameterValue";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -65925,8 +66326,8 @@ fn decode_sparse_keyframe_track_parameter_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse KeyframeTrackParameterValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65948,6 +66349,7 @@ fn decode_sparse_animation_presets_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnimationPresets",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnimationPresets";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -65976,8 +66378,8 @@ fn decode_sparse_animation_presets_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnimationPresets",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -65999,6 +66401,7 @@ fn decode_sparse_animation_preset_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnimationPresetData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AnimationPresetData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -66028,8 +66431,8 @@ fn decode_sparse_animation_preset_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AnimationPresetData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66051,6 +66454,7 @@ fn decode_sparse_style_animation_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StyleAnimation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StyleAnimation";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -66073,8 +66477,8 @@ fn decode_sparse_style_animation_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StyleAnimation",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66096,6 +66500,7 @@ fn decode_sparse_style_id_for_animation_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StyleIdForAnimation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "StyleIdForAnimation";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -66136,8 +66541,8 @@ fn decode_sparse_style_id_for_animation_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse StyleIdForAnimation",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66155,6 +66560,7 @@ fn decode_sparse_tools_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Tools");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "Tools";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -66180,7 +66586,8 @@ fn decode_sparse_tools_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse Tools", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66198,6 +66605,7 @@ fn decode_sparse_tool_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ToolData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ToolData";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -66248,7 +66656,8 @@ fn decode_sparse_tool_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ToolData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66270,6 +66679,7 @@ fn decode_sparse_custom_effects_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CustomEffects",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CustomEffects";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -66298,8 +66708,8 @@ fn decode_sparse_custom_effects_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CustomEffects",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66321,6 +66731,7 @@ fn decode_sparse_custom_effect_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CustomEffectData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CustomEffectData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -66340,8 +66751,8 @@ fn decode_sparse_custom_effect_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CustomEffectData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66363,6 +66774,7 @@ fn decode_sparse_spring_params_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SpringParams",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SpringParams";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -66396,7 +66808,8 @@ fn decode_sparse_spring_params_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SpringParams", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66418,6 +66831,7 @@ fn decode_sparse_transition_easing_any_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionEasingAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransitionEasingAnyValue";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -66444,8 +66858,8 @@ fn decode_sparse_transition_easing_any_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransitionEasingAnyValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66463,6 +66877,7 @@ fn decode_sparse_easing_data_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EasingData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EasingData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -66492,7 +66907,8 @@ fn decode_sparse_easing_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EasingData", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66514,6 +66930,7 @@ fn decode_sparse_transition_override_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionOverride",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransitionOverride";
     let mut keys = Vec::with_capacity(11);
     let mut values = Vec::with_capacity(11);
     keys.push(module_key_atom.encode(env));
@@ -66602,8 +67019,8 @@ fn decode_sparse_transition_override_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransitionOverride",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66625,6 +67042,7 @@ fn decode_sparse_transition_override_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionOverrideData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransitionOverrideData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -66663,8 +67081,8 @@ fn decode_sparse_transition_override_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransitionOverrideData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66742,6 +67160,7 @@ fn decode_sparse_transition_override_binding_location_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionOverrideBindingLocation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransitionOverrideBindingLocation";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -66793,8 +67212,8 @@ fn decode_sparse_transition_override_binding_location_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransitionOverrideBindingLocation",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66912,6 +67331,7 @@ fn decode_sparse_node_contents_keyframe_binding_location_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeContentsKeyframeBindingLocation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeContentsKeyframeBindingLocation";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -66966,8 +67386,8 @@ fn decode_sparse_node_contents_keyframe_binding_location_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeContentsKeyframeBindingLocation",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -66989,6 +67409,7 @@ fn decode_sparse_transition_override_prop_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionOverridePropMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransitionOverridePropMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -67017,8 +67438,8 @@ fn decode_sparse_transition_override_prop_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransitionOverridePropMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -67040,6 +67461,7 @@ fn decode_sparse_transition_override_prop_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionOverridePropMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "TransitionOverridePropMapEntry";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -67102,8 +67524,8 @@ fn decode_sparse_transition_override_prop_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse TransitionOverridePropMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -67145,6 +67567,7 @@ fn decode_sparse_optional_vector_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.OptionalVector",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "OptionalVector";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -67164,8 +67587,8 @@ fn decode_sparse_optional_vector_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse OptionalVector",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -67895,6 +68318,7 @@ fn decode_sparse_migration_status_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.MigrationStatus",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "MigrationStatus";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -67914,8 +68338,8 @@ fn decode_sparse_migration_status_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse MigrationStatus",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -67937,6 +68361,7 @@ fn decode_sparse_node_field_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeFieldMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeFieldMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -67965,7 +68390,8 @@ fn decode_sparse_node_field_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeFieldMap", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -67987,6 +68413,7 @@ fn decode_sparse_node_field_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeFieldMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeFieldMapEntry";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -68024,8 +68451,8 @@ fn decode_sparse_node_field_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeFieldMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68103,6 +68530,7 @@ fn decode_sparse_aria_attribute_any_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ARIAAttributeAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ARIAAttributeAnyValue";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -68156,8 +68584,8 @@ fn decode_sparse_aria_attribute_any_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ARIAAttributeAnyValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68207,6 +68635,7 @@ fn decode_sparse_aria_attribute_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ARIAAttributeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ARIAAttributeData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -68239,8 +68668,8 @@ fn decode_sparse_aria_attribute_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ARIAAttributeData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68262,6 +68691,7 @@ fn decode_sparse_aria_attributes_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ARIAAttributesMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ARIAAttributesMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -68290,8 +68720,8 @@ fn decode_sparse_aria_attributes_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ARIAAttributesMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68313,6 +68743,7 @@ fn decode_sparse_aria_attributes_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ARIAAttributesMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ARIAAttributesMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -68342,8 +68773,8 @@ fn decode_sparse_aria_attributes_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ARIAAttributesMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68365,6 +68796,7 @@ fn decode_sparse_handoff_status_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.HandoffStatusMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "HandoffStatusMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -68394,8 +68826,8 @@ fn decode_sparse_handoff_status_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse HandoffStatusMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68417,6 +68849,7 @@ fn decode_sparse_handoff_status_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.HandoffStatusMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "HandoffStatusMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -68445,8 +68878,8 @@ fn decode_sparse_handoff_status_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse HandoffStatusMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68468,6 +68901,7 @@ fn decode_sparse_edit_scope_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.EditScopeInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EditScopeInfo";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -68512,8 +68946,8 @@ fn decode_sparse_edit_scope_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EditScopeInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68535,6 +68969,7 @@ fn decode_sparse_edit_scope_snapshot_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.EditScopeSnapshot",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EditScopeSnapshot";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -68580,8 +69015,8 @@ fn decode_sparse_edit_scope_snapshot_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EditScopeSnapshot",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68603,6 +69038,7 @@ fn decode_sparse_edit_scope_stack_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.EditScopeStack",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EditScopeStack";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -68628,8 +69064,8 @@ fn decode_sparse_edit_scope_stack_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EditScopeStack",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68647,6 +69083,7 @@ fn decode_sparse_edit_scope_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EditScope");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "EditScope";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -68680,7 +69117,8 @@ fn decode_sparse_edit_scope_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse EditScope", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68798,6 +69236,7 @@ fn decode_sparse_section_preset_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SectionPresetInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SectionPresetInfo";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -68841,8 +69280,8 @@ fn decode_sparse_section_preset_info_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SectionPresetInfo",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68864,6 +69303,7 @@ fn decode_sparse_clipboard_selection_region_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ClipboardSelectionRegion",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ClipboardSelectionRegion";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -68928,8 +69368,8 @@ fn decode_sparse_clipboard_selection_region_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ClipboardSelectionRegion",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -68971,6 +69411,7 @@ fn decode_sparse_first_draft_kit_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FirstDraftKit",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FirstDraftKit";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -69000,8 +69441,8 @@ fn decode_sparse_first_draft_kit_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FirstDraftKit",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69023,6 +69464,7 @@ fn decode_sparse_first_draft_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FirstDraftData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FirstDraftData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -69049,8 +69491,8 @@ fn decode_sparse_first_draft_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FirstDraftData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69092,6 +69534,7 @@ fn decode_sparse_first_draft_kit_element_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FirstDraftKitElementData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FirstDraftKitElementData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -69114,8 +69557,8 @@ fn decode_sparse_first_draft_kit_element_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FirstDraftKitElementData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69181,6 +69624,7 @@ fn decode_sparse_platform_shape_property_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PlatformShapePropertyMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PlatformShapePropertyMapEntry";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -69216,8 +69660,8 @@ fn decode_sparse_platform_shape_property_map_entry_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PlatformShapePropertyMapEntry",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69239,6 +69683,7 @@ fn decode_sparse_platform_shape_definition_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PlatformShapeDefinition",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PlatformShapeDefinition";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -69284,8 +69729,8 @@ fn decode_sparse_platform_shape_definition_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PlatformShapeDefinition",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69307,6 +69752,7 @@ fn decode_sparse_node_behaviors_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeBehaviors",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeBehaviors";
     let mut keys = Vec::with_capacity(11);
     let mut values = Vec::with_capacity(11);
     keys.push(module_key_atom.encode(env));
@@ -69401,8 +69847,8 @@ fn decode_sparse_node_behaviors_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeBehaviors",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69424,6 +69870,7 @@ fn decode_sparse_behavior_transition_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.BehaviorTransition",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "BehaviorTransition";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -69488,8 +69935,8 @@ fn decode_sparse_behavior_transition_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse BehaviorTransition",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69559,6 +70006,7 @@ fn decode_sparse_appear_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AppearBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AppearBehavior";
     let mut keys = Vec::with_capacity(11);
     let mut values = Vec::with_capacity(11);
     keys.push(module_key_atom.encode(env));
@@ -69650,8 +70098,8 @@ fn decode_sparse_appear_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AppearBehavior",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69673,6 +70121,7 @@ fn decode_sparse_hover_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.HoverBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "HoverBehavior";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -69709,8 +70158,8 @@ fn decode_sparse_hover_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse HoverBehavior",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69732,6 +70181,7 @@ fn decode_sparse_press_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PressBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "PressBehavior";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -69768,8 +70218,8 @@ fn decode_sparse_press_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse PressBehavior",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69791,6 +70241,7 @@ fn decode_sparse_focus_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FocusBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FocusBehavior";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -69827,8 +70278,8 @@ fn decode_sparse_focus_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FocusBehavior",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69850,6 +70301,7 @@ fn decode_sparse_scroll_parallax_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ScrollParallaxBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ScrollParallaxBehavior";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -69897,8 +70349,8 @@ fn decode_sparse_scroll_parallax_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ScrollParallaxBehavior",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -69940,6 +70392,7 @@ fn decode_sparse_scroll_transform_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ScrollTransformBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ScrollTransformBehavior";
     let mut keys = Vec::with_capacity(10);
     let mut values = Vec::with_capacity(10);
     keys.push(module_key_atom.encode(env));
@@ -70021,8 +70474,8 @@ fn decode_sparse_scroll_transform_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ScrollTransformBehavior",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70044,6 +70497,7 @@ fn decode_sparse_cursor_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CursorBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CursorBehavior";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -70084,8 +70538,8 @@ fn decode_sparse_cursor_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CursorBehavior",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70107,6 +70561,7 @@ fn decode_sparse_marquee_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.MarqueeBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "MarqueeBehavior";
     let mut keys = Vec::with_capacity(8);
     let mut values = Vec::with_capacity(8);
     keys.push(module_key_atom.encode(env));
@@ -70176,8 +70631,8 @@ fn decode_sparse_marquee_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse MarqueeBehavior",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70199,6 +70654,7 @@ fn decode_sparse_code_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CodeBehavior";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -70245,7 +70701,8 @@ fn decode_sparse_code_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CodeBehavior", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70267,6 +70724,7 @@ fn decode_sparse_client_rendered_metadata_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ClientRenderedMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ClientRenderedMetadata";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -70311,8 +70769,8 @@ fn decode_sparse_client_rendered_metadata_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ClientRenderedMetadata",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70350,6 +70808,7 @@ fn decode_sparse_link_behavior_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.LinkBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "LinkBehavior";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -70390,7 +70849,8 @@ fn decode_sparse_link_behavior_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse LinkBehavior", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70412,6 +70872,7 @@ fn decode_sparse_variable_id_or_variable_override_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableIdOrVariableOverrideId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "VariableIdOrVariableOverrideId";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -70441,8 +70902,8 @@ fn decode_sparse_variable_id_or_variable_override_id_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse VariableIdOrVariableOverrideId",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70549,6 +71010,7 @@ fn decode_sparse_index_font_style_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.IndexFontStyle",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "IndexFontStyle";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -70616,8 +71078,8 @@ fn decode_sparse_index_font_style_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse IndexFontStyle",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70639,6 +71101,7 @@ fn decode_sparse_index_font_file_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.IndexFontFile",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "IndexFontFile";
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
     keys.push(module_key_atom.encode(env));
@@ -70715,8 +71178,8 @@ fn decode_sparse_index_font_file_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse IndexFontFile",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -70965,6 +71428,7 @@ fn decode_sparse_font_index_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FontIndex");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FontIndex";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -71011,7 +71475,8 @@ fn decode_sparse_font_index_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FontIndex", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71033,6 +71498,7 @@ fn decode_sparse_slide_theme_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlideThemeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "SlideThemeData";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -71059,8 +71525,8 @@ fn decode_sparse_slide_theme_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse SlideThemeData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71138,6 +71604,7 @@ fn decode_sparse_node_chat_message_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeChatMessage",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeChatMessage";
     let mut keys = Vec::with_capacity(9);
     let mut values = Vec::with_capacity(9);
     keys.push(module_key_atom.encode(env));
@@ -71227,8 +71694,8 @@ fn decode_sparse_node_chat_message_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeChatMessage",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71250,6 +71717,7 @@ fn decode_sparse_node_chat_tool_call_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeChatToolCall",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeChatToolCall";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -71283,8 +71751,8 @@ fn decode_sparse_node_chat_tool_call_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeChatToolCall",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71306,6 +71774,7 @@ fn decode_sparse_node_chat_tool_result_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeChatToolResult",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeChatToolResult";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -71339,8 +71808,8 @@ fn decode_sparse_node_chat_tool_result_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeChatToolResult",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71362,6 +71831,7 @@ fn decode_sparse_node_chat_exchange_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeChatExchange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeChatExchange";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -71417,8 +71887,8 @@ fn decode_sparse_node_chat_exchange_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeChatExchange",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71440,6 +71910,7 @@ fn decode_sparse_node_chat_compression_state_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.NodeChatCompressionState",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "NodeChatCompressionState";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -71466,8 +71937,8 @@ fn decode_sparse_node_chat_compression_state_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse NodeChatCompressionState",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71485,6 +71956,7 @@ fn decode_sparse_file_update_from_decoder<'a>(
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
     let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FileUpdate");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "FileUpdate";
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
     keys.push(module_key_atom.encode(env));
@@ -71518,7 +71990,8 @@ fn decode_sparse_file_update_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse FileUpdate", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71540,6 +72013,7 @@ fn decode_sparse_ai_chat_content_part_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AIChatContentPart",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AIChatContentPart";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -71572,8 +72046,8 @@ fn decode_sparse_ai_chat_content_part_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AIChatContentPart",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71615,6 +72089,7 @@ fn decode_sparse_ai_chat_content_part_any_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AIChatContentPartAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AIChatContentPartAnyValue";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -71647,8 +72122,8 @@ fn decode_sparse_ai_chat_content_part_any_value_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AIChatContentPartAnyValue",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71694,6 +72169,7 @@ fn decode_sparse_ai_chat_message_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AIChatMessage",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AIChatMessage";
     let mut keys = Vec::with_capacity(6);
     let mut values = Vec::with_capacity(6);
     keys.push(module_key_atom.encode(env));
@@ -71753,8 +72229,8 @@ fn decode_sparse_ai_chat_message_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AIChatMessage",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -71776,6 +72252,7 @@ fn decode_sparse_ai_chat_thread_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AIChatThread",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "AIChatThread";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -71801,7 +72278,8 @@ fn decode_sparse_ai_chat_thread_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse AIChatThread", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -72094,6 +72572,7 @@ fn decode_sparse_cooper_template_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CooperTemplateData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "CooperTemplateData";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -72116,8 +72595,8 @@ fn decode_sparse_cooper_template_data_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse CooperTemplateData",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -72139,6 +72618,7 @@ fn decode_sparse_image_import_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ImageImportMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ImageImportMap";
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
     keys.push(module_key_atom.encode(env));
@@ -72164,8 +72644,8 @@ fn decode_sparse_image_import_map_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ImageImportMap",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -72187,6 +72667,7 @@ fn decode_sparse_image_import_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ImageImport",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "ImageImport";
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
     keys.push(module_key_atom.encode(env));
@@ -72213,7 +72694,8 @@ fn decode_sparse_image_import_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse ImageImport", field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),
@@ -72255,6 +72737,7 @@ fn decode_sparse_bezier_handles_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.BezierHandles",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
+    let definition_name = "BezierHandles";
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
     keys.push(module_key_atom.encode(env));
@@ -72295,8 +72778,8 @@ fn decode_sparse_bezier_handles_from_decoder<'a>(
                     Error::Term(
                         Box::new(
                             format!(
-                                "unknown field {} while decoding sparse BezierHandles",
-                                field
+                                "unknown field {} while decoding sparse {}", field,
+                                definition_name
                             ),
                         ),
                     ),

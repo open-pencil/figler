@@ -42,67 +42,46 @@ defmodule FigKiwi.NativeSceneGenerator do
   end
 
   defp sparse_definition(%Definition{kind: :struct, name: name, fields: fields}, definition_map) do
-    body = Enum.map_join(fields, "\n", &sparse_struct_field(&1, definition_map))
-    capacity = length(fields) + 1
-
-    """
-    fn decode_sparse_#{rust_ident(name)}_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-        static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-        let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.#{name}");
-        let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
-        let mut keys = Vec::with_capacity(#{capacity});
-        let mut values = Vec::with_capacity(#{capacity});
-        keys.push(module_key_atom.encode(env));
-        values.push(module_atom.encode(env));
-    #{indent(body, 4)}
-        Term::map_from_term_arrays(env, &keys, &values)
-    }
-    """
+    render_sparse_template("sparse_struct_decoder.rs",
+      name: name,
+      capacity: length(fields) + 1,
+      splice: [sparse_fields: Enum.map(fields, &sparse_struct_field(&1, definition_map))]
+    )
   end
 
   defp sparse_definition(%Definition{kind: :enum, name: name, fields: fields}, _definition_map) do
-    arms =
-      Enum.map_join(fields, "\n", fn field ->
-        "#{field.value} => { static ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new(); Ok(cached_atom(env, &ATOM_#{field.value}, \"#{Macro.underscore(field.name)}\").encode(env)) },"
-      end)
-
-    """
-    fn decode_sparse_#{rust_ident(name)}_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-        match decoder.read_var_uint()? {
-    #{indent(arms, 8)}
-            value => Ok((value as i64).encode(env)),
-        }
-    }
-    """
+    render_sparse_template("sparse_enum_decoder.rs",
+      name: name,
+      splice: [
+        sparse_enum_arms:
+          Enum.map(fields, fn field ->
+            "#{field.value} => { static ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new(); Ok(cached_atom(env, &ATOM_#{field.value}, \"#{Macro.underscore(field.name)}\").encode(env)) },"
+          end)
+      ]
+    )
   end
 
   defp sparse_definition(%Definition{kind: :message, name: name, fields: fields}, definition_map) do
-    arms = Enum.map_join(fields, "\n", &sparse_message_arm(&1, definition_map))
-    capacity = length(fields) + 1
+    render_sparse_template("sparse_message_decoder.rs",
+      name: name,
+      capacity: length(fields) + 1,
+      splice: [sparse_field_arms: Enum.map(fields, &sparse_message_arm(&1, definition_map))]
+    )
+  end
 
-    """
-    fn decode_sparse_#{rust_ident(name)}_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-        static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-        let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.#{name}");
-        let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
-        let mut keys = Vec::with_capacity(#{capacity});
-        let mut values = Vec::with_capacity(#{capacity});
-        keys.push(module_key_atom.encode(env));
-        values.push(module_atom.encode(env));
+  defp render_sparse_template(template, opts) do
+    name = Keyword.fetch!(opts, :name)
+    path = Path.join(["native", "src", "templates", template])
 
-        loop {
-            match decoder.read_var_uint()? {
-                0 => break,
-    #{indent(arms, 12)}
-                field => return Err(Error::Term(Box::new(format!("unknown field {} while decoding sparse #{name}", field)))),
-            }
-        }
-
-        Term::map_from_term_arrays(env, &keys, &values)
-    }
-    """
+    RustQ.render!(File.read!(path), path,
+      bind: [
+        decoder_name: "decode_sparse_#{rust_ident(name)}_from_decoder",
+        module_name: {:literal, "Elixir.FigKiwi.Schema.#{name}"},
+        definition_name: {:literal, name},
+        capacity: {:expr, opts |> Keyword.get(:capacity, 0) |> Integer.to_string()}
+      ],
+      splice: Keyword.get(opts, :splice, [])
+    )
   end
 
   defp sparse_struct_field(field, definition_map) do
