@@ -18,33 +18,7 @@ defmodule FigKiwi.Scene.Node do
   @enforce_keys [:guid, :node_type]
   defstruct @field_names ++ [children: nil]
 
-  @type t :: %__MODULE__{
-          guid: String.t(),
-          node_type: FigKiwi.Schema.NodeType.t() | String.t(),
-          name: String.t() | nil,
-          parent_guid: String.t() | nil,
-          position: String.t() | nil,
-          size: map() | nil,
-          transform: map() | nil,
-          visible: boolean() | nil,
-          locked: boolean() | nil,
-          opacity: number() | nil,
-          text: String.t() | nil,
-          font_family: String.t() | nil,
-          font_style: String.t() | nil,
-          font_postscript: String.t() | nil,
-          font_size: number() | nil,
-          text_style_guid: String.t() | nil,
-          component_key: String.t() | nil,
-          origin_component_key: String.t() | nil,
-          fill_style_guid: String.t() | nil,
-          stroke_style_guid: String.t() | nil,
-          effect_style_guid: String.t() | nil,
-          grid_style_guid: String.t() | nil,
-          fill_count: non_neg_integer() | nil,
-          stroke_count: non_neg_integer() | nil,
-          children: [t()] | nil
-        }
+  @type t :: %__MODULE__{}
 
   @doc """
   Returns the generated Kiwi schema module this projection is derived from.

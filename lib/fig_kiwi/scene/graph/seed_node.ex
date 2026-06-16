@@ -10,66 +10,17 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   currently empty so the Elixir resolver can grow without changing public shape.
   """
 
-  alias FigKiwi.Scene.Graph.ComponentPropAssignment
-  alias FigKiwi.Scene.Graph.ComponentPropDef
-  alias FigKiwi.Scene.Graph.ComponentPropRef
-  alias FigKiwi.Scene.Graph.DerivedSymbolData
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.SeedProjection
-  alias FigKiwi.Scene.Graph.SymbolOverride
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Projection
 
   @projected_fields Node.field_names()
-  @resolver_metadata_fields SeedProjection.resolver_metadata_fields()
 
   @enforce_keys [:guid, :node_type]
   defstruct @projected_fields ++ SeedProjection.struct_fields()
 
-  @type t :: %__MODULE__{
-          guid: GUID.graph_guid(),
-          node_type: String.t(),
-          name: String.t() | nil,
-          parent_guid: GUID.graph_guid() | nil,
-          position: String.t() | nil,
-          size: map() | nil,
-          transform: map() | nil,
-          visible: boolean() | nil,
-          locked: boolean() | nil,
-          opacity: number() | nil,
-          text: String.t() | nil,
-          font_family: String.t() | nil,
-          font_style: String.t() | nil,
-          font_postscript: String.t() | nil,
-          font_size: number() | nil,
-          text_style_guid: String.t() | nil,
-          component_key: String.t() | nil,
-          origin_component_key: String.t() | nil,
-          fill_style_guid: String.t() | nil,
-          stroke_style_guid: String.t() | nil,
-          effect_style_guid: String.t() | nil,
-          grid_style_guid: String.t() | nil,
-          fill_count: non_neg_integer() | nil,
-          stroke_count: non_neg_integer() | nil,
-          stack_mode: atom() | String.t() | nil,
-          stack_spacing: number() | nil,
-          stack_horizontal_padding: number() | nil,
-          stack_vertical_padding: number() | nil,
-          stack_padding_right: number() | nil,
-          stack_padding_bottom: number() | nil,
-          component_guid: GUID.figma_guid() | nil,
-          symbol_id: GUID.figma_guid() | nil,
-          override_key: GUID.figma_guid() | nil,
-          origin: :source | :clone,
-          symbol_overrides: [SymbolOverride.t()],
-          component_prop_defs: [ComponentPropDef.t()],
-          component_prop_refs: [ComponentPropRef.t()],
-          component_prop_assignments: [ComponentPropAssignment.t()],
-          derived_symbol_data: [DerivedSymbolData.t()],
-          variable_consumption: [term()],
-          variable_data_values: [term()],
-          source: Node.t() | map() | nil
-        }
+  @type t :: %__MODULE__{}
 
   @doc """
   Builds seed nodes from a decoded generated `Message` struct.
@@ -100,38 +51,8 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   end
 
   defp put_resolver_metadata(%__MODULE__{} = seed, node_change) do
-    @resolver_metadata_fields
-    |> Map.new(&{&1, resolver_metadata_value(&1, node_change)})
-    |> then(&struct!(seed, &1))
+    struct!(seed, SeedProjection.metadata(node_change))
   end
-
-  defp resolver_metadata_value(field, node_change) do
-    field
-    |> SeedProjection.value_kind()
-    |> resolver_metadata_value_for(node_change)
-  end
-
-  defp resolver_metadata_value_for(:guid, node_change), do: guid(get(node_change, :override_key))
-
-  defp resolver_metadata_value_for(:symbol_overrides, node_change),
-    do: node_change |> get(:symbol_data) |> symbol_overrides()
-
-  defp resolver_metadata_value_for(:component_prop_defs, node_change),
-    do: node_change |> get(:component_prop_defs) |> component_prop_defs()
-
-  defp resolver_metadata_value_for(:component_prop_refs, node_change),
-    do: node_change |> get(:component_prop_refs) |> component_prop_refs()
-
-  defp resolver_metadata_value_for(:component_prop_assignments, node_change),
-    do: node_change |> get(:component_prop_assignments) |> component_prop_assignments()
-
-  defp resolver_metadata_value_for(:derived_symbol_data, node_change),
-    do: node_change |> get(:derived_symbol_data) |> derived_symbol_data()
-
-  defp resolver_metadata_value_for({:multiplayer_entries, source_field}, node_change),
-    do: node_change |> get(source_field) |> multiplayer_entries()
-
-  defp resolver_metadata_value_for({:field, field}, node_change), do: get(node_change, field)
 
   @doc """
   Builds a seed node from the current projected scene node.
@@ -282,118 +203,9 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   defp projected_node_change_value(value, %{value: :count}), do: count(value)
   defp projected_node_change_value(value, _projection), do: value
 
-  defp symbol_overrides(nil), do: []
-  defp symbol_overrides(%{symbol_overrides: nil}), do: []
-
-  defp symbol_overrides(%{symbol_overrides: overrides}) do
-    Enum.map(overrides, fn override ->
-      %SymbolOverride{
-        guid_path: guid_path(get(override, :guid_path)),
-        overridden_symbol_id: guid(get(override, :overridden_symbol_id)),
-        fields: override_fields(override),
-        component_prop_assignments:
-          component_prop_assignments(get(override, :component_prop_assignments)),
-        variable_consumption: multiplayer_entries(get(override, :variable_consumption_map))
-      }
-    end)
-  end
-
-  defp override_fields(override) do
-    %{}
-    |> put_present(:name, get(override, :name))
-    |> put_present(:visible, get(override, :visible))
-    |> put_present(
-      :text,
-      get(override, :text_data) && get(get(override, :text_data), :characters)
-    )
-    |> put_present(:size, vector(get(override, :size)))
-    |> put_present(:transform, matrix(get(override, :transform)))
-  end
-
-  defp component_prop_defs(nil), do: []
-
-  defp component_prop_defs(defs) do
-    Enum.map(defs, fn defn ->
-      %ComponentPropDef{
-        id: guid(get(defn, :id)),
-        name: get(defn, :name),
-        type: get(defn, :type),
-        initial_value: component_prop_value(get(defn, :initial_value))
-      }
-    end)
-  end
-
-  defp component_prop_refs(nil), do: []
-
-  defp component_prop_refs(refs) do
-    Enum.map(refs, fn ref ->
-      %ComponentPropRef{
-        def_id: guid(get(ref, :def_id)),
-        field: get(ref, :component_prop_node_field) || get(ref, :node_field)
-      }
-    end)
-  end
-
-  defp component_prop_assignments(nil), do: []
-
-  defp component_prop_assignments(assignments) do
-    Enum.map(assignments, fn assignment ->
-      %ComponentPropAssignment{
-        def_id: guid(get(assignment, :def_id)),
-        value: component_prop_value(get(assignment, :value)),
-        variable_value: variable_data(get(assignment, :var_value))
-      }
-    end)
-  end
-
-  defp derived_symbol_data(nil), do: []
-
-  defp derived_symbol_data(values) do
-    Enum.map(values, fn value ->
-      %DerivedSymbolData{
-        guid_path: guid_path(get(value, :guid_path)),
-        size: vector(get(value, :size)),
-        transform: matrix(get(value, :transform)),
-        font_size: get(value, :font_size),
-        line_height: get(value, :line_height),
-        letter_spacing: get(value, :letter_spacing),
-        stroke_weight: get(value, :stroke_weight),
-        derived_text_data: get(value, :derived_text_data),
-        fill_geometry: get(value, :fill_geometry) || [],
-        stroke_geometry: get(value, :stroke_geometry) || []
-      }
-    end)
-  end
-
-  defp component_prop_value(nil), do: nil
-
-  defp component_prop_value(value) do
-    cond do
-      is_boolean(get(value, :bool_value)) -> {:bool, get(value, :bool_value)}
-      get(value, :text_value) -> {:text, get(get(value, :text_value), :characters)}
-      get(value, :guid_value) -> {:guid, guid(get(value, :guid_value))}
-      is_number(get(value, :float_value)) -> {:float, get(value, :float_value)}
-      get(value, :vector_value) -> {:vector, vector(get(value, :vector_value))}
-      true -> value
-    end
-  end
-
-  defp variable_data(nil), do: nil
-  defp variable_data(data), do: data
-
-  defp multiplayer_entries(nil), do: []
-  defp multiplayer_entries(%{entries: entries}) when is_list(entries), do: entries
-  defp multiplayer_entries(_value), do: []
-
-  defp put_present(map, _key, nil), do: map
-  defp put_present(map, key, value), do: Map.put(map, key, value)
-
   defp guid(nil), do: nil
 
   defp guid(%{session_id: session_id, local_id: local_id}), do: {session_id, local_id}
-
-  defp guid_path(nil), do: []
-  defp guid_path(%{guids: guids}) when is_list(guids), do: Enum.map(guids, &guid/1)
 
   defp vector(nil), do: nil
   defp vector(%{x: x, y: y}), do: %{x: x, y: y}
