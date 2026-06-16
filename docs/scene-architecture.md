@@ -36,7 +36,8 @@ Module-specific behavior belongs under matching paths, for example:
 - `test/scene/graph/component_props_test.exs`
 - `test/scene/graph/variables_test.exs`
 
-Reusable tiny scene fixtures live in `test/support/scene_fixture.ex`.
+Reusable tiny scene fixtures live in `test/support/scene_fixture_test.exs`.
+Graph resolver builders live in `test/support/graph_builder_test.exs`.
 
 ## Resolver semantics
 

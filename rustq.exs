@@ -12,6 +12,14 @@ unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator.Focus) do
   Code.require_file("lib/fig_kiwi/native_scene_generator/focus.ex")
 end
 
+unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator.Skip) do
+  Code.require_file("lib/fig_kiwi/native_scene_generator/skip.ex")
+end
+
+unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator.Sparse) do
+  Code.require_file("lib/fig_kiwi/native_scene_generator/sparse.ex")
+end
+
 unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator) do
   Code.require_file("lib/fig_kiwi/native_scene_generator.ex")
 end
