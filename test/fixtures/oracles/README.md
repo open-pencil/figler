@@ -42,4 +42,6 @@ mise exec rust@1.96.0 -- mix fig_kiwi.oracles --dir /path/to/oracle-fixtures
 ```
 
 Each external fixture directory should contain a `.fig`, a `manifest.json`, and
-oracle JSON files referenced by that manifest.
+oracle JSON files referenced by that manifest. Use
+`external-manifest.template.json` as a starting point for local real-file oracle
+sets without committing the binary fixture itself.

@@ -36,6 +36,14 @@ Module-specific behavior belongs under matching paths, for example:
 - `test/scene/graph/component_props_test.exs`
 - `test/scene/graph/variables_test.exs`
 
+Native generator modules mirror generated Rust concerns:
+
+- `FigKiwi.NativeSceneGenerator.Sparse` renders generic sparse schema decoders.
+- `FigKiwi.NativeSceneGenerator.Skip` renders generic skip decoders and skip arms.
+- `FigKiwi.NativeSceneGenerator.Focus` renders focused effective-graph seed traversal.
+- `FigKiwi.NativeSceneGenerator.Scene` renders projected scene records, queries, XPath attrs, summaries, and navigation NIFs.
+- `FigKiwi.NativeSceneGenerator` should stay a small facade/orchestrator.
+
 Reusable tiny scene fixtures live in `test/support/scene_fixture_test.exs`.
 Graph resolver builders live in `test/support/graph_builder_test.exs`.
 

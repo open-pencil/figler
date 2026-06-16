@@ -20,6 +20,10 @@ unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator.Sparse) do
   Code.require_file("lib/fig_kiwi/native_scene_generator/sparse.ex")
 end
 
+unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator.Scene) do
+  Code.require_file("lib/fig_kiwi/native_scene_generator/scene.ex")
+end
+
 unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator) do
   Code.require_file("lib/fig_kiwi/native_scene_generator.ex")
 end

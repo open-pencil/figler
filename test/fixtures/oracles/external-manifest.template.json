@@ -1,0 +1,9 @@
+{
+  "comparisons": [
+    {
+      "node": "REPLACE_WITH_NODE_GUID",
+      "depth": 3,
+      "json": "oracle-node-depth3.json"
+    }
+  ]
+}
