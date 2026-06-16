@@ -15,27 +15,13 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   alias FigKiwi.Scene.Graph.ComponentPropRef
   alias FigKiwi.Scene.Graph.DerivedSymbolData
   alias FigKiwi.Scene.Graph.GUID
+  alias FigKiwi.Scene.Graph.SeedProjection
   alias FigKiwi.Scene.Graph.SymbolOverride
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Projection
 
   @projected_fields Node.field_names()
-  @resolver_metadata_fields [
-    :override_key,
-    :stack_mode,
-    :stack_spacing,
-    :stack_horizontal_padding,
-    :stack_vertical_padding,
-    :stack_padding_right,
-    :stack_padding_bottom,
-    :symbol_overrides,
-    :component_prop_defs,
-    :component_prop_refs,
-    :component_prop_assignments,
-    :derived_symbol_data,
-    :variable_consumption,
-    :variable_data_values
-  ]
+  @resolver_metadata_fields SeedProjection.resolver_metadata_fields()
 
   @enforce_keys [:guid, :node_type]
   defstruct @projected_fields ++
@@ -296,32 +282,23 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   end
 
   defp projected_value(%{source: {:style_id, :guid}, name: name}, node_change) do
-    node_change |> get(style_id_field(name)) |> style_guid()
+    node_change |> get(Projection.style_id_field(name)) |> style_guid()
   end
 
   defp projected_value(%{source: {:node_change, :type}}, _node_change), do: nil
 
-  defp projected_value(%{source: {:node_change, field}}, node_change) do
-    node_change |> get(field) |> projected_node_change_value(field)
+  defp projected_value(%{source: {:node_change, field}} = projection, node_change) do
+    node_change |> get(field) |> projected_node_change_value(projection)
   end
 
   defp parent_index_value(:guid, nil), do: nil
   defp parent_index_value(:guid, parent_index), do: GUID.format(guid(get(parent_index, :guid)))
   defp parent_index_value(field, parent_index), do: parent_index && get(parent_index, field)
 
-  defp projected_node_change_value(value, field) when field in [:size], do: vector(value)
-  defp projected_node_change_value(value, field) when field in [:transform], do: matrix(value)
-
-  defp projected_node_change_value(value, field) when field in [:fill_paints, :stroke_paints],
-    do: count(value)
-
-  defp projected_node_change_value(value, _field), do: value
-
-  defp style_id_field(:text_style_guid), do: :style_id_for_text
-  defp style_id_field(:fill_style_guid), do: :style_id_for_fill
-  defp style_id_field(:stroke_style_guid), do: :style_id_for_stroke_fill
-  defp style_id_field(:effect_style_guid), do: :style_id_for_effect
-  defp style_id_field(:grid_style_guid), do: :style_id_for_grid
+  defp projected_node_change_value(value, %{value: :vector}), do: vector(value)
+  defp projected_node_change_value(value, %{value: :matrix}), do: matrix(value)
+  defp projected_node_change_value(value, %{value: :count}), do: count(value)
+  defp projected_node_change_value(value, _projection), do: value
 
   defp symbol_overrides(nil), do: []
   defp symbol_overrides(%{symbol_overrides: nil}), do: []

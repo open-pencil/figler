@@ -13,17 +13,52 @@ defmodule FigKiwi.Scene.Projection do
     %{name: :name, source: {:node_change, :name}, xpath_attrs: [:name]},
     %{name: :parent_guid, source: {:parent_index, :guid}, xpath_attrs: [:parent_guid]},
     %{name: :position, source: {:parent_index, :position}, xpath_attrs: [:position]},
-    %{name: :size, source: {:node_change, :size}, xpath_attrs: [:x, :y, :width, :height]},
-    %{name: :transform, source: {:node_change, :transform}, xpath_attrs: [:transform]},
-    %{name: :visible, source: {:node_change, :visible}, xpath_attrs: [:visible]},
-    %{name: :locked, source: {:node_change, :locked}, xpath_attrs: [:locked]},
-    %{name: :opacity, source: {:node_change, :opacity}, xpath_attrs: [:opacity]},
-    %{name: :text, source: {:text_data, :characters}, xpath_attrs: [:text]},
-    %{name: :font_family, source: {:font_name, :family}, xpath_attrs: [:font_family]},
-    %{name: :font_style, source: {:font_name, :style}, xpath_attrs: [:font_style]},
-    %{name: :font_postscript, source: {:font_name, :postscript}, xpath_attrs: [:font_postscript]},
-    %{name: :font_size, source: {:node_change, :font_size}, xpath_attrs: [:font_size]},
-    %{name: :text_style_guid, source: {:style_id, :guid}, xpath_attrs: [:text_style_guid]},
+    %{
+      name: :size,
+      source: {:node_change, :size},
+      xpath_attrs: [:x, :y, :width, :height],
+      value: :vector
+    },
+    %{
+      name: :transform,
+      source: {:node_change, :transform},
+      xpath_attrs: [:transform],
+      value: :matrix
+    },
+    %{name: :visible, source: {:node_change, :visible}, xpath_attrs: [:visible], decode: :bool},
+    %{name: :locked, source: {:node_change, :locked}, xpath_attrs: [:locked], decode: :bool},
+    %{name: :opacity, source: {:node_change, :opacity}, xpath_attrs: [:opacity], decode: :float},
+    %{name: :text, source: {:text_data, :characters}, xpath_attrs: [:text], decode: :text_data},
+    %{
+      name: :font_family,
+      source: {:font_name, :family},
+      xpath_attrs: [:font_family],
+      decode: :font_name
+    },
+    %{
+      name: :font_style,
+      source: {:font_name, :style},
+      xpath_attrs: [:font_style],
+      decode: :font_name
+    },
+    %{
+      name: :font_postscript,
+      source: {:font_name, :postscript},
+      xpath_attrs: [:font_postscript],
+      decode: :font_name
+    },
+    %{
+      name: :font_size,
+      source: {:node_change, :font_size},
+      xpath_attrs: [:font_size],
+      decode: :float
+    },
+    %{
+      name: :text_style_guid,
+      source: {:style_id, :guid},
+      xpath_attrs: [:text_style_guid],
+      value: :style_guid
+    },
     %{
       name: :component_key,
       source: {:node_change, :component_key},
@@ -34,12 +69,44 @@ defmodule FigKiwi.Scene.Projection do
       source: {:node_change, :origin_component_key},
       xpath_attrs: [:origin_component_key]
     },
-    %{name: :fill_style_guid, source: {:style_id, :guid}, xpath_attrs: [:fill_style_guid]},
-    %{name: :stroke_style_guid, source: {:style_id, :guid}, xpath_attrs: [:stroke_style_guid]},
-    %{name: :effect_style_guid, source: {:style_id, :guid}, xpath_attrs: [:effect_style_guid]},
-    %{name: :grid_style_guid, source: {:style_id, :guid}, xpath_attrs: [:grid_style_guid]},
-    %{name: :fill_count, source: {:node_change, :fill_paints}, xpath_attrs: [:fill_count]},
-    %{name: :stroke_count, source: {:node_change, :stroke_paints}, xpath_attrs: [:stroke_count]}
+    %{
+      name: :fill_style_guid,
+      source: {:style_id, :guid},
+      xpath_attrs: [:fill_style_guid],
+      value: :style_guid
+    },
+    %{
+      name: :stroke_style_guid,
+      source: {:style_id, :guid},
+      xpath_attrs: [:stroke_style_guid],
+      value: :style_guid
+    },
+    %{
+      name: :effect_style_guid,
+      source: {:style_id, :guid},
+      xpath_attrs: [:effect_style_guid],
+      value: :style_guid
+    },
+    %{
+      name: :grid_style_guid,
+      source: {:style_id, :guid},
+      xpath_attrs: [:grid_style_guid],
+      value: :style_guid
+    },
+    %{
+      name: :fill_count,
+      source: {:node_change, :fill_paints},
+      xpath_attrs: [:fill_count],
+      value: :count,
+      decode: :counted_paints
+    },
+    %{
+      name: :stroke_count,
+      source: {:node_change, :stroke_paints},
+      xpath_attrs: [:stroke_count],
+      value: :count,
+      decode: :counted_paints
+    }
   ]
 
   @node_change_source_fields @fields
@@ -81,11 +148,36 @@ defmodule FigKiwi.Scene.Projection do
     end
   end
 
+  @style_id_fields %{
+    text_style_guid: :style_id_for_text,
+    fill_style_guid: :style_id_for_fill,
+    stroke_style_guid: :style_id_for_stroke_fill,
+    effect_style_guid: :style_id_for_effect,
+    grid_style_guid: :style_id_for_grid
+  }
+
   def source_module, do: @source_module
   def source_fields, do: @node_change_source_fields
   def parent_index_source_fields, do: @parent_index_source_fields
   def fields, do: @fields
   def field_names, do: Enum.map(@fields, & &1.name)
+
+  def style_id_field(name), do: Map.fetch!(@style_id_fields, name)
+
+  def source_name(field) when is_atom(field) do
+    field
+    |> Atom.to_string()
+    |> Macro.camelize()
+    |> then(fn <<first::binary-size(1), rest::binary>> -> String.downcase(first) <> rest end)
+  end
+
+  def source_name(%{name: name, source: {:style_id, :guid}}),
+    do: name |> style_id_field() |> source_name()
+
+  def source_name(%{source: {:node_change, field}}), do: source_name(field)
+  def source_name(%{source: {:parent_index, _field}}), do: source_name(:parent_index)
+  def source_name(%{source: {:text_data, _field}}), do: source_name(:text_data)
+  def source_name(%{source: {:font_name, _field}}), do: source_name(:font_name)
 
   def required_field_names,
     do: @fields |> Enum.filter(&Map.get(&1, :required?, false)) |> Enum.map(& &1.name)
