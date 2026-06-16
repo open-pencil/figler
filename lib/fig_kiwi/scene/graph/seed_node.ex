@@ -24,27 +24,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   @resolver_metadata_fields SeedProjection.resolver_metadata_fields()
 
   @enforce_keys [:guid, :node_type]
-  defstruct @projected_fields ++
-              [
-                :stack_mode,
-                :stack_spacing,
-                :stack_horizontal_padding,
-                :stack_vertical_padding,
-                :stack_padding_right,
-                :stack_padding_bottom,
-                :component_guid,
-                :symbol_id,
-                :override_key,
-                origin: :source,
-                symbol_overrides: [],
-                component_prop_defs: [],
-                component_prop_refs: [],
-                component_prop_assignments: [],
-                derived_symbol_data: [],
-                variable_consumption: [],
-                variable_data_values: [],
-                source: nil
-              ]
+  defstruct @projected_fields ++ SeedProjection.struct_fields()
 
   @type t :: %__MODULE__{
           guid: GUID.graph_guid(),
@@ -125,31 +105,33 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
     |> then(&struct!(seed, &1))
   end
 
-  defp resolver_metadata_value(:override_key, node_change),
-    do: guid(get(node_change, :override_key))
+  defp resolver_metadata_value(field, node_change) do
+    field
+    |> SeedProjection.value_kind()
+    |> resolver_metadata_value_for(node_change)
+  end
 
-  defp resolver_metadata_value(:symbol_overrides, node_change),
+  defp resolver_metadata_value_for(:guid, node_change), do: guid(get(node_change, :override_key))
+
+  defp resolver_metadata_value_for(:symbol_overrides, node_change),
     do: node_change |> get(:symbol_data) |> symbol_overrides()
 
-  defp resolver_metadata_value(:component_prop_defs, node_change),
+  defp resolver_metadata_value_for(:component_prop_defs, node_change),
     do: node_change |> get(:component_prop_defs) |> component_prop_defs()
 
-  defp resolver_metadata_value(:component_prop_refs, node_change),
+  defp resolver_metadata_value_for(:component_prop_refs, node_change),
     do: node_change |> get(:component_prop_refs) |> component_prop_refs()
 
-  defp resolver_metadata_value(:component_prop_assignments, node_change),
+  defp resolver_metadata_value_for(:component_prop_assignments, node_change),
     do: node_change |> get(:component_prop_assignments) |> component_prop_assignments()
 
-  defp resolver_metadata_value(:derived_symbol_data, node_change),
+  defp resolver_metadata_value_for(:derived_symbol_data, node_change),
     do: node_change |> get(:derived_symbol_data) |> derived_symbol_data()
 
-  defp resolver_metadata_value(:variable_consumption, node_change),
-    do: node_change |> get(:variable_consumption_map) |> multiplayer_entries()
+  defp resolver_metadata_value_for({:multiplayer_entries, source_field}, node_change),
+    do: node_change |> get(source_field) |> multiplayer_entries()
 
-  defp resolver_metadata_value(:variable_data_values, node_change),
-    do: node_change |> get(:variable_data_values) |> multiplayer_entries()
-
-  defp resolver_metadata_value(field, node_change), do: get(node_change, field)
+  defp resolver_metadata_value_for({:field, field}, node_change), do: get(node_change, field)
 
   @doc """
   Builds a seed node from the current projected scene node.

@@ -362,14 +362,14 @@ defmodule FigKiwi.NativeSceneGenerator do
 
   defp scene_optional_struct_fields do
     Enum.map(scene_optional_fields(), fn field ->
-      "#{field}: #{scene_rust_field_type(field)},"
+      "#{field}: #{Projection.rust_type(field)},"
     end)
   end
 
   defp scene_record_struct_fields do
     Enum.map(scene_optional_fields(), fn
       :parent_guid -> "parent_guid: Option<SceneGuid>,"
-      field -> "#{field}: #{scene_rust_field_type(field)},"
+      field -> "#{field}: #{Projection.rust_type(field)},"
     end)
   end
 
@@ -382,7 +382,7 @@ defmodule FigKiwi.NativeSceneGenerator do
           field == :parent_guid ->
             "node.parent_guid.map(|guid| guid.to_string())"
 
-          field in [:visible, :locked, :opacity, :font_size, :fill_count, :stroke_count] ->
+          Projection.rust_copy?(field) ->
             "node.#{name}"
 
           true ->
@@ -478,45 +478,10 @@ defmodule FigKiwi.NativeSceneGenerator do
     )
   end
 
-  defp scene_rust_field_type(:size), do: "Option<SceneSize>"
-  defp scene_rust_field_type(:transform), do: "Option<SceneTransform>"
-  defp scene_rust_field_type(:visible), do: "Option<bool>"
-  defp scene_rust_field_type(:locked), do: "Option<bool>"
-  defp scene_rust_field_type(:opacity), do: "Option<f32>"
-  defp scene_rust_field_type(:font_size), do: "Option<f32>"
-  defp scene_rust_field_type(:fill_count), do: "Option<usize>"
-  defp scene_rust_field_type(:stroke_count), do: "Option<usize>"
-  defp scene_rust_field_type(_field), do: "Option<String>"
-
   defp scene_attr_lookup do
     entries =
       scene_optional_fields()
-      |> Enum.flat_map(fn
-        :size ->
-          [
-            {:size, "x", "value.x.to_string()", []},
-            {:size, "y", "value.y.to_string()", []},
-            {:size, "width", "value.x.to_string()", []},
-            {:size, "height", "value.y.to_string()", []}
-          ]
-
-        :transform ->
-          [
-            {:transform, "transform",
-             "format!(\"{},{},{},{},{},{}\", value.m00, value.m01, value.m02, value.m10, value.m11, value.m12)",
-             []}
-          ]
-
-        field
-        when field in [:visible, :locked, :opacity, :font_size, :fill_count, :stroke_count] ->
-          [{field, Atom.to_string(field), "value.to_string()", by_ref?: false}]
-
-        :parent_guid ->
-          [{:parent_guid, "parent_guid", "value.to_string()", []}]
-
-        field ->
-          [{field, Atom.to_string(field), "value.clone()", []}]
-      end)
+      |> Enum.flat_map(&Projection.xpath_attr_entries/1)
 
     entries
     |> Enum.with_index()
