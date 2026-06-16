@@ -17,8 +17,25 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.SymbolOverride
   alias FigKiwi.Scene.Node
+  alias FigKiwi.Scene.Projection
 
   @projected_fields Node.field_names()
+  @resolver_metadata_fields [
+    :override_key,
+    :stack_mode,
+    :stack_spacing,
+    :stack_horizontal_padding,
+    :stack_vertical_padding,
+    :stack_padding_right,
+    :stack_padding_bottom,
+    :symbol_overrides,
+    :component_prop_defs,
+    :component_prop_refs,
+    :component_prop_assignments,
+    :derived_symbol_data,
+    :variable_consumption,
+    :variable_data_values
+  ]
 
   @enforce_keys [:guid, :node_type]
   defstruct @projected_fields ++
@@ -111,27 +128,42 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
     node = public_node_from_change(node_change)
     %__MODULE__{} = seed = from_node(node)
 
-    %__MODULE__{
-      seed
-      | symbol_id: symbol_id,
-        override_key: guid(get(node_change, :override_key)),
-        component_guid: symbol_id,
-        stack_mode: get(node_change, :stack_mode),
-        stack_spacing: get(node_change, :stack_spacing),
-        stack_horizontal_padding: get(node_change, :stack_horizontal_padding),
-        stack_vertical_padding: get(node_change, :stack_vertical_padding),
-        stack_padding_right: get(node_change, :stack_padding_right),
-        stack_padding_bottom: get(node_change, :stack_padding_bottom),
-        symbol_overrides: symbol_overrides(symbol_data),
-        component_prop_defs: component_prop_defs(get(node_change, :component_prop_defs)),
-        component_prop_refs: component_prop_refs(get(node_change, :component_prop_refs)),
-        component_prop_assignments:
-          component_prop_assignments(get(node_change, :component_prop_assignments)),
-        derived_symbol_data: derived_symbol_data(get(node_change, :derived_symbol_data)),
-        variable_consumption: multiplayer_entries(get(node_change, :variable_consumption_map)),
-        variable_data_values: multiplayer_entries(get(node_change, :variable_data_values))
-    }
+    seed
+    |> struct!(%{symbol_id: symbol_id, component_guid: symbol_id})
+    |> put_resolver_metadata(node_change)
   end
+
+  defp put_resolver_metadata(%__MODULE__{} = seed, node_change) do
+    @resolver_metadata_fields
+    |> Map.new(&{&1, resolver_metadata_value(&1, node_change)})
+    |> then(&struct!(seed, &1))
+  end
+
+  defp resolver_metadata_value(:override_key, node_change),
+    do: guid(get(node_change, :override_key))
+
+  defp resolver_metadata_value(:symbol_overrides, node_change),
+    do: node_change |> get(:symbol_data) |> symbol_overrides()
+
+  defp resolver_metadata_value(:component_prop_defs, node_change),
+    do: node_change |> get(:component_prop_defs) |> component_prop_defs()
+
+  defp resolver_metadata_value(:component_prop_refs, node_change),
+    do: node_change |> get(:component_prop_refs) |> component_prop_refs()
+
+  defp resolver_metadata_value(:component_prop_assignments, node_change),
+    do: node_change |> get(:component_prop_assignments) |> component_prop_assignments()
+
+  defp resolver_metadata_value(:derived_symbol_data, node_change),
+    do: node_change |> get(:derived_symbol_data) |> derived_symbol_data()
+
+  defp resolver_metadata_value(:variable_consumption, node_change),
+    do: node_change |> get(:variable_consumption_map) |> multiplayer_entries()
+
+  defp resolver_metadata_value(:variable_data_values, node_change),
+    do: node_change |> get(:variable_data_values) |> multiplayer_entries()
+
+  defp resolver_metadata_value(field, node_change), do: get(node_change, field)
 
   @doc """
   Builds a seed node from the current projected scene node.
@@ -237,37 +269,59 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   end
 
   defp public_node_from_change(node_change) do
-    parent_index = get(node_change, :parent_index)
-    text_data = get(node_change, :text_data)
-    font_name = get(node_change, :font_name)
+    values =
+      Projection.fields()
+      |> Map.new(fn %{name: name} = field -> {name, projected_value(field, node_change)} end)
 
-    %Node{
-      guid: GUID.format(guid(get(node_change, :guid))),
-      node_type: node_change |> get(:type) |> to_string() |> Macro.underscore(),
-      name: get(node_change, :name),
-      parent_guid: GUID.format(guid(parent_index && get(parent_index, :guid))),
-      position: parent_index && get(parent_index, :position),
-      size: vector(get(node_change, :size)),
-      transform: matrix(get(node_change, :transform)),
-      visible: get(node_change, :visible),
-      locked: get(node_change, :locked),
-      opacity: get(node_change, :opacity),
-      text: text_data && get(text_data, :characters),
-      font_family: font_name && get(font_name, :family),
-      font_style: font_name && get(font_name, :style),
-      font_postscript: font_name && get(font_name, :postscript),
-      font_size: get(node_change, :font_size),
-      text_style_guid: style_guid(get(node_change, :style_id_for_text)),
-      component_key: get(node_change, :component_key),
-      origin_component_key: get(node_change, :origin_component_key),
-      fill_style_guid: style_guid(get(node_change, :style_id_for_fill)),
-      stroke_style_guid: style_guid(get(node_change, :style_id_for_stroke_fill)),
-      effect_style_guid: style_guid(get(node_change, :style_id_for_effect)),
-      grid_style_guid: style_guid(get(node_change, :style_id_for_grid)),
-      fill_count: count(get(node_change, :fill_paints)),
-      stroke_count: count(get(node_change, :stroke_paints))
-    }
+    struct!(Node, values)
   end
+
+  defp projected_value(%{name: :guid}, node_change),
+    do: GUID.format(guid(get(node_change, :guid)))
+
+  defp projected_value(%{name: :node_type}, node_change),
+    do: node_change |> get(:type) |> to_string() |> Macro.underscore()
+
+  defp projected_value(%{source: {:parent_index, field}}, node_change) do
+    parent_index = get(node_change, :parent_index)
+    parent_index_value(field, parent_index)
+  end
+
+  defp projected_value(%{source: {:text_data, field}}, node_change) do
+    node_change |> get(:text_data) |> get(field)
+  end
+
+  defp projected_value(%{source: {:font_name, field}}, node_change) do
+    node_change |> get(:font_name) |> get(field)
+  end
+
+  defp projected_value(%{source: {:style_id, :guid}, name: name}, node_change) do
+    node_change |> get(style_id_field(name)) |> style_guid()
+  end
+
+  defp projected_value(%{source: {:node_change, :type}}, _node_change), do: nil
+
+  defp projected_value(%{source: {:node_change, field}}, node_change) do
+    node_change |> get(field) |> projected_node_change_value(field)
+  end
+
+  defp parent_index_value(:guid, nil), do: nil
+  defp parent_index_value(:guid, parent_index), do: GUID.format(guid(get(parent_index, :guid)))
+  defp parent_index_value(field, parent_index), do: parent_index && get(parent_index, field)
+
+  defp projected_node_change_value(value, field) when field in [:size], do: vector(value)
+  defp projected_node_change_value(value, field) when field in [:transform], do: matrix(value)
+
+  defp projected_node_change_value(value, field) when field in [:fill_paints, :stroke_paints],
+    do: count(value)
+
+  defp projected_node_change_value(value, _field), do: value
+
+  defp style_id_field(:text_style_guid), do: :style_id_for_text
+  defp style_id_field(:fill_style_guid), do: :style_id_for_fill
+  defp style_id_field(:stroke_style_guid), do: :style_id_for_stroke_fill
+  defp style_id_field(:effect_style_guid), do: :style_id_for_effect
+  defp style_id_field(:grid_style_guid), do: :style_id_for_grid
 
   defp symbol_overrides(nil), do: []
   defp symbol_overrides(%{symbol_overrides: nil}), do: []

@@ -54,54 +54,7 @@ fn decode_scene_node_change_from_decoder(
                 let name = scene_node_type_name(value).to_string();
                 *type_counts.entry(name).or_insert(0) += 1;
             }
-            5 => decoder.skip_string()?,
-            6 => {
-                decoder.read_bool()?;
-            }
-            7 => {
-                decoder.read_bool()?;
-            }
-            11 => {
-                skip_vector_from_decoder(decoder)?;
-            }
-            12 => {
-                skip_matrix_from_decoder(decoder)?;
-            }
-            38 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_paint_from_decoder(decoder)?;
-                }
-            }
-            39 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    skip_paint_from_decoder(decoder)?;
-                }
-            }
-            41 => {
-                skip_font_name_from_decoder(decoder)?;
-            }
-            42 => {
-                skip_text_data_from_decoder(decoder)?;
-            }
-            216 => decoder.skip_string()?,
-            252 => decoder.skip_string()?,
-            332 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            333 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            334 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            335 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            336 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
+            __rq_scene_summary_node_arms => unreachable!(),
             __rq_scene_node_skip_arms => unreachable!(),
             field => {
                 return Err(

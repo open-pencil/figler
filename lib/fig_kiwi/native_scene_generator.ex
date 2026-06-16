@@ -305,6 +305,7 @@ defmodule FigKiwi.NativeSceneGenerator do
         |> Enum.reject(&(&1.value == 4))
         |> Enum.map(&skip_message_arm(&1, definition_map)),
       scene_node_skip_arms: scene_node_skip_arms(definition_map),
+      scene_summary_node_arms: scene_summary_node_arms(definition_map),
       scene_text_data_skip_arms:
         definition_map
         |> Map.fetch!("TextData")
@@ -332,15 +333,24 @@ defmodule FigKiwi.NativeSceneGenerator do
   end
 
   defp scene_node_skip_arms(definition_map) do
-    keep_names =
-      Projection.source_fields()
-      |> Enum.map(&lower_camel/1)
-      |> MapSet.new()
+    keep_names = Projection.source_fields() |> Enum.map(&lower_camel/1) |> MapSet.new()
 
     definition_map
     |> Map.fetch!("NodeChange")
     |> then(& &1.fields)
     |> Enum.reject(&MapSet.member?(keep_names, &1.name))
+    |> Enum.map(&skip_message_arm(&1, definition_map))
+  end
+
+  defp scene_summary_node_arms(definition_map) do
+    skip_names = [:guid, :parent_index, :type] |> Enum.map(&lower_camel/1) |> MapSet.new()
+    keep_names = Projection.source_fields() |> Enum.map(&lower_camel/1) |> MapSet.new()
+
+    definition_map
+    |> Map.fetch!("NodeChange")
+    |> then(& &1.fields)
+    |> Enum.filter(&MapSet.member?(keep_names, &1.name))
+    |> Enum.reject(&MapSet.member?(skip_names, &1.name))
     |> Enum.map(&skip_message_arm(&1, definition_map))
   end
 
@@ -401,71 +411,78 @@ defmodule FigKiwi.NativeSceneGenerator do
   end
 
   defp scene_decode_arms(definition_map) do
-    node_fields = definition_map |> Map.fetch!("NodeChange") |> then(& &1.fields)
+    fields_by_source =
+      definition_map
+      |> Map.fetch!("NodeChange")
+      |> then(& &1.fields)
+      |> Map.new(&{&1.name, &1.value})
 
-    field_id = fn source ->
-      node_fields |> Enum.find(&(&1.name == source)) |> Map.fetch!(:value)
-    end
-
-    [
-      scene_decode_arm(field_id.("name"), "name = Some(decoder.read_string_value()?)"),
-      scene_decode_arm(field_id.("visible"), "visible = Some(decoder.read_bool()?)"),
-      scene_decode_arm(field_id.("locked"), "locked = Some(decoder.read_bool()?)"),
-      scene_decode_arm(field_id.("opacity"), "opacity = Some(decoder.read_var_float_value()?)"),
-      scene_decode_arm(field_id.("size"), "size = Some(read_scene_size_value(decoder)?)"),
-      scene_decode_arm(
-        field_id.("transform"),
-        "transform = Some(read_scene_transform_value(decoder)?)"
-      ),
-      scene_decode_arm(field_id.("fontName"), [
-        "let (family, style, postscript) = read_scene_font_name_value(decoder)?;",
-        "font_family = family;",
-        "font_style = style;",
-        "font_postscript = postscript;"
-      ]),
-      scene_decode_arm(field_id.("textData"), "text = read_scene_text_data_value(decoder)?"),
-      scene_decode_arm(
-        field_id.("fontSize"),
-        "font_size = Some(decoder.read_var_float_value()?)"
-      ),
-      scene_decode_arm(
-        field_id.("componentKey"),
-        "component_key = Some(decoder.read_string_value()?)"
-      ),
-      scene_decode_arm(
-        field_id.("originComponentKey"),
-        "origin_component_key = Some(decoder.read_string_value()?)"
-      ),
-      scene_decode_arm(
-        field_id.("styleIdForFill"),
-        "fill_style_guid = read_scene_style_id_value(decoder)?"
-      ),
-      scene_decode_arm(
-        field_id.("styleIdForStrokeFill"),
-        "stroke_style_guid = read_scene_style_id_value(decoder)?"
-      ),
-      scene_decode_arm(
-        field_id.("styleIdForText"),
-        "text_style_guid = read_scene_style_id_value(decoder)?"
-      ),
-      scene_decode_arm(
-        field_id.("styleIdForEffect"),
-        "effect_style_guid = read_scene_style_id_value(decoder)?"
-      ),
-      scene_decode_arm(
-        field_id.("styleIdForGrid"),
-        "grid_style_guid = read_scene_style_id_value(decoder)?"
-      ),
-      scene_decode_arm(
-        field_id.("fillPaints"),
-        "fill_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"
-      ),
-      scene_decode_arm(
-        field_id.("strokePaints"),
-        "stroke_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"
-      )
-    ]
+    Projection.fields()
+    |> Enum.reject(&Map.get(&1, :required?, false))
+    |> Enum.reject(&match?(%{source: {:parent_index, _field}}, &1))
+    |> Enum.map(&scene_decode_arm_for(&1, fields_by_source))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
   end
+
+  defp scene_decode_arm_for(%{source: {:font_name, _field}}, fields_by_source) do
+    scene_decode_arm(Map.fetch!(fields_by_source, "fontName"), [
+      "let (family, style, postscript) = read_scene_font_name_value(decoder)?;",
+      "font_family = family;",
+      "font_style = style;",
+      "font_postscript = postscript;"
+    ])
+  end
+
+  defp scene_decode_arm_for(%{name: :text, source: {:text_data, :characters}}, fields_by_source) do
+    scene_decode_arm(
+      Map.fetch!(fields_by_source, "textData"),
+      "text = read_scene_text_data_value(decoder)?"
+    )
+  end
+
+  defp scene_decode_arm_for(%{source: {:style_id, :guid}, name: name}, fields_by_source) do
+    scene_decode_arm(
+      Map.fetch!(fields_by_source, style_source_name(name)),
+      "#{name} = read_scene_style_id_value(decoder)?"
+    )
+  end
+
+  defp scene_decode_arm_for(%{source: {:node_change, field}, name: name}, fields_by_source) do
+    scene_decode_arm(
+      Map.fetch!(fields_by_source, lower_camel(field)),
+      scene_decode_expr(name, field)
+    )
+  end
+
+  defp scene_decode_arm_for(_field, _fields_by_source), do: nil
+
+  defp scene_decode_expr(name, field)
+       when field in [:name, :component_key, :origin_component_key],
+       do: "#{name} = Some(decoder.read_string_value()?)"
+
+  defp scene_decode_expr(name, field) when field in [:visible, :locked],
+    do: "#{name} = Some(decoder.read_bool()?)"
+
+  defp scene_decode_expr(name, field) when field in [:opacity, :font_size],
+    do: "#{name} = Some(decoder.read_var_float_value()?)"
+
+  defp scene_decode_expr(_name, :size), do: "size = Some(read_scene_size_value(decoder)?)"
+
+  defp scene_decode_expr(_name, :transform),
+    do: "transform = Some(read_scene_transform_value(decoder)?)"
+
+  defp scene_decode_expr(:fill_count, :fill_paints),
+    do: "fill_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"
+
+  defp scene_decode_expr(:stroke_count, :stroke_paints),
+    do: "stroke_count = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"
+
+  defp style_source_name(:text_style_guid), do: "styleIdForText"
+  defp style_source_name(:fill_style_guid), do: "styleIdForFill"
+  defp style_source_name(:stroke_style_guid), do: "styleIdForStrokeFill"
+  defp style_source_name(:effect_style_guid), do: "styleIdForEffect"
+  defp style_source_name(:grid_style_guid), do: "styleIdForGrid"
 
   defp scene_decode_arm(id, lines) do
     Rust.arm(

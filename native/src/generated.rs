@@ -93182,11 +93182,12 @@ mod scene_xpath_runtime {
                     node_type = Some(scene_node_type_name(decoder.read_var_uint()?));
                 }
                 5 => name = Some(decoder.read_string_value()?),
+                11 => size = Some(read_scene_size_value(decoder)?),
+                12 => transform = Some(read_scene_transform_value(decoder)?),
                 6 => visible = Some(decoder.read_bool()?),
                 7 => locked = Some(decoder.read_bool()?),
                 8 => opacity = Some(decoder.read_var_float_value()?),
-                11 => size = Some(read_scene_size_value(decoder)?),
-                12 => transform = Some(read_scene_transform_value(decoder)?),
+                42 => text = read_scene_text_data_value(decoder)?,
                 41 => {
                     let (family, style, postscript) = read_scene_font_name_value(
                         decoder,
@@ -93195,13 +93196,12 @@ mod scene_xpath_runtime {
                     font_style = style;
                     font_postscript = postscript;
                 }
-                42 => text = read_scene_text_data_value(decoder)?,
                 21 => font_size = Some(decoder.read_var_float_value()?),
+                334 => text_style_guid = read_scene_style_id_value(decoder)?,
                 216 => component_key = Some(decoder.read_string_value()?),
                 252 => origin_component_key = Some(decoder.read_string_value()?),
                 332 => fill_style_guid = read_scene_style_id_value(decoder)?,
                 333 => stroke_style_guid = read_scene_style_id_value(decoder)?,
-                334 => text_style_guid = read_scene_style_id_value(decoder)?,
                 335 => effect_style_guid = read_scene_style_id_value(decoder)?,
                 336 => grid_style_guid = read_scene_style_id_value(decoder)?,
                 38 => {
@@ -95339,12 +95339,47 @@ fn decode_scene_node_change_from_decoder(
                 let name = scene_node_type_name(value).to_string();
                 *type_counts.entry(name).or_insert(0) += 1;
             }
-            5 => decoder.skip_string()?,
+            5 => {
+                decoder.skip_string()?;
+            }
+            332 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            333 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            334 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            335 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            336 => {
+                skip_style_id_from_decoder(decoder)?;
+            }
+            216 => {
+                decoder.skip_string()?;
+            }
+            252 => {
+                decoder.skip_string()?;
+            }
+            21 => {
+                decoder.read_var_float_value()?;
+            }
+            41 => {
+                skip_font_name_from_decoder(decoder)?;
+            }
+            42 => {
+                skip_text_data_from_decoder(decoder)?;
+            }
             6 => {
                 decoder.read_bool()?;
             }
             7 => {
                 decoder.read_bool()?;
+            }
+            8 => {
+                decoder.read_var_float_value()?;
             }
             11 => {
                 skip_vector_from_decoder(decoder)?;
@@ -95363,29 +95398,6 @@ fn decode_scene_node_change_from_decoder(
                 for _ in 0..len {
                     skip_paint_from_decoder(decoder)?;
                 }
-            }
-            41 => {
-                skip_font_name_from_decoder(decoder)?;
-            }
-            42 => {
-                skip_text_data_from_decoder(decoder)?;
-            }
-            216 => decoder.skip_string()?,
-            252 => decoder.skip_string()?,
-            332 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            333 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            334 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            335 => {
-                skip_style_id_from_decoder(decoder)?;
-            }
-            336 => {
-                skip_style_id_from_decoder(decoder)?;
             }
             53 => {
                 decoder.read_var_uint()?;
