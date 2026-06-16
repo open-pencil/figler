@@ -304,36 +304,7 @@ defmodule FigKiwi.NativeSceneGenerator do
         |> then(& &1.fields)
         |> Enum.reject(&(&1.value == 4))
         |> Enum.map(&skip_message_arm(&1, definition_map)),
-      scene_node_skip_arms:
-        definition_map
-        |> Map.fetch!("NodeChange")
-        |> then(& &1.fields)
-        |> Enum.reject(
-          &(&1.value in [
-              1,
-              3,
-              4,
-              5,
-              6,
-              7,
-              8,
-              11,
-              12,
-              21,
-              38,
-              39,
-              41,
-              42,
-              216,
-              252,
-              332,
-              333,
-              334,
-              335,
-              336
-            ])
-        )
-        |> Enum.map(&skip_message_arm(&1, definition_map)),
+      scene_node_skip_arms: scene_node_skip_arms(definition_map),
       scene_text_data_skip_arms:
         definition_map
         |> Map.fetch!("TextData")
@@ -358,6 +329,26 @@ defmodule FigKiwi.NativeSceneGenerator do
       scene_query_field_encoders: scene_query_field_encoders(),
       scene_navigation_nifs: scene_navigation_nifs()
     ]
+  end
+
+  defp scene_node_skip_arms(definition_map) do
+    keep_names =
+      Projection.source_fields()
+      |> Enum.map(&lower_camel/1)
+      |> MapSet.new()
+
+    definition_map
+    |> Map.fetch!("NodeChange")
+    |> then(& &1.fields)
+    |> Enum.reject(&MapSet.member?(keep_names, &1.name))
+    |> Enum.map(&skip_message_arm(&1, definition_map))
+  end
+
+  defp lower_camel(field) do
+    field
+    |> Atom.to_string()
+    |> Macro.camelize()
+    |> then(fn <<first::binary-size(1), rest::binary>> -> String.downcase(first) <> rest end)
   end
 
   defp scene_optional_fields do
