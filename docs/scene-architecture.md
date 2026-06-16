@@ -24,6 +24,20 @@ seed metadata. Conversion submodules keep concerns focused:
 - `SeedExtraction.ComponentProps`
 - `SeedExtraction.DerivedData`
 
+## Tests
+
+Tests should mirror module boundaries instead of accumulating in one integration file.
+Keep top-level `test/scene_test.exs` for `FigKiwi.Scene` smoke/integration coverage.
+Module-specific behavior belongs under matching paths, for example:
+
+- `test/scene/projection_test.exs`
+- `test/scene/navigation_test.exs`
+- `test/scene/graph/resolver_test.exs`
+- `test/scene/graph/component_props_test.exs`
+- `test/scene/graph/variables_test.exs`
+
+Reusable tiny scene fixtures live in `test/support/scene_fixture.ex`.
+
 ## Resolver semantics
 
 Resolver stages stay in Elixir while behavior is evolving:
@@ -37,3 +51,11 @@ Resolver stages stay in Elixir while behavior is evolving:
 
 Schema-shaped Rust should still be generated from projection/spec modules and RustQ templates.
 Avoid adding hand-maintained field-number or schema-name lists outside those specs.
+
+## Where to add behavior
+
+- New public projected fields: update `Scene.Projection`; native projection should follow via generator splices.
+- Native Rust field rendering policy: update `Scene.Projection.Native`.
+- New graph seed metadata fields: update `Graph.SeedProjection`.
+- NodeChange-to-seed conversion: update the focused `Graph.SeedExtraction.*` module.
+- Figma effective-scene semantics: update the appropriate resolver stage module, not the raw scene index.
