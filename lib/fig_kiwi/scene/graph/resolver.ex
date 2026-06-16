@@ -13,6 +13,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   alias FigKiwi.Scene.Graph.ComponentProps
   alias FigKiwi.Scene.Graph.DerivedData
   alias FigKiwi.Scene.Graph.Focus
+  alias FigKiwi.Scene.Graph.Nodes
   alias FigKiwi.Scene.Graph.Provenance
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.SourceInstances
@@ -85,6 +86,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp apply_symbol_overrides(graph) do
     graph
     |> SymbolOverrides.apply(SourceInstances.list(graph))
+    |> Nodes.reindex()
     |> mark_stage(:symbol_overrides)
   end
 
@@ -93,6 +95,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
   defp apply_component_props(graph) do
     graph
     |> ComponentProps.apply_all()
+    |> Nodes.reindex()
     |> mark_stage(:component_props)
   end
 

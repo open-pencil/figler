@@ -128,9 +128,7 @@ defmodule FigKiwi.Scene.Graph.Patch do
          field: :visible,
          value: false
        }) do
-    graph.children
-    |> Map.get(target, [])
-    |> Enum.reduce(graph, &Nodes.remove(&2, &1))
+    Nodes.clear_children(graph, target, indexes: false)
   end
 
   defp maybe_clear_hidden_children(%Graph{} = graph, _patch), do: graph

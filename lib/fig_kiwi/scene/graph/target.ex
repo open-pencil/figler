@@ -62,10 +62,10 @@ defmodule FigKiwi.Scene.Graph.Target do
     root_guid = GUID.root(instance_guid)
 
     cond do
-      clone_guid = Map.get(graph.clone_index, {root_guid, source_guid}) ->
+      clone_guid = live_clone(graph, Map.get(graph.clone_index, {root_guid, source_guid})) ->
         {:ok, clone_guid}
 
-      clone_guid = Map.get(graph.clone_source_index, {root_guid, source_guid}) ->
+      clone_guid = live_clone(graph, Map.get(graph.clone_source_index, {root_guid, source_guid})) ->
         {:ok, clone_guid}
 
       Map.has_key?(graph.nodes, source_guid) ->
@@ -75,4 +75,9 @@ defmodule FigKiwi.Scene.Graph.Target do
         {:error, :missing_source}
     end
   end
+
+  defp live_clone(_graph, nil), do: nil
+
+  defp live_clone(graph, clone_guid),
+    do: if(Map.has_key?(graph.nodes, clone_guid), do: clone_guid)
 end

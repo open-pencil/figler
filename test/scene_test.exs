@@ -404,7 +404,11 @@ defmodule FigKiwi.SceneTest do
           variable_consumption: [%{field: :width, variable: "var:1"}]
         }
       ]
-      |> Resolver.from_seed(resource: make_ref(), stages: [:variables])
+      |> Resolver.from_seed(
+        resource: make_ref(),
+        stages: [:variables],
+        options: [resolve_variables: :preserve]
+      )
       |> Resolver.resolve()
 
     assert Graph.unresolved(graph) == [
@@ -414,6 +418,22 @@ defmodule FigKiwi.SceneTest do
     assert Graph.explain(graph, "1:1").unresolved == [
              {:variable_ref_preserved, %{field: :width, variable: "var:1"}}
            ]
+  end
+
+  test "variables stage skips unknown refs in known mode" do
+    graph =
+      [
+        %SeedNode{
+          guid: {1, 1},
+          node_type: "rectangle",
+          variable_consumption: [%{field: :width, variable: "var:1"}]
+        }
+      ]
+      |> Resolver.from_seed(resource: make_ref(), stages: [:variables])
+      |> Resolver.resolve()
+
+    assert Graph.unresolved(graph) == []
+    assert Graph.explain(graph, "1:1").unresolved == []
   end
 
   test "variables stage applies known variable refs to clear node fields" do

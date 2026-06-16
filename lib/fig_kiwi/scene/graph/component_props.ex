@@ -116,23 +116,33 @@ defmodule FigKiwi.Scene.Graph.ComponentProps do
   defp normalize_guid(guid), do: guid
 
   defp target(graph, instance_guid, source_guid) do
+    root_guid = GUID.root(instance_guid)
+
     cond do
       clone_guid = nested_clone(graph, instance_guid, source_guid) ->
         {:ok, normalize_guid(clone_guid)}
 
-      clone_guid = descendant_by_name(graph, instance_guid, source_guid) ->
+      clone_guid = live_clone(graph, Map.get(graph.clone_index, {root_guid, source_guid})) ->
         {:ok, normalize_guid(clone_guid)}
 
-      clone_guid = Map.get(graph.clone_index, {GUID.root(instance_guid), source_guid}) ->
+      clone_guid = live_clone(graph, Map.get(graph.clone_source_index, {root_guid, source_guid})) ->
         {:ok, normalize_guid(clone_guid)}
 
       Map.has_key?(graph.nodes, source_guid) ->
         {:ok, source_guid}
 
+      clone_guid = descendant_by_name(graph, instance_guid, source_guid) ->
+        {:ok, normalize_guid(clone_guid)}
+
       true ->
         {:error, :missing_target}
     end
   end
+
+  defp live_clone(_graph, nil), do: nil
+
+  defp live_clone(graph, clone_guid),
+    do: if(Map.has_key?(graph.nodes, clone_guid), do: clone_guid)
 
   defp nested_clone(graph, {:clone, _root, _path} = instance_guid, source_guid) do
     clone_guid = GUID.append(instance_guid, source_guid)

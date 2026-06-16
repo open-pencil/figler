@@ -32,8 +32,14 @@ defmodule FigKiwi.Scene.Graph.DerivedData do
   end
 
   defp resolve_target(graph, instance_guid, guid_path) do
-    guided_target(graph, instance_guid, guid_path) ||
-      Target.resolve(graph, instance_guid, guid_path)
+    case Target.resolve(graph, instance_guid, guid_path) do
+      {:ok, target_guid} ->
+        {:ok, target_guid}
+
+      {:error, _reason} ->
+        guided_target(graph, instance_guid, guid_path) ||
+          Target.resolve(graph, instance_guid, guid_path)
+    end
   end
 
   defp guided_target(_graph, _current_guid, []), do: nil

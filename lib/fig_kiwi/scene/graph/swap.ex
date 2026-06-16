@@ -59,9 +59,7 @@ defmodule FigKiwi.Scene.Graph.Swap do
   """
   @spec clear(Graph.t(), GUID.graph_guid()) :: Graph.t()
   def clear(%Graph{} = graph, target_guid) do
-    graph.children
-    |> Map.get(target_guid, [])
-    |> Enum.reduce(graph, &Nodes.remove(&2, &1))
+    Nodes.clear_children(graph, target_guid, indexes: false)
   end
 
   @doc """

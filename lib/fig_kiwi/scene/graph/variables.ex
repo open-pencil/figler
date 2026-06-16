@@ -32,17 +32,23 @@ defmodule FigKiwi.Scene.Graph.Variables do
   defp apply_variable_refs(%Graph{options: options} = graph, seed) do
     case Keyword.get(options, :resolve_variables, :known) do
       false -> {graph, [], []}
-      _mode -> apply_variable_refs(graph, seed, seed.variable_consumption)
+      mode -> apply_variable_refs(graph, seed, seed.variable_consumption, mode)
     end
   end
 
-  defp apply_variable_refs(%Graph{} = graph, _seed, []), do: {graph, [], []}
+  defp apply_variable_refs(%Graph{} = graph, _seed, [], _mode), do: {graph, [], []}
 
-  defp apply_variable_refs(%Graph{} = graph, seed, refs) do
+  defp apply_variable_refs(%Graph{} = graph, seed, refs, mode) do
     Enum.reduce(refs, {graph, [], []}, fn ref, {acc, applied, unresolved} ->
       case apply_variable_ref(acc, seed, ref) do
-        {:ok, next, item} -> {next, [item | applied], unresolved}
-        :unknown -> {acc, applied, [{:variable_ref_preserved, ref} | unresolved]}
+        {:ok, next, item} ->
+          {next, [item | applied], unresolved}
+
+        :unknown when mode == :preserve ->
+          {acc, applied, [{:variable_ref_preserved, ref} | unresolved]}
+
+        :unknown ->
+          {acc, applied, unresolved}
       end
     end)
   end

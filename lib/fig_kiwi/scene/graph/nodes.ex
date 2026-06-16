@@ -40,21 +40,79 @@ defmodule FigKiwi.Scene.Graph.Nodes do
   @doc """
   Removes a subtree rooted at `guid`.
   """
-  @spec remove(Graph.t(), GUID.graph_guid()) :: Graph.t()
-  def remove(%Graph{} = graph, guid) do
-    guids = subtree(graph, guid)
+  @spec remove(Graph.t(), GUID.graph_guid(), keyword()) :: Graph.t()
+  def remove(%Graph{} = graph, guid, opts \\ []) do
+    remove_many(graph, [guid], opts)
+  end
+
+  @doc """
+  Removes multiple subtrees in one batch.
+  """
+  @spec remove_many(Graph.t(), [GUID.graph_guid()], keyword()) :: Graph.t()
+  def remove_many(%Graph{} = graph, root_guids, opts \\ []) when is_list(root_guids) do
+    guids = Enum.flat_map(root_guids, &subtree(graph, &1))
     guid_set = MapSet.new(guids)
 
-    %Graph{
+    graph = %Graph{
       graph
       | nodes: Map.drop(graph.nodes, guids),
         seed_nodes: Map.drop(graph.seed_nodes, guids),
         children: delete_child_refs(graph.children, guid_set),
-        clone_index: delete_clone_refs(graph.clone_index, guid_set),
-        clone_source_index: delete_clone_refs(graph.clone_source_index, guid_set),
-        provenance: Map.drop(graph.provenance, guids),
-        by_type: remove_index_entries(graph.by_type, guid_set),
-        by_name: remove_index_entries(graph.by_name, guid_set)
+        provenance: Map.drop(graph.provenance, guids)
+    }
+
+    if Keyword.get(opts, :indexes, true) do
+      %Graph{
+        graph
+        | clone_index: delete_clone_refs(graph.clone_index, guid_set),
+          clone_source_index: delete_clone_refs(graph.clone_source_index, guid_set),
+          by_type: remove_index_entries(graph.by_type, guid_set),
+          by_name: remove_index_entries(graph.by_name, guid_set)
+      }
+    else
+      graph
+    end
+  end
+
+  @doc """
+  Removes all direct children under a parent in one batch.
+  """
+  @spec clear_children(Graph.t(), GUID.graph_guid(), keyword()) :: Graph.t()
+  def clear_children(%Graph{} = graph, parent_guid, opts \\ []) do
+    root_guids = Map.get(graph.children, parent_guid, [])
+    guids = Enum.flat_map(root_guids, &subtree(graph, &1))
+    guid_set = MapSet.new(guids)
+
+    graph = %Graph{
+      graph
+      | nodes: Map.drop(graph.nodes, guids),
+        seed_nodes: Map.drop(graph.seed_nodes, guids),
+        children: graph.children |> Map.drop(guids) |> Map.put(parent_guid, []),
+        provenance: Map.drop(graph.provenance, guids)
+    }
+
+    if Keyword.get(opts, :indexes, true) do
+      %Graph{
+        graph
+        | clone_index: delete_clone_refs(graph.clone_index, guid_set),
+          clone_source_index: delete_clone_refs(graph.clone_source_index, guid_set),
+          by_type: remove_index_entries(graph.by_type, guid_set),
+          by_name: remove_index_entries(graph.by_name, guid_set)
+      }
+    else
+      graph
+    end
+  end
+
+  @doc """
+  Rebuilds type/name lookup indexes from current graph nodes.
+  """
+  @spec reindex(Graph.t()) :: Graph.t()
+  def reindex(%Graph{} = graph) do
+    %Graph{
+      graph
+      | by_type: group_nodes(graph.nodes, & &1.node_type),
+        by_name: group_nodes(graph.nodes, & &1.name)
     }
   end
 
@@ -69,6 +127,16 @@ defmodule FigKiwi.Scene.Graph.Nodes do
       |> Enum.flat_map(&subtree(graph, &1))
 
     descendants ++ [guid]
+  end
+
+  defp group_nodes(nodes, key_fun) do
+    Enum.reduce(nodes, %{}, fn {guid, node}, acc ->
+      case key_fun.(node) do
+        nil -> acc
+        "" -> acc
+        key -> Map.update(acc, key, [guid], &[guid | &1])
+      end
+    end)
   end
 
   defp remove_indexes(%Graph{} = graph, guid) do
