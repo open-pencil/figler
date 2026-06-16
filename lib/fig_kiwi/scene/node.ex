@@ -13,35 +13,10 @@ defmodule FigKiwi.Scene.Node do
   @source_module Projection.source_module()
   @source_fields Projection.source_fields()
   @parent_index_source_fields Projection.parent_index_source_fields()
+  @field_names Projection.field_names()
 
   @enforce_keys [:guid, :node_type]
-  defstruct [
-    :guid,
-    :node_type,
-    :name,
-    :parent_guid,
-    :position,
-    :size,
-    :transform,
-    :visible,
-    :locked,
-    :opacity,
-    :text,
-    :font_family,
-    :font_style,
-    :font_postscript,
-    :font_size,
-    :text_style_guid,
-    :component_key,
-    :origin_component_key,
-    :fill_style_guid,
-    :stroke_style_guid,
-    :effect_style_guid,
-    :grid_style_guid,
-    :fill_count,
-    :stroke_count,
-    children: nil
-  ]
+  defstruct @field_names ++ [children: nil]
 
   @type t :: %__MODULE__{
           guid: String.t(),
@@ -84,6 +59,12 @@ defmodule FigKiwi.Scene.Node do
   def source_fields, do: @source_fields
 
   @doc """
+  Returns projected scene node field names.
+  """
+  @spec field_names() :: [atom()]
+  def field_names, do: @field_names
+
+  @doc """
   Returns the `ParentIndex` fields flattened into this projection.
   """
   @spec parent_index_source_fields() :: [atom()]
@@ -92,32 +73,6 @@ defmodule FigKiwi.Scene.Node do
   @doc false
   @spec from_map(map()) :: t()
   def from_map(map) when is_map(map) do
-    struct!(
-      __MODULE__,
-      Map.take(map, [
-        :guid,
-        :node_type,
-        :name,
-        :parent_guid,
-        :position,
-        :size,
-        :transform,
-        :visible,
-        :locked,
-        :text,
-        :font_family,
-        :font_style,
-        :font_postscript,
-        :text_style_guid,
-        :component_key,
-        :origin_component_key,
-        :fill_style_guid,
-        :stroke_style_guid,
-        :effect_style_guid,
-        :grid_style_guid,
-        :fill_count,
-        :stroke_count
-      ])
-    )
+    struct!(__MODULE__, Map.take(map, @field_names))
   end
 end

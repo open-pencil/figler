@@ -18,51 +18,30 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   alias FigKiwi.Scene.Graph.SymbolOverride
   alias FigKiwi.Scene.Node
 
+  @projected_fields Node.field_names()
+
   @enforce_keys [:guid, :node_type]
-  defstruct [
-    :guid,
-    :node_type,
-    :name,
-    :parent_guid,
-    :position,
-    :size,
-    :transform,
-    :visible,
-    :locked,
-    :opacity,
-    :text,
-    :font_family,
-    :font_style,
-    :font_postscript,
-    :font_size,
-    :text_style_guid,
-    :component_key,
-    :origin_component_key,
-    :fill_style_guid,
-    :stroke_style_guid,
-    :effect_style_guid,
-    :grid_style_guid,
-    :fill_count,
-    :stroke_count,
-    :stack_mode,
-    :stack_spacing,
-    :stack_horizontal_padding,
-    :stack_vertical_padding,
-    :stack_padding_right,
-    :stack_padding_bottom,
-    :component_guid,
-    :symbol_id,
-    :override_key,
-    origin: :source,
-    symbol_overrides: [],
-    component_prop_defs: [],
-    component_prop_refs: [],
-    component_prop_assignments: [],
-    derived_symbol_data: [],
-    variable_consumption: [],
-    variable_data_values: [],
-    source: nil
-  ]
+  defstruct @projected_fields ++
+              [
+                :stack_mode,
+                :stack_spacing,
+                :stack_horizontal_padding,
+                :stack_vertical_padding,
+                :stack_padding_right,
+                :stack_padding_bottom,
+                :component_guid,
+                :symbol_id,
+                :override_key,
+                origin: :source,
+                symbol_overrides: [],
+                component_prop_defs: [],
+                component_prop_refs: [],
+                component_prop_assignments: [],
+                derived_symbol_data: [],
+                variable_consumption: [],
+                variable_data_values: [],
+                source: nil
+              ]
 
   @type t :: %__MODULE__{
           guid: GUID.graph_guid(),
@@ -130,9 +109,10 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
     symbol_data = get(node_change, :symbol_data)
     symbol_id = guid(symbol_data && get(symbol_data, :symbol_id))
     node = public_node_from_change(node_change)
+    %__MODULE__{} = seed = from_node(node)
 
     %__MODULE__{
-      from_node(node)
+      seed
       | symbol_id: symbol_id,
         override_key: guid(get(node_change, :override_key)),
         component_guid: symbol_id,
@@ -158,33 +138,13 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   """
   @spec from_node(Node.t()) :: t()
   def from_node(%Node{} = node) do
-    %__MODULE__{
-      guid: GUID.parse!(node.guid),
-      node_type: node.node_type,
-      name: node.name,
-      parent_guid: GUID.parse(node.parent_guid),
-      position: node.position,
-      size: node.size,
-      transform: node.transform,
-      visible: node.visible,
-      locked: node.locked,
-      opacity: node.opacity,
-      text: node.text,
-      font_family: node.font_family,
-      font_style: node.font_style,
-      font_postscript: node.font_postscript,
-      font_size: node.font_size,
-      text_style_guid: node.text_style_guid,
-      component_key: node.component_key,
-      origin_component_key: node.origin_component_key,
-      fill_style_guid: node.fill_style_guid,
-      stroke_style_guid: node.stroke_style_guid,
-      effect_style_guid: node.effect_style_guid,
-      grid_style_guid: node.grid_style_guid,
-      fill_count: node.fill_count,
-      stroke_count: node.stroke_count,
-      source: node
-    }
+    node
+    |> Map.from_struct()
+    |> Map.take(@projected_fields)
+    |> Map.update!(:guid, &GUID.parse!/1)
+    |> Map.update!(:parent_guid, &GUID.parse/1)
+    |> Map.put(:source, node)
+    |> then(&struct!(__MODULE__, &1))
   end
 
   @doc """
@@ -202,32 +162,14 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   """
   @spec to_node(t()) :: Node.t()
   def to_node(%__MODULE__{} = seed) do
-    %Node{
-      guid: GUID.format(seed.guid),
-      node_type: seed.node_type,
-      name: seed.name,
-      parent_guid: GUID.format(seed.parent_guid),
-      position: seed.position,
-      size: seed.size,
-      transform: seed.transform,
-      visible: seed.visible,
-      locked: seed.locked || false,
-      opacity: seed.opacity,
-      text: seed.text || "",
-      font_family: seed.font_family,
-      font_style: seed.font_style,
-      font_postscript: seed.font_postscript,
-      font_size: seed.font_size,
-      text_style_guid: seed.text_style_guid,
-      component_key: seed.component_key,
-      origin_component_key: seed.origin_component_key,
-      fill_style_guid: seed.fill_style_guid,
-      stroke_style_guid: seed.stroke_style_guid,
-      effect_style_guid: seed.effect_style_guid,
-      grid_style_guid: seed.grid_style_guid,
-      fill_count: seed.fill_count,
-      stroke_count: seed.stroke_count
-    }
+    seed
+    |> Map.from_struct()
+    |> Map.take(@projected_fields)
+    |> Map.update!(:guid, &GUID.format/1)
+    |> Map.update!(:parent_guid, &GUID.format/1)
+    |> Map.update!(:locked, &(&1 || false))
+    |> Map.update!(:text, &(&1 || ""))
+    |> then(&struct!(Node, &1))
   end
 
   defp focused_node_changes(node_changes, nil), do: node_changes
