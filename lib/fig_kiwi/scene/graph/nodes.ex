@@ -51,6 +51,7 @@ defmodule FigKiwi.Scene.Graph.Nodes do
         seed_nodes: Map.drop(graph.seed_nodes, guids),
         children: delete_child_refs(graph.children, guid_set),
         clone_index: delete_clone_refs(graph.clone_index, guid_set),
+        clone_source_index: delete_clone_refs(graph.clone_source_index, guid_set),
         provenance: Map.drop(graph.provenance, guids),
         by_type: remove_index_entries(graph.by_type, guid_set),
         by_name: remove_index_entries(graph.by_name, guid_set)

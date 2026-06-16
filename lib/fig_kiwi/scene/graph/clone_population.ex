@@ -160,12 +160,18 @@ defmodule FigKiwi.Scene.Graph.ClonePopulation do
        ) do
     %Graph{} = graph = Nodes.put(graph, clone_guid, cloned_node, cloned_seed)
 
+    root_guid = GUID.root(instance_guid)
+
     %Graph{
       graph
-      | clone_index:
-          Map.put(graph.clone_index, {GUID.root(instance_guid), source_guid}, clone_guid)
+      | clone_index: Map.put(graph.clone_index, {root_guid, source_guid}, clone_guid),
+        clone_source_index:
+          Map.put(graph.clone_source_index, {root_guid, source_leaf(source_guid)}, clone_guid)
     }
   end
+
+  defp source_leaf({:clone, _root_guid, source_path}), do: List.last(source_path)
+  defp source_leaf(source_guid), do: source_guid
 
   defp unresolved(%Graph{} = graph, item),
     do: %Graph{graph | unresolved: [item | graph.unresolved]}

@@ -59,11 +59,13 @@ defmodule FigKiwi.Scene.Graph.Target do
   end
 
   defp resolve_source_guid(graph, instance_guid, source_guid) do
+    root_guid = GUID.root(instance_guid)
+
     cond do
-      clone_guid = Map.get(graph.clone_index, {GUID.root(instance_guid), source_guid}) ->
+      clone_guid = Map.get(graph.clone_index, {root_guid, source_guid}) ->
         {:ok, clone_guid}
 
-      clone_guid = nested_clone(graph, instance_guid, source_guid) ->
+      clone_guid = Map.get(graph.clone_source_index, {root_guid, source_guid}) ->
         {:ok, clone_guid}
 
       Map.has_key?(graph.nodes, source_guid) ->
@@ -72,17 +74,5 @@ defmodule FigKiwi.Scene.Graph.Target do
       true ->
         {:error, :missing_source}
     end
-  end
-
-  defp nested_clone(graph, instance_guid, source_guid) do
-    root_guid = GUID.root(instance_guid)
-
-    Enum.find_value(graph.clone_index, fn
-      {{^root_guid, {:clone, _source_root, source_path}}, clone_guid} ->
-        if List.last(source_path) == source_guid, do: clone_guid
-
-      _entry ->
-        nil
-    end)
   end
 end

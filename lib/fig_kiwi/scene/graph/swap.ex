@@ -167,7 +167,12 @@ defmodule FigKiwi.Scene.Graph.Swap do
   defp put_index(%Graph{} = graph, instance_guid, source_guid, clone_guid) do
     %Graph{
       graph
-      | clone_index: Map.put(graph.clone_index, {instance_guid, source_guid}, clone_guid)
+      | clone_index: Map.put(graph.clone_index, {instance_guid, source_guid}, clone_guid),
+        clone_source_index:
+          Map.put(graph.clone_source_index, {instance_guid, source_leaf(source_guid)}, clone_guid)
     }
   end
+
+  defp source_leaf({:clone, _root_guid, source_path}), do: List.last(source_path)
+  defp source_leaf(source_guid), do: source_guid
 end

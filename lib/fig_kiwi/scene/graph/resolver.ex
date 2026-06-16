@@ -45,6 +45,7 @@ defmodule FigKiwi.Scene.Graph.Resolver do
       by_type: group_guids(seed_nodes, & &1.node_type),
       by_name: group_guids(seed_nodes, & &1.name),
       clone_index: %{},
+      clone_source_index: %{},
       component_prop_refs: ComponentProps.index(seed_nodes),
       provenance: Provenance.initial(seed_nodes),
       unresolved: [],
