@@ -7,8 +7,8 @@ defmodule FigKiwi.Scene.ProjectionTest do
   alias FigKiwi.Scene.Projection
 
   test "projection specs stay aligned with node and seed structs" do
-    node_fields = Map.keys(%Node{}) -- [:__struct__]
-    seed_fields = Map.keys(%SeedNode{}) -- [:__struct__]
+    node_fields = Map.keys(Node.__struct__()) -- [:__struct__]
+    seed_fields = Map.keys(SeedNode.__struct__()) -- [:__struct__]
 
     seed_projection_fields =
       Enum.map(SeedProjection.struct_fields(), fn
