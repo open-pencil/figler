@@ -21,6 +21,18 @@ defmodule FigKiwi.Test.GraphBuilder do
   def symbol_override(guid_path, fields),
     do: %SymbolOverride{guid_path: guid_path, fields: fields}
 
+  def variable_ref(field, value) do
+    struct(FigKiwi.Schema.VariableDataMapEntry,
+      variable_field: field,
+      variable_data:
+        struct(FigKiwi.Schema.VariableData,
+          data_type: :float,
+          resolved_data_type: :float,
+          value: struct(FigKiwi.Schema.VariableAnyValue, float_value: value)
+        )
+    )
+  end
+
   def resolve(seed_nodes, opts \\ []) do
     stages = Keyword.get(opts, :stages, [:populate_instances, :symbol_overrides])
     opts = Keyword.put_new(opts, :resource, make_ref())
