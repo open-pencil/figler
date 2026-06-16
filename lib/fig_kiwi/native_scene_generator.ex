@@ -1,6 +1,7 @@
 defmodule FigKiwi.NativeSceneGenerator do
   @moduledoc false
 
+  alias FigKiwi.NativeSceneGenerator.Focus
   alias FigKiwi.Scene.Projection
   alias FigKiwi.Scene.Projection.Native, as: ProjectionNative
   alias KiwiCodec.Schema
@@ -25,7 +26,8 @@ defmodule FigKiwi.NativeSceneGenerator do
       node_type_name_arms: node_type_name_arms(definition_map),
       sparse_decoders: Enum.map(schema.definitions, &sparse_definition(&1, definition_map)),
       skip_decoders: Enum.map(schema.definitions, &skip_definition(&1, definition_map)),
-      graph_focus_decoders: graph_focus_decoders(definition_map)
+      graph_focus_decoders:
+        Focus.render(definition_map, &skip_message_arm/2, &render_scene_template/2)
     ] ++ scene_splices(definition_map)
   end
 
@@ -189,112 +191,6 @@ defmodule FigKiwi.NativeSceneGenerator do
       name: name,
       splice: [skip_field_arms: Enum.map(fields, &skip_message_arm(&1, definition_map))]
     )
-  end
-
-  defp graph_focus_decoders(definition_map) do
-    message_fields = definition_map |> Map.fetch!("Message") |> then(& &1.fields)
-    node_fields = definition_map |> Map.fetch!("NodeChange") |> then(& &1.fields)
-    symbol_fields = definition_map |> Map.fetch!("SymbolData") |> then(& &1.fields)
-
-    prop_assignment_fields =
-      definition_map |> Map.fetch!("ComponentPropAssignment") |> then(& &1.fields)
-
-    prop_value_fields = definition_map |> Map.fetch!("ComponentPropValue") |> then(& &1.fields)
-
-    message_skip_arms =
-      message_fields
-      |> Enum.reject(&(&1.name == "nodeChanges"))
-      |> Enum.map(&skip_message_arm(&1, definition_map))
-
-    node_focus_arms =
-      Enum.map(node_fields, fn field ->
-        case field.name do
-          "guid" ->
-            graph_focus_arm(field, "guid = Some(graph_focus_read_guid(decoder)?);")
-
-          "parentIndex" ->
-            graph_focus_arm(field, "parent_guid = Some(graph_focus_read_parent_guid(decoder)?);")
-
-          "symbolData" ->
-            graph_focus_arm(field, [
-              "let data = graph_focus_read_symbol_data(decoder)?;",
-              "symbol_id = data.symbol_id;",
-              "graph_focus_extend_refs(&mut refs, data.refs);"
-            ])
-
-          "overriddenSymbolID" ->
-            graph_focus_arm(
-              field,
-              "graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);"
-            )
-
-          "componentPropAssignments" ->
-            graph_focus_arm(field, [
-              "let len = decoder.read_var_uint()? as usize;",
-              "for _ in 0..len { let next = graph_focus_read_component_prop_assignment(decoder)?; graph_focus_extend_refs(&mut refs, next); }"
-            ])
-
-          _other ->
-            skip_message_arm(field, definition_map)
-        end
-      end)
-
-    symbol_focus_arms =
-      symbol_fields
-      |> Enum.reject(&(&1.name in ["symbolID", "symbolOverrides"]))
-      |> Enum.map(&skip_message_arm(&1, definition_map))
-
-    prop_assignment_arms =
-      graph_focus_prop_assignment_arms(prop_assignment_fields, definition_map)
-
-    prop_value_arms = graph_focus_prop_value_arms(prop_value_fields, definition_map)
-
-    render_scene_template("graph_focus_decoders.rs",
-      splice: [
-        message_skip_arms: message_skip_arms,
-        node_focus_arms: node_focus_arms,
-        symbol_focus_arms: symbol_focus_arms,
-        prop_assignment_arms: prop_assignment_arms,
-        prop_value_arms: prop_value_arms
-      ]
-    )
-  end
-
-  defp graph_focus_arm(field, lines) do
-    Rust.arm(
-      Integer.to_string(field.value),
-      lines |> List.wrap() |> Rust.block() |> Rust.to_fragment()
-    )
-  end
-
-  defp graph_focus_prop_assignment_arms(fields, definition_map) do
-    Enum.map(fields, fn field ->
-      case field.name do
-        "value" ->
-          graph_focus_arm(field, [
-            "let next = graph_focus_read_component_prop_value(decoder)?;",
-            "graph_focus_extend_refs(&mut refs, next);"
-          ])
-
-        _other ->
-          skip_message_arm(field, definition_map)
-      end
-    end)
-  end
-
-  defp graph_focus_prop_value_arms(fields, definition_map) do
-    Enum.map(fields, fn field ->
-      case field.name do
-        "guidValue" ->
-          graph_focus_arm(
-            field,
-            "graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);"
-          )
-
-        _other ->
-          skip_message_arm(field, definition_map)
-      end
-    end)
   end
 
   defp scene_splices(definition_map) do

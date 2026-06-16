@@ -8,6 +8,10 @@ unless Code.ensure_loaded?(FigKiwi.Scene.Projection.Native) do
   Code.require_file("lib/fig_kiwi/scene/projection/native.ex")
 end
 
+unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator.Focus) do
+  Code.require_file("lib/fig_kiwi/native_scene_generator/focus.ex")
+end
+
 unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator) do
   Code.require_file("lib/fig_kiwi/native_scene_generator.ex")
 end
