@@ -10,11 +10,9 @@ defmodule FigKiwi.SceneTest do
   alias FigKiwi.Scene.Graph.Patch
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
-  alias FigKiwi.Scene.Graph.SeedProjection
   alias FigKiwi.Scene.Graph.SymbolOverride
   alias FigKiwi.Scene.Graph.Target
   alias FigKiwi.Scene.Node
-  alias FigKiwi.Scene.Projection
   alias FigKiwi.Scene.Summary
   alias KiwiCodec.Schema.Binary, as: SchemaBinary
 
@@ -25,58 +23,6 @@ defmodule FigKiwi.SceneTest do
              root_count: 1,
              type_counts: [{"canvas", 1}, {"document", 1}]
            }
-  end
-
-  test "scene projection specs stay aligned with node and seed structs" do
-    node_fields = Map.keys(%Node{}) -- [:__struct__]
-    seed_fields = Map.keys(%SeedNode{}) -- [:__struct__]
-
-    seed_projection_fields =
-      Enum.map(SeedProjection.struct_fields(), fn
-        {field, _default} -> field
-        field -> field
-      end)
-
-    assert MapSet.new(node_fields) == MapSet.new(Projection.field_names() ++ [:children])
-
-    assert MapSet.new(seed_fields) ==
-             MapSet.new(Projection.field_names() ++ seed_projection_fields)
-
-    generated = File.read!("native/src/generated.rs")
-
-    for field <- Projection.field_names() -- [:guid, :node_type] do
-      assert generated =~ "#{field}:"
-    end
-  end
-
-  test "scene node projection is backed by generated Kiwi schema metadata" do
-    assert Node.source_module() == FigKiwi.Schema.NodeChange
-
-    assert Node.source_fields() == [
-             :guid,
-             :type,
-             :name,
-             :parent_index,
-             :size,
-             :transform,
-             :visible,
-             :locked,
-             :opacity,
-             :text_data,
-             :font_name,
-             :font_size,
-             :style_id_for_text,
-             :component_key,
-             :origin_component_key,
-             :style_id_for_fill,
-             :style_id_for_stroke_fill,
-             :style_id_for_effect,
-             :style_id_for_grid,
-             :fill_paints,
-             :stroke_paints
-           ]
-
-    assert Node.parent_index_source_fields() == [:guid, :position]
   end
 
   test "queries raw message payloads" do

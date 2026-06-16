@@ -2,6 +2,7 @@ defmodule FigKiwi.NativeSceneGenerator do
   @moduledoc false
 
   alias FigKiwi.Scene.Projection
+  alias FigKiwi.Scene.Projection.Native, as: ProjectionNative
   alias KiwiCodec.Schema
   alias KiwiCodec.Schema.Definition
   alias RustQ.Rust
@@ -362,14 +363,14 @@ defmodule FigKiwi.NativeSceneGenerator do
 
   defp scene_optional_struct_fields do
     Enum.map(scene_optional_fields(), fn field ->
-      "#{field}: #{Projection.rust_type(field)},"
+      "#{field}: #{ProjectionNative.rust_type(field)},"
     end)
   end
 
   defp scene_record_struct_fields do
     Enum.map(scene_optional_fields(), fn
       :parent_guid -> "parent_guid: Option<SceneGuid>,"
-      field -> "#{field}: #{Projection.rust_type(field)},"
+      field -> "#{field}: #{ProjectionNative.rust_type(field)},"
     end)
   end
 
@@ -382,7 +383,7 @@ defmodule FigKiwi.NativeSceneGenerator do
           field == :parent_guid ->
             "node.parent_guid.map(|guid| guid.to_string())"
 
-          Projection.rust_copy?(field) ->
+          ProjectionNative.rust_copy?(field) ->
             "node.#{name}"
 
           true ->
@@ -481,7 +482,7 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp scene_attr_lookup do
     entries =
       scene_optional_fields()
-      |> Enum.flat_map(&Projection.xpath_attr_entries/1)
+      |> Enum.flat_map(&ProjectionNative.xpath_attr_entries/1)
 
     entries
     |> Enum.with_index()
