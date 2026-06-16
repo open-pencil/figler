@@ -53,25 +53,14 @@ defmodule FigKiwi.Scene.Graph.Nodes do
     guids = Enum.flat_map(root_guids, &subtree(graph, &1))
     guid_set = MapSet.new(guids)
 
-    graph = %Graph{
+    %Graph{
       graph
       | nodes: Map.drop(graph.nodes, guids),
         seed_nodes: Map.drop(graph.seed_nodes, guids),
         children: delete_child_refs(graph.children, guid_set),
         provenance: Map.drop(graph.provenance, guids)
     }
-
-    if Keyword.get(opts, :indexes, true) do
-      %Graph{
-        graph
-        | clone_index: delete_clone_refs(graph.clone_index, guid_set),
-          clone_source_index: delete_clone_refs(graph.clone_source_index, guid_set),
-          by_type: remove_index_entries(graph.by_type, guid_set),
-          by_name: remove_index_entries(graph.by_name, guid_set)
-      }
-    else
-      graph
-    end
+    |> maybe_remove_index_entries(guid_set, opts)
   end
 
   @doc """
@@ -83,14 +72,17 @@ defmodule FigKiwi.Scene.Graph.Nodes do
     guids = Enum.flat_map(root_guids, &subtree(graph, &1))
     guid_set = MapSet.new(guids)
 
-    graph = %Graph{
+    %Graph{
       graph
       | nodes: Map.drop(graph.nodes, guids),
         seed_nodes: Map.drop(graph.seed_nodes, guids),
         children: graph.children |> Map.drop(guids) |> Map.put(parent_guid, []),
         provenance: Map.drop(graph.provenance, guids)
     }
+    |> maybe_remove_index_entries(guid_set, opts)
+  end
 
+  defp maybe_remove_index_entries(%Graph{} = graph, guid_set, opts) do
     if Keyword.get(opts, :indexes, true) do
       %Graph{
         graph

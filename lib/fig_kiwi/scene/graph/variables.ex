@@ -38,17 +38,20 @@ defmodule FigKiwi.Scene.Graph.Variables do
 
   defp apply_variable_refs(%Graph{} = graph, _seed, [], _mode), do: {graph, [], []}
 
-  defp apply_variable_refs(%Graph{} = graph, seed, refs, mode) do
+  defp apply_variable_refs(%Graph{} = graph, seed, refs, :preserve) do
     Enum.reduce(refs, {graph, [], []}, fn ref, {acc, applied, unresolved} ->
       case apply_variable_ref(acc, seed, ref) do
-        {:ok, next, item} ->
-          {next, [item | applied], unresolved}
+        {:ok, next, item} -> {next, [item | applied], unresolved}
+        :unknown -> {acc, applied, [{:variable_ref_preserved, ref} | unresolved]}
+      end
+    end)
+  end
 
-        :unknown when mode == :preserve ->
-          {acc, applied, [{:variable_ref_preserved, ref} | unresolved]}
-
-        :unknown ->
-          {acc, applied, unresolved}
+  defp apply_variable_refs(%Graph{} = graph, seed, refs, _mode) do
+    Enum.reduce(refs, {graph, [], []}, fn ref, {acc, applied, unresolved} ->
+      case apply_variable_ref(acc, seed, ref) do
+        {:ok, next, item} -> {next, [item | applied], unresolved}
+        :unknown -> {acc, applied, unresolved}
       end
     end)
   end

@@ -12,6 +12,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
 
   alias FigKiwi.Scene.Graph.GUID
   alias FigKiwi.Scene.Graph.SeedProjection
+  alias FigKiwi.Scene.Graph.Value
   alias FigKiwi.Scene.Node
   alias FigKiwi.Scene.Projection
 
@@ -41,7 +42,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   @spec from_node_change(FigKiwi.Schema.NodeChange.t() | map()) :: t()
   def from_node_change(node_change) when is_map(node_change) do
     symbol_data = get(node_change, :symbol_data)
-    symbol_id = guid(symbol_data && get(symbol_data, :symbol_id))
+    symbol_id = Value.guid(symbol_data && get(symbol_data, :symbol_id))
     node = public_node_from_change(node_change)
     %__MODULE__{} = seed = from_node(node)
 
@@ -97,7 +98,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   defp focused_node_changes(node_changes, []), do: node_changes
 
   defp focused_node_changes(node_changes, focus) do
-    node_by_guid = Map.new(node_changes, &{guid(get(&1, :guid)), &1})
+    node_by_guid = Map.new(node_changes, &{Value.guid(get(&1, :guid)), &1})
     children = node_change_children(node_changes)
 
     focused_guids =
@@ -105,15 +106,15 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
       |> Enum.reduce(MapSet.new(), &collect_node_subtree(&2, &1, node_by_guid, children))
       |> collect_node_components(node_by_guid, children)
 
-    Enum.filter(node_changes, &MapSet.member?(focused_guids, guid(get(&1, :guid))))
+    Enum.filter(node_changes, &MapSet.member?(focused_guids, Value.guid(get(&1, :guid))))
   end
 
   defp node_change_children(node_changes) do
     Enum.reduce(node_changes, %{}, fn node_change, children ->
       parent_index = get(node_change, :parent_index)
 
-      parent_guid = parent_index && guid(get(parent_index, :guid))
-      node_guid = guid(get(node_change, :guid))
+      parent_guid = parent_index && Value.guid(get(parent_index, :guid))
+      node_guid = Value.guid(get(node_change, :guid))
 
       if parent_guid do
         Map.update(children, parent_guid, [node_guid], &[node_guid | &1])
@@ -128,7 +129,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
       Enum.reduce(guids, guids, fn guid, acc ->
         node_change = Map.get(node_by_guid, guid)
         symbol_data = node_change && get(node_change, :symbol_data)
-        component_guid = symbol_data && guid(get(symbol_data, :symbol_id))
+        component_guid = symbol_data && Value.guid(get(symbol_data, :symbol_id))
 
         if is_tuple(component_guid) do
           collect_node_subtree(acc, component_guid, node_by_guid, children)
@@ -166,7 +167,7 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   end
 
   defp projected_value(%{name: :guid}, node_change),
-    do: GUID.format(guid(get(node_change, :guid)))
+    do: GUID.format(Value.guid(get(node_change, :guid)))
 
   defp projected_value(%{name: :node_type}, node_change),
     do: node_change |> get(:type) |> to_string() |> Macro.underscore()
@@ -195,29 +196,19 @@ defmodule FigKiwi.Scene.Graph.SeedNode do
   end
 
   defp parent_index_value(:guid, nil), do: nil
-  defp parent_index_value(:guid, parent_index), do: GUID.format(guid(get(parent_index, :guid)))
+
+  defp parent_index_value(:guid, parent_index),
+    do: GUID.format(Value.guid(get(parent_index, :guid)))
+
   defp parent_index_value(field, parent_index), do: parent_index && get(parent_index, field)
 
-  defp projected_node_change_value(value, %{value: :vector}), do: vector(value)
-  defp projected_node_change_value(value, %{value: :matrix}), do: matrix(value)
+  defp projected_node_change_value(value, %{value: :vector}), do: Value.vector(value)
+  defp projected_node_change_value(value, %{value: :matrix}), do: Value.matrix(value)
   defp projected_node_change_value(value, %{value: :count}), do: count(value)
   defp projected_node_change_value(value, _projection), do: value
 
-  defp guid(nil), do: nil
-
-  defp guid(%{session_id: session_id, local_id: local_id}), do: {session_id, local_id}
-
-  defp vector(nil), do: nil
-  defp vector(%{x: x, y: y}), do: %{x: x, y: y}
-
-  defp matrix(nil), do: nil
-
-  defp matrix(%{m00: m00, m01: m01, m02: m02, m10: m10, m11: m11, m12: m12}) do
-    %{m00: m00, m01: m01, m02: m02, m10: m10, m11: m11, m12: m12}
-  end
-
   defp style_guid(nil), do: nil
-  defp style_guid(%{guid: guid}), do: guid |> guid() |> GUID.format()
+  defp style_guid(%{guid: guid}), do: guid |> Value.guid() |> GUID.format()
   defp style_guid(_style_id), do: nil
 
   defp count(nil), do: nil

@@ -7,6 +7,7 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
   alias FigKiwi.Scene.Graph.DerivedSymbolData
   alias FigKiwi.Scene.Graph.SeedProjection
   alias FigKiwi.Scene.Graph.SymbolOverride
+  alias FigKiwi.Scene.Graph.Value
 
   def metadata(node_change) do
     SeedProjection.resolver_metadata_fields()
@@ -16,7 +17,7 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
   defp value(field, node_change),
     do: field |> SeedProjection.value_kind() |> value_for(node_change)
 
-  defp value_for(:guid, node_change), do: guid(get(node_change, :override_key))
+  defp value_for(:guid, node_change), do: Value.guid(get(node_change, :override_key))
 
   defp value_for(:symbol_overrides, node_change),
     do: node_change |> get(:symbol_data) |> symbol_overrides()
@@ -45,7 +46,7 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
     Enum.map(overrides, fn override ->
       %SymbolOverride{
         guid_path: guid_path(get(override, :guid_path)),
-        overridden_symbol_id: guid(get(override, :overridden_symbol_id)),
+        overridden_symbol_id: Value.guid(get(override, :overridden_symbol_id)),
         fields: override_fields(override),
         component_prop_assignments:
           component_prop_assignments(get(override, :component_prop_assignments)),
@@ -62,8 +63,8 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
       :text,
       get(override, :text_data) && get(get(override, :text_data), :characters)
     )
-    |> put_present(:size, vector(get(override, :size)))
-    |> put_present(:transform, matrix(get(override, :transform)))
+    |> put_present(:size, Value.vector(get(override, :size)))
+    |> put_present(:transform, Value.matrix(get(override, :transform)))
   end
 
   defp component_prop_defs(nil), do: []
@@ -71,7 +72,7 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
   defp component_prop_defs(defs) do
     Enum.map(defs, fn defn ->
       %ComponentPropDef{
-        id: guid(get(defn, :id)),
+        id: Value.guid(get(defn, :id)),
         name: get(defn, :name),
         type: get(defn, :type),
         initial_value: component_prop_value(get(defn, :initial_value))
@@ -84,7 +85,7 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
   defp component_prop_refs(refs) do
     Enum.map(refs, fn ref ->
       %ComponentPropRef{
-        def_id: guid(get(ref, :def_id)),
+        def_id: Value.guid(get(ref, :def_id)),
         field: get(ref, :component_prop_node_field) || get(ref, :node_field)
       }
     end)
@@ -95,7 +96,7 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
   defp component_prop_assignments(assignments) do
     Enum.map(assignments, fn assignment ->
       %ComponentPropAssignment{
-        def_id: guid(get(assignment, :def_id)),
+        def_id: Value.guid(get(assignment, :def_id)),
         value: component_prop_value(get(assignment, :value)),
         variable_value: variable_data(get(assignment, :var_value))
       }
@@ -108,8 +109,8 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
     Enum.map(values, fn value ->
       %DerivedSymbolData{
         guid_path: guid_path(get(value, :guid_path)),
-        size: vector(get(value, :size)),
-        transform: matrix(get(value, :transform)),
+        size: Value.vector(get(value, :size)),
+        transform: Value.matrix(get(value, :transform)),
         font_size: get(value, :font_size),
         line_height: get(value, :line_height),
         letter_spacing: get(value, :letter_spacing),
@@ -127,9 +128,9 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
     cond do
       is_boolean(get(value, :bool_value)) -> {:bool, get(value, :bool_value)}
       get(value, :text_value) -> {:text, get(get(value, :text_value), :characters)}
-      get(value, :guid_value) -> {:guid, guid(get(value, :guid_value))}
+      get(value, :guid_value) -> {:guid, Value.guid(get(value, :guid_value))}
       is_number(get(value, :float_value)) -> {:float, get(value, :float_value)}
-      get(value, :vector_value) -> {:vector, vector(get(value, :vector_value))}
+      get(value, :vector_value) -> {:vector, Value.vector(get(value, :vector_value))}
       true -> value
     end
   end
@@ -144,20 +145,8 @@ defmodule FigKiwi.Scene.Graph.SeedExtraction do
   defp put_present(map, _key, nil), do: map
   defp put_present(map, key, value), do: Map.put(map, key, value)
 
-  defp guid(nil), do: nil
-  defp guid(%{session_id: session_id, local_id: local_id}), do: {session_id, local_id}
-
   defp guid_path(nil), do: []
-  defp guid_path(%{guids: guids}) when is_list(guids), do: Enum.map(guids, &guid/1)
-
-  defp vector(nil), do: nil
-  defp vector(%{x: x, y: y}), do: %{x: x, y: y}
-
-  defp matrix(nil), do: nil
-
-  defp matrix(%{m00: m00, m01: m01, m02: m02, m10: m10, m11: m11, m12: m12}) do
-    %{m00: m00, m01: m01, m02: m02, m10: m10, m11: m11, m12: m12}
-  end
+  defp guid_path(%{guids: guids}) when is_list(guids), do: Enum.map(guids, &Value.guid/1)
 
   defp get(nil, _key), do: nil
   defp get(map, key) when is_map(map), do: Map.get(map, key)

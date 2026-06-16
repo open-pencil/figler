@@ -414,8 +414,9 @@ defmodule FigKiwi.NativeSceneGenerator do
       |> Map.new(&{&1.name, &1.value})
 
     Projection.fields()
-    |> Enum.reject(&Map.get(&1, :required?, false))
-    |> Enum.reject(&match?(%{source: {:parent_index, _field}}, &1))
+    |> Enum.reject(
+      &(Map.get(&1, :required?, false) or match?(%{source: {:parent_index, _field}}, &1))
+    )
     |> Enum.map(&scene_decode_arm_for(&1, fields_by_source))
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
