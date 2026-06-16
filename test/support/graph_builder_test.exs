@@ -1,6 +1,9 @@
 defmodule FigKiwi.Test.GraphBuilder do
   @moduledoc false
 
+  alias FigKiwi.Scene.Graph.ComponentPropAssignment
+  alias FigKiwi.Scene.Graph.ComponentPropRef
+  alias FigKiwi.Scene.Graph.DerivedSymbolData
   alias FigKiwi.Scene.Graph.Resolver
   alias FigKiwi.Scene.Graph.SeedNode
   alias FigKiwi.Scene.Graph.SymbolOverride
@@ -20,6 +23,20 @@ defmodule FigKiwi.Test.GraphBuilder do
 
   def symbol_override(guid_path, fields),
     do: %SymbolOverride{guid_path: guid_path, fields: fields}
+
+  def symbol_swap(guid_path, component_guid, attrs \\ []) do
+    struct!(
+      SymbolOverride,
+      Keyword.merge([guid_path: guid_path, overridden_symbol_id: component_guid], attrs)
+    )
+  end
+
+  def prop_ref(def_id, field), do: %ComponentPropRef{def_id: def_id, field: field}
+  def prop_assignment(def_id, value), do: %ComponentPropAssignment{def_id: def_id, value: value}
+
+  def derived_symbol_data(guid_path, attrs \\ []) do
+    struct!(DerivedSymbolData, Keyword.put(attrs, :guid_path, guid_path))
+  end
 
   def variable_ref(field, value) do
     struct(FigKiwi.Schema.VariableDataMapEntry,
