@@ -347,7 +347,7 @@ defmodule FigKiwi.NativeSceneGenerator do
         |> Enum.reject(&(&1.value == 1))
         |> Enum.map(&skip_message_arm(&1, definition_map)),
       scene_query_node_fields: scene_optional_struct_fields(),
-      scene_record_fields: scene_optional_struct_fields(),
+      scene_record_fields: scene_record_struct_fields(),
       scene_query_node_build_fields: scene_node_build_fields(),
       scene_record_build_fields: scene_record_build_fields(),
       scene_decode_locals: scene_decode_locals(),
@@ -367,6 +367,13 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp scene_optional_struct_fields do
     Enum.map(scene_optional_fields(), fn field ->
       "#{field}: #{scene_rust_field_type(field)},"
+    end)
+  end
+
+  defp scene_record_struct_fields do
+    Enum.map(scene_optional_fields(), fn
+      :parent_guid -> "parent_guid: Option<SceneGuid>,"
+      field -> "#{field}: #{scene_rust_field_type(field)},"
     end)
   end
 
