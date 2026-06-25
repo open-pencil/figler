@@ -155,1946 +155,1512 @@ fn scene_node_type_name(value: u32) -> &'static str {
         _ => "unknown",
     }
 }
+static MESSAGE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static MESSAGE_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
 fn decode_message_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "join_start").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_0, "join_start").encode(env)),
+        1i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_1, "node_changes").encode(env)),
+        2i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_2, "user_changes").encode(env)),
+        3i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_3, "join_end").encode(env)),
+        4i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_4, "signal").encode(env)),
+        5i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_5, "style").encode(env)),
+        6i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_6, "style_set").encode(env)),
+        7i64 => {
+            Ok(
+                cached_atom(env, &MESSAGE_TYPE_ATOM_7, "join_start_skip_reload")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "node_changes").encode(env))
+        8i64 => {
+            Ok(
+                cached_atom(env, &MESSAGE_TYPE_ATOM_8, "notify_should_upgrade")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "user_changes").encode(env))
+        9i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_9, "upgrade_done").encode(env)),
+        10i64 => {
+            Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_10, "upgrade_refresh").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "join_end").encode(env))
+        11i64 => {
+            Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_11, "scene_graph_query").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "signal").encode(env))
+        12i64 => {
+            Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_12, "scene_graph_reply").encode(env))
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "style").encode(env))
+        13i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_13, "diff").encode(env)),
+        14i64 => {
+            Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_14, "client_broadcast").encode(env))
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "style_set").encode(env))
+        15i64 => {
+            Ok(
+                cached_atom(env, &MESSAGE_TYPE_ATOM_15, "join_start_journaled")
+                    .encode(env),
+            )
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "join_start_skip_reload").encode(env))
+        16i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_16, "stream_start").encode(env)),
+        17i64 => Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_17, "stream_end").encode(env)),
+        18i64 => {
+            Ok(
+                cached_atom(env, &MESSAGE_TYPE_ATOM_18, "interactive_slide_change")
+                    .encode(env),
+            )
         }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "notify_should_upgrade").encode(env))
+        19i64 => {
+            Ok(
+                cached_atom(env, &MESSAGE_TYPE_ATOM_19, "reconnect_scene_graph_query")
+                    .encode(env),
+            )
         }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "upgrade_done").encode(env))
+        20i64 => {
+            Ok(
+                cached_atom(env, &MESSAGE_TYPE_ATOM_20, "reconnect_scene_graph_reply")
+                    .encode(env),
+            )
         }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "upgrade_refresh").encode(env))
+        21i64 => {
+            Ok(
+                cached_atom(env, &MESSAGE_TYPE_ATOM_21, "join_end_incremental_reconnect")
+                    .encode(env),
+            )
         }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "scene_graph_query").encode(env))
+        22i64 => {
+            Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_22, "node_status_change").encode(env))
         }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "scene_graph_reply").encode(env))
+        23i64 => {
+            Ok(cached_atom(env, &MESSAGE_TYPE_ATOM_23, "client_rendered").encode(env))
         }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "diff").encode(env))
+        24i64 => {
+            Ok(
+                cached_atom(env, &MESSAGE_TYPE_ATOM_24, "buzz_approval_change")
+                    .encode(env),
+            )
         }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "client_broadcast").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "join_start_journaled").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "stream_start").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "stream_end").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "interactive_slide_change").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "reconnect_scene_graph_query").encode(env))
-        }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "reconnect_scene_graph_reply").encode(env))
-        }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "join_end_incremental_reconnect").encode(env))
-        }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "node_status_change").encode(env))
-        }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "client_rendered").encode(env))
-        }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "buzz_approval_change").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static AXIS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static AXIS_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_axis_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "x").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "y").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &AXIS_ATOM_0, "x").encode(env)),
+        1i64 => Ok(cached_atom(env, &AXIS_ATOM_1, "y").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static ACCESS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ACCESS_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_access_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "read_only").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "read_write").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &ACCESS_ATOM_0, "read_only").encode(env)),
+        1i64 => Ok(cached_atom(env, &ACCESS_ATOM_1, "read_write").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static NODE_PHASE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static NODE_PHASE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_node_phase_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "created").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "removed").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &NODE_PHASE_ATOM_0, "created").encode(env)),
+        1i64 => Ok(cached_atom(env, &NODE_PHASE_ATOM_1, "removed").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static WINDING_RULE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static WINDING_RULE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_winding_rule_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "nonzero").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "odd").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &WINDING_RULE_ATOM_0, "nonzero").encode(env)),
+        1i64 => Ok(cached_atom(env, &WINDING_RULE_ATOM_1, "odd").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static NODE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_30: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_31: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_32: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_33: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_34: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_35: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_36: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_37: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_38: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_39: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_40: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_41: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_42: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_43: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_44: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_45: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_46: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_47: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_48: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_49: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_50: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_51: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_52: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_53: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_54: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_55: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_56: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_57: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_58: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_59: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_60: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_61: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_62: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_63: OnceLock<Atom> = OnceLock::new();
+static NODE_TYPE_ATOM_64: OnceLock<Atom> = OnceLock::new();
 fn decode_node_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "document").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "canvas").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "group").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "frame").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "boolean_operation").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "vector").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "star").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "line").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "ellipse").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "rectangle").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "regular_polygon").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "rounded_rectangle").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "text").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "slice").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "symbol").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "instance").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "sticky").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "shape_with_text").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "connector").encode(env))
-        }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "code_block").encode(env))
-        }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "widget").encode(env))
-        }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "stamp").encode(env))
-        }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "media").encode(env))
-        }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "highlight").encode(env))
-        }
-        25 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "section").encode(env))
-        }
-        26 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "section_overlay").encode(env))
-        }
-        27 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "washi_tape").encode(env))
-        }
-        28 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "variable").encode(env))
-        }
-        29 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "table").encode(env))
-        }
-        30 => {
-            static ATOM_30: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_30, "table_cell").encode(env))
-        }
-        31 => {
-            static ATOM_31: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_31, "variable_set").encode(env))
-        }
-        32 => {
-            static ATOM_32: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_32, "slide").encode(env))
-        }
-        33 => {
-            static ATOM_33: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_33, "assisted_layout").encode(env))
-        }
-        34 => {
-            static ATOM_34: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_34, "interactive_slide_element").encode(env))
-        }
-        35 => {
-            static ATOM_35: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_35, "variable_override").encode(env))
-        }
-        36 => {
-            static ATOM_36: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_36, "module").encode(env))
-        }
-        37 => {
-            static ATOM_37: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_37, "slide_grid").encode(env))
-        }
-        38 => {
-            static ATOM_38: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_38, "slide_row").encode(env))
-        }
-        39 => {
-            static ATOM_39: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_39, "responsive_set").encode(env))
-        }
-        40 => {
-            static ATOM_40: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_40, "code_component").encode(env))
-        }
-        41 => {
-            static ATOM_41: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_41, "text_path").encode(env))
-        }
-        42 => {
-            static ATOM_42: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_42, "code_instance").encode(env))
-        }
-        43 => {
-            static ATOM_43: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_43, "code_library").encode(env))
-        }
-        44 => {
-            static ATOM_44: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_44, "code_file").encode(env))
-        }
-        45 => {
-            static ATOM_45: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_45, "code_layer").encode(env))
-        }
-        46 => {
-            static ATOM_46: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_46, "brush").encode(env))
-        }
-        47 => {
-            static ATOM_47: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_47, "managed_string").encode(env))
-        }
-        48 => {
-            static ATOM_48: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_48, "transform").encode(env))
-        }
-        49 => {
-            static ATOM_49: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_49, "cms_rich_text").encode(env))
-        }
-        50 => {
-            static ATOM_50: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_50, "repeater").encode(env))
-        }
-        51 => {
-            static ATOM_51: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_51, "jsx").encode(env))
-        }
-        52 => {
-            static ATOM_52: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_52, "embedded_prototype").encode(env))
-        }
-        53 => {
-            static ATOM_53: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_53, "react_fiber").encode(env))
-        }
-        54 => {
-            static ATOM_54: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_54, "responsive_node_set").encode(env))
-        }
-        55 => {
-            static ATOM_55: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_55, "webpage").encode(env))
-        }
-        56 => {
-            static ATOM_56: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_56, "keyframe").encode(env))
-        }
-        57 => {
-            static ATOM_57: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_57, "keyframe_track").encode(env))
-        }
-        58 => {
-            static ATOM_58: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_58, "animation_preset_instance").encode(env))
-        }
-        59 => {
-            static ATOM_59: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_59, "code_embed").encode(env))
-        }
-        60 => {
-            static ATOM_60: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_60, "binary_file").encode(env))
-        }
-        61 => {
-            static ATOM_61: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_61, "spec_block").encode(env))
-        }
-        62 => {
-            static ATOM_62: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_62, "tool_instance").encode(env))
-        }
-        63 => {
-            static ATOM_63: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_63, "custom_effect_instance").encode(env))
-        }
-        64 => {
-            static ATOM_64: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_64, "native_code_layer_instance").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_1, "document").encode(env)),
+        2i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_2, "canvas").encode(env)),
+        3i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_3, "group").encode(env)),
+        4i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_4, "frame").encode(env)),
+        5i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_5, "boolean_operation").encode(env)),
+        6i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_6, "vector").encode(env)),
+        7i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_7, "star").encode(env)),
+        8i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_8, "line").encode(env)),
+        9i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_9, "ellipse").encode(env)),
+        10i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_10, "rectangle").encode(env)),
+        11i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_11, "regular_polygon").encode(env)),
+        12i64 => {
+            Ok(cached_atom(env, &NODE_TYPE_ATOM_12, "rounded_rectangle").encode(env))
+        }
+        13i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_13, "text").encode(env)),
+        14i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_14, "slice").encode(env)),
+        15i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_15, "symbol").encode(env)),
+        16i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_16, "instance").encode(env)),
+        17i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_17, "sticky").encode(env)),
+        18i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_18, "shape_with_text").encode(env)),
+        19i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_19, "connector").encode(env)),
+        20i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_20, "code_block").encode(env)),
+        21i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_21, "widget").encode(env)),
+        22i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_22, "stamp").encode(env)),
+        23i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_23, "media").encode(env)),
+        24i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_24, "highlight").encode(env)),
+        25i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_25, "section").encode(env)),
+        26i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_26, "section_overlay").encode(env)),
+        27i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_27, "washi_tape").encode(env)),
+        28i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_28, "variable").encode(env)),
+        29i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_29, "table").encode(env)),
+        30i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_30, "table_cell").encode(env)),
+        31i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_31, "variable_set").encode(env)),
+        32i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_32, "slide").encode(env)),
+        33i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_33, "assisted_layout").encode(env)),
+        34i64 => {
+            Ok(
+                cached_atom(env, &NODE_TYPE_ATOM_34, "interactive_slide_element")
+                    .encode(env),
+            )
+        }
+        35i64 => {
+            Ok(cached_atom(env, &NODE_TYPE_ATOM_35, "variable_override").encode(env))
+        }
+        36i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_36, "module").encode(env)),
+        37i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_37, "slide_grid").encode(env)),
+        38i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_38, "slide_row").encode(env)),
+        39i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_39, "responsive_set").encode(env)),
+        40i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_40, "code_component").encode(env)),
+        41i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_41, "text_path").encode(env)),
+        42i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_42, "code_instance").encode(env)),
+        43i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_43, "code_library").encode(env)),
+        44i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_44, "code_file").encode(env)),
+        45i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_45, "code_layer").encode(env)),
+        46i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_46, "brush").encode(env)),
+        47i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_47, "managed_string").encode(env)),
+        48i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_48, "transform").encode(env)),
+        49i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_49, "cms_rich_text").encode(env)),
+        50i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_50, "repeater").encode(env)),
+        51i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_51, "jsx").encode(env)),
+        52i64 => {
+            Ok(cached_atom(env, &NODE_TYPE_ATOM_52, "embedded_prototype").encode(env))
+        }
+        53i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_53, "react_fiber").encode(env)),
+        54i64 => {
+            Ok(cached_atom(env, &NODE_TYPE_ATOM_54, "responsive_node_set").encode(env))
+        }
+        55i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_55, "webpage").encode(env)),
+        56i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_56, "keyframe").encode(env)),
+        57i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_57, "keyframe_track").encode(env)),
+        58i64 => {
+            Ok(
+                cached_atom(env, &NODE_TYPE_ATOM_58, "animation_preset_instance")
+                    .encode(env),
+            )
+        }
+        59i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_59, "code_embed").encode(env)),
+        60i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_60, "binary_file").encode(env)),
+        61i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_61, "spec_block").encode(env)),
+        62i64 => Ok(cached_atom(env, &NODE_TYPE_ATOM_62, "tool_instance").encode(env)),
+        63i64 => {
+            Ok(
+                cached_atom(env, &NODE_TYPE_ATOM_63, "custom_effect_instance")
+                    .encode(env),
+            )
+        }
+        64i64 => {
+            Ok(
+                cached_atom(env, &NODE_TYPE_ATOM_64, "native_code_layer_instance")
+                    .encode(env),
+            )
+        }
+        value => Ok(value.encode(env)),
     }
 }
+static SHAPE_WITH_TEXT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static SHAPE_WITH_TEXT_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
 fn decode_shape_with_text_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "square").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_0, "square").encode(env)),
+        1i64 => Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_1, "ellipse").encode(env)),
+        2i64 => Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_2, "diamond").encode(env)),
+        3i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_3, "triangle_up").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "ellipse").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_4, "triangle_down")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "diamond").encode(env))
+        5i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_5, "rounded_rectangle")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "triangle_up").encode(env))
+        6i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_6, "parallelogram_right")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "triangle_down").encode(env))
+        7i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_7, "parallelogram_left")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "rounded_rectangle").encode(env))
+        8i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_8, "eng_database")
+                    .encode(env),
+            )
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "parallelogram_right").encode(env))
+        9i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_9, "eng_queue").encode(env))
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "parallelogram_left").encode(env))
+        10i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_10, "eng_file").encode(env))
         }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "eng_database").encode(env))
+        11i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_11, "eng_folder").encode(env))
         }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "eng_queue").encode(env))
+        12i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_12, "trapezoid").encode(env))
         }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "eng_file").encode(env))
+        13i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_13, "predefined_process")
+                    .encode(env),
+            )
         }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "eng_folder").encode(env))
+        14i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_14, "shield").encode(env))
         }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "trapezoid").encode(env))
+        15i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_15, "document_single")
+                    .encode(env),
+            )
         }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "predefined_process").encode(env))
+        16i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_16, "document_multiple")
+                    .encode(env),
+            )
         }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "shield").encode(env))
+        17i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_17, "manual_input")
+                    .encode(env),
+            )
         }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "document_single").encode(env))
+        18i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_18, "hexagon").encode(env))
         }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "document_multiple").encode(env))
+        19i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_19, "chevron").encode(env))
         }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "manual_input").encode(env))
+        20i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_20, "pentagon").encode(env))
         }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "hexagon").encode(env))
+        21i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_21, "octagon").encode(env))
         }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "chevron").encode(env))
+        22i64 => Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_22, "star").encode(env)),
+        23i64 => Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_23, "plus").encode(env)),
+        24i64 => {
+            Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_24, "arrow_left").encode(env))
         }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "pentagon").encode(env))
+        25i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_25, "arrow_right")
+                    .encode(env),
+            )
         }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "octagon").encode(env))
+        26i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_26, "summing_junction")
+                    .encode(env),
+            )
         }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "star").encode(env))
+        27i64 => Ok(cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_27, "or").encode(env)),
+        28i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_28, "speech_bubble")
+                    .encode(env),
+            )
         }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "plus").encode(env))
+        29i64 => {
+            Ok(
+                cached_atom(env, &SHAPE_WITH_TEXT_TYPE_ATOM_29, "internal_storage")
+                    .encode(env),
+            )
         }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "arrow_left").encode(env))
-        }
-        25 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "arrow_right").encode(env))
-        }
-        26 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "summing_junction").encode(env))
-        }
-        27 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "or").encode(env))
-        }
-        28 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "speech_bubble").encode(env))
-        }
-        29 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "internal_storage").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static BLEND_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static BLEND_MODE_ATOM_18: OnceLock<Atom> = OnceLock::new();
 fn decode_blend_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "pass_through").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "normal").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "darken").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "multiply").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "linear_burn").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "color_burn").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "lighten").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "screen").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "linear_dodge").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "color_dodge").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "overlay").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "soft_light").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "hard_light").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "difference").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "exclusion").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "hue").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "saturation").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "color").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "luminosity").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_0, "pass_through").encode(env)),
+        1i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_1, "normal").encode(env)),
+        2i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_2, "darken").encode(env)),
+        3i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_3, "multiply").encode(env)),
+        4i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_4, "linear_burn").encode(env)),
+        5i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_5, "color_burn").encode(env)),
+        6i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_6, "lighten").encode(env)),
+        7i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_7, "screen").encode(env)),
+        8i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_8, "linear_dodge").encode(env)),
+        9i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_9, "color_dodge").encode(env)),
+        10i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_10, "overlay").encode(env)),
+        11i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_11, "soft_light").encode(env)),
+        12i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_12, "hard_light").encode(env)),
+        13i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_13, "difference").encode(env)),
+        14i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_14, "exclusion").encode(env)),
+        15i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_15, "hue").encode(env)),
+        16i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_16, "saturation").encode(env)),
+        17i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_17, "color").encode(env)),
+        18i64 => Ok(cached_atom(env, &BLEND_MODE_ATOM_18, "luminosity").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static PAINT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static PAINT_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
 fn decode_paint_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "solid").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "gradient_linear").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "gradient_radial").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "gradient_angular").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "gradient_diamond").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "image").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "emoji").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "video").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "pattern").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "noise").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "custom").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_0, "solid").encode(env)),
+        1i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_1, "gradient_linear").encode(env)),
+        2i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_2, "gradient_radial").encode(env)),
+        3i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_3, "gradient_angular").encode(env)),
+        4i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_4, "gradient_diamond").encode(env)),
+        5i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_5, "image").encode(env)),
+        6i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_6, "emoji").encode(env)),
+        7i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_7, "video").encode(env)),
+        8i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_8, "pattern").encode(env)),
+        9i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_9, "noise").encode(env)),
+        10i64 => Ok(cached_atom(env, &PAINT_TYPE_ATOM_10, "custom").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static IMAGE_SCALE_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static IMAGE_SCALE_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static IMAGE_SCALE_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static IMAGE_SCALE_MODE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_image_scale_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "stretch").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "fit").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "fill").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "tile").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &IMAGE_SCALE_MODE_ATOM_0, "stretch").encode(env)),
+        1i64 => Ok(cached_atom(env, &IMAGE_SCALE_MODE_ATOM_1, "fit").encode(env)),
+        2i64 => Ok(cached_atom(env, &IMAGE_SCALE_MODE_ATOM_2, "fill").encode(env)),
+        3i64 => Ok(cached_atom(env, &IMAGE_SCALE_MODE_ATOM_3, "tile").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static EFFECT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static EFFECT_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
 fn decode_effect_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "inner_shadow").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "drop_shadow").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "foreground_blur").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "background_blur").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "repeat").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "symmetry").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "grain").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "noise").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "glass").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "custom").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_0, "inner_shadow").encode(env)),
+        1i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_1, "drop_shadow").encode(env)),
+        2i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_2, "foreground_blur").encode(env)),
+        3i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_3, "background_blur").encode(env)),
+        4i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_4, "repeat").encode(env)),
+        5i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_5, "symmetry").encode(env)),
+        6i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_6, "grain").encode(env)),
+        7i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_7, "noise").encode(env)),
+        8i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_8, "glass").encode(env)),
+        9i64 => Ok(cached_atom(env, &EFFECT_TYPE_ATOM_9, "custom").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TEXT_CASE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TEXT_CASE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TEXT_CASE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static TEXT_CASE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static TEXT_CASE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static TEXT_CASE_ATOM_5: OnceLock<Atom> = OnceLock::new();
 fn decode_text_case_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "original").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "upper").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "lower").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "title").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "small_caps").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "small_caps_forced").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TEXT_CASE_ATOM_0, "original").encode(env)),
+        1i64 => Ok(cached_atom(env, &TEXT_CASE_ATOM_1, "upper").encode(env)),
+        2i64 => Ok(cached_atom(env, &TEXT_CASE_ATOM_2, "lower").encode(env)),
+        3i64 => Ok(cached_atom(env, &TEXT_CASE_ATOM_3, "title").encode(env)),
+        4i64 => Ok(cached_atom(env, &TEXT_CASE_ATOM_4, "small_caps").encode(env)),
+        5i64 => Ok(cached_atom(env, &TEXT_CASE_ATOM_5, "small_caps_forced").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TEXT_DECORATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TEXT_DECORATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TEXT_DECORATION_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_text_decoration_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TEXT_DECORATION_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &TEXT_DECORATION_ATOM_1, "underline").encode(env)),
+        2i64 => {
+            Ok(cached_atom(env, &TEXT_DECORATION_ATOM_2, "strikethrough").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "underline").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "strikethrough").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TEXT_DECORATION_STYLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TEXT_DECORATION_STYLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TEXT_DECORATION_STYLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_text_decoration_style_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "solid").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "dotted").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "wavy").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TEXT_DECORATION_STYLE_ATOM_0, "solid").encode(env)),
+        1i64 => Ok(cached_atom(env, &TEXT_DECORATION_STYLE_ATOM_1, "dotted").encode(env)),
+        2i64 => Ok(cached_atom(env, &TEXT_DECORATION_STYLE_ATOM_2, "wavy").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static LEADING_TRIM_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static LEADING_TRIM_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_leading_trim_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "cap_height").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &LEADING_TRIM_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &LEADING_TRIM_ATOM_1, "cap_height").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static NUMBER_UNITS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static NUMBER_UNITS_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static NUMBER_UNITS_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_number_units_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "raw").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "pixels").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "percent").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &NUMBER_UNITS_ATOM_0, "raw").encode(env)),
+        1i64 => Ok(cached_atom(env, &NUMBER_UNITS_ATOM_1, "pixels").encode(env)),
+        2i64 => Ok(cached_atom(env, &NUMBER_UNITS_ATOM_2, "percent").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static CONSTRAINT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CONSTRAINT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CONSTRAINT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static CONSTRAINT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static CONSTRAINT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static CONSTRAINT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static CONSTRAINT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
 fn decode_constraint_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "min").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "max").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "stretch").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "scale").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "fixed_min").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "fixed_max").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CONSTRAINT_TYPE_ATOM_0, "min").encode(env)),
+        1i64 => Ok(cached_atom(env, &CONSTRAINT_TYPE_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &CONSTRAINT_TYPE_ATOM_2, "max").encode(env)),
+        3i64 => Ok(cached_atom(env, &CONSTRAINT_TYPE_ATOM_3, "stretch").encode(env)),
+        4i64 => Ok(cached_atom(env, &CONSTRAINT_TYPE_ATOM_4, "scale").encode(env)),
+        5i64 => Ok(cached_atom(env, &CONSTRAINT_TYPE_ATOM_5, "fixed_min").encode(env)),
+        6i64 => Ok(cached_atom(env, &CONSTRAINT_TYPE_ATOM_6, "fixed_max").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STROKE_ALIGN_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STROKE_ALIGN_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STROKE_ALIGN_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static STROKE_ALIGN_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_stroke_align_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "center").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "inside").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "outside").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "offset").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STROKE_ALIGN_ATOM_0, "center").encode(env)),
+        1i64 => Ok(cached_atom(env, &STROKE_ALIGN_ATOM_1, "inside").encode(env)),
+        2i64 => Ok(cached_atom(env, &STROKE_ALIGN_ATOM_2, "outside").encode(env)),
+        3i64 => Ok(cached_atom(env, &STROKE_ALIGN_ATOM_3, "offset").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STROKE_CAP_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static STROKE_CAP_ATOM_20: OnceLock<Atom> = OnceLock::new();
 fn decode_stroke_cap_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_1, "round").encode(env)),
+        2i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_2, "square").encode(env)),
+        3i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_3, "arrow_lines").encode(env)),
+        4i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_4, "arrow_equilateral").encode(env)),
+        5i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_5, "diamond_filled").encode(env)),
+        6i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_6, "triangle_filled").encode(env)),
+        7i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_7, "highlight").encode(env)),
+        8i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_8, "washi_tape_1").encode(env)),
+        9i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_9, "washi_tape_2").encode(env)),
+        10i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_10, "washi_tape_3").encode(env)),
+        11i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_11, "washi_tape_4").encode(env)),
+        12i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_12, "washi_tape_5").encode(env)),
+        13i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_13, "washi_tape_6").encode(env)),
+        14i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_14, "circle_filled").encode(env)),
+        15i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_15, "erd_zero_or_one").encode(env)),
+        16i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_16, "erd_exactly_one").encode(env)),
+        17i64 => {
+            Ok(cached_atom(env, &STROKE_CAP_ATOM_17, "erd_zero_or_more").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "round").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "square").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "arrow_lines").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "arrow_equilateral").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "diamond_filled").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "triangle_filled").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "highlight").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "washi_tape_1").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "washi_tape_2").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "washi_tape_3").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "washi_tape_4").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "washi_tape_5").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "washi_tape_6").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "circle_filled").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "erd_zero_or_one").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "erd_exactly_one").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "erd_zero_or_more").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "erd_one_or_more").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "erd_one").encode(env))
-        }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "erd_many").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        18i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_18, "erd_one_or_more").encode(env)),
+        19i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_19, "erd_one").encode(env)),
+        20i64 => Ok(cached_atom(env, &STROKE_CAP_ATOM_20, "erd_many").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STROKE_JOIN_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STROKE_JOIN_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STROKE_JOIN_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_stroke_join_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "miter").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "bevel").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "round").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STROKE_JOIN_ATOM_0, "miter").encode(env)),
+        1i64 => Ok(cached_atom(env, &STROKE_JOIN_ATOM_1, "bevel").encode(env)),
+        2i64 => Ok(cached_atom(env, &STROKE_JOIN_ATOM_2, "round").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static BOOLEAN_OPERATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static BOOLEAN_OPERATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static BOOLEAN_OPERATION_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static BOOLEAN_OPERATION_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_boolean_operation_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "union").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "intersect").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "subtract").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "xor").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &BOOLEAN_OPERATION_ATOM_0, "union").encode(env)),
+        1i64 => Ok(cached_atom(env, &BOOLEAN_OPERATION_ATOM_1, "intersect").encode(env)),
+        2i64 => Ok(cached_atom(env, &BOOLEAN_OPERATION_ATOM_2, "subtract").encode(env)),
+        3i64 => Ok(cached_atom(env, &BOOLEAN_OPERATION_ATOM_3, "xor").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TEXT_ALIGN_HORIZONTAL_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TEXT_ALIGN_HORIZONTAL_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TEXT_ALIGN_HORIZONTAL_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static TEXT_ALIGN_HORIZONTAL_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_text_align_horizontal_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "left").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TEXT_ALIGN_HORIZONTAL_ATOM_0, "left").encode(env)),
+        1i64 => Ok(cached_atom(env, &TEXT_ALIGN_HORIZONTAL_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &TEXT_ALIGN_HORIZONTAL_ATOM_2, "right").encode(env)),
+        3i64 => {
+            Ok(cached_atom(env, &TEXT_ALIGN_HORIZONTAL_ATOM_3, "justified").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "right").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "justified").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TEXT_ALIGN_VERTICAL_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TEXT_ALIGN_VERTICAL_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TEXT_ALIGN_VERTICAL_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_text_align_vertical_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "top").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "bottom").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TEXT_ALIGN_VERTICAL_ATOM_0, "top").encode(env)),
+        1i64 => Ok(cached_atom(env, &TEXT_ALIGN_VERTICAL_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &TEXT_ALIGN_VERTICAL_ATOM_2, "bottom").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static MOUSE_CURSOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static MOUSE_CURSOR_ATOM_10: OnceLock<Atom> = OnceLock::new();
 fn decode_mouse_cursor_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "default").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "crosshair").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "eyedropper").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "hand").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "paint_bucket").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "pen").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "pencil").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "marker").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "eraser").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "highlighter").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "lasso").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_0, "default").encode(env)),
+        1i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_1, "crosshair").encode(env)),
+        2i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_2, "eyedropper").encode(env)),
+        3i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_3, "hand").encode(env)),
+        4i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_4, "paint_bucket").encode(env)),
+        5i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_5, "pen").encode(env)),
+        6i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_6, "pencil").encode(env)),
+        7i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_7, "marker").encode(env)),
+        8i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_8, "eraser").encode(env)),
+        9i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_9, "highlighter").encode(env)),
+        10i64 => Ok(cached_atom(env, &MOUSE_CURSOR_ATOM_10, "lasso").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static VECTOR_MIRROR_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static VECTOR_MIRROR_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static VECTOR_MIRROR_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_vector_mirror_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &VECTOR_MIRROR_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &VECTOR_MIRROR_ATOM_1, "angle").encode(env)),
+        2i64 => {
+            Ok(cached_atom(env, &VECTOR_MIRROR_ATOM_2, "angle_and_length").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "angle").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "angle_and_length").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static IMAGE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static IMAGE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static IMAGE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static IMAGE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static IMAGE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static IMAGE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
 fn decode_image_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "png").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "jpeg").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "svg").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "pdf").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "mp4").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "gif").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &IMAGE_TYPE_ATOM_0, "png").encode(env)),
+        1i64 => Ok(cached_atom(env, &IMAGE_TYPE_ATOM_1, "jpeg").encode(env)),
+        2i64 => Ok(cached_atom(env, &IMAGE_TYPE_ATOM_2, "svg").encode(env)),
+        3i64 => Ok(cached_atom(env, &IMAGE_TYPE_ATOM_3, "pdf").encode(env)),
+        4i64 => Ok(cached_atom(env, &IMAGE_TYPE_ATOM_4, "mp4").encode(env)),
+        5i64 => Ok(cached_atom(env, &IMAGE_TYPE_ATOM_5, "gif").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static EXPORT_CONSTRAINT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EXPORT_CONSTRAINT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EXPORT_CONSTRAINT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_export_constraint_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "content_scale").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &EXPORT_CONSTRAINT_TYPE_ATOM_0, "content_scale")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "content_width").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &EXPORT_CONSTRAINT_TYPE_ATOM_1, "content_width")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "content_height").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &EXPORT_CONSTRAINT_TYPE_ATOM_2, "content_height")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static LAYOUT_GRID_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static LAYOUT_GRID_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static LAYOUT_GRID_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static LAYOUT_GRID_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_layout_grid_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "min").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "stretch").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "max").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &LAYOUT_GRID_TYPE_ATOM_0, "min").encode(env)),
+        1i64 => Ok(cached_atom(env, &LAYOUT_GRID_TYPE_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &LAYOUT_GRID_TYPE_ATOM_2, "stretch").encode(env)),
+        3i64 => Ok(cached_atom(env, &LAYOUT_GRID_TYPE_ATOM_3, "max").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static LAYOUT_GRID_PATTERN_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static LAYOUT_GRID_PATTERN_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_layout_grid_pattern_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "stripes").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "grid").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &LAYOUT_GRID_PATTERN_ATOM_0, "stripes").encode(env)),
+        1i64 => Ok(cached_atom(env, &LAYOUT_GRID_PATTERN_ATOM_1, "grid").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TEXT_AUTO_RESIZE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TEXT_AUTO_RESIZE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TEXT_AUTO_RESIZE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_text_auto_resize_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TEXT_AUTO_RESIZE_ATOM_0, "none").encode(env)),
+        1i64 => {
+            Ok(
+                cached_atom(env, &TEXT_AUTO_RESIZE_ATOM_1, "width_and_height")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "width_and_height").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "height").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        2i64 => Ok(cached_atom(env, &TEXT_AUTO_RESIZE_ATOM_2, "height").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TEXT_TRUNCATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TEXT_TRUNCATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_text_truncation_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "disabled").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "ending").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TEXT_TRUNCATION_ATOM_0, "disabled").encode(env)),
+        1i64 => Ok(cached_atom(env, &TEXT_TRUNCATION_ATOM_1, "ending").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STYLE_SET_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STYLE_SET_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STYLE_SET_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static STYLE_SET_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static STYLE_SET_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_style_set_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "personal").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "team").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "custom").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "frequency").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "temporary").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STYLE_SET_TYPE_ATOM_0, "personal").encode(env)),
+        1i64 => Ok(cached_atom(env, &STYLE_SET_TYPE_ATOM_1, "team").encode(env)),
+        2i64 => Ok(cached_atom(env, &STYLE_SET_TYPE_ATOM_2, "custom").encode(env)),
+        3i64 => Ok(cached_atom(env, &STYLE_SET_TYPE_ATOM_3, "frequency").encode(env)),
+        4i64 => Ok(cached_atom(env, &STYLE_SET_TYPE_ATOM_4, "temporary").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STYLE_SET_CONTENT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STYLE_SET_CONTENT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STYLE_SET_CONTENT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_style_set_content_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "solid").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STYLE_SET_CONTENT_TYPE_ATOM_0, "solid").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &STYLE_SET_CONTENT_TYPE_ATOM_1, "gradient").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "gradient").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "image").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        2i64 => Ok(cached_atom(env, &STYLE_SET_CONTENT_TYPE_ATOM_2, "image").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STACK_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STACK_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STACK_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static STACK_MODE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_stack_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "horizontal").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "vertical").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "grid").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STACK_MODE_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &STACK_MODE_ATOM_1, "horizontal").encode(env)),
+        2i64 => Ok(cached_atom(env, &STACK_MODE_ATOM_2, "vertical").encode(env)),
+        3i64 => Ok(cached_atom(env, &STACK_MODE_ATOM_3, "grid").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STACK_ALIGN_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STACK_ALIGN_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STACK_ALIGN_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static STACK_ALIGN_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_stack_align_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "min").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "max").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "baseline").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STACK_ALIGN_ATOM_0, "min").encode(env)),
+        1i64 => Ok(cached_atom(env, &STACK_ALIGN_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &STACK_ALIGN_ATOM_2, "max").encode(env)),
+        3i64 => Ok(cached_atom(env, &STACK_ALIGN_ATOM_3, "baseline").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STACK_COUNTER_ALIGN_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STACK_COUNTER_ALIGN_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STACK_COUNTER_ALIGN_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static STACK_COUNTER_ALIGN_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static STACK_COUNTER_ALIGN_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static STACK_COUNTER_ALIGN_ATOM_5: OnceLock<Atom> = OnceLock::new();
 fn decode_stack_counter_align_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "min").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "max").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "stretch").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "auto").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "baseline").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STACK_COUNTER_ALIGN_ATOM_0, "min").encode(env)),
+        1i64 => Ok(cached_atom(env, &STACK_COUNTER_ALIGN_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &STACK_COUNTER_ALIGN_ATOM_2, "max").encode(env)),
+        3i64 => Ok(cached_atom(env, &STACK_COUNTER_ALIGN_ATOM_3, "stretch").encode(env)),
+        4i64 => Ok(cached_atom(env, &STACK_COUNTER_ALIGN_ATOM_4, "auto").encode(env)),
+        5i64 => Ok(cached_atom(env, &STACK_COUNTER_ALIGN_ATOM_5, "baseline").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STACK_JUSTIFY_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STACK_JUSTIFY_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STACK_JUSTIFY_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static STACK_JUSTIFY_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static STACK_JUSTIFY_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_stack_justify_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "min").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "max").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "space_evenly").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "space_between").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STACK_JUSTIFY_ATOM_0, "min").encode(env)),
+        1i64 => Ok(cached_atom(env, &STACK_JUSTIFY_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &STACK_JUSTIFY_ATOM_2, "max").encode(env)),
+        3i64 => Ok(cached_atom(env, &STACK_JUSTIFY_ATOM_3, "space_evenly").encode(env)),
+        4i64 => Ok(cached_atom(env, &STACK_JUSTIFY_ATOM_4, "space_between").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static GRID_CHILD_ALIGN_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static GRID_CHILD_ALIGN_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static GRID_CHILD_ALIGN_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static GRID_CHILD_ALIGN_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_grid_child_align_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "auto").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "min").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "center").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "max").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &GRID_CHILD_ALIGN_ATOM_0, "auto").encode(env)),
+        1i64 => Ok(cached_atom(env, &GRID_CHILD_ALIGN_ATOM_1, "min").encode(env)),
+        2i64 => Ok(cached_atom(env, &GRID_CHILD_ALIGN_ATOM_2, "center").encode(env)),
+        3i64 => Ok(cached_atom(env, &GRID_CHILD_ALIGN_ATOM_3, "max").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static GRID_AUTO_TRACKS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static GRID_AUTO_TRACKS_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_grid_auto_tracks_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "rows").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &GRID_AUTO_TRACKS_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &GRID_AUTO_TRACKS_ATOM_1, "rows").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STACK_SIZE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STACK_SIZE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STACK_SIZE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_stack_size_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "fixed").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STACK_SIZE_ATOM_0, "fixed").encode(env)),
+        1i64 => Ok(cached_atom(env, &STACK_SIZE_ATOM_1, "resize_to_fit").encode(env)),
+        2i64 => {
+            Ok(
+                cached_atom(env, &STACK_SIZE_ATOM_2, "resize_to_fit_with_implicit_size")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "resize_to_fit").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "resize_to_fit_with_implicit_size").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STACK_POSITIONING_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STACK_POSITIONING_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_stack_positioning_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "auto").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "absolute").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STACK_POSITIONING_ATOM_0, "auto").encode(env)),
+        1i64 => Ok(cached_atom(env, &STACK_POSITIONING_ATOM_1, "absolute").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STACK_WRAP_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STACK_WRAP_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_stack_wrap_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "no_wrap").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "wrap").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STACK_WRAP_ATOM_0, "no_wrap").encode(env)),
+        1i64 => Ok(cached_atom(env, &STACK_WRAP_ATOM_1, "wrap").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static STACK_COUNTER_ALIGN_CONTENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STACK_COUNTER_ALIGN_CONTENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_stack_counter_align_content_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "auto").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &STACK_COUNTER_ALIGN_CONTENT_ATOM_0, "auto").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "space_between").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &STACK_COUNTER_ALIGN_CONTENT_ATOM_1, "space_between")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static CONNECTION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static CONNECTION_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
 fn decode_connection_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CONNECTION_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &CONNECTION_TYPE_ATOM_1, "internal_node").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "internal_node").encode(env))
+        2i64 => Ok(cached_atom(env, &CONNECTION_TYPE_ATOM_2, "url").encode(env)),
+        3i64 => Ok(cached_atom(env, &CONNECTION_TYPE_ATOM_3, "back").encode(env)),
+        4i64 => Ok(cached_atom(env, &CONNECTION_TYPE_ATOM_4, "close").encode(env)),
+        5i64 => Ok(cached_atom(env, &CONNECTION_TYPE_ATOM_5, "set_variable").encode(env)),
+        6i64 => {
+            Ok(
+                cached_atom(env, &CONNECTION_TYPE_ATOM_6, "update_media_runtime")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "url").encode(env))
+        7i64 => Ok(cached_atom(env, &CONNECTION_TYPE_ATOM_7, "conditional").encode(env)),
+        8i64 => {
+            Ok(
+                cached_atom(env, &CONNECTION_TYPE_ATOM_8, "set_variable_mode")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "back").encode(env))
+        9i64 => {
+            Ok(cached_atom(env, &CONNECTION_TYPE_ATOM_9, "object_animation").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "close").encode(env))
+        10i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &CONNECTION_TYPE_ATOM_10,
+                        "update_animation_timeline_state",
+                    )
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "set_variable").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "update_media_runtime").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "conditional").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "set_variable_mode").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "object_animation").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "update_animation_timeline_state").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static INTERACTION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static INTERACTION_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
 fn decode_interaction_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "on_click").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_0, "on_click").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_1, "after_timeout").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "after_timeout").encode(env))
+        2i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_2, "mouse_in").encode(env)),
+        3i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_3, "mouse_out").encode(env)),
+        4i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_4, "on_hover").encode(env)),
+        5i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_5, "mouse_down").encode(env)),
+        6i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_6, "mouse_up").encode(env)),
+        7i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_7, "on_press").encode(env)),
+        8i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_8, "none").encode(env)),
+        9i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_9, "drag").encode(env)),
+        10i64 => {
+            Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_10, "on_key_down").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "mouse_in").encode(env))
+        11i64 => Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_11, "on_voice").encode(env)),
+        12i64 => {
+            Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_12, "on_media_hit").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "mouse_out").encode(env))
+        13i64 => {
+            Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_13, "on_media_end").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "on_hover").encode(env))
+        14i64 => {
+            Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_14, "mouse_enter").encode(env))
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "mouse_down").encode(env))
+        15i64 => {
+            Ok(cached_atom(env, &INTERACTION_TYPE_ATOM_15, "mouse_leave").encode(env))
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "mouse_up").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "on_press").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "none").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "drag").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "on_key_down").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "on_voice").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "on_media_hit").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "on_media_end").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "mouse_enter").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "mouse_leave").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TRANSITION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
 fn decode_transition_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "instant_transition").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_0, "instant_transition")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "dissolve").encode(env))
+        1i64 => Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_1, "dissolve").encode(env)),
+        2i64 => Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_2, "fade").encode(env)),
+        3i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_3, "slide_from_left").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "fade").encode(env))
+        4i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_4, "slide_from_right").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "slide_from_left").encode(env))
+        5i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_5, "slide_from_top").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "slide_from_right").encode(env))
+        6i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_6, "slide_from_bottom")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "slide_from_top").encode(env))
+        7i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_7, "push_from_left").encode(env))
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "slide_from_bottom").encode(env))
+        8i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_8, "push_from_right").encode(env))
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "push_from_left").encode(env))
+        9i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_9, "push_from_top").encode(env))
         }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "push_from_right").encode(env))
+        10i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_10, "push_from_bottom")
+                    .encode(env),
+            )
         }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "push_from_top").encode(env))
+        11i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_11, "move_from_left").encode(env))
         }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "push_from_bottom").encode(env))
+        12i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_12, "move_from_right").encode(env))
         }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "move_from_left").encode(env))
+        13i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_13, "move_from_top").encode(env))
         }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "move_from_right").encode(env))
+        14i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_14, "move_from_bottom")
+                    .encode(env),
+            )
         }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "move_from_top").encode(env))
+        15i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_15, "slide_out_to_left")
+                    .encode(env),
+            )
         }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "move_from_bottom").encode(env))
+        16i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_16, "slide_out_to_right")
+                    .encode(env),
+            )
         }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "slide_out_to_left").encode(env))
+        17i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_17, "slide_out_to_top")
+                    .encode(env),
+            )
         }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "slide_out_to_right").encode(env))
+        18i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_18, "slide_out_to_bottom")
+                    .encode(env),
+            )
         }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "slide_out_to_top").encode(env))
+        19i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_19, "move_out_to_left")
+                    .encode(env),
+            )
         }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "slide_out_to_bottom").encode(env))
+        20i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_20, "move_out_to_right")
+                    .encode(env),
+            )
         }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "move_out_to_left").encode(env))
+        21i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_21, "move_out_to_top").encode(env))
         }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "move_out_to_right").encode(env))
+        22i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_TYPE_ATOM_22, "move_out_to_bottom")
+                    .encode(env),
+            )
         }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "move_out_to_top").encode(env))
+        23i64 => Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_23, "magic_move").encode(env)),
+        24i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_24, "smart_animate").encode(env))
         }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "move_out_to_bottom").encode(env))
+        25i64 => {
+            Ok(cached_atom(env, &TRANSITION_TYPE_ATOM_25, "scroll_animate").encode(env))
         }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "magic_move").encode(env))
-        }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "smart_animate").encode(env))
-        }
-        25 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "scroll_animate").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static EASING_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static EASING_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
 fn decode_easing_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "in_cubic").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_0, "in_cubic").encode(env)),
+        1i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_1, "out_cubic").encode(env)),
+        2i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_2, "inout_cubic").encode(env)),
+        3i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_3, "linear").encode(env)),
+        4i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_4, "in_back_cubic").encode(env)),
+        5i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_5, "out_back_cubic").encode(env)),
+        6i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_6, "inout_back_cubic").encode(env)),
+        7i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_7, "custom_cubic").encode(env)),
+        8i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_8, "spring").encode(env)),
+        9i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_9, "gentle_spring").encode(env)),
+        10i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_10, "custom_spring").encode(env)),
+        11i64 => {
+            Ok(cached_atom(env, &EASING_TYPE_ATOM_11, "spring_preset_one").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "out_cubic").encode(env))
+        12i64 => {
+            Ok(cached_atom(env, &EASING_TYPE_ATOM_12, "spring_preset_two").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "inout_cubic").encode(env))
+        13i64 => {
+            Ok(cached_atom(env, &EASING_TYPE_ATOM_13, "spring_preset_three").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "linear").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "in_back_cubic").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "out_back_cubic").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "inout_back_cubic").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "custom_cubic").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "spring").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "gentle_spring").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "custom_spring").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "spring_preset_one").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "spring_preset_two").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "spring_preset_three").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "hold").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        14i64 => Ok(cached_atom(env, &EASING_TYPE_ATOM_14, "hold").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SCROLL_DIRECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SCROLL_DIRECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SCROLL_DIRECTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static SCROLL_DIRECTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_scroll_direction_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "horizontal").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "vertical").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "both").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SCROLL_DIRECTION_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &SCROLL_DIRECTION_ATOM_1, "horizontal").encode(env)),
+        2i64 => Ok(cached_atom(env, &SCROLL_DIRECTION_ATOM_2, "vertical").encode(env)),
+        3i64 => Ok(cached_atom(env, &SCROLL_DIRECTION_ATOM_3, "both").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SCROLL_CONTRACTED_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SCROLL_CONTRACTED_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_scroll_contracted_state_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "expanded").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &SCROLL_CONTRACTED_STATE_ATOM_0, "expanded").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "contracted").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &SCROLL_CONTRACTED_STATE_ATOM_1, "contracted")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static GUID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static GUID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_guid_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GUID");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["session_id", "local_id"]);
+    let module_atom = cached_atom(env, &GUID_MODULE_ATOM, "Elixir.FigKiwi.Schema.GUID");
+    let keys = cached_struct_keys(env, &GUID_STRUCT_KEYS, &["session_id", "local_id"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_var_uint()?;
@@ -2103,14 +1669,18 @@ fn decode_guid_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static COLOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static COLOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_color_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Color");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["r", "g", "b", "a"]);
+    let module_atom = cached_atom(
+        env,
+        &COLOR_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.Color",
+    );
+    let keys = cached_struct_keys(env, &COLOR_STRUCT_KEYS, &["r", "g", "b", "a"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_var_float(env)?;
@@ -2123,14 +1693,18 @@ fn decode_color_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static VECTOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static VECTOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_vector_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Vector");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["x", "y"]);
+    let module_atom = cached_atom(
+        env,
+        &VECTOR_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.Vector",
+    );
+    let keys = cached_struct_keys(env, &VECTOR_STRUCT_KEYS, &["x", "y"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_var_float(env)?;
@@ -2139,14 +1713,14 @@ fn decode_vector_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static RECT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static RECT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_rect_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Rect");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["x", "y", "w", "h"]);
+    let module_atom = cached_atom(env, &RECT_MODULE_ATOM, "Elixir.FigKiwi.Schema.Rect");
+    let keys = cached_struct_keys(env, &RECT_STRUCT_KEYS, &["x", "y", "w", "h"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_var_float(env)?;
@@ -2159,14 +1733,18 @@ fn decode_rect_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static COLOR_STOP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static COLOR_STOP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_color_stop_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorStop");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["color", "position"]);
+    let module_atom = cached_atom(
+        env,
+        &COLOR_STOP_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.ColorStop",
+    );
+    let keys = cached_struct_keys(env, &COLOR_STOP_STRUCT_KEYS, &["color", "position"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decode_color_from_decoder(env, decoder)?;
@@ -2222,16 +1800,20 @@ fn decode_color_stop_var_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static MATRIX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static MATRIX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_matrix_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Matrix");
+    let module_atom = cached_atom(
+        env,
+        &MATRIX_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.Matrix",
+    );
     let keys = cached_struct_keys(
         env,
-        &STRUCT_KEYS,
+        &MATRIX_STRUCT_KEYS,
         &["m00", "m01", "m02", "m10", "m11", "m12"],
     );
     let mut values = Vec::with_capacity(keys.len());
@@ -2250,18 +1832,18 @@ fn decode_matrix_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static PARENT_INDEX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static PARENT_INDEX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_parent_index_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &PARENT_INDEX_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.ParentIndex",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "position"]);
+    let keys = cached_struct_keys(env, &PARENT_INDEX_STRUCT_KEYS, &["guid", "position"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decode_guid_from_decoder(env, decoder)?;
@@ -2270,14 +1852,18 @@ fn decode_parent_index_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static NUMBER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static NUMBER_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_number_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Number");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["value", "units"]);
+    let module_atom = cached_atom(
+        env,
+        &NUMBER_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.Number",
+    );
+    let keys = cached_struct_keys(env, &NUMBER_STRUCT_KEYS, &["value", "units"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_var_float(env)?;
@@ -2286,14 +1872,22 @@ fn decode_number_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static FONT_NAME_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static FONT_NAME_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_font_name_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FontName");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["family", "style", "postscript"]);
+    let module_atom = cached_atom(
+        env,
+        &FONT_NAME_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.FontName",
+    );
+    let keys = cached_struct_keys(
+        env,
+        &FONT_NAME_STRUCT_KEYS,
+        &["family", "style", "postscript"],
+    );
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_string(env)?;
@@ -2304,212 +1898,207 @@ fn decode_font_name_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static FONT_VARIANT_NUMERIC_FIGURE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_NUMERIC_FIGURE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_NUMERIC_FIGURE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_font_variant_numeric_figure_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_FIGURE_ATOM_0, "normal")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "lining").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_FIGURE_ATOM_1, "lining")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "oldstyle").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_FIGURE_ATOM_2, "oldstyle")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static FONT_VARIANT_NUMERIC_SPACING_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_NUMERIC_SPACING_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_NUMERIC_SPACING_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_font_variant_numeric_spacing_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_SPACING_ATOM_0, "normal")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "proportional").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_SPACING_ATOM_1, "proportional")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "tabular").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_SPACING_ATOM_2, "tabular")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static FONT_VARIANT_NUMERIC_FRACTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_NUMERIC_FRACTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_NUMERIC_FRACTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_font_variant_numeric_fraction_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_FRACTION_ATOM_0, "normal")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "diagonal").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_FRACTION_ATOM_1, "diagonal")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "stacked").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &FONT_VARIANT_NUMERIC_FRACTION_ATOM_2, "stacked")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static FONT_VARIANT_CAPS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_CAPS_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_CAPS_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_CAPS_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_CAPS_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_CAPS_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_CAPS_ATOM_6: OnceLock<Atom> = OnceLock::new();
 fn decode_font_variant_caps_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "small").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "all_small").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "petite").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "all_petite").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "unicase").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "titling").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &FONT_VARIANT_CAPS_ATOM_0, "normal").encode(env)),
+        1i64 => Ok(cached_atom(env, &FONT_VARIANT_CAPS_ATOM_1, "small").encode(env)),
+        2i64 => Ok(cached_atom(env, &FONT_VARIANT_CAPS_ATOM_2, "all_small").encode(env)),
+        3i64 => Ok(cached_atom(env, &FONT_VARIANT_CAPS_ATOM_3, "petite").encode(env)),
+        4i64 => Ok(cached_atom(env, &FONT_VARIANT_CAPS_ATOM_4, "all_petite").encode(env)),
+        5i64 => Ok(cached_atom(env, &FONT_VARIANT_CAPS_ATOM_5, "unicase").encode(env)),
+        6i64 => Ok(cached_atom(env, &FONT_VARIANT_CAPS_ATOM_6, "titling").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static FONT_VARIANT_POSITION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_POSITION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static FONT_VARIANT_POSITION_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_font_variant_position_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "sub").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "super").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &FONT_VARIANT_POSITION_ATOM_0, "normal").encode(env)),
+        1i64 => Ok(cached_atom(env, &FONT_VARIANT_POSITION_ATOM_1, "sub").encode(env)),
+        2i64 => Ok(cached_atom(env, &FONT_VARIANT_POSITION_ATOM_2, "super").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static FONT_STYLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FONT_STYLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_font_style_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "italic").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &FONT_STYLE_ATOM_0, "normal").encode(env)),
+        1i64 => Ok(cached_atom(env, &FONT_STYLE_ATOM_1, "italic").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SEMANTIC_WEIGHT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SEMANTIC_WEIGHT_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_semantic_weight_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "bold").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SEMANTIC_WEIGHT_ATOM_0, "normal").encode(env)),
+        1i64 => Ok(cached_atom(env, &SEMANTIC_WEIGHT_ATOM_1, "bold").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SEMANTIC_ITALIC_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SEMANTIC_ITALIC_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_semantic_italic_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "italic").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SEMANTIC_ITALIC_ATOM_0, "normal").encode(env)),
+        1i64 => Ok(cached_atom(env, &SEMANTIC_ITALIC_ATOM_1, "italic").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static CODE_SNAPSHOT_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CODE_SNAPSHOT_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CODE_SNAPSHOT_STATE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static CODE_SNAPSHOT_STATE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static CODE_SNAPSHOT_STATE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_code_snapshot_state_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "initial").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CODE_SNAPSHOT_STATE_ATOM_0, "initial").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &CODE_SNAPSHOT_STATE_ATOM_1, "snapshotting").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "snapshotting").encode(env))
+        2i64 => Ok(cached_atom(env, &CODE_SNAPSHOT_STATE_ATOM_2, "ok").encode(env)),
+        3i64 => {
+            Ok(
+                cached_atom(env, &CODE_SNAPSHOT_STATE_ATOM_3, "snapshot_error")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "ok").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &CODE_SNAPSHOT_STATE_ATOM_4, "llm_in_progress")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "snapshot_error").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "llm_in_progress").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SNAPSHOT_CAPTURE_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SNAPSHOT_CAPTURE_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_snapshot_capture_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "full").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SNAPSHOT_CAPTURE_MODE_ATOM_0, "full").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &SNAPSHOT_CAPTURE_MODE_ATOM_1, "partial").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "partial").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_code_source_info_from_decoder<'a>(
@@ -2578,48 +2167,46 @@ fn decode_code_source_info_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CODE_OBJECT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CODE_OBJECT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CODE_OBJECT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static CODE_OBJECT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static CODE_OBJECT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static CODE_OBJECT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static CODE_OBJECT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static CODE_OBJECT_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static CODE_OBJECT_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
 fn decode_code_object_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "web_layer").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CODE_OBJECT_TYPE_ATOM_0, "web_layer").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &CODE_OBJECT_TYPE_ATOM_1, "web_interaction").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "web_interaction").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &CODE_OBJECT_TYPE_ATOM_2, "native_layer").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "native_layer").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &CODE_OBJECT_TYPE_ATOM_3, "animation_preset")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "animation_preset").encode(env))
+        4i64 => Ok(cached_atom(env, &CODE_OBJECT_TYPE_ATOM_4, "tool").encode(env)),
+        5i64 => {
+            Ok(cached_atom(env, &CODE_OBJECT_TYPE_ATOM_5, "custom_effect").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "tool").encode(env))
+        6i64 => Ok(cached_atom(env, &CODE_OBJECT_TYPE_ATOM_6, "plugin").encode(env)),
+        7i64 => {
+            Ok(
+                cached_atom(env, &CODE_OBJECT_TYPE_ATOM_7, "web_layer_generic")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "custom_effect").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "plugin").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "web_layer_generic").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "custom_fill").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        8i64 => Ok(cached_atom(env, &CODE_OBJECT_TYPE_ATOM_8, "custom_fill").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_custom_tool_artifact_ref_from_decoder<'a>(
@@ -2679,962 +2266,502 @@ fn decode_custom_tool_artifact_ref_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static LOCK_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static LOCK_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static LOCK_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_lock_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "all").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "background_only").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &LOCK_MODE_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &LOCK_MODE_ATOM_1, "all").encode(env)),
+        2i64 => Ok(cached_atom(env, &LOCK_MODE_ATOM_2, "background_only").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static OPEN_TYPE_FEATURE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_29: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_30: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_31: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_32: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_33: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_34: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_35: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_36: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_37: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_38: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_39: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_40: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_41: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_42: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_43: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_44: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_45: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_46: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_47: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_48: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_49: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_50: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_51: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_52: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_53: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_54: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_55: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_56: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_57: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_58: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_59: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_60: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_61: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_62: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_63: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_64: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_65: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_66: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_67: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_68: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_69: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_70: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_71: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_72: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_73: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_74: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_75: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_76: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_77: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_78: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_79: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_80: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_81: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_82: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_83: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_84: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_85: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_86: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_87: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_88: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_89: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_90: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_91: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_92: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_93: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_94: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_95: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_96: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_97: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_98: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_99: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_100: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_101: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_102: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_103: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_104: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_105: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_106: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_107: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_108: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_109: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_110: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_111: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_112: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_113: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_114: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_115: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_116: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_117: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_118: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_119: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_120: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_121: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_122: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_123: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_124: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_125: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_126: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_127: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_128: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_129: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_130: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_131: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_132: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_133: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_134: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_135: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_136: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_137: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_138: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_139: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_140: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_141: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_142: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_143: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_144: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_145: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_146: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_147: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_148: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_149: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_150: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_151: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_152: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_153: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_154: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_155: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_156: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_157: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_158: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_159: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_160: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_161: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_162: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_163: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_164: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_165: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_166: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_167: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_168: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_169: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_170: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_171: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_172: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_173: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_174: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_175: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_176: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_177: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_178: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_179: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_180: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_181: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_182: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_183: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_184: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_185: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_186: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_187: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_188: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_189: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_190: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_191: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_192: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_193: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_194: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_195: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_196: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_197: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_198: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_199: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_200: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_201: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_202: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_203: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_204: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_205: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_206: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_207: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_208: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_209: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_210: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_211: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_212: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_213: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_214: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_215: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_216: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_217: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_218: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_219: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_220: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_221: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_222: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_223: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_224: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_225: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_226: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_227: OnceLock<Atom> = OnceLock::new();
+static OPEN_TYPE_FEATURE_ATOM_228: OnceLock<Atom> = OnceLock::new();
 fn decode_open_type_feature_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "pcap").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "c2_pc").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "case").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "cpsp").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "titl").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "unic").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "zero").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "sinf").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "ordn").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "afrc").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "dnom").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "numr").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "liga").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "clig").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "dlig").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "hlig").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "rlig").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "aalt").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "calt").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "rclt").encode(env))
-        }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "salt").encode(env))
-        }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "rvrn").encode(env))
-        }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "vert").encode(env))
-        }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "swsh").encode(env))
-        }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "cswh").encode(env))
-        }
-        25 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "nalt").encode(env))
-        }
-        26 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "ccmp").encode(env))
-        }
-        27 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "stch").encode(env))
-        }
-        28 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "hist").encode(env))
-        }
-        29 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "size").encode(env))
-        }
-        30 => {
-            static ATOM_30: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_30, "ornm").encode(env))
-        }
-        31 => {
-            static ATOM_31: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_31, "ital").encode(env))
-        }
-        32 => {
-            static ATOM_32: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_32, "rand").encode(env))
-        }
-        33 => {
-            static ATOM_33: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_33, "dtls").encode(env))
-        }
-        34 => {
-            static ATOM_34: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_34, "flac").encode(env))
-        }
-        35 => {
-            static ATOM_35: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_35, "mgrk").encode(env))
-        }
-        36 => {
-            static ATOM_36: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_36, "ssty").encode(env))
-        }
-        37 => {
-            static ATOM_37: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_37, "kern").encode(env))
-        }
-        38 => {
-            static ATOM_38: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_38, "fwid").encode(env))
-        }
-        39 => {
-            static ATOM_39: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_39, "hwid").encode(env))
-        }
-        40 => {
-            static ATOM_40: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_40, "halt").encode(env))
-        }
-        41 => {
-            static ATOM_41: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_41, "twid").encode(env))
-        }
-        42 => {
-            static ATOM_42: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_42, "qwid").encode(env))
-        }
-        43 => {
-            static ATOM_43: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_43, "pwid").encode(env))
-        }
-        44 => {
-            static ATOM_44: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_44, "just").encode(env))
-        }
-        45 => {
-            static ATOM_45: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_45, "lfbd").encode(env))
-        }
-        46 => {
-            static ATOM_46: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_46, "opbd").encode(env))
-        }
-        47 => {
-            static ATOM_47: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_47, "rtbd").encode(env))
-        }
-        48 => {
-            static ATOM_48: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_48, "palt").encode(env))
-        }
-        49 => {
-            static ATOM_49: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_49, "pkna").encode(env))
-        }
-        50 => {
-            static ATOM_50: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_50, "ltra").encode(env))
-        }
-        51 => {
-            static ATOM_51: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_51, "ltrm").encode(env))
-        }
-        52 => {
-            static ATOM_52: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_52, "rtla").encode(env))
-        }
-        53 => {
-            static ATOM_53: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_53, "rtlm").encode(env))
-        }
-        54 => {
-            static ATOM_54: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_54, "abrv").encode(env))
-        }
-        55 => {
-            static ATOM_55: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_55, "abvm").encode(env))
-        }
-        56 => {
-            static ATOM_56: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_56, "abvs").encode(env))
-        }
-        57 => {
-            static ATOM_57: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_57, "valt").encode(env))
-        }
-        58 => {
-            static ATOM_58: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_58, "vhal").encode(env))
-        }
-        59 => {
-            static ATOM_59: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_59, "blwf").encode(env))
-        }
-        60 => {
-            static ATOM_60: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_60, "blwm").encode(env))
-        }
-        61 => {
-            static ATOM_61: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_61, "blws").encode(env))
-        }
-        62 => {
-            static ATOM_62: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_62, "akhn").encode(env))
-        }
-        63 => {
-            static ATOM_63: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_63, "cjct").encode(env))
-        }
-        64 => {
-            static ATOM_64: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_64, "cfar").encode(env))
-        }
-        65 => {
-            static ATOM_65: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_65, "cpct").encode(env))
-        }
-        66 => {
-            static ATOM_66: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_66, "curs").encode(env))
-        }
-        67 => {
-            static ATOM_67: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_67, "dist").encode(env))
-        }
-        68 => {
-            static ATOM_68: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_68, "expt").encode(env))
-        }
-        69 => {
-            static ATOM_69: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_69, "falt").encode(env))
-        }
-        70 => {
-            static ATOM_70: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_70, "fina").encode(env))
-        }
-        71 => {
-            static ATOM_71: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_71, "fin2").encode(env))
-        }
-        72 => {
-            static ATOM_72: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_72, "fin3").encode(env))
-        }
-        73 => {
-            static ATOM_73: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_73, "half").encode(env))
-        }
-        74 => {
-            static ATOM_74: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_74, "haln").encode(env))
-        }
-        75 => {
-            static ATOM_75: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_75, "hkna").encode(env))
-        }
-        76 => {
-            static ATOM_76: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_76, "hngl").encode(env))
-        }
-        77 => {
-            static ATOM_77: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_77, "hojo").encode(env))
-        }
-        78 => {
-            static ATOM_78: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_78, "init").encode(env))
-        }
-        79 => {
-            static ATOM_79: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_79, "isol").encode(env))
-        }
-        80 => {
-            static ATOM_80: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_80, "jp78").encode(env))
-        }
-        81 => {
-            static ATOM_81: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_81, "jp83").encode(env))
-        }
-        82 => {
-            static ATOM_82: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_82, "jp90").encode(env))
-        }
-        83 => {
-            static ATOM_83: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_83, "jp04").encode(env))
-        }
-        84 => {
-            static ATOM_84: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_84, "ljmo").encode(env))
-        }
-        85 => {
-            static ATOM_85: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_85, "locl").encode(env))
-        }
-        86 => {
-            static ATOM_86: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_86, "mark").encode(env))
-        }
-        87 => {
-            static ATOM_87: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_87, "medi").encode(env))
-        }
-        88 => {
-            static ATOM_88: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_88, "med2").encode(env))
-        }
-        89 => {
-            static ATOM_89: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_89, "mkmk").encode(env))
-        }
-        90 => {
-            static ATOM_90: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_90, "nlck").encode(env))
-        }
-        91 => {
-            static ATOM_91: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_91, "nukt").encode(env))
-        }
-        92 => {
-            static ATOM_92: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_92, "pref").encode(env))
-        }
-        93 => {
-            static ATOM_93: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_93, "pres").encode(env))
-        }
-        94 => {
-            static ATOM_94: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_94, "vpal").encode(env))
-        }
-        95 => {
-            static ATOM_95: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_95, "pstf").encode(env))
-        }
-        96 => {
-            static ATOM_96: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_96, "psts").encode(env))
-        }
-        97 => {
-            static ATOM_97: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_97, "rkrf").encode(env))
-        }
-        98 => {
-            static ATOM_98: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_98, "rphf").encode(env))
-        }
-        99 => {
-            static ATOM_99: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_99, "ruby").encode(env))
-        }
-        100 => {
-            static ATOM_100: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_100, "smpl").encode(env))
-        }
-        101 => {
-            static ATOM_101: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_101, "tjmo").encode(env))
-        }
-        102 => {
-            static ATOM_102: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_102, "tnam").encode(env))
-        }
-        103 => {
-            static ATOM_103: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_103, "trad").encode(env))
-        }
-        104 => {
-            static ATOM_104: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_104, "vatu").encode(env))
-        }
-        105 => {
-            static ATOM_105: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_105, "vjmo").encode(env))
-        }
-        106 => {
-            static ATOM_106: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_106, "vkna").encode(env))
-        }
-        107 => {
-            static ATOM_107: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_107, "vkrn").encode(env))
-        }
-        108 => {
-            static ATOM_108: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_108, "vrtr").encode(env))
-        }
-        109 => {
-            static ATOM_109: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_109, "vrt2").encode(env))
-        }
-        110 => {
-            static ATOM_110: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_110, "ss01").encode(env))
-        }
-        111 => {
-            static ATOM_111: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_111, "ss02").encode(env))
-        }
-        112 => {
-            static ATOM_112: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_112, "ss03").encode(env))
-        }
-        113 => {
-            static ATOM_113: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_113, "ss04").encode(env))
-        }
-        114 => {
-            static ATOM_114: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_114, "ss05").encode(env))
-        }
-        115 => {
-            static ATOM_115: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_115, "ss06").encode(env))
-        }
-        116 => {
-            static ATOM_116: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_116, "ss07").encode(env))
-        }
-        117 => {
-            static ATOM_117: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_117, "ss08").encode(env))
-        }
-        118 => {
-            static ATOM_118: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_118, "ss09").encode(env))
-        }
-        119 => {
-            static ATOM_119: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_119, "ss10").encode(env))
-        }
-        120 => {
-            static ATOM_120: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_120, "ss11").encode(env))
-        }
-        121 => {
-            static ATOM_121: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_121, "ss12").encode(env))
-        }
-        122 => {
-            static ATOM_122: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_122, "ss13").encode(env))
-        }
-        123 => {
-            static ATOM_123: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_123, "ss14").encode(env))
-        }
-        124 => {
-            static ATOM_124: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_124, "ss15").encode(env))
-        }
-        125 => {
-            static ATOM_125: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_125, "ss16").encode(env))
-        }
-        126 => {
-            static ATOM_126: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_126, "ss17").encode(env))
-        }
-        127 => {
-            static ATOM_127: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_127, "ss18").encode(env))
-        }
-        128 => {
-            static ATOM_128: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_128, "ss19").encode(env))
-        }
-        129 => {
-            static ATOM_129: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_129, "ss20").encode(env))
-        }
-        130 => {
-            static ATOM_130: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_130, "cv01").encode(env))
-        }
-        131 => {
-            static ATOM_131: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_131, "cv02").encode(env))
-        }
-        132 => {
-            static ATOM_132: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_132, "cv03").encode(env))
-        }
-        133 => {
-            static ATOM_133: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_133, "cv04").encode(env))
-        }
-        134 => {
-            static ATOM_134: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_134, "cv05").encode(env))
-        }
-        135 => {
-            static ATOM_135: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_135, "cv06").encode(env))
-        }
-        136 => {
-            static ATOM_136: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_136, "cv07").encode(env))
-        }
-        137 => {
-            static ATOM_137: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_137, "cv08").encode(env))
-        }
-        138 => {
-            static ATOM_138: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_138, "cv09").encode(env))
-        }
-        139 => {
-            static ATOM_139: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_139, "cv10").encode(env))
-        }
-        140 => {
-            static ATOM_140: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_140, "cv11").encode(env))
-        }
-        141 => {
-            static ATOM_141: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_141, "cv12").encode(env))
-        }
-        142 => {
-            static ATOM_142: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_142, "cv13").encode(env))
-        }
-        143 => {
-            static ATOM_143: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_143, "cv14").encode(env))
-        }
-        144 => {
-            static ATOM_144: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_144, "cv15").encode(env))
-        }
-        145 => {
-            static ATOM_145: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_145, "cv16").encode(env))
-        }
-        146 => {
-            static ATOM_146: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_146, "cv17").encode(env))
-        }
-        147 => {
-            static ATOM_147: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_147, "cv18").encode(env))
-        }
-        148 => {
-            static ATOM_148: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_148, "cv19").encode(env))
-        }
-        149 => {
-            static ATOM_149: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_149, "cv20").encode(env))
-        }
-        150 => {
-            static ATOM_150: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_150, "cv21").encode(env))
-        }
-        151 => {
-            static ATOM_151: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_151, "cv22").encode(env))
-        }
-        152 => {
-            static ATOM_152: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_152, "cv23").encode(env))
-        }
-        153 => {
-            static ATOM_153: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_153, "cv24").encode(env))
-        }
-        154 => {
-            static ATOM_154: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_154, "cv25").encode(env))
-        }
-        155 => {
-            static ATOM_155: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_155, "cv26").encode(env))
-        }
-        156 => {
-            static ATOM_156: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_156, "cv27").encode(env))
-        }
-        157 => {
-            static ATOM_157: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_157, "cv28").encode(env))
-        }
-        158 => {
-            static ATOM_158: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_158, "cv29").encode(env))
-        }
-        159 => {
-            static ATOM_159: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_159, "cv30").encode(env))
-        }
-        160 => {
-            static ATOM_160: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_160, "cv31").encode(env))
-        }
-        161 => {
-            static ATOM_161: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_161, "cv32").encode(env))
-        }
-        162 => {
-            static ATOM_162: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_162, "cv33").encode(env))
-        }
-        163 => {
-            static ATOM_163: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_163, "cv34").encode(env))
-        }
-        164 => {
-            static ATOM_164: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_164, "cv35").encode(env))
-        }
-        165 => {
-            static ATOM_165: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_165, "cv36").encode(env))
-        }
-        166 => {
-            static ATOM_166: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_166, "cv37").encode(env))
-        }
-        167 => {
-            static ATOM_167: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_167, "cv38").encode(env))
-        }
-        168 => {
-            static ATOM_168: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_168, "cv39").encode(env))
-        }
-        169 => {
-            static ATOM_169: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_169, "cv40").encode(env))
-        }
-        170 => {
-            static ATOM_170: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_170, "cv41").encode(env))
-        }
-        171 => {
-            static ATOM_171: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_171, "cv42").encode(env))
-        }
-        172 => {
-            static ATOM_172: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_172, "cv43").encode(env))
-        }
-        173 => {
-            static ATOM_173: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_173, "cv44").encode(env))
-        }
-        174 => {
-            static ATOM_174: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_174, "cv45").encode(env))
-        }
-        175 => {
-            static ATOM_175: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_175, "cv46").encode(env))
-        }
-        176 => {
-            static ATOM_176: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_176, "cv47").encode(env))
-        }
-        177 => {
-            static ATOM_177: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_177, "cv48").encode(env))
-        }
-        178 => {
-            static ATOM_178: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_178, "cv49").encode(env))
-        }
-        179 => {
-            static ATOM_179: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_179, "cv50").encode(env))
-        }
-        180 => {
-            static ATOM_180: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_180, "cv51").encode(env))
-        }
-        181 => {
-            static ATOM_181: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_181, "cv52").encode(env))
-        }
-        182 => {
-            static ATOM_182: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_182, "cv53").encode(env))
-        }
-        183 => {
-            static ATOM_183: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_183, "cv54").encode(env))
-        }
-        184 => {
-            static ATOM_184: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_184, "cv55").encode(env))
-        }
-        185 => {
-            static ATOM_185: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_185, "cv56").encode(env))
-        }
-        186 => {
-            static ATOM_186: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_186, "cv57").encode(env))
-        }
-        187 => {
-            static ATOM_187: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_187, "cv58").encode(env))
-        }
-        188 => {
-            static ATOM_188: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_188, "cv59").encode(env))
-        }
-        189 => {
-            static ATOM_189: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_189, "cv60").encode(env))
-        }
-        190 => {
-            static ATOM_190: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_190, "cv61").encode(env))
-        }
-        191 => {
-            static ATOM_191: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_191, "cv62").encode(env))
-        }
-        192 => {
-            static ATOM_192: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_192, "cv63").encode(env))
-        }
-        193 => {
-            static ATOM_193: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_193, "cv64").encode(env))
-        }
-        194 => {
-            static ATOM_194: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_194, "cv65").encode(env))
-        }
-        195 => {
-            static ATOM_195: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_195, "cv66").encode(env))
-        }
-        196 => {
-            static ATOM_196: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_196, "cv67").encode(env))
-        }
-        197 => {
-            static ATOM_197: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_197, "cv68").encode(env))
-        }
-        198 => {
-            static ATOM_198: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_198, "cv69").encode(env))
-        }
-        199 => {
-            static ATOM_199: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_199, "cv70").encode(env))
-        }
-        200 => {
-            static ATOM_200: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_200, "cv71").encode(env))
-        }
-        201 => {
-            static ATOM_201: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_201, "cv72").encode(env))
-        }
-        202 => {
-            static ATOM_202: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_202, "cv73").encode(env))
-        }
-        203 => {
-            static ATOM_203: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_203, "cv74").encode(env))
-        }
-        204 => {
-            static ATOM_204: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_204, "cv75").encode(env))
-        }
-        205 => {
-            static ATOM_205: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_205, "cv76").encode(env))
-        }
-        206 => {
-            static ATOM_206: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_206, "cv77").encode(env))
-        }
-        207 => {
-            static ATOM_207: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_207, "cv78").encode(env))
-        }
-        208 => {
-            static ATOM_208: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_208, "cv79").encode(env))
-        }
-        209 => {
-            static ATOM_209: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_209, "cv80").encode(env))
-        }
-        210 => {
-            static ATOM_210: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_210, "cv81").encode(env))
-        }
-        211 => {
-            static ATOM_211: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_211, "cv82").encode(env))
-        }
-        212 => {
-            static ATOM_212: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_212, "cv83").encode(env))
-        }
-        213 => {
-            static ATOM_213: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_213, "cv84").encode(env))
-        }
-        214 => {
-            static ATOM_214: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_214, "cv85").encode(env))
-        }
-        215 => {
-            static ATOM_215: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_215, "cv86").encode(env))
-        }
-        216 => {
-            static ATOM_216: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_216, "cv87").encode(env))
-        }
-        217 => {
-            static ATOM_217: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_217, "cv88").encode(env))
-        }
-        218 => {
-            static ATOM_218: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_218, "cv89").encode(env))
-        }
-        219 => {
-            static ATOM_219: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_219, "cv90").encode(env))
-        }
-        220 => {
-            static ATOM_220: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_220, "cv91").encode(env))
-        }
-        221 => {
-            static ATOM_221: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_221, "cv92").encode(env))
-        }
-        222 => {
-            static ATOM_222: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_222, "cv93").encode(env))
-        }
-        223 => {
-            static ATOM_223: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_223, "cv94").encode(env))
-        }
-        224 => {
-            static ATOM_224: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_224, "cv95").encode(env))
-        }
-        225 => {
-            static ATOM_225: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_225, "cv96").encode(env))
-        }
-        226 => {
-            static ATOM_226: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_226, "cv97").encode(env))
-        }
-        227 => {
-            static ATOM_227: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_227, "cv98").encode(env))
-        }
-        228 => {
-            static ATOM_228: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_228, "cv99").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_0, "pcap").encode(env)),
+        1i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_1, "c2_pc").encode(env)),
+        2i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_2, "case").encode(env)),
+        3i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_3, "cpsp").encode(env)),
+        4i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_4, "titl").encode(env)),
+        5i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_5, "unic").encode(env)),
+        6i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_6, "zero").encode(env)),
+        7i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_7, "sinf").encode(env)),
+        8i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_8, "ordn").encode(env)),
+        9i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_9, "afrc").encode(env)),
+        10i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_10, "dnom").encode(env)),
+        11i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_11, "numr").encode(env)),
+        12i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_12, "liga").encode(env)),
+        13i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_13, "clig").encode(env)),
+        14i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_14, "dlig").encode(env)),
+        15i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_15, "hlig").encode(env)),
+        16i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_16, "rlig").encode(env)),
+        17i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_17, "aalt").encode(env)),
+        18i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_18, "calt").encode(env)),
+        19i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_19, "rclt").encode(env)),
+        20i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_20, "salt").encode(env)),
+        21i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_21, "rvrn").encode(env)),
+        22i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_22, "vert").encode(env)),
+        23i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_23, "swsh").encode(env)),
+        24i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_24, "cswh").encode(env)),
+        25i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_25, "nalt").encode(env)),
+        26i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_26, "ccmp").encode(env)),
+        27i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_27, "stch").encode(env)),
+        28i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_28, "hist").encode(env)),
+        29i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_29, "size").encode(env)),
+        30i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_30, "ornm").encode(env)),
+        31i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_31, "ital").encode(env)),
+        32i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_32, "rand").encode(env)),
+        33i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_33, "dtls").encode(env)),
+        34i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_34, "flac").encode(env)),
+        35i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_35, "mgrk").encode(env)),
+        36i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_36, "ssty").encode(env)),
+        37i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_37, "kern").encode(env)),
+        38i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_38, "fwid").encode(env)),
+        39i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_39, "hwid").encode(env)),
+        40i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_40, "halt").encode(env)),
+        41i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_41, "twid").encode(env)),
+        42i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_42, "qwid").encode(env)),
+        43i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_43, "pwid").encode(env)),
+        44i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_44, "just").encode(env)),
+        45i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_45, "lfbd").encode(env)),
+        46i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_46, "opbd").encode(env)),
+        47i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_47, "rtbd").encode(env)),
+        48i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_48, "palt").encode(env)),
+        49i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_49, "pkna").encode(env)),
+        50i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_50, "ltra").encode(env)),
+        51i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_51, "ltrm").encode(env)),
+        52i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_52, "rtla").encode(env)),
+        53i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_53, "rtlm").encode(env)),
+        54i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_54, "abrv").encode(env)),
+        55i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_55, "abvm").encode(env)),
+        56i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_56, "abvs").encode(env)),
+        57i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_57, "valt").encode(env)),
+        58i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_58, "vhal").encode(env)),
+        59i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_59, "blwf").encode(env)),
+        60i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_60, "blwm").encode(env)),
+        61i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_61, "blws").encode(env)),
+        62i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_62, "akhn").encode(env)),
+        63i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_63, "cjct").encode(env)),
+        64i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_64, "cfar").encode(env)),
+        65i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_65, "cpct").encode(env)),
+        66i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_66, "curs").encode(env)),
+        67i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_67, "dist").encode(env)),
+        68i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_68, "expt").encode(env)),
+        69i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_69, "falt").encode(env)),
+        70i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_70, "fina").encode(env)),
+        71i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_71, "fin2").encode(env)),
+        72i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_72, "fin3").encode(env)),
+        73i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_73, "half").encode(env)),
+        74i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_74, "haln").encode(env)),
+        75i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_75, "hkna").encode(env)),
+        76i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_76, "hngl").encode(env)),
+        77i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_77, "hojo").encode(env)),
+        78i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_78, "init").encode(env)),
+        79i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_79, "isol").encode(env)),
+        80i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_80, "jp78").encode(env)),
+        81i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_81, "jp83").encode(env)),
+        82i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_82, "jp90").encode(env)),
+        83i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_83, "jp04").encode(env)),
+        84i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_84, "ljmo").encode(env)),
+        85i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_85, "locl").encode(env)),
+        86i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_86, "mark").encode(env)),
+        87i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_87, "medi").encode(env)),
+        88i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_88, "med2").encode(env)),
+        89i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_89, "mkmk").encode(env)),
+        90i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_90, "nlck").encode(env)),
+        91i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_91, "nukt").encode(env)),
+        92i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_92, "pref").encode(env)),
+        93i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_93, "pres").encode(env)),
+        94i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_94, "vpal").encode(env)),
+        95i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_95, "pstf").encode(env)),
+        96i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_96, "psts").encode(env)),
+        97i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_97, "rkrf").encode(env)),
+        98i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_98, "rphf").encode(env)),
+        99i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_99, "ruby").encode(env)),
+        100i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_100, "smpl").encode(env)),
+        101i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_101, "tjmo").encode(env)),
+        102i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_102, "tnam").encode(env)),
+        103i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_103, "trad").encode(env)),
+        104i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_104, "vatu").encode(env)),
+        105i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_105, "vjmo").encode(env)),
+        106i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_106, "vkna").encode(env)),
+        107i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_107, "vkrn").encode(env)),
+        108i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_108, "vrtr").encode(env)),
+        109i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_109, "vrt2").encode(env)),
+        110i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_110, "ss01").encode(env)),
+        111i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_111, "ss02").encode(env)),
+        112i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_112, "ss03").encode(env)),
+        113i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_113, "ss04").encode(env)),
+        114i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_114, "ss05").encode(env)),
+        115i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_115, "ss06").encode(env)),
+        116i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_116, "ss07").encode(env)),
+        117i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_117, "ss08").encode(env)),
+        118i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_118, "ss09").encode(env)),
+        119i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_119, "ss10").encode(env)),
+        120i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_120, "ss11").encode(env)),
+        121i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_121, "ss12").encode(env)),
+        122i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_122, "ss13").encode(env)),
+        123i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_123, "ss14").encode(env)),
+        124i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_124, "ss15").encode(env)),
+        125i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_125, "ss16").encode(env)),
+        126i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_126, "ss17").encode(env)),
+        127i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_127, "ss18").encode(env)),
+        128i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_128, "ss19").encode(env)),
+        129i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_129, "ss20").encode(env)),
+        130i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_130, "cv01").encode(env)),
+        131i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_131, "cv02").encode(env)),
+        132i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_132, "cv03").encode(env)),
+        133i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_133, "cv04").encode(env)),
+        134i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_134, "cv05").encode(env)),
+        135i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_135, "cv06").encode(env)),
+        136i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_136, "cv07").encode(env)),
+        137i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_137, "cv08").encode(env)),
+        138i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_138, "cv09").encode(env)),
+        139i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_139, "cv10").encode(env)),
+        140i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_140, "cv11").encode(env)),
+        141i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_141, "cv12").encode(env)),
+        142i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_142, "cv13").encode(env)),
+        143i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_143, "cv14").encode(env)),
+        144i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_144, "cv15").encode(env)),
+        145i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_145, "cv16").encode(env)),
+        146i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_146, "cv17").encode(env)),
+        147i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_147, "cv18").encode(env)),
+        148i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_148, "cv19").encode(env)),
+        149i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_149, "cv20").encode(env)),
+        150i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_150, "cv21").encode(env)),
+        151i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_151, "cv22").encode(env)),
+        152i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_152, "cv23").encode(env)),
+        153i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_153, "cv24").encode(env)),
+        154i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_154, "cv25").encode(env)),
+        155i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_155, "cv26").encode(env)),
+        156i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_156, "cv27").encode(env)),
+        157i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_157, "cv28").encode(env)),
+        158i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_158, "cv29").encode(env)),
+        159i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_159, "cv30").encode(env)),
+        160i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_160, "cv31").encode(env)),
+        161i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_161, "cv32").encode(env)),
+        162i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_162, "cv33").encode(env)),
+        163i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_163, "cv34").encode(env)),
+        164i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_164, "cv35").encode(env)),
+        165i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_165, "cv36").encode(env)),
+        166i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_166, "cv37").encode(env)),
+        167i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_167, "cv38").encode(env)),
+        168i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_168, "cv39").encode(env)),
+        169i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_169, "cv40").encode(env)),
+        170i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_170, "cv41").encode(env)),
+        171i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_171, "cv42").encode(env)),
+        172i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_172, "cv43").encode(env)),
+        173i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_173, "cv44").encode(env)),
+        174i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_174, "cv45").encode(env)),
+        175i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_175, "cv46").encode(env)),
+        176i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_176, "cv47").encode(env)),
+        177i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_177, "cv48").encode(env)),
+        178i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_178, "cv49").encode(env)),
+        179i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_179, "cv50").encode(env)),
+        180i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_180, "cv51").encode(env)),
+        181i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_181, "cv52").encode(env)),
+        182i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_182, "cv53").encode(env)),
+        183i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_183, "cv54").encode(env)),
+        184i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_184, "cv55").encode(env)),
+        185i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_185, "cv56").encode(env)),
+        186i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_186, "cv57").encode(env)),
+        187i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_187, "cv58").encode(env)),
+        188i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_188, "cv59").encode(env)),
+        189i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_189, "cv60").encode(env)),
+        190i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_190, "cv61").encode(env)),
+        191i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_191, "cv62").encode(env)),
+        192i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_192, "cv63").encode(env)),
+        193i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_193, "cv64").encode(env)),
+        194i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_194, "cv65").encode(env)),
+        195i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_195, "cv66").encode(env)),
+        196i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_196, "cv67").encode(env)),
+        197i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_197, "cv68").encode(env)),
+        198i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_198, "cv69").encode(env)),
+        199i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_199, "cv70").encode(env)),
+        200i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_200, "cv71").encode(env)),
+        201i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_201, "cv72").encode(env)),
+        202i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_202, "cv73").encode(env)),
+        203i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_203, "cv74").encode(env)),
+        204i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_204, "cv75").encode(env)),
+        205i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_205, "cv76").encode(env)),
+        206i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_206, "cv77").encode(env)),
+        207i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_207, "cv78").encode(env)),
+        208i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_208, "cv79").encode(env)),
+        209i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_209, "cv80").encode(env)),
+        210i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_210, "cv81").encode(env)),
+        211i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_211, "cv82").encode(env)),
+        212i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_212, "cv83").encode(env)),
+        213i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_213, "cv84").encode(env)),
+        214i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_214, "cv85").encode(env)),
+        215i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_215, "cv86").encode(env)),
+        216i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_216, "cv87").encode(env)),
+        217i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_217, "cv88").encode(env)),
+        218i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_218, "cv89").encode(env)),
+        219i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_219, "cv90").encode(env)),
+        220i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_220, "cv91").encode(env)),
+        221i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_221, "cv92").encode(env)),
+        222i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_222, "cv93").encode(env)),
+        223i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_223, "cv94").encode(env)),
+        224i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_224, "cv95").encode(env)),
+        225i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_225, "cv96").encode(env)),
+        226i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_226, "cv97").encode(env)),
+        227i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_227, "cv98").encode(env)),
+        228i64 => Ok(cached_atom(env, &OPEN_TYPE_FEATURE_ATOM_228, "cv99").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static EXPORT_CONSTRAINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static EXPORT_CONSTRAINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_export_constraint_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &EXPORT_CONSTRAINT_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.ExportConstraint",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["type", "value"]);
+    let keys = cached_struct_keys(
+        env,
+        &EXPORT_CONSTRAINT_STRUCT_KEYS,
+        &["type", "value"],
+    );
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decode_export_constraint_type_from_decoder(env, decoder)?;
@@ -3643,18 +2770,18 @@ fn decode_export_constraint_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static GUID_MAPPING_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static GUID_MAPPING_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_guid_mapping_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &GUID_MAPPING_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.GUIDMapping",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["from", "to"]);
+    let keys = cached_struct_keys(env, &GUID_MAPPING_STRUCT_KEYS, &["from", "to"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decode_guid_from_decoder(env, decoder)?;
@@ -3663,14 +2790,14 @@ fn decode_guid_mapping_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static BLOB_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static BLOB_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_blob_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Blob");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["bytes"]);
+    let module_atom = cached_atom(env, &BLOB_MODULE_ATOM, "Elixir.FigKiwi.Schema.Blob");
+    let keys = cached_struct_keys(env, &BLOB_STRUCT_KEYS, &["bytes"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_byte_array(env)?;
@@ -3780,20 +2907,20 @@ fn decode_paste_source_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static FILTER_COLOR_ADJUST_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static FILTER_COLOR_ADJUST_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_filter_color_adjust_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &FILTER_COLOR_ADJUST_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.FilterColorAdjust",
     );
     let keys = cached_struct_keys(
         env,
-        &STRUCT_KEYS,
+        &FILTER_COLOR_ADJUST_STRUCT_KEYS,
         &[
             "tint",
             "shadows",
@@ -4161,116 +3288,122 @@ fn decode_paint_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static NOISE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static NOISE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static NOISE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_noise_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "multitone").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "monotone").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "duotone").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &NOISE_TYPE_ATOM_0, "multitone").encode(env)),
+        1i64 => Ok(cached_atom(env, &NOISE_TYPE_ATOM_1, "monotone").encode(env)),
+        2i64 => Ok(cached_atom(env, &NOISE_TYPE_ATOM_2, "duotone").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static PATTERN_TILE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PATTERN_TILE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PATTERN_TILE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_pattern_tile_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "rectangular").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &PATTERN_TILE_TYPE_ATOM_0, "rectangular").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "horizontal_hexagonal").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &PATTERN_TILE_TYPE_ATOM_1, "horizontal_hexagonal")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "vertical_hexagonal").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &PATTERN_TILE_TYPE_ATOM_2, "vertical_hexagonal")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static PATTERN_ALIGNMENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PATTERN_ALIGNMENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PATTERN_ALIGNMENT_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_pattern_alignment_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "start").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "end").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &PATTERN_ALIGNMENT_ATOM_0, "start").encode(env)),
+        1i64 => Ok(cached_atom(env, &PATTERN_ALIGNMENT_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &PATTERN_ALIGNMENT_ATOM_2, "end").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static INTERPOLATION_COLOR_SPACE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_COLOR_SPACE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_COLOR_SPACE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_COLOR_SPACE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_COLOR_SPACE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_interpolation_color_space_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "default").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &INTERPOLATION_COLOR_SPACE_ATOM_0, "default")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "oklab").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &INTERPOLATION_COLOR_SPACE_ATOM_1, "oklab").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "oklch").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &INTERPOLATION_COLOR_SPACE_ATOM_2, "oklch").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "hsl").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &INTERPOLATION_COLOR_SPACE_ATOM_3, "hsl").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "srgb_linear").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &INTERPOLATION_COLOR_SPACE_ATOM_4, "srgb_linear")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static INTERPOLATION_HUE_METHOD_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_HUE_METHOD_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_HUE_METHOD_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_HUE_METHOD_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_interpolation_hue_method_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "shorter").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &INTERPOLATION_HUE_METHOD_ATOM_0, "shorter").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "longer").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &INTERPOLATION_HUE_METHOD_ATOM_1, "longer").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "increasing").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &INTERPOLATION_HUE_METHOD_ATOM_2, "increasing")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "decreasing").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &INTERPOLATION_HUE_METHOD_ATOM_3, "decreasing")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_font_meta_data_from_decoder<'a>(
@@ -5980,16 +5113,20 @@ fn decode_canvas_node_id_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static INDEX_RANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static INDEX_RANGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_index_range_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.IndexRange");
+    let module_atom = cached_atom(
+        env,
+        &INDEX_RANGE_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.IndexRange",
+    );
     let keys = cached_struct_keys(
         env,
-        &STRUCT_KEYS,
+        &INDEX_RANGE_STRUCT_KEYS,
         &["start_index", "end_index_exclusive"],
     );
     let mut values = Vec::with_capacity(keys.len());
@@ -6000,18 +5137,22 @@ fn decode_index_range_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static COLLABORATIVE_TEXT_OP_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static COLLABORATIVE_TEXT_OP_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_collaborative_text_op_id_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &COLLABORATIVE_TEXT_OP_ID_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.CollaborativeTextOpID",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["session_id", "counter_id"]);
+    let keys = cached_struct_keys(
+        env,
+        &COLLABORATIVE_TEXT_OP_ID_STRUCT_KEYS,
+        &["session_id", "counter_id"],
+    );
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_var_uint()?;
@@ -6020,20 +5161,26 @@ fn decode_collaborative_text_op_id_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static COLLABORATIVE_TEXT_OP_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static COLLABORATIVE_TEXT_OP_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_collaborative_text_op_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "insert").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &COLLABORATIVE_TEXT_OP_TYPE_ATOM_0, "insert")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "delete").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &COLLABORATIVE_TEXT_OP_TYPE_ATOM_1, "delete")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder<'a>(
@@ -6450,32 +5597,22 @@ fn decode_responsive_text_style_variant_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static FLAPP_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FLAPP_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static FLAPP_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static FLAPP_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static FLAPP_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_flapp_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "poll").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "embed").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "facepile").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "alignment").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "youtube").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &FLAPP_TYPE_ATOM_0, "poll").encode(env)),
+        1i64 => Ok(cached_atom(env, &FLAPP_TYPE_ATOM_1, "embed").encode(env)),
+        2i64 => Ok(cached_atom(env, &FLAPP_TYPE_ATOM_2, "facepile").encode(env)),
+        3i64 => Ok(cached_atom(env, &FLAPP_TYPE_ATOM_3, "alignment").encode(env)),
+        4i64 => Ok(cached_atom(env, &FLAPP_TYPE_ATOM_4, "youtube").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_slide_theme_props_from_decoder<'a>(
@@ -6961,88 +6098,66 @@ fn decode_imported_code_files_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static BLUR_OP_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static BLUR_OP_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_blur_op_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "normal").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "progressive").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &BLUR_OP_TYPE_ATOM_0, "normal").encode(env)),
+        1i64 => Ok(cached_atom(env, &BLUR_OP_TYPE_ATOM_1, "progressive").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static REPEAT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static REPEAT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_repeat_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "linear").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "radial").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &REPEAT_TYPE_ATOM_0, "linear").encode(env)),
+        1i64 => Ok(cached_atom(env, &REPEAT_TYPE_ATOM_1, "radial").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static UNIT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static UNIT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_unit_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "pixels").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "relative").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &UNIT_TYPE_ATOM_0, "pixels").encode(env)),
+        1i64 => Ok(cached_atom(env, &UNIT_TYPE_ATOM_1, "relative").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static REPEAT_ORDER_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static REPEAT_ORDER_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_repeat_order_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "forward").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "reverse").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &REPEAT_ORDER_ATOM_0, "forward").encode(env)),
+        1i64 => Ok(cached_atom(env, &REPEAT_ORDER_ATOM_1, "reverse").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static EFFECT_AXIS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EFFECT_AXIS_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EFFECT_AXIS_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_effect_axis_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "x").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "y").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "x_and_y").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EFFECT_AXIS_ATOM_0, "x").encode(env)),
+        1i64 => Ok(cached_atom(env, &EFFECT_AXIS_ATOM_1, "y").encode(env)),
+        2i64 => Ok(cached_atom(env, &EFFECT_AXIS_ATOM_2, "x_and_y").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_effect_from_decoder<'a>(
@@ -7354,24 +6469,22 @@ fn decode_effect_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static TRANSFORM_MODIFIER_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_MODIFIER_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_MODIFIER_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_transform_modifier_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "repeat").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &TRANSFORM_MODIFIER_TYPE_ATOM_0, "repeat").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "symmetry").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &TRANSFORM_MODIFIER_TYPE_ATOM_1, "symmetry").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "skew").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        2i64 => Ok(cached_atom(env, &TRANSFORM_MODIFIER_TYPE_ATOM_2, "skew").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_transform_modifier_from_decoder<'a>(
@@ -7460,36 +6573,41 @@ fn decode_transform_modifier_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static TRANSFORM_SCHEMA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_SCHEMA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_SCHEMA_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_transform_schema_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TRANSFORM_SCHEMA_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => {
+            Ok(
+                cached_atom(env, &TRANSFORM_SCHEMA_TYPE_ATOM_1, "fixed_order")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "fixed_order").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &TRANSFORM_SCHEMA_TYPE_ATOM_2, "freeform").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "freeform").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static MATRIX4F_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static MATRIX4F_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_matrix4f_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Matrix4f");
+    let module_atom = cached_atom(
+        env,
+        &MATRIX4F_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.Matrix4f",
+    );
     let keys = cached_struct_keys(
         env,
-        &STRUCT_KEYS,
+        &MATRIX4F_STRUCT_KEYS,
         &[
             "m00",
             "m01",
@@ -7601,40 +6719,30 @@ fn decode_fixed_order_transform3d_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static TRANSFORM_FN_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_FN_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_FN_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_FN_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_FN_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_FN_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static TRANSFORM_FN_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
 fn decode_transform_fn_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TRANSFORM_FN_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &TRANSFORM_FN_TYPE_ATOM_1, "matrix_3_d").encode(env)),
+        2i64 => {
+            Ok(cached_atom(env, &TRANSFORM_FN_TYPE_ATOM_2, "perspective").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "matrix_3_d").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &TRANSFORM_FN_TYPE_ATOM_3, "translate_z").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "perspective").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "translate_z").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "rotate_x").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "rotate_y").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "rotate_z").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        4i64 => Ok(cached_atom(env, &TRANSFORM_FN_TYPE_ATOM_4, "rotate_x").encode(env)),
+        5i64 => Ok(cached_atom(env, &TRANSFORM_FN_TYPE_ATOM_5, "rotate_y").encode(env)),
+        6i64 => Ok(cached_atom(env, &TRANSFORM_FN_TYPE_ATOM_6, "rotate_z").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_transform_fn_value_from_decoder<'a>(
@@ -7818,18 +6926,18 @@ fn decode_transform3d_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static NUMBER_VECTOR2_D_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static NUMBER_VECTOR2_D_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_number_vector2_d_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &NUMBER_VECTOR2_D_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.NumberVector2D",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["x", "y"]);
+    let keys = cached_struct_keys(env, &NUMBER_VECTOR2_D_STRUCT_KEYS, &["x", "y"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decode_number_from_decoder(env, decoder)?;
@@ -7957,44 +7065,37 @@ fn decode_transition_info_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static PROTOTYPE_DEVICE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PROTOTYPE_DEVICE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PROTOTYPE_DEVICE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static PROTOTYPE_DEVICE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_prototype_device_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &PROTOTYPE_DEVICE_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &PROTOTYPE_DEVICE_TYPE_ATOM_1, "preset").encode(env)),
+        2i64 => Ok(cached_atom(env, &PROTOTYPE_DEVICE_TYPE_ATOM_2, "custom").encode(env)),
+        3i64 => {
+            Ok(
+                cached_atom(env, &PROTOTYPE_DEVICE_TYPE_ATOM_3, "presentation")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "preset").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "custom").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "presentation").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static DEVICE_ROTATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static DEVICE_ROTATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_device_rotation_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "ccw_90").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &DEVICE_ROTATION_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &DEVICE_ROTATION_ATOM_1, "ccw_90").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_prototype_device_from_decoder<'a>(
@@ -8048,76 +7149,92 @@ fn decode_prototype_device_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static OVERLAY_POSITION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_POSITION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_POSITION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_POSITION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_POSITION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_POSITION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_POSITION_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_POSITION_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
 fn decode_overlay_position_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "center").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &OVERLAY_POSITION_TYPE_ATOM_0, "center").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &OVERLAY_POSITION_TYPE_ATOM_1, "top_left").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "top_left").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &OVERLAY_POSITION_TYPE_ATOM_2, "top_center").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "top_center").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &OVERLAY_POSITION_TYPE_ATOM_3, "top_right").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "top_right").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &OVERLAY_POSITION_TYPE_ATOM_4, "bottom_left")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "bottom_left").encode(env))
+        5i64 => {
+            Ok(
+                cached_atom(env, &OVERLAY_POSITION_TYPE_ATOM_5, "bottom_center")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "bottom_center").encode(env))
+        6i64 => {
+            Ok(
+                cached_atom(env, &OVERLAY_POSITION_TYPE_ATOM_6, "bottom_right")
+                    .encode(env),
+            )
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "bottom_right").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "manual").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        7i64 => Ok(cached_atom(env, &OVERLAY_POSITION_TYPE_ATOM_7, "manual").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static OVERLAY_BACKGROUND_INTERACTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_BACKGROUND_INTERACTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_overlay_background_interaction_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &OVERLAY_BACKGROUND_INTERACTION_ATOM_0, "none")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "close_on_click_outside").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &OVERLAY_BACKGROUND_INTERACTION_ATOM_1,
+                        "close_on_click_outside",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static OVERLAY_BACKGROUND_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static OVERLAY_BACKGROUND_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_overlay_background_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &OVERLAY_BACKGROUND_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => {
+            Ok(
+                cached_atom(env, &OVERLAY_BACKGROUND_TYPE_ATOM_1, "solid_color")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "solid_color").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_overlay_background_appearance_from_decoder<'a>(
@@ -8164,76 +7281,64 @@ fn decode_overlay_background_appearance_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static NAVIGATION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static NAVIGATION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static NAVIGATION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static NAVIGATION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static NAVIGATION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_navigation_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "navigate").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "overlay").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "swap").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "swap_state").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "scroll_to").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &NAVIGATION_TYPE_ATOM_0, "navigate").encode(env)),
+        1i64 => Ok(cached_atom(env, &NAVIGATION_TYPE_ATOM_1, "overlay").encode(env)),
+        2i64 => Ok(cached_atom(env, &NAVIGATION_TYPE_ATOM_2, "swap").encode(env)),
+        3i64 => Ok(cached_atom(env, &NAVIGATION_TYPE_ATOM_3, "swap_state").encode(env)),
+        4i64 => Ok(cached_atom(env, &NAVIGATION_TYPE_ATOM_4, "scroll_to").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static EXPORT_COLOR_PROFILE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EXPORT_COLOR_PROFILE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EXPORT_COLOR_PROFILE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static EXPORT_COLOR_PROFILE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_export_color_profile_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "document").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &EXPORT_COLOR_PROFILE_ATOM_0, "document").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "srgb").encode(env))
+        1i64 => Ok(cached_atom(env, &EXPORT_COLOR_PROFILE_ATOM_1, "srgb").encode(env)),
+        2i64 => {
+            Ok(
+                cached_atom(env, &EXPORT_COLOR_PROFILE_ATOM_2, "display_p3_v4")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "display_p3_v4").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "cmyk").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        3i64 => Ok(cached_atom(env, &EXPORT_COLOR_PROFILE_ATOM_3, "cmyk").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static EXPORT_BACKGROUND_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EXPORT_BACKGROUND_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EXPORT_BACKGROUND_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_export_background_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "solid").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EXPORT_BACKGROUND_TYPE_ATOM_0, "solid").encode(env)),
+        1i64 => {
+            Ok(
+                cached_atom(env, &EXPORT_BACKGROUND_TYPE_ATOM_1, "transparent")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "transparent").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "grid").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        2i64 => Ok(cached_atom(env, &EXPORT_BACKGROUND_TYPE_ATOM_2, "grid").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_export_settings_from_decoder<'a>(
@@ -8347,20 +7452,16 @@ fn decode_export_settings_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static EXPORT_SVGID_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EXPORT_SVGID_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_export_svgid_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "if_needed").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "always").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EXPORT_SVGID_MODE_ATOM_0, "if_needed").encode(env)),
+        1i64 => Ok(cached_atom(env, &EXPORT_SVGID_MODE_ATOM_1, "always").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_layout_grid_from_decoder<'a>(
@@ -8532,76 +7633,52 @@ fn decode_path_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static STYLE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static STYLE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static STYLE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static STYLE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static STYLE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static STYLE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static STYLE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static STYLE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
 fn decode_style_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "fill").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "stroke").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "text").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "effect").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "export").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "grid").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "animation").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &STYLE_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &STYLE_TYPE_ATOM_1, "fill").encode(env)),
+        2i64 => Ok(cached_atom(env, &STYLE_TYPE_ATOM_2, "stroke").encode(env)),
+        3i64 => Ok(cached_atom(env, &STYLE_TYPE_ATOM_3, "text").encode(env)),
+        4i64 => Ok(cached_atom(env, &STYLE_TYPE_ATOM_4, "effect").encode(env)),
+        5i64 => Ok(cached_atom(env, &STYLE_TYPE_ATOM_5, "export").encode(env)),
+        6i64 => Ok(cached_atom(env, &STYLE_TYPE_ATOM_6, "grid").encode(env)),
+        7i64 => Ok(cached_atom(env, &STYLE_TYPE_ATOM_7, "animation").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static BRUSH_ORIENTATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static BRUSH_ORIENTATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_brush_orientation_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "forward").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "reverse").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &BRUSH_ORIENTATION_ATOM_0, "forward").encode(env)),
+        1i64 => Ok(cached_atom(env, &BRUSH_ORIENTATION_ATOM_1, "reverse").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static BRUSH_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static BRUSH_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_brush_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "stretch").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "scatter").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &BRUSH_TYPE_ATOM_0, "stretch").encode(env)),
+        1i64 => Ok(cached_atom(env, &BRUSH_TYPE_ATOM_1, "scatter").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_dynamic_stroke_settings_from_decoder<'a>(
@@ -9019,27 +8096,29 @@ fn decode_shared_style_master_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static SCROLL_BEHAVIOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SCROLL_BEHAVIOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SCROLL_BEHAVIOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_scroll_behavior_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "scrolls").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SCROLL_BEHAVIOR_ATOM_0, "scrolls").encode(env)),
+        1i64 => {
             Ok(
-                cached_atom(env, &ATOM_1, "fixed_when_child_of_scrolling_frame")
+                cached_atom(
+                        env,
+                        &SCROLL_BEHAVIOR_ATOM_1,
+                        "fixed_when_child_of_scrolling_frame",
+                    )
                     .encode(env),
             )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "sticky_scrolls").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &SCROLL_BEHAVIOR_ATOM_2, "sticky_scrolls").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_arc_data_from_decoder<'a>(
@@ -9256,52 +8335,34 @@ fn decode_multiplayer_field_version_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CONNECTOR_MAGNET_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_MAGNET_ATOM_9: OnceLock<Atom> = OnceLock::new();
 fn decode_connector_magnet_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_1, "auto").encode(env)),
+        2i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_2, "top").encode(env)),
+        3i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_3, "left").encode(env)),
+        4i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_4, "bottom").encode(env)),
+        5i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_5, "right").encode(env)),
+        6i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_6, "center").encode(env)),
+        7i64 => {
+            Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_7, "auto_horizontal").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "auto").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "top").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "left").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "bottom").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "right").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "center").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "auto_horizontal").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "edge").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "absolute").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        8i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_8, "edge").encode(env)),
+        9i64 => Ok(cached_atom(env, &CONNECTOR_MAGNET_ATOM_9, "absolute").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_connector_endpoint_from_decoder<'a>(
@@ -9395,40 +8456,46 @@ fn decode_connector_control_point_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CONNECTOR_TEXT_SECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_TEXT_SECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_connector_text_section_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "middle_to_start").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &CONNECTOR_TEXT_SECTION_ATOM_0, "middle_to_start")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "middle_to_end").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &CONNECTOR_TEXT_SECTION_ATOM_1, "middle_to_end")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static CONNECTOR_OFF_AXIS_OFFSET_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_OFF_AXIS_OFFSET_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_OFF_AXIS_OFFSET_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_connector_off_axis_offset_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &CONNECTOR_OFF_AXIS_OFFSET_ATOM_0, "none").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "above").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &CONNECTOR_OFF_AXIS_OFFSET_ATOM_1, "above").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "below").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &CONNECTOR_OFF_AXIS_OFFSET_ATOM_2, "below").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_connector_text_midpoint_from_decoder<'a>(
@@ -9479,180 +8546,268 @@ fn decode_connector_text_midpoint_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CONNECTOR_LINE_STYLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_LINE_STYLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_LINE_STYLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_connector_line_style_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "elbowed").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CONNECTOR_LINE_STYLE_ATOM_0, "elbowed").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &CONNECTOR_LINE_STYLE_ATOM_1, "straight").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "straight").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "curved").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        2i64 => Ok(cached_atom(env, &CONNECTOR_LINE_STYLE_ATOM_2, "curved").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static CONNECTOR_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CONNECTOR_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_connector_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "manual").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "diagram").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CONNECTOR_TYPE_ATOM_0, "manual").encode(env)),
+        1i64 => Ok(cached_atom(env, &CONNECTOR_TYPE_ATOM_1, "diagram").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static ANNOTATION_PROPERTY_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_30: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_31: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_PROPERTY_TYPE_ATOM_32: OnceLock<Atom> = OnceLock::new();
 fn decode_annotation_property_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "fill").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_0, "fill").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "stroke").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_1, "stroke").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "width").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_2, "width").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "height").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_3, "height").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "min_width").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_4, "min_width")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "min_height").encode(env))
+        5i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_5, "min_height")
+                    .encode(env),
+            )
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "max_width").encode(env))
+        6i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_6, "max_width")
+                    .encode(env),
+            )
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "max_height").encode(env))
+        7i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_7, "max_height")
+                    .encode(env),
+            )
         }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "stroke_width").encode(env))
+        8i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_8, "stroke_width")
+                    .encode(env),
+            )
         }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "corner_radius").encode(env))
+        9i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_9, "corner_radius")
+                    .encode(env),
+            )
         }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "effect").encode(env))
+        10i64 => {
+            Ok(cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_10, "effect").encode(env))
         }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "text_style").encode(env))
+        11i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_11, "text_style")
+                    .encode(env),
+            )
         }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "text_align_horizontal").encode(env))
+        12i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &ANNOTATION_PROPERTY_TYPE_ATOM_12,
+                        "text_align_horizontal",
+                    )
+                    .encode(env),
+            )
         }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "font_family").encode(env))
+        13i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_13, "font_family")
+                    .encode(env),
+            )
         }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "font_size").encode(env))
+        14i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_14, "font_size")
+                    .encode(env),
+            )
         }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "font_weight").encode(env))
+        15i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_15, "font_weight")
+                    .encode(env),
+            )
         }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "line_height").encode(env))
+        16i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_16, "line_height")
+                    .encode(env),
+            )
         }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "letter_spacing").encode(env))
+        17i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_17, "letter_spacing")
+                    .encode(env),
+            )
         }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "stack_spacing").encode(env))
+        18i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_18, "stack_spacing")
+                    .encode(env),
+            )
         }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "stack_padding").encode(env))
+        19i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_19, "stack_padding")
+                    .encode(env),
+            )
         }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "stack_mode").encode(env))
+        20i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_20, "stack_mode")
+                    .encode(env),
+            )
         }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "stack_alignment").encode(env))
+        21i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_21, "stack_alignment")
+                    .encode(env),
+            )
         }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "opacity").encode(env))
+        22i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_22, "opacity")
+                    .encode(env),
+            )
         }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "component").encode(env))
+        23i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_23, "component")
+                    .encode(env),
+            )
         }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "font_style").encode(env))
+        24i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_24, "font_style")
+                    .encode(env),
+            )
         }
-        25 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "grid_row_gap").encode(env))
+        25i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_25, "grid_row_gap")
+                    .encode(env),
+            )
         }
-        26 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "grid_column_gap").encode(env))
+        26i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_26, "grid_column_gap")
+                    .encode(env),
+            )
         }
-        27 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "grid_row_count").encode(env))
+        27i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_27, "grid_row_count")
+                    .encode(env),
+            )
         }
-        28 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "grid_column_count").encode(env))
+        28i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_28, "grid_column_count")
+                    .encode(env),
+            )
         }
-        29 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "grid_row_anchor_index").encode(env))
+        29i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &ANNOTATION_PROPERTY_TYPE_ATOM_29,
+                        "grid_row_anchor_index",
+                    )
+                    .encode(env),
+            )
         }
-        30 => {
-            static ATOM_30: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_30, "grid_column_anchor_index").encode(env))
+        30i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &ANNOTATION_PROPERTY_TYPE_ATOM_30,
+                        "grid_column_anchor_index",
+                    )
+                    .encode(env),
+            )
         }
-        31 => {
-            static ATOM_31: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_31, "grid_row_span").encode(env))
+        31i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_31, "grid_row_span")
+                    .encode(env),
+            )
         }
-        32 => {
-            static ATOM_32: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_32, "grid_column_span").encode(env))
+        32i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_PROPERTY_TYPE_ATOM_32, "grid_column_span")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_annotation_property_from_decoder<'a>(
@@ -9690,76 +8845,91 @@ fn decode_annotation_property_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static ANNOTATION_CATEGORY_PRESET_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_PRESET_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_PRESET_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_PRESET_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_PRESET_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_PRESET_ATOM_5: OnceLock<Atom> = OnceLock::new();
 fn decode_annotation_category_preset_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_PRESET_ATOM_0, "none").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "accessibility").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_CATEGORY_PRESET_ATOM_1, "accessibility")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "behavior").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_CATEGORY_PRESET_ATOM_2, "behavior")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "content").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_CATEGORY_PRESET_ATOM_3, "content")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "development").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_CATEGORY_PRESET_ATOM_4, "development")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "interaction").encode(env))
+        5i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_CATEGORY_PRESET_ATOM_5, "interaction")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static ANNOTATION_CATEGORY_COLOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_COLOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_COLOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_COLOR_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_COLOR_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_COLOR_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_COLOR_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_CATEGORY_COLOR_ATOM_7: OnceLock<Atom> = OnceLock::new();
 fn decode_annotation_category_color_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "yellow").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_COLOR_ATOM_0, "yellow").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "orange").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_COLOR_ATOM_1, "orange").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "red").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_COLOR_ATOM_2, "red").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "pink").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_COLOR_ATOM_3, "pink").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "violet").encode(env))
+        4i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_COLOR_ATOM_4, "violet").encode(env))
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "blue").encode(env))
+        5i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_COLOR_ATOM_5, "blue").encode(env))
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "teal").encode(env))
+        6i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_COLOR_ATOM_6, "teal").encode(env))
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "green").encode(env))
+        7i64 => {
+            Ok(cached_atom(env, &ANNOTATION_CATEGORY_COLOR_ATOM_7, "green").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_annotation_category_custom_from_decoder<'a>(
@@ -9952,28 +9122,40 @@ fn decode_annotation_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_annotation_measurement_node_side_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "top").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_0, "top")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "bottom").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_1, "bottom")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "left").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_2, "left")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "right").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_3, "right")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_annotation_measurement_from_decoder<'a>(
@@ -10276,108 +9458,72 @@ fn decode_edit_info_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static EDITOR_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EDITOR_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EDITOR_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static EDITOR_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static EDITOR_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static EDITOR_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static EDITOR_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static EDITOR_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static EDITOR_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
 fn decode_editor_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "design").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "whiteboard").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "slides").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "dev_handoff").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "sites").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "cooper").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "illustration").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "figmake").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "figspec").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_0, "design").encode(env)),
+        1i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_1, "whiteboard").encode(env)),
+        2i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_2, "slides").encode(env)),
+        3i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_3, "dev_handoff").encode(env)),
+        4i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_4, "sites").encode(env)),
+        5i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_5, "cooper").encode(env)),
+        6i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_6, "illustration").encode(env)),
+        7i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_7, "figmake").encode(env)),
+        8i64 => Ok(cached_atom(env, &EDITOR_TYPE_ATOM_8, "figspec").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static MASK_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MASK_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MASK_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_mask_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "alpha").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "outline").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "luminance").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &MASK_TYPE_ATOM_0, "alpha").encode(env)),
+        1i64 => Ok(cached_atom(env, &MASK_TYPE_ATOM_1, "outline").encode(env)),
+        2i64 => Ok(cached_atom(env, &MASK_TYPE_ATOM_2, "luminance").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static MODULE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MODULE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MODULE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_module_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "single_node").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "multi_node").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &MODULE_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &MODULE_TYPE_ATOM_1, "single_node").encode(env)),
+        2i64 => Ok(cached_atom(env, &MODULE_TYPE_ATOM_2, "multi_node").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SECTION_STATUS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SECTION_STATUS_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SECTION_STATUS_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_section_status_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "build").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "completed").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SECTION_STATUS_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &SECTION_STATUS_ATOM_1, "build").encode(env)),
+        2i64 => Ok(cached_atom(env, &SECTION_STATUS_ATOM_2, "completed").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_section_status_info_from_decoder<'a>(
@@ -10554,28 +9700,37 @@ fn decode_buzz_approval_requests_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static BUZZ_APPROVAL_NODE_STATUS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static BUZZ_APPROVAL_NODE_STATUS_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static BUZZ_APPROVAL_NODE_STATUS_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static BUZZ_APPROVAL_NODE_STATUS_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_buzz_approval_node_status_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &BUZZ_APPROVAL_NODE_STATUS_ATOM_0, "none").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "in_review").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &BUZZ_APPROVAL_NODE_STATUS_ATOM_1, "in_review")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "approved").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &BUZZ_APPROVAL_NODE_STATUS_ATOM_2, "approved")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "changes_requested").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &BUZZ_APPROVAL_NODE_STATUS_ATOM_3, "changes_requested")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_buzz_approval_node_status_info_from_decoder<'a>(
@@ -10681,20 +9836,26 @@ fn decode_code_embed_info_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static VARIABLE_TIMING_DISPLAY_UNIT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_TIMING_DISPLAY_UNIT_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_variable_timing_display_unit_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "milliseconds").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_TIMING_DISPLAY_UNIT_ATOM_0, "milliseconds")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "seconds").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_TIMING_DISPLAY_UNIT_ATOM_1, "seconds")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_node_change_from_decoder<'a>(
@@ -13909,24 +13070,18 @@ fn decode_node_change_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static GIT_REPO_REF_PROVIDER_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static GIT_REPO_REF_PROVIDER_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static GIT_REPO_REF_PROVIDER_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_git_repo_ref_provider_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "ugit").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "github").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "other").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &GIT_REPO_REF_PROVIDER_ATOM_0, "ugit").encode(env)),
+        1i64 => Ok(cached_atom(env, &GIT_REPO_REF_PROVIDER_ATOM_1, "github").encode(env)),
+        2i64 => Ok(cached_atom(env, &GIT_REPO_REF_PROVIDER_ATOM_2, "other").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_git_repo_ref_from_decoder<'a>(
@@ -14519,76 +13674,68 @@ fn decode_cookie_banner_settings_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static COOKIE_BANNER_COMPONENT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static COOKIE_BANNER_COMPONENT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_cookie_banner_component_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "banner").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &COOKIE_BANNER_COMPONENT_TYPE_ATOM_0, "banner")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "modal").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &COOKIE_BANNER_COMPONENT_TYPE_ATOM_1, "modal")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TRIGGER_COMPONENT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRIGGER_COMPONENT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_trigger_component_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "banner").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &TRIGGER_COMPONENT_TYPE_ATOM_0, "banner").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "tag").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        1i64 => Ok(cached_atom(env, &TRIGGER_COMPONENT_TYPE_ATOM_1, "tag").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static COOKIE_X_ALIGNMENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static COOKIE_X_ALIGNMENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static COOKIE_X_ALIGNMENT_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_cookie_x_alignment_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "left").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "right").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &COOKIE_X_ALIGNMENT_ATOM_0, "left").encode(env)),
+        1i64 => Ok(cached_atom(env, &COOKIE_X_ALIGNMENT_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &COOKIE_X_ALIGNMENT_ATOM_2, "right").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static COOKIE_Y_ALIGNMENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static COOKIE_Y_ALIGNMENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static COOKIE_Y_ALIGNMENT_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_cookie_y_alignment_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "top").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "center").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "bottom").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &COOKIE_Y_ALIGNMENT_ATOM_0, "top").encode(env)),
+        1i64 => Ok(cached_atom(env, &COOKIE_Y_ALIGNMENT_ATOM_1, "center").encode(env)),
+        2i64 => Ok(cached_atom(env, &COOKIE_Y_ALIGNMENT_ATOM_2, "bottom").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_responsive_set_settings_from_decoder<'a>(
@@ -14733,20 +13880,20 @@ fn decode_responsive_set_settings_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static RESPONSIVE_SCALING_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static RESPONSIVE_SCALING_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_responsive_scaling_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "reflow").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &RESPONSIVE_SCALING_MODE_ATOM_0, "reflow").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "scale").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &RESPONSIVE_SCALING_MODE_ATOM_1, "scale").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_cms_selector_from_decoder<'a>(
@@ -14848,20 +13995,26 @@ fn decode_cms_filter_critera_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_cms_filter_criteria_match_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "match_all").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_0, "match_all")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "match_any").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_1, "match_any")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_cms_selector_filter_from_decoder<'a>(
@@ -14914,16 +14067,19 @@ fn decode_cms_selector_filter_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CMS_SELECTOR_FILTER_OPERATOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
 fn decode_cms_selector_filter_operator_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "equals").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &CMS_SELECTOR_FILTER_OPERATOR_ATOM_0, "equals")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_cms_selector_sort_from_decoder<'a>(
@@ -14965,20 +14121,18 @@ fn decode_cms_selector_sort_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CMS_FIELD_ORDER_BY_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CMS_FIELD_ORDER_BY_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_cms_field_order_by_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "ascending").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CMS_FIELD_ORDER_BY_ATOM_0, "ascending").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &CMS_FIELD_ORDER_BY_ATOM_1, "descending").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "descending").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_cms_consumption_map_from_decoder<'a>(
@@ -15064,20 +14218,20 @@ fn decode_cms_consumption_map_entry_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CMS_CONSUMPTION_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CMS_CONSUMPTION_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_cms_consumption_field_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "missing").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &CMS_CONSUMPTION_FIELD_ATOM_0, "missing").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "text_data").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &CMS_CONSUMPTION_FIELD_ATOM_1, "text_data").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_cms_rich_text_style_map_from_decoder<'a>(
@@ -15163,48 +14317,72 @@ fn decode_cms_rich_text_style_entry_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static CMS_RICH_TEXT_STYLE_CLASS_ATOM_8: OnceLock<Atom> = OnceLock::new();
 fn decode_cms_rich_text_style_class_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "heading1").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_0, "heading1")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "heading2").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_1, "heading2")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "heading3").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_2, "heading3")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "heading4").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_3, "heading4")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "heading5").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_4, "heading5")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "heading6").encode(env))
+        5i64 => {
+            Ok(
+                cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_5, "heading6")
+                    .encode(env),
+            )
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "paragraph").encode(env))
+        6i64 => {
+            Ok(
+                cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_6, "paragraph")
+                    .encode(env),
+            )
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "link").encode(env))
+        7i64 => {
+            Ok(cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_7, "link").encode(env))
         }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "blockquote").encode(env))
+        8i64 => {
+            Ok(
+                cached_atom(env, &CMS_RICH_TEXT_STYLE_CLASS_ATOM_8, "blockquote")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_cms_rich_text_descriptor_from_decoder<'a>(
@@ -15592,40 +14770,46 @@ fn decode_managed_string_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static MANAGED_STRING_CONTENT_SCHEMA_ATOM_0: OnceLock<Atom> = OnceLock::new();
 fn decode_managed_string_content_schema_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "v0").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_CONTENT_SCHEMA_ATOM_0, "v0").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static MANAGED_STRING_NODE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_NODE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_NODE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_NODE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_managed_string_node_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "text").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_NODE_TYPE_ATOM_0, "text").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "concatenate").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &MANAGED_STRING_NODE_TYPE_ATOM_1, "concatenate")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "plural").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_NODE_TYPE_ATOM_2, "plural").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "placeholder").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &MANAGED_STRING_NODE_TYPE_ATOM_3, "placeholder")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_managed_string_node_from_decoder<'a>(
@@ -15777,36 +14961,36 @@ fn decode_managed_string_concatenate_ast_node_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static MANAGED_STRING_PLURAL_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_PLURAL_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_PLURAL_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_PLURAL_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_PLURAL_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_PLURAL_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
 fn decode_managed_string_plural_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "zero").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_PLURAL_TYPE_ATOM_0, "zero").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "one").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_PLURAL_TYPE_ATOM_1, "one").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "two").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_PLURAL_TYPE_ATOM_2, "two").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "few").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_PLURAL_TYPE_ATOM_3, "few").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "many").encode(env))
+        4i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_PLURAL_TYPE_ATOM_4, "many").encode(env))
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "other").encode(env))
+        5i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_PLURAL_TYPE_ATOM_5, "other").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_managed_string_plural_ast_node_data_from_decoder<'a>(
@@ -15896,28 +15080,31 @@ fn decode_managed_string_plural_type_map_entry_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static MANAGED_STRING_FORMAT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_FORMAT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_FORMAT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static MANAGED_STRING_FORMAT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_managed_string_format_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "text").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_FORMAT_TYPE_ATOM_0, "text").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "date").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_FORMAT_TYPE_ATOM_1, "date").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "time").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &MANAGED_STRING_FORMAT_TYPE_ATOM_2, "time").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "number").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &MANAGED_STRING_FORMAT_TYPE_ATOM_3, "number")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_managed_string_placeholder_ast_node_data_from_decoder<'a>(
@@ -16072,76 +15259,68 @@ fn decode_video_playback_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static MEDIA_ACTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static MEDIA_ACTION_ATOM_9: OnceLock<Atom> = OnceLock::new();
 fn decode_media_action_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "play").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &MEDIA_ACTION_ATOM_0, "play").encode(env)),
+        1i64 => Ok(cached_atom(env, &MEDIA_ACTION_ATOM_1, "pause").encode(env)),
+        2i64 => {
+            Ok(cached_atom(env, &MEDIA_ACTION_ATOM_2, "toggle_play_pause").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "pause").encode(env))
+        3i64 => Ok(cached_atom(env, &MEDIA_ACTION_ATOM_3, "mute").encode(env)),
+        4i64 => Ok(cached_atom(env, &MEDIA_ACTION_ATOM_4, "unmute").encode(env)),
+        5i64 => {
+            Ok(cached_atom(env, &MEDIA_ACTION_ATOM_5, "toggle_mute_unmute").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "toggle_play_pause").encode(env))
+        6i64 => Ok(cached_atom(env, &MEDIA_ACTION_ATOM_6, "skip_forward").encode(env)),
+        7i64 => Ok(cached_atom(env, &MEDIA_ACTION_ATOM_7, "skip_backward").encode(env)),
+        8i64 => Ok(cached_atom(env, &MEDIA_ACTION_ATOM_8, "skip_to").encode(env)),
+        9i64 => {
+            Ok(cached_atom(env, &MEDIA_ACTION_ATOM_9, "set_playback_rate").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "mute").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "unmute").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "toggle_mute_unmute").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "skip_forward").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "skip_backward").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "skip_to").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "set_playback_rate").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static ANIMATION_TIMELINE_ACTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_TIMELINE_ACTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_TIMELINE_ACTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_TIMELINE_ACTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_animation_timeline_action_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "play").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &ANIMATION_TIMELINE_ACTION_ATOM_0, "play").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "pause").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &ANIMATION_TIMELINE_ACTION_ATOM_1, "pause").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "toggle_play_pause").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &ANIMATION_TIMELINE_ACTION_ATOM_2, "toggle_play_pause")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "set_playhead").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &ANIMATION_TIMELINE_ACTION_ATOM_3, "set_playhead")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_widget_hover_style_from_decoder<'a>(
@@ -16417,288 +15596,333 @@ fn decode_variable_data_map_entry_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static VARIABLE_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_29: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_30: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_31: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_32: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_33: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_34: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_35: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_36: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_37: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_38: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_39: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_40: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_41: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_42: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_43: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_44: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_45: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_46: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_47: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_48: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_49: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_50: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_51: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_52: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_53: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_54: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_55: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_56: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_57: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_58: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_59: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_60: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_61: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_62: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_63: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_64: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_FIELD_ATOM_65: OnceLock<Atom> = OnceLock::new();
 fn decode_variable_field_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "missing").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_0, "missing").encode(env)),
+        1i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_1, "corner_radius").encode(env)),
+        2i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_2, "paragraph_spacing").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "corner_radius").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_3, "paragraph_indent").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "paragraph_spacing").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "paragraph_indent").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "stroke_weight").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "stack_spacing").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "stack_padding_left").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "stack_padding_top").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "stack_padding_right").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "stack_padding_bottom").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "visible").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "text_data").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "width").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "height").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
+        4i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_4, "stroke_weight").encode(env)),
+        5i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_5, "stack_spacing").encode(env)),
+        6i64 => {
             Ok(
-                cached_atom(env, &ATOM_14, "rectangle_top_left_corner_radius")
+                cached_atom(env, &VARIABLE_FIELD_ATOM_6, "stack_padding_left")
                     .encode(env),
             )
         }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
+        7i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_7, "stack_padding_top").encode(env))
+        }
+        8i64 => {
             Ok(
-                cached_atom(env, &ATOM_15, "rectangle_top_right_corner_radius")
+                cached_atom(env, &VARIABLE_FIELD_ATOM_8, "stack_padding_right")
                     .encode(env),
             )
         }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
+        9i64 => {
             Ok(
-                cached_atom(env, &ATOM_16, "rectangle_bottom_left_corner_radius")
+                cached_atom(env, &VARIABLE_FIELD_ATOM_9, "stack_padding_bottom")
                     .encode(env),
             )
         }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
+        10i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_10, "visible").encode(env)),
+        11i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_11, "text_data").encode(env)),
+        12i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_12, "width").encode(env)),
+        13i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_13, "height").encode(env)),
+        14i64 => {
             Ok(
-                cached_atom(env, &ATOM_17, "rectangle_bottom_right_corner_radius")
+                cached_atom(
+                        env,
+                        &VARIABLE_FIELD_ATOM_14,
+                        "rectangle_top_left_corner_radius",
+                    )
                     .encode(env),
             )
         }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "border_top_weight").encode(env))
+        15i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &VARIABLE_FIELD_ATOM_15,
+                        "rectangle_top_right_corner_radius",
+                    )
+                    .encode(env),
+            )
         }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "border_bottom_weight").encode(env))
+        16i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &VARIABLE_FIELD_ATOM_16,
+                        "rectangle_bottom_left_corner_radius",
+                    )
+                    .encode(env),
+            )
         }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "border_left_weight").encode(env))
+        17i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &VARIABLE_FIELD_ATOM_17,
+                        "rectangle_bottom_right_corner_radius",
+                    )
+                    .encode(env),
+            )
         }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "border_right_weight").encode(env))
+        18i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_18, "border_top_weight")
+                    .encode(env),
+            )
         }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "variant_properties").encode(env))
+        19i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_19, "border_bottom_weight")
+                    .encode(env),
+            )
         }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "stack_counter_spacing").encode(env))
+        20i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_20, "border_left_weight")
+                    .encode(env),
+            )
         }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "min_width").encode(env))
+        21i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_21, "border_right_weight")
+                    .encode(env),
+            )
         }
-        25 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "max_width").encode(env))
+        22i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_22, "variant_properties")
+                    .encode(env),
+            )
         }
-        26 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "min_height").encode(env))
+        23i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_23, "stack_counter_spacing")
+                    .encode(env),
+            )
         }
-        27 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "max_height").encode(env))
+        24i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_24, "min_width").encode(env)),
+        25i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_25, "max_width").encode(env)),
+        26i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_26, "min_height").encode(env)),
+        27i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_27, "max_height").encode(env)),
+        28i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_28, "font_family").encode(env)),
+        29i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_29, "font_style").encode(env)),
+        30i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_30, "font_variations").encode(env))
         }
-        28 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "font_family").encode(env))
+        31i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_31, "opacity").encode(env)),
+        32i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_32, "font_size").encode(env)),
+        34i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_33, "letter_spacing").encode(env))
         }
-        29 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "font_style").encode(env))
+        36i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_34, "line_height").encode(env)),
+        37i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_35, "overridden_symbol_id")
+                    .encode(env),
+            )
         }
-        30 => {
-            static ATOM_30: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_30, "font_variations").encode(env))
+        38i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_36, "hyperlink").encode(env)),
+        39i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &VARIABLE_FIELD_ATOM_37,
+                        "cms_serialized_rich_text_data",
+                    )
+                    .encode(env),
+            )
         }
-        31 => {
-            static ATOM_31: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_31, "opacity").encode(env))
+        40i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_38, "slot_content_id").encode(env))
         }
-        32 => {
-            static ATOM_32: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_32, "font_size").encode(env))
+        41i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_39, "grid_row_gap").encode(env))
         }
-        34 => {
-            static ATOM_33: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_33, "letter_spacing").encode(env))
+        42i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_40, "grid_column_gap").encode(env))
         }
-        36 => {
-            static ATOM_34: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_34, "line_height").encode(env))
+        43i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_41, "x_position").encode(env)),
+        44i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_42, "y_position").encode(env)),
+        45i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_43, "rotation").encode(env)),
+        46i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_44, "motion_translation_x")
+                    .encode(env),
+            )
         }
-        37 => {
-            static ATOM_35: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_35, "overridden_symbol_id").encode(env))
+        47i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_45, "motion_translation_y")
+                    .encode(env),
+            )
         }
-        38 => {
-            static ATOM_36: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_36, "hyperlink").encode(env))
+        48i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_46, "motion_rotation").encode(env))
         }
-        39 => {
-            static ATOM_37: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_37, "cms_serialized_rich_text_data").encode(env))
+        49i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_47, "motion_scale_x").encode(env))
         }
-        40 => {
-            static ATOM_38: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_38, "slot_content_id").encode(env))
+        50i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_48, "motion_scale_y").encode(env))
         }
-        41 => {
-            static ATOM_39: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_39, "grid_row_gap").encode(env))
+        51i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_49, "motion_shear").encode(env))
         }
-        42 => {
-            static ATOM_40: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_40, "grid_column_gap").encode(env))
+        52i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_50, "scroll_offset_x").encode(env))
         }
-        43 => {
-            static ATOM_41: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_41, "x_position").encode(env))
+        53i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_51, "scroll_offset_y").encode(env))
         }
-        44 => {
-            static ATOM_42: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_42, "y_position").encode(env))
+        54i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_52, "path_trim_start").encode(env))
         }
-        45 => {
-            static ATOM_43: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_43, "rotation").encode(env))
+        55i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_53, "path_trim_end").encode(env))
         }
-        46 => {
-            static ATOM_44: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_44, "motion_translation_x").encode(env))
+        56i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_54, "dissolve_progress")
+                    .encode(env),
+            )
         }
-        47 => {
-            static ATOM_45: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_45, "motion_translation_y").encode(env))
+        57i64 => Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_55, "easing_data").encode(env)),
+        58i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_56, "media_current_time")
+                    .encode(env),
+            )
         }
-        48 => {
-            static ATOM_46: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_46, "motion_rotation").encode(env))
+        59i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_57, "transform_3_d_perspective")
+                    .encode(env),
+            )
         }
-        49 => {
-            static ATOM_47: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_47, "motion_scale_x").encode(env))
+        60i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_58, "transform_3_d_translation_z")
+                    .encode(env),
+            )
         }
-        50 => {
-            static ATOM_48: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_48, "motion_scale_y").encode(env))
+        61i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_59, "transform_3_d_rotation_x")
+                    .encode(env),
+            )
         }
-        51 => {
-            static ATOM_49: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_49, "motion_shear").encode(env))
+        62i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_60, "transform_3_d_rotation_y")
+                    .encode(env),
+            )
         }
-        52 => {
-            static ATOM_50: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_50, "scroll_offset_x").encode(env))
+        63i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_61, "transform_3_d_rotation_z")
+                    .encode(env),
+            )
         }
-        53 => {
-            static ATOM_51: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_51, "scroll_offset_y").encode(env))
+        64i64 => {
+            Ok(cached_atom(env, &VARIABLE_FIELD_ATOM_62, "polygon_count").encode(env))
         }
-        54 => {
-            static ATOM_52: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_52, "path_trim_start").encode(env))
+        65i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_63, "arc_data_starting_angle")
+                    .encode(env),
+            )
         }
-        55 => {
-            static ATOM_53: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_53, "path_trim_end").encode(env))
+        66i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_64, "arc_data_ending_angle")
+                    .encode(env),
+            )
         }
-        56 => {
-            static ATOM_54: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_54, "dissolve_progress").encode(env))
+        67i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_FIELD_ATOM_65, "arc_data_inner_radius")
+                    .encode(env),
+            )
         }
-        57 => {
-            static ATOM_55: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_55, "easing_data").encode(env))
-        }
-        58 => {
-            static ATOM_56: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_56, "media_current_time").encode(env))
-        }
-        59 => {
-            static ATOM_57: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_57, "transform_3_d_perspective").encode(env))
-        }
-        60 => {
-            static ATOM_58: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_58, "transform_3_d_translation_z").encode(env))
-        }
-        61 => {
-            static ATOM_59: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_59, "transform_3_d_rotation_x").encode(env))
-        }
-        62 => {
-            static ATOM_60: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_60, "transform_3_d_rotation_y").encode(env))
-        }
-        63 => {
-            static ATOM_61: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_61, "transform_3_d_rotation_z").encode(env))
-        }
-        64 => {
-            static ATOM_62: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_62, "polygon_count").encode(env))
-        }
-        65 => {
-            static ATOM_63: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_63, "arc_data_starting_angle").encode(env))
-        }
-        66 => {
-            static ATOM_64: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_64, "arc_data_ending_angle").encode(env))
-        }
-        67 => {
-            static ATOM_65: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_65, "arc_data_inner_radius").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_variable_mode_by_set_map_from_decoder<'a>(
@@ -17361,24 +16585,18 @@ fn decode_grid_track_sizing_function_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static GRID_TRACK_SIZING_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static GRID_TRACK_SIZING_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static GRID_TRACK_SIZING_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_grid_track_sizing_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "flex").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "fixed").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "hug").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &GRID_TRACK_SIZING_TYPE_ATOM_0, "flex").encode(env)),
+        1i64 => Ok(cached_atom(env, &GRID_TRACK_SIZING_TYPE_ATOM_1, "fixed").encode(env)),
+        2i64 => Ok(cached_atom(env, &GRID_TRACK_SIZING_TYPE_ATOM_2, "hug").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_table_row_column_size_map_from_decoder<'a>(
@@ -17540,20 +16758,16 @@ fn decode_agenda_position_map_entry_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static AGENDA_ITEM_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static AGENDA_ITEM_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_agenda_item_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "node").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "block").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &AGENDA_ITEM_TYPE_ATOM_0, "node").encode(env)),
+        1i64 => Ok(cached_atom(env, &AGENDA_ITEM_TYPE_ATOM_1, "block").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_agenda_metadata_map_from_decoder<'a>(
@@ -17803,34 +17017,38 @@ fn decode_agenda_music_info_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static DIAGRAM_LAYOUT_RULE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static DIAGRAM_LAYOUT_RULE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_diagram_layout_rule_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &DIAGRAM_LAYOUT_RULE_TYPE_ATOM_0, "none").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "tree").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &DIAGRAM_LAYOUT_RULE_TYPE_ATOM_1, "tree").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static DIAGRAM_PARENT_INDEX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static DIAGRAM_PARENT_INDEX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_diagram_parent_index_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &DIAGRAM_PARENT_INDEX_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.DiagramParentIndex",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "position"]);
+    let keys = cached_struct_keys(
+        env,
+        &DIAGRAM_PARENT_INDEX_STRUCT_KEYS,
+        &["guid", "position"],
+    );
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decode_guid_from_decoder(env, decoder)?;
@@ -17839,20 +17057,16 @@ fn decode_diagram_parent_index_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static DIAGRAM_LAYOUT_PAUSED_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static DIAGRAM_LAYOUT_PAUSED_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_diagram_layout_paused_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "no").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "yes").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &DIAGRAM_LAYOUT_PAUSED_ATOM_0, "no").encode(env)),
+        1i64 => Ok(cached_atom(env, &DIAGRAM_LAYOUT_PAUSED_ATOM_1, "yes").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_component_prop_ref_from_decoder<'a>(
@@ -17916,32 +17130,55 @@ fn decode_component_prop_ref_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static COMPONENT_PROP_NODE_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_NODE_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_NODE_FIELD_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_NODE_FIELD_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_NODE_FIELD_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_component_prop_node_field_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "visible").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &COMPONENT_PROP_NODE_FIELD_ATOM_0, "visible")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "text_data").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &COMPONENT_PROP_NODE_FIELD_ATOM_1, "text_data")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "overridden_symbol_id").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COMPONENT_PROP_NODE_FIELD_ATOM_2,
+                        "overridden_symbol_id",
+                    )
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "inherit_fill_style_id").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COMPONENT_PROP_NODE_FIELD_ATOM_3,
+                        "inherit_fill_style_id",
+                    )
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "slot_content_id").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &COMPONENT_PROP_NODE_FIELD_ATOM_4, "slot_content_id")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_component_prop_assignment_from_decoder<'a>(
@@ -18490,80 +17727,67 @@ fn decode_timeline_assignments_map_entry_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static COMPONENT_PROP_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static COMPONENT_PROP_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
 fn decode_component_prop_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "bool").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_0, "bool").encode(env)),
+        1i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_1, "text").encode(env)),
+        2i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_2, "color").encode(env)),
+        3i64 => {
+            Ok(
+                cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_3, "instance_swap")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "text").encode(env))
+        4i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_4, "variant").encode(env)),
+        5i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_5, "number").encode(env)),
+        6i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_6, "image").encode(env)),
+        7i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_7, "slot").encode(env)),
+        8i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_8, "easing").encode(env)),
+        9i64 => {
+            Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_9, "color_array").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "color").encode(env))
+        10i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_10, "vector").encode(env)),
+        11i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_11, "line").encode(env)),
+        12i64 => Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_12, "circle").encode(env)),
+        13i64 => {
+            Ok(
+                cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_13, "rotation_3_d")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "instance_swap").encode(env))
+        14i64 => {
+            Ok(
+                cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_14, "circle_point")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "variant").encode(env))
+        15i64 => {
+            Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_15, "gradient").encode(env))
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "number").encode(env))
+        16i64 => {
+            Ok(cached_atom(env, &COMPONENT_PROP_TYPE_ATOM_16, "color_point").encode(env))
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "image").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "slot").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "easing").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "color_array").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "vector").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "line").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "circle").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "rotation_3_d").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "circle_point").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "gradient").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "color_point").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_component_prop_preferred_values_from_decoder<'a>(
@@ -18715,28 +17939,28 @@ fn decode_parameter_config_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static PARAMETER_CONFIG_CONTROL_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PARAMETER_CONFIG_CONTROL_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PARAMETER_CONFIG_CONTROL_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static PARAMETER_CONFIG_CONTROL_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_parameter_config_control_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "default").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &PARAMETER_CONFIG_CONTROL_ATOM_0, "default").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "slider").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &PARAMETER_CONFIG_CONTROL_ATOM_1, "slider").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "input").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &PARAMETER_CONFIG_CONTROL_ATOM_2, "input").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "select").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &PARAMETER_CONFIG_CONTROL_ATOM_3, "select").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_input_config_from_decoder<'a>(
@@ -18827,24 +18051,18 @@ fn decode_slider_config_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static POINT_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static POINT_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static POINT_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_point_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "canvas_and_ui").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "canvas").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "ui").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &POINT_MODE_ATOM_0, "canvas_and_ui").encode(env)),
+        1i64 => Ok(cached_atom(env, &POINT_MODE_ATOM_1, "canvas").encode(env)),
+        2i64 => Ok(cached_atom(env, &POINT_MODE_ATOM_2, "ui").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_point_config_from_decoder<'a>(
@@ -19620,68 +18838,76 @@ fn decode_instance_swap_preferred_value_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_instance_swap_preferred_value_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "component").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_0, "component")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "state_group").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_1,
+                        "state_group",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static WIDGET_EVENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static WIDGET_EVENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static WIDGET_EVENT_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static WIDGET_EVENT_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static WIDGET_EVENT_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_widget_event_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "mouse_down").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &WIDGET_EVENT_ATOM_0, "mouse_down").encode(env)),
+        1i64 => Ok(cached_atom(env, &WIDGET_EVENT_ATOM_1, "click").encode(env)),
+        2i64 => Ok(cached_atom(env, &WIDGET_EVENT_ATOM_2, "text_edit_end").encode(env)),
+        3i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_EVENT_ATOM_3, "attached_stickables_changed")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "click").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_EVENT_ATOM_4, "stuck_status_changed")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "text_edit_end").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "attached_stickables_changed").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "stuck_status_changed").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static WIDGET_INPUT_BEHAVIOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static WIDGET_INPUT_BEHAVIOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static WIDGET_INPUT_BEHAVIOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_widget_input_behavior_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "wrap").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &WIDGET_INPUT_BEHAVIOR_ATOM_0, "wrap").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &WIDGET_INPUT_BEHAVIOR_ATOM_1, "truncate").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "truncate").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &WIDGET_INPUT_BEHAVIOR_ATOM_2, "multiline").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "multiline").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_widget_metadata_from_decoder<'a>(
@@ -19745,40 +18971,65 @@ fn decode_widget_metadata_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
 fn decode_widget_property_menu_item_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "action").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_0, "action")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "separator").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_1, "separator")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "color").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_2, "color")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "dropdown").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_3, "dropdown")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "color_selector").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_4,
+                        "color_selector",
+                    )
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "toggle").encode(env))
+        5i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_5, "toggle")
+                    .encode(env),
+            )
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "link").encode(env))
+        6i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_6, "link")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_widget_property_menu_selector_option_from_decoder<'a>(
@@ -19821,20 +19072,30 @@ fn decode_widget_property_menu_selector_option_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_widget_input_text_node_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "widget_controlled").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_0,
+                        "widget_controlled",
+                    )
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "rich_text").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_1, "rich_text")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_widget_property_menu_item_from_decoder<'a>(
@@ -19926,220 +19187,166 @@ fn decode_widget_property_menu_item_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CODE_BLOCK_LANGUAGE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_LANGUAGE_ATOM_16: OnceLock<Atom> = OnceLock::new();
 fn decode_code_block_language_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "typescript").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_0, "typescript").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "cpp").encode(env))
+        1i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_1, "cpp").encode(env)),
+        2i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_2, "ruby").encode(env)),
+        3i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_3, "css").encode(env)),
+        4i64 => {
+            Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_4, "javascript").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "ruby").encode(env))
+        5i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_5, "html").encode(env)),
+        6i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_6, "json").encode(env)),
+        7i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_7, "graphql").encode(env)),
+        8i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_8, "python").encode(env)),
+        9i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_9, "go").encode(env)),
+        10i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_10, "sql").encode(env)),
+        11i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_11, "swift").encode(env)),
+        12i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_12, "kotlin").encode(env)),
+        13i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_13, "rust").encode(env)),
+        14i64 => Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_14, "bash").encode(env)),
+        15i64 => {
+            Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_15, "plaintext").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "css").encode(env))
+        16i64 => {
+            Ok(cached_atom(env, &CODE_BLOCK_LANGUAGE_ATOM_16, "markdown").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "javascript").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "html").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "json").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "graphql").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "python").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "go").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "sql").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "swift").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "kotlin").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "rust").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "bash").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "plaintext").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "markdown").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static CODE_BLOCK_THEME_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_THEME_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_THEME_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_THEME_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_THEME_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_THEME_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static CODE_BLOCK_THEME_ATOM_6: OnceLock<Atom> = OnceLock::new();
 fn decode_code_block_theme_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "figjam_dark").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CODE_BLOCK_THEME_ATOM_0, "figjam_dark").encode(env)),
+        1i64 => Ok(cached_atom(env, &CODE_BLOCK_THEME_ATOM_1, "dracula").encode(env)),
+        2i64 => Ok(cached_atom(env, &CODE_BLOCK_THEME_ATOM_2, "duotone_sea").encode(env)),
+        3i64 => {
+            Ok(cached_atom(env, &CODE_BLOCK_THEME_ATOM_3, "duotone_space").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "dracula").encode(env))
+        4i64 => {
+            Ok(cached_atom(env, &CODE_BLOCK_THEME_ATOM_4, "duotone_earth").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "duotone_sea").encode(env))
+        5i64 => {
+            Ok(cached_atom(env, &CODE_BLOCK_THEME_ATOM_5, "duotone_forest").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "duotone_space").encode(env))
+        6i64 => {
+            Ok(cached_atom(env, &CODE_BLOCK_THEME_ATOM_6, "duotone_light").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "duotone_earth").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "duotone_forest").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "duotone_light").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SPEC_BLOCK_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static SPEC_BLOCK_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
 fn decode_spec_block_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "default").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_0, "default").encode(env)),
+        1i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_1, "paragraph").encode(env)),
+        2i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_2, "heading_1").encode(env)),
+        3i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_3, "heading_2").encode(env)),
+        4i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_4, "heading_3").encode(env)),
+        5i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_5, "heading_4").encode(env)),
+        6i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_6, "heading_5").encode(env)),
+        7i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_7, "heading_6").encode(env)),
+        8i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_8, "code_block").encode(env)),
+        9i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_9, "block_quote").encode(env)),
+        10i64 => {
+            Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_10, "horizontal_rule").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "paragraph").encode(env))
+        11i64 => {
+            Ok(
+                cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_11, "ordered_list_item")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "heading_1").encode(env))
+        12i64 => {
+            Ok(
+                cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_12, "unordered_list_item")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "heading_2").encode(env))
+        13i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_13, "document").encode(env)),
+        14i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_14, "table").encode(env)),
+        15i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_15, "table_row").encode(env)),
+        16i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_16, "table_cell").encode(env)),
+        17i64 => {
+            Ok(
+                cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_17, "todo_list_item_unchecked")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "heading_3").encode(env))
+        18i64 => {
+            Ok(
+                cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_18, "todo_list_item_checked")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "heading_4").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "heading_5").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "heading_6").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "code_block").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "block_quote").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "horizontal_rule").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "ordered_list_item").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "unordered_list_item").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "document").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "table").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "table_row").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "table_cell").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "todo_list_item_unchecked").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "todo_list_item_checked").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "image").encode(env))
-        }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "embed").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        19i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_19, "image").encode(env)),
+        20i64 => Ok(cached_atom(env, &SPEC_BLOCK_TYPE_ATOM_20, "embed").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static INTERNAL_ENUM_FOR_TEST_ATOM_0: OnceLock<Atom> = OnceLock::new();
 fn decode_internal_enum_for_test_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        1 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "old").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        1i64 => Ok(cached_atom(env, &INTERNAL_ENUM_FOR_TEST_ATOM_0, "old").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_internal_data_for_test_from_decoder<'a>(
@@ -20217,28 +19424,30 @@ fn decode_state_group_property_value_order_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static BACKFILL_ERROR_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static BACKFILL_ERROR_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static BACKFILL_ERROR_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static BACKFILL_ERROR_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_backfill_error_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &BACKFILL_ERROR_ATOM_0, "none").encode(env)),
+        1i64 => {
+            Ok(
+                cached_atom(env, &BACKFILL_ERROR_ATOM_1, "transient_retrying")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "transient_retrying").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &BACKFILL_ERROR_ATOM_2, "permanently_failed")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "permanently_failed").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "paste_failed").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        3i64 => Ok(cached_atom(env, &BACKFILL_ERROR_ATOM_3, "paste_failed").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_partial_paste_annotation_from_decoder<'a>(
@@ -20379,28 +19588,20 @@ fn decode_text_list_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static BULLET_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static BULLET_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static BULLET_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static BULLET_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_bullet_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "ordered").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "unordered").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "indent").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "no_list").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &BULLET_TYPE_ATOM_0, "ordered").encode(env)),
+        1i64 => Ok(cached_atom(env, &BULLET_TYPE_ATOM_1, "unordered").encode(env)),
+        2i64 => Ok(cached_atom(env, &BULLET_TYPE_ATOM_2, "indent").encode(env)),
+        3i64 => Ok(cached_atom(env, &BULLET_TYPE_ATOM_3, "no_list").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_text_line_data_from_decoder<'a>(
@@ -20524,84 +19725,64 @@ fn decode_derived_text_line_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static LINE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static LINE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static LINE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static LINE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static LINE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_line_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "plain").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "ordered_list").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "unordered_list").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "blockquote").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "header").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &LINE_TYPE_ATOM_0, "plain").encode(env)),
+        1i64 => Ok(cached_atom(env, &LINE_TYPE_ATOM_1, "ordered_list").encode(env)),
+        2i64 => Ok(cached_atom(env, &LINE_TYPE_ATOM_2, "unordered_list").encode(env)),
+        3i64 => Ok(cached_atom(env, &LINE_TYPE_ATOM_3, "blockquote").encode(env)),
+        4i64 => Ok(cached_atom(env, &LINE_TYPE_ATOM_4, "header").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SOURCE_DIRECTIONALITY_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SOURCE_DIRECTIONALITY_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SOURCE_DIRECTIONALITY_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_source_directionality_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "auto").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "ltr").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "rtl").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SOURCE_DIRECTIONALITY_ATOM_0, "auto").encode(env)),
+        1i64 => Ok(cached_atom(env, &SOURCE_DIRECTIONALITY_ATOM_1, "ltr").encode(env)),
+        2i64 => Ok(cached_atom(env, &SOURCE_DIRECTIONALITY_ATOM_2, "rtl").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static DIRECTIONALITY_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static DIRECTIONALITY_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_directionality_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "ltr").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "rtl").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &DIRECTIONALITY_ATOM_0, "ltr").encode(env)),
+        1i64 => Ok(cached_atom(env, &DIRECTIONALITY_ATOM_1, "rtl").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static DIRECTIONALITY_INTENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static DIRECTIONALITY_INTENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_directionality_intent_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "implicit").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &DIRECTIONALITY_INTENT_ATOM_0, "implicit").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "explicit").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &DIRECTIONALITY_INTENT_ATOM_1, "explicit").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_prototype_interaction_from_decoder<'a>(
@@ -21073,52 +20254,44 @@ fn decode_prototype_action_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static ANIMATION_PHASE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_PHASE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_animation_phase_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "in").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "out").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &ANIMATION_PHASE_ATOM_0, "in").encode(env)),
+        1i64 => Ok(cached_atom(env, &ANIMATION_PHASE_ATOM_1, "out").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static ANIMATION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static ANIMATION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
 fn decode_animation_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &ANIMATION_TYPE_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &ANIMATION_TYPE_ATOM_1, "fade").encode(env)),
+        2i64 => {
+            Ok(cached_atom(env, &ANIMATION_TYPE_ATOM_2, "slide_from_left").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "fade").encode(env))
+        3i64 => {
+            Ok(cached_atom(env, &ANIMATION_TYPE_ATOM_3, "slide_from_right").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "slide_from_left").encode(env))
+        4i64 => {
+            Ok(cached_atom(env, &ANIMATION_TYPE_ATOM_4, "slide_from_top").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "slide_from_right").encode(env))
+        5i64 => {
+            Ok(cached_atom(env, &ANIMATION_TYPE_ATOM_5, "slide_from_bottom").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "slide_from_top").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "slide_from_bottom").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_animation_state_from_decoder<'a>(
@@ -21208,32 +20381,27 @@ fn decode_prototype_starting_point_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static TRIGGER_DEVICE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRIGGER_DEVICE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TRIGGER_DEVICE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static TRIGGER_DEVICE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static TRIGGER_DEVICE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_trigger_device_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "keyboard").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TRIGGER_DEVICE_ATOM_0, "keyboard").encode(env)),
+        1i64 => {
+            Ok(
+                cached_atom(env, &TRIGGER_DEVICE_ATOM_1, "unknown_controller")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "unknown_controller").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "xbox_one").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "ps4").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "switch_pro").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        2i64 => Ok(cached_atom(env, &TRIGGER_DEVICE_ATOM_2, "xbox_one").encode(env)),
+        3i64 => Ok(cached_atom(env, &TRIGGER_DEVICE_ATOM_3, "ps4").encode(env)),
+        4i64 => Ok(cached_atom(env, &TRIGGER_DEVICE_ATOM_4, "switch_pro").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_key_trigger_from_decoder<'a>(
@@ -21361,24 +20529,20 @@ fn decode_cms_item_page_target_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static MENTION_SOURCE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static MENTION_SOURCE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static MENTION_SOURCE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_mention_source_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "default").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &MENTION_SOURCE_ATOM_0, "default").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &MENTION_SOURCE_ATOM_1, "copy_duplicate").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "copy_duplicate").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "silent_insert").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        2i64 => Ok(cached_atom(env, &MENTION_SOURCE_ATOM_2, "silent_insert").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_mention_from_decoder<'a>(
@@ -21766,14 +20930,18 @@ fn decode_mouse_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CLICK_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static CLICK_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_click_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Click");
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["id", "point"]);
+    let module_atom = cached_atom(
+        env,
+        &CLICK_MODULE_ATOM,
+        "Elixir.FigKiwi.Schema.Click",
+    );
+    let keys = cached_struct_keys(env, &CLICK_STRUCT_KEYS, &["id", "point"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decoder.read_var_uint()?;
@@ -21782,18 +20950,22 @@ fn decode_click_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static SCROLL_POSITION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static SCROLL_POSITION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_scroll_position_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &SCROLL_POSITION_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.ScrollPosition",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["node", "scroll_offset"]);
+    let keys = cached_struct_keys(
+        env,
+        &SCROLL_POSITION_STRUCT_KEYS,
+        &["node", "scroll_offset"],
+    );
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decode_guid_from_decoder(env, decoder)?;
@@ -21802,20 +20974,20 @@ fn decode_scroll_position_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static TRIGGERED_OVERLAY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static TRIGGERED_OVERLAY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_triggered_overlay_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &TRIGGERED_OVERLAY_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.TriggeredOverlay",
     );
     let keys = cached_struct_keys(
         env,
-        &STRUCT_KEYS,
+        &TRIGGERED_OVERLAY_STRUCT_KEYS,
         &["overlay_guid", "hotspot_guid", "swap_guid"],
     );
     let mut values = Vec::with_capacity(keys.len());
@@ -22149,20 +21321,16 @@ fn decode_presented_state_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static TRANSITION_DIRECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_DIRECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_transition_direction_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "forward").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "reverse").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TRANSITION_DIRECTION_ATOM_0, "forward").encode(env)),
+        1i64 => Ok(cached_atom(env, &TRANSITION_DIRECTION_ATOM_1, "reverse").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_top_level_playback_change_from_decoder<'a>(
@@ -22411,24 +21579,24 @@ fn decode_text_selection_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static PLAYBACK_CHANGE_PHASE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PLAYBACK_CHANGE_PHASE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PLAYBACK_CHANGE_PHASE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_playback_change_phase_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "initiated").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &PLAYBACK_CHANGE_PHASE_ATOM_0, "initiated").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "aborted").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &PLAYBACK_CHANGE_PHASE_ATOM_1, "aborted").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "committed").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &PLAYBACK_CHANGE_PHASE_ATOM_2, "committed").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_playback_change_keyframe_from_decoder<'a>(
@@ -22811,72 +21979,62 @@ fn decode_april_fun_fig_pal_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static HEARTBEAT_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static HEARTBEAT_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_heartbeat_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "foreground").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "background").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &HEARTBEAT_ATOM_0, "foreground").encode(env)),
+        1i64 => Ok(cached_atom(env, &HEARTBEAT_ATOM_1, "background").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SITES_VIEW_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SITES_VIEW_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SITES_VIEW_STATE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static SITES_VIEW_STATE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static SITES_VIEW_STATE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static SITES_VIEW_STATE_ATOM_5: OnceLock<Atom> = OnceLock::new();
 fn decode_sites_view_state_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "file").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "code").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "dakota").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "settings").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "insert").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "variables").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SITES_VIEW_STATE_ATOM_0, "file").encode(env)),
+        1i64 => Ok(cached_atom(env, &SITES_VIEW_STATE_ATOM_1, "code").encode(env)),
+        2i64 => Ok(cached_atom(env, &SITES_VIEW_STATE_ATOM_2, "dakota").encode(env)),
+        3i64 => Ok(cached_atom(env, &SITES_VIEW_STATE_ATOM_3, "settings").encode(env)),
+        4i64 => Ok(cached_atom(env, &SITES_VIEW_STATE_ATOM_4, "insert").encode(env)),
+        5i64 => Ok(cached_atom(env, &SITES_VIEW_STATE_ATOM_5, "variables").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static DESIGN_FULL_PAGE_VIEW_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static DESIGN_FULL_PAGE_VIEW_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static DESIGN_FULL_PAGE_VIEW_STATE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_design_full_page_view_state_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &DESIGN_FULL_PAGE_VIEW_STATE_ATOM_0, "none").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "design_system").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &DESIGN_FULL_PAGE_VIEW_STATE_ATOM_1, "design_system")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "variables").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &DESIGN_FULL_PAGE_VIEW_STATE_ATOM_2, "variables")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_agent_info_from_decoder<'a>(
@@ -23412,40 +22570,45 @@ fn decode_buzz_approval_change_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_scene_graph_query_behavior_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "default").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_0, "default")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "containing_page").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_1, "containing_page")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "plugin").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_2, "plugin")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SCENE_GRAPH_QUERY_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SCENE_GRAPH_QUERY_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_scene_graph_query_mode_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "add").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "set").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SCENE_GRAPH_QUERY_MODE_ATOM_0, "add").encode(env)),
+        1i64 => Ok(cached_atom(env, &SCENE_GRAPH_QUERY_MODE_ATOM_1, "set").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_scene_graph_query_from_decoder<'a>(
@@ -23845,20 +23008,16 @@ fn decode_client_broadcast_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static PASTE_ASSET_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PASTE_ASSET_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_paste_asset_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "unknown").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "variable").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &PASTE_ASSET_TYPE_ATOM_0, "unknown").encode(env)),
+        1i64 => Ok(cached_atom(env, &PASTE_ASSET_TYPE_ATOM_1, "variable").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_message_from_decoder<'a>(
@@ -24207,18 +23366,22 @@ fn decode_encoded_offsets_index_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static GUID_AND_ENCODED_OFFSET_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
+static GUID_AND_ENCODED_OFFSET_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
 fn decode_guid_and_encoded_offset_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-    static STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
     let module_atom = cached_atom(
         env,
-        &MODULE_ATOM,
+        &GUID_AND_ENCODED_OFFSET_MODULE_ATOM,
         "Elixir.FigKiwi.Schema.GUIDAndEncodedOffset",
     );
-    let keys = cached_struct_keys(env, &STRUCT_KEYS, &["guid", "offset"]);
+    let keys = cached_struct_keys(
+        env,
+        &GUID_AND_ENCODED_OFFSET_STRUCT_KEYS,
+        &["guid", "offset"],
+    );
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
     let value = decode_guid_from_decoder(env, decoder)?;
@@ -24227,20 +23390,18 @@ fn decode_guid_and_encoded_offset_from_decoder<'a>(
     values.push(value.encode(env).as_c_arg());
     make_struct(env, keys, &values)
 }
+static RICH_MEDIA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static RICH_MEDIA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_rich_media_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "animated_image").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &RICH_MEDIA_TYPE_ATOM_0, "animated_image").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "video").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        1i64 => Ok(cached_atom(env, &RICH_MEDIA_TYPE_ATOM_1, "video").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_rich_media_data_from_decoder<'a>(
@@ -24282,244 +23443,310 @@ fn decode_rich_media_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static VARIABLE_DATA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_30: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_DATA_TYPE_ATOM_31: OnceLock<Atom> = OnceLock::new();
 fn decode_variable_data_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "boolean").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_0, "boolean").encode(env)),
+        1i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_1, "float").encode(env)),
+        2i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_2, "string").encode(env)),
+        3i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_3, "alias").encode(env)),
+        4i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_4, "color").encode(env)),
+        5i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_5, "expression").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "float").encode(env))
+        6i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_6, "map").encode(env)),
+        7i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_7, "symbol_id").encode(env)),
+        8i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_8, "font_style").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "string").encode(env))
+        9i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_9, "text_data").encode(env)),
+        10i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_10, "invalid").encode(env)),
+        11i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_11, "node_field_alias")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "alias").encode(env))
+        12i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_12, "cms_alias").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "color").encode(env))
+        13i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_13, "prop_ref").encode(env))
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "expression").encode(env))
+        14i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_14, "image").encode(env)),
+        15i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_15, "managed_string_alias")
+                    .encode(env),
+            )
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "map").encode(env))
+        16i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_16, "link").encode(env)),
+        17i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_17, "js_runtime_alias")
+                    .encode(env),
+            )
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "symbol_id").encode(env))
+        18i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_18, "slot_content_id")
+                    .encode(env),
+            )
         }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "font_style").encode(env))
+        19i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_19, "date").encode(env)),
+        20i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_20, "keyframe_track_id")
+                    .encode(env),
+            )
         }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "text_data").encode(env))
+        21i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &VARIABLE_DATA_TYPE_ATOM_21,
+                        "keyframe_track_parameter_data",
+                    )
+                    .encode(env),
+            )
         }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "invalid").encode(env))
+        22i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_22, "easing").encode(env)),
+        23i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_23, "timing").encode(env)),
+        24i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_24, "vector").encode(env)),
+        25i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_25, "color_array").encode(env))
         }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "node_field_alias").encode(env))
+        26i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_26, "line").encode(env)),
+        27i64 => Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_27, "circle").encode(env)),
+        28i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_28, "rotation_3_d").encode(env))
         }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "cms_alias").encode(env))
+        29i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_29, "circle_point").encode(env))
         }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "prop_ref").encode(env))
+        30i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_30, "gradient").encode(env))
         }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "image").encode(env))
+        31i64 => {
+            Ok(cached_atom(env, &VARIABLE_DATA_TYPE_ATOM_31, "color_point").encode(env))
         }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "managed_string_alias").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "link").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "js_runtime_alias").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "slot_content_id").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "date").encode(env))
-        }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "keyframe_track_id").encode(env))
-        }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "keyframe_track_parameter_data").encode(env))
-        }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "easing").encode(env))
-        }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "timing").encode(env))
-        }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "vector").encode(env))
-        }
-        25 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "color_array").encode(env))
-        }
-        26 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "line").encode(env))
-        }
-        27 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "circle").encode(env))
-        }
-        28 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "rotation_3_d").encode(env))
-        }
-        29 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "circle_point").encode(env))
-        }
-        30 => {
-            static ATOM_30: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_30, "gradient").encode(env))
-        }
-        31 => {
-            static ATOM_31: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_31, "color_point").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_RESOLVED_DATA_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
 fn decode_variable_resolved_data_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "boolean").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_0, "boolean")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "float").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_1, "float")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "string").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_2, "string")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "color").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_3, "color")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "map").encode(env))
+        5i64 => {
+            Ok(cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_4, "map").encode(env))
         }
-        6 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "symbol_id").encode(env))
+        6i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_5, "symbol_id")
+                    .encode(env),
+            )
         }
-        7 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "font_style").encode(env))
+        7i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_6, "font_style")
+                    .encode(env),
+            )
         }
-        8 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "text_data").encode(env))
+        8i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_7, "text_data")
+                    .encode(env),
+            )
         }
-        9 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "image").encode(env))
+        9i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_8, "image")
+                    .encode(env),
+            )
         }
-        10 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "link").encode(env))
+        10i64 => {
+            Ok(cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_9, "link").encode(env))
         }
-        11 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "js_runtime_alias").encode(env))
+        11i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &VARIABLE_RESOLVED_DATA_TYPE_ATOM_10,
+                        "js_runtime_alias",
+                    )
+                    .encode(env),
+            )
         }
-        12 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "slot_content_id").encode(env))
+        12i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_11, "slot_content_id")
+                    .encode(env),
+            )
         }
-        13 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "keyframe_track_id").encode(env))
+        13i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &VARIABLE_RESOLVED_DATA_TYPE_ATOM_12,
+                        "keyframe_track_id",
+                    )
+                    .encode(env),
+            )
         }
-        14 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "keyframe_track_parameter_data").encode(env))
+        14i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &VARIABLE_RESOLVED_DATA_TYPE_ATOM_13,
+                        "keyframe_track_parameter_data",
+                    )
+                    .encode(env),
+            )
         }
-        15 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "easing").encode(env))
+        15i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_14, "easing")
+                    .encode(env),
+            )
         }
-        16 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "timing").encode(env))
+        16i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_15, "timing")
+                    .encode(env),
+            )
         }
-        17 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "vector").encode(env))
+        17i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_16, "vector")
+                    .encode(env),
+            )
         }
-        18 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "color_array").encode(env))
+        18i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_17, "color_array")
+                    .encode(env),
+            )
         }
-        19 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "line").encode(env))
+        19i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_18, "line")
+                    .encode(env),
+            )
         }
-        20 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "circle").encode(env))
+        20i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_19, "circle")
+                    .encode(env),
+            )
         }
-        21 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "rotation_3_d").encode(env))
+        21i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_20, "rotation_3_d")
+                    .encode(env),
+            )
         }
-        22 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "circle_point").encode(env))
+        22i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_21, "circle_point")
+                    .encode(env),
+            )
         }
-        23 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "gradient").encode(env))
+        23i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_22, "gradient")
+                    .encode(env),
+            )
         }
-        24 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "color_point").encode(env))
+        24i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_RESOLVED_DATA_TYPE_ATOM_23, "color_point")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_variable_any_value_from_decoder<'a>(
@@ -24706,92 +23933,88 @@ fn decode_variable_any_value_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static EXPRESSION_FUNCTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static EXPRESSION_FUNCTION_ATOM_19: OnceLock<Atom> = OnceLock::new();
 fn decode_expression_function_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "addition").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_0, "addition").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_1, "subtraction").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "subtraction").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &EXPRESSION_FUNCTION_ATOM_2, "resolve_variant")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "resolve_variant").encode(env))
+        3i64 => Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_3, "multiply").encode(env)),
+        4i64 => Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_4, "divide").encode(env)),
+        5i64 => Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_5, "equals").encode(env)),
+        6i64 => {
+            Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_6, "not_equal").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "multiply").encode(env))
+        7i64 => {
+            Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_7, "less_than").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "divide").encode(env))
+        8i64 => {
+            Ok(
+                cached_atom(env, &EXPRESSION_FUNCTION_ATOM_8, "less_than_or_equal")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "equals").encode(env))
+        9i64 => {
+            Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_9, "greater_than").encode(env))
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "not_equal").encode(env))
+        10i64 => {
+            Ok(
+                cached_atom(env, &EXPRESSION_FUNCTION_ATOM_10, "greater_than_or_equal")
+                    .encode(env),
+            )
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "less_than").encode(env))
+        11i64 => Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_11, "and").encode(env)),
+        12i64 => Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_12, "or").encode(env)),
+        13i64 => Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_13, "not").encode(env)),
+        14i64 => {
+            Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_14, "stringify").encode(env))
         }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "less_than_or_equal").encode(env))
+        15i64 => {
+            Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_15, "ternary").encode(env))
         }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "greater_than").encode(env))
+        16i64 => {
+            Ok(
+                cached_atom(env, &EXPRESSION_FUNCTION_ATOM_16, "var_mode_lookup")
+                    .encode(env),
+            )
         }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "greater_than_or_equal").encode(env))
+        17i64 => Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_17, "negate").encode(env)),
+        18i64 => {
+            Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_18, "is_truthy").encode(env))
         }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "and").encode(env))
+        19i64 => {
+            Ok(cached_atom(env, &EXPRESSION_FUNCTION_ATOM_19, "keyframe").encode(env))
         }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "or").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "not").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "stringify").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "ternary").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "var_mode_lookup").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "negate").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "is_truthy").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "keyframe").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_expression_from_decoder<'a>(
@@ -25200,20 +24423,27 @@ fn decode_node_field_alias_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static NODE_FIELD_ALIAS_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static NODE_FIELD_ALIAS_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_node_field_alias_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "missing").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &NODE_FIELD_ALIAS_TYPE_ATOM_0, "missing").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "component_prop_assignments").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &NODE_FIELD_ALIAS_TYPE_ATOM_1,
+                        "component_prop_assignments",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_cms_alias_from_decoder<'a>(
@@ -25877,104 +25107,75 @@ fn decode_variable_data_values_entry_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static VARIABLE_SCOPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static VARIABLE_SCOPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
 fn decode_variable_scope_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "all_scopes").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_0, "all_scopes").encode(env)),
+        1i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_1, "text_content").encode(env)),
+        2i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_2, "corner_radius").encode(env)),
+        3i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_3, "width_height").encode(env)),
+        4i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_4, "gap").encode(env)),
+        5i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_5, "all_fills").encode(env)),
+        6i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_6, "frame_fill").encode(env)),
+        7i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_7, "shape_fill").encode(env)),
+        8i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_8, "text_fill").encode(env)),
+        9i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_9, "stroke").encode(env)),
+        10i64 => {
+            Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_10, "stroke_float").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "text_content").encode(env))
+        11i64 => {
+            Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_11, "effect_float").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "corner_radius").encode(env))
+        12i64 => {
+            Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_12, "effect_color").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "width_height").encode(env))
+        13i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_13, "opacity").encode(env)),
+        14i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_14, "font_style").encode(env)),
+        15i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_15, "font_family").encode(env)),
+        16i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_16, "font_size").encode(env)),
+        17i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_17, "line_height").encode(env)),
+        18i64 => {
+            Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_18, "letter_spacing").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "gap").encode(env))
+        19i64 => {
+            Ok(
+                cached_atom(env, &VARIABLE_SCOPE_ATOM_19, "paragraph_spacing")
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "all_fills").encode(env))
+        20i64 => {
+            Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_20, "paragraph_indent").encode(env))
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "frame_fill").encode(env))
+        21i64 => {
+            Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_21, "font_variations").encode(env))
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "shape_fill").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "text_fill").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "stroke").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "stroke_float").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "effect_float").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "effect_color").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "opacity").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "font_style").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "font_family").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "font_size").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "line_height").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "letter_spacing").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "paragraph_spacing").encode(env))
-        }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "paragraph_indent").encode(env))
-        }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "font_variations").encode(env))
-        }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "transform").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        22i64 => Ok(cached_atom(env, &VARIABLE_SCOPE_ATOM_22, "transform").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_keyframe_any_value_from_decoder<'a>(
@@ -26028,32 +25229,24 @@ fn decode_keyframe_any_value_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static KEYFRAME_VALUE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_VALUE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_VALUE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_VALUE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_VALUE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_keyframe_value_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "float").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &KEYFRAME_VALUE_TYPE_ATOM_0, "float").encode(env)),
+        1i64 => Ok(cached_atom(env, &KEYFRAME_VALUE_TYPE_ATOM_1, "invalid").encode(env)),
+        2i64 => Ok(cached_atom(env, &KEYFRAME_VALUE_TYPE_ATOM_2, "color").encode(env)),
+        3i64 => {
+            Ok(cached_atom(env, &KEYFRAME_VALUE_TYPE_ATOM_3, "text_data").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "invalid").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "color").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "text_data").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "vector").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        4i64 => Ok(cached_atom(env, &KEYFRAME_VALUE_TYPE_ATOM_4, "vector").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_keyframe_value_data_from_decoder<'a>(
@@ -26095,24 +25288,37 @@ fn decode_keyframe_value_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_keyframe_track_parameter_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "invalid").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_0, "invalid")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "manual").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_1, "manual")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "animation_preset").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_2,
+                        "animation_preset",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_manual_keyframe_track_parameter_from_decoder<'a>(
@@ -26922,60 +26128,99 @@ fn decode_transition_override_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static TRANSITION_OVERRIDE_PROP_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_OVERRIDE_PROP_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_OVERRIDE_PROP_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_OVERRIDE_PROP_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_OVERRIDE_PROP_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_transition_override_prop_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "all").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &TRANSITION_OVERRIDE_PROP_ATOM_0, "all").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &TRANSITION_OVERRIDE_PROP_ATOM_1, "opacity").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "opacity").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_OVERRIDE_PROP_ATOM_2, "translation")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "translation").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &TRANSITION_OVERRIDE_PROP_ATOM_3, "rotation")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "rotation").encode(env))
+        4i64 => {
+            Ok(cached_atom(env, &TRANSITION_OVERRIDE_PROP_ATOM_4, "scale").encode(env))
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "scale").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_transition_override_binding_top_level_field_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "missing").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_0,
+                        "missing",
+                    )
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "parameter_consumption_map").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_1,
+                        "parameter_consumption_map",
+                    )
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "effect_data").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_2,
+                        "effect_data",
+                    )
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "fill_paint_data").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_3,
+                        "fill_paint_data",
+                    )
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "stroke_paint_data").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_4,
+                        "stroke_paint_data",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_transition_override_binding_location_from_decoder<'a>(
@@ -27038,100 +26283,254 @@ fn decode_transition_override_binding_location_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_21: OnceLock<Atom> = OnceLock::new();
 fn decode_keyframe_binding_effect_parametrized_field_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "missing").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_0,
+                        "missing",
+                    )
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "offset_x").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_1,
+                        "offset_x",
+                    )
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "offset_y").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_2,
+                        "offset_y",
+                    )
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "radius").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_3,
+                        "radius",
+                    )
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "spread").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_4,
+                        "spread",
+                    )
+                    .encode(env),
+            )
         }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "color").encode(env))
+        5i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_5,
+                        "color",
+                    )
+                    .encode(env),
+            )
         }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "refraction_radius").encode(env))
+        6i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_6,
+                        "refraction_radius",
+                    )
+                    .encode(env),
+            )
         }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "specular_angle").encode(env))
+        7i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_7,
+                        "specular_angle",
+                    )
+                    .encode(env),
+            )
         }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "specular_intensity").encode(env))
+        8i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_8,
+                        "specular_intensity",
+                    )
+                    .encode(env),
+            )
         }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "chromatic_aberration").encode(env))
+        9i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_9,
+                        "chromatic_aberration",
+                    )
+                    .encode(env),
+            )
         }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "splay").encode(env))
+        10i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_10,
+                        "splay",
+                    )
+                    .encode(env),
+            )
         }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "refraction_intensity").encode(env))
+        11i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_11,
+                        "refraction_intensity",
+                    )
+                    .encode(env),
+            )
         }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "start_radius").encode(env))
+        12i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_12,
+                        "start_radius",
+                    )
+                    .encode(env),
+            )
         }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "start_offset_x").encode(env))
+        13i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_13,
+                        "start_offset_x",
+                    )
+                    .encode(env),
+            )
         }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "start_offset_y").encode(env))
+        14i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_14,
+                        "start_offset_y",
+                    )
+                    .encode(env),
+            )
         }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "end_offset_x").encode(env))
+        15i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_15,
+                        "end_offset_x",
+                    )
+                    .encode(env),
+            )
         }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "end_offset_y").encode(env))
+        16i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_16,
+                        "end_offset_y",
+                    )
+                    .encode(env),
+            )
         }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "noise_size_x").encode(env))
+        17i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_17,
+                        "noise_size_x",
+                    )
+                    .encode(env),
+            )
         }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "noise_size_y").encode(env))
+        18i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_18,
+                        "noise_size_y",
+                    )
+                    .encode(env),
+            )
         }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "density").encode(env))
+        19i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_19,
+                        "density",
+                    )
+                    .encode(env),
+            )
         }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "effect_opacity").encode(env))
+        20i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_20,
+                        "effect_opacity",
+                    )
+                    .encode(env),
+            )
         }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "secondary_color").encode(env))
+        21i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_21,
+                        "secondary_color",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_node_contents_keyframe_binding_location_from_decoder<'a>(
@@ -27299,24 +26698,18 @@ fn decode_transition_override_prop_map_entry_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static CODE_SYNTAX_PLATFORM_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CODE_SYNTAX_PLATFORM_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CODE_SYNTAX_PLATFORM_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_code_syntax_platform_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "web").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "android").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "i_os").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CODE_SYNTAX_PLATFORM_ATOM_0, "web").encode(env)),
+        1i64 => Ok(cached_atom(env, &CODE_SYNTAX_PLATFORM_ATOM_1, "android").encode(env)),
+        2i64 => Ok(cached_atom(env, &CODE_SYNTAX_PLATFORM_ATOM_2, "i_os").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_optional_vector_from_decoder<'a>(
@@ -27354,712 +26747,366 @@ fn decode_optional_vector_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static HTML_TAG_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_29: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_30: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_31: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_32: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_33: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_34: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_35: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_36: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_37: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_38: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_39: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_40: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_41: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_42: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_43: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_44: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_45: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_46: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_47: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_48: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_49: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_50: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_51: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_52: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_53: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_54: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_55: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_56: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_57: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_58: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_59: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_60: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_61: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_62: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_63: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_64: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_65: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_66: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_67: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_68: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_69: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_70: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_71: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_72: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_73: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_74: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_75: OnceLock<Atom> = OnceLock::new();
+static HTML_TAG_ATOM_76: OnceLock<Atom> = OnceLock::new();
 fn decode_html_tag_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "auto").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "article").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "section").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "nav").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "aside").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "h1").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "h2").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "h3").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "h4").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "h5").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "h6").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "hgroup").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "header").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "footer").encode(env))
-        }
-        14 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "address").encode(env))
-        }
-        15 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "p").encode(env))
-        }
-        16 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "hr").encode(env))
-        }
-        17 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "pre").encode(env))
-        }
-        18 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "blockquote").encode(env))
-        }
-        19 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "ol").encode(env))
-        }
-        20 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "ul").encode(env))
-        }
-        21 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "menu").encode(env))
-        }
-        22 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "li").encode(env))
-        }
-        23 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "dl").encode(env))
-        }
-        24 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "dt").encode(env))
-        }
-        25 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "dd").encode(env))
-        }
-        26 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "figure").encode(env))
-        }
-        27 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "figcaption").encode(env))
-        }
-        28 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "main").encode(env))
-        }
-        29 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "div").encode(env))
-        }
-        30 => {
-            static ATOM_30: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_30, "a").encode(env))
-        }
-        31 => {
-            static ATOM_31: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_31, "em").encode(env))
-        }
-        32 => {
-            static ATOM_32: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_32, "strong").encode(env))
-        }
-        33 => {
-            static ATOM_33: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_33, "small").encode(env))
-        }
-        34 => {
-            static ATOM_34: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_34, "s").encode(env))
-        }
-        35 => {
-            static ATOM_35: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_35, "cite").encode(env))
-        }
-        36 => {
-            static ATOM_36: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_36, "q").encode(env))
-        }
-        37 => {
-            static ATOM_37: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_37, "dfn").encode(env))
-        }
-        38 => {
-            static ATOM_38: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_38, "abbr").encode(env))
-        }
-        39 => {
-            static ATOM_39: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_39, "ruby").encode(env))
-        }
-        40 => {
-            static ATOM_40: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_40, "rt").encode(env))
-        }
-        41 => {
-            static ATOM_41: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_41, "rp").encode(env))
-        }
-        42 => {
-            static ATOM_42: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_42, "data").encode(env))
-        }
-        43 => {
-            static ATOM_43: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_43, "time").encode(env))
-        }
-        44 => {
-            static ATOM_44: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_44, "code").encode(env))
-        }
-        45 => {
-            static ATOM_45: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_45, "var").encode(env))
-        }
-        46 => {
-            static ATOM_46: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_46, "samp").encode(env))
-        }
-        47 => {
-            static ATOM_47: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_47, "kbd").encode(env))
-        }
-        48 => {
-            static ATOM_48: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_48, "sub").encode(env))
-        }
-        49 => {
-            static ATOM_49: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_49, "sup").encode(env))
-        }
-        50 => {
-            static ATOM_50: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_50, "i").encode(env))
-        }
-        51 => {
-            static ATOM_51: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_51, "b").encode(env))
-        }
-        52 => {
-            static ATOM_52: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_52, "u").encode(env))
-        }
-        53 => {
-            static ATOM_53: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_53, "mark").encode(env))
-        }
-        54 => {
-            static ATOM_54: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_54, "bdi").encode(env))
-        }
-        55 => {
-            static ATOM_55: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_55, "bdo").encode(env))
-        }
-        56 => {
-            static ATOM_56: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_56, "span").encode(env))
-        }
-        57 => {
-            static ATOM_57: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_57, "br").encode(env))
-        }
-        58 => {
-            static ATOM_58: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_58, "wbr").encode(env))
-        }
-        59 => {
-            static ATOM_59: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_59, "picture").encode(env))
-        }
-        60 => {
-            static ATOM_60: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_60, "source").encode(env))
-        }
-        61 => {
-            static ATOM_61: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_61, "img").encode(env))
-        }
-        62 => {
-            static ATOM_62: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_62, "form").encode(env))
-        }
-        63 => {
-            static ATOM_63: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_63, "label").encode(env))
-        }
-        64 => {
-            static ATOM_64: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_64, "input").encode(env))
-        }
-        65 => {
-            static ATOM_65: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_65, "button").encode(env))
-        }
-        66 => {
-            static ATOM_66: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_66, "select").encode(env))
-        }
-        67 => {
-            static ATOM_67: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_67, "datalist").encode(env))
-        }
-        68 => {
-            static ATOM_68: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_68, "optgroup").encode(env))
-        }
-        69 => {
-            static ATOM_69: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_69, "option").encode(env))
-        }
-        70 => {
-            static ATOM_70: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_70, "textarea").encode(env))
-        }
-        71 => {
-            static ATOM_71: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_71, "output").encode(env))
-        }
-        72 => {
-            static ATOM_72: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_72, "progress").encode(env))
-        }
-        73 => {
-            static ATOM_73: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_73, "meter").encode(env))
-        }
-        74 => {
-            static ATOM_74: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_74, "fieldset").encode(env))
-        }
-        75 => {
-            static ATOM_75: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_75, "legend").encode(env))
-        }
-        76 => {
-            static ATOM_76: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_76, "video").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_0, "auto").encode(env)),
+        1i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_1, "article").encode(env)),
+        2i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_2, "section").encode(env)),
+        3i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_3, "nav").encode(env)),
+        4i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_4, "aside").encode(env)),
+        5i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_5, "h1").encode(env)),
+        6i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_6, "h2").encode(env)),
+        7i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_7, "h3").encode(env)),
+        8i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_8, "h4").encode(env)),
+        9i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_9, "h5").encode(env)),
+        10i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_10, "h6").encode(env)),
+        11i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_11, "hgroup").encode(env)),
+        12i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_12, "header").encode(env)),
+        13i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_13, "footer").encode(env)),
+        14i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_14, "address").encode(env)),
+        15i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_15, "p").encode(env)),
+        16i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_16, "hr").encode(env)),
+        17i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_17, "pre").encode(env)),
+        18i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_18, "blockquote").encode(env)),
+        19i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_19, "ol").encode(env)),
+        20i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_20, "ul").encode(env)),
+        21i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_21, "menu").encode(env)),
+        22i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_22, "li").encode(env)),
+        23i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_23, "dl").encode(env)),
+        24i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_24, "dt").encode(env)),
+        25i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_25, "dd").encode(env)),
+        26i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_26, "figure").encode(env)),
+        27i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_27, "figcaption").encode(env)),
+        28i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_28, "main").encode(env)),
+        29i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_29, "div").encode(env)),
+        30i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_30, "a").encode(env)),
+        31i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_31, "em").encode(env)),
+        32i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_32, "strong").encode(env)),
+        33i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_33, "small").encode(env)),
+        34i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_34, "s").encode(env)),
+        35i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_35, "cite").encode(env)),
+        36i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_36, "q").encode(env)),
+        37i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_37, "dfn").encode(env)),
+        38i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_38, "abbr").encode(env)),
+        39i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_39, "ruby").encode(env)),
+        40i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_40, "rt").encode(env)),
+        41i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_41, "rp").encode(env)),
+        42i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_42, "data").encode(env)),
+        43i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_43, "time").encode(env)),
+        44i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_44, "code").encode(env)),
+        45i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_45, "var").encode(env)),
+        46i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_46, "samp").encode(env)),
+        47i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_47, "kbd").encode(env)),
+        48i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_48, "sub").encode(env)),
+        49i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_49, "sup").encode(env)),
+        50i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_50, "i").encode(env)),
+        51i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_51, "b").encode(env)),
+        52i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_52, "u").encode(env)),
+        53i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_53, "mark").encode(env)),
+        54i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_54, "bdi").encode(env)),
+        55i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_55, "bdo").encode(env)),
+        56i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_56, "span").encode(env)),
+        57i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_57, "br").encode(env)),
+        58i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_58, "wbr").encode(env)),
+        59i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_59, "picture").encode(env)),
+        60i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_60, "source").encode(env)),
+        61i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_61, "img").encode(env)),
+        62i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_62, "form").encode(env)),
+        63i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_63, "label").encode(env)),
+        64i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_64, "input").encode(env)),
+        65i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_65, "button").encode(env)),
+        66i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_66, "select").encode(env)),
+        67i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_67, "datalist").encode(env)),
+        68i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_68, "optgroup").encode(env)),
+        69i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_69, "option").encode(env)),
+        70i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_70, "textarea").encode(env)),
+        71i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_71, "output").encode(env)),
+        72i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_72, "progress").encode(env)),
+        73i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_73, "meter").encode(env)),
+        74i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_74, "fieldset").encode(env)),
+        75i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_75, "legend").encode(env)),
+        76i64 => Ok(cached_atom(env, &HTML_TAG_ATOM_76, "video").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static ARIA_ROLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_29: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_30: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_31: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_32: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_33: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_34: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_35: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_36: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_37: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_38: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_39: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_40: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_41: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_42: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_43: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_44: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_45: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_46: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_47: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_48: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_49: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_50: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_51: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_52: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_53: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_54: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_55: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_56: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_57: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_58: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_59: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_60: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_61: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_62: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_63: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_64: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_65: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_66: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_67: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_68: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_69: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_70: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_71: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_72: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_73: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_74: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_75: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_76: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_77: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_78: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_79: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_80: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_81: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_82: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_83: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_84: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_85: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_86: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_87: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_88: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_89: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_90: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_91: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_92: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_93: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_94: OnceLock<Atom> = OnceLock::new();
+static ARIA_ROLE_ATOM_95: OnceLock<Atom> = OnceLock::new();
 fn decode_aria_role_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "auto").encode(env))
-        }
-        52 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "none").encode(env))
-        }
-        30 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "application").encode(env))
-        }
-        67 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "banner").encode(env))
-        }
-        68 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "complementary").encode(env))
-        }
-        69 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "contentinfo").encode(env))
-        }
-        70 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "form").encode(env))
-        }
-        71 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "main").encode(env))
-        }
-        72 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "navigation").encode(env))
-        }
-        73 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "region").encode(env))
-        }
-        74 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "search").encode(env))
-        }
-        13 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "separator").encode(env))
-        }
-        31 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "article").encode(env))
-        }
-        35 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "columnheader").encode(env))
-        }
-        36 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "definition").encode(env))
-        }
-        38 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "directory").encode(env))
-        }
-        39 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "document").encode(env))
-        }
-        44 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "group").encode(env))
-        }
-        45 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "heading").encode(env))
-        }
-        46 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "img").encode(env))
-        }
-        48 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "list").encode(env))
-        }
-        49 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "listitem").encode(env))
-        }
-        50 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "math").encode(env))
-        }
-        53 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "note").encode(env))
-        }
-        55 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "presentation").encode(env))
-        }
-        56 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "row").encode(env))
-        }
-        57 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "rowgroup").encode(env))
-        }
-        58 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "rowheader").encode(env))
-        }
-        62 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "table").encode(env))
-        }
-        65 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "toolbar").encode(env))
-        }
-        1 => {
-            static ATOM_30: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_30, "button").encode(env))
-        }
-        2 => {
-            static ATOM_31: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_31, "checkbox").encode(env))
-        }
-        3 => {
-            static ATOM_32: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_32, "gridcell").encode(env))
-        }
-        4 => {
-            static ATOM_33: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_33, "link").encode(env))
-        }
-        5 => {
-            static ATOM_34: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_34, "menuitem").encode(env))
-        }
-        6 => {
-            static ATOM_35: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_35, "menuitemcheckbox").encode(env))
-        }
-        7 => {
-            static ATOM_36: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_36, "menuitemradio").encode(env))
-        }
-        8 => {
-            static ATOM_37: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_37, "option").encode(env))
-        }
-        9 => {
-            static ATOM_38: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_38, "progressbar").encode(env))
-        }
-        10 => {
-            static ATOM_39: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_39, "radio").encode(env))
-        }
-        11 => {
-            static ATOM_40: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_40, "scrollbar").encode(env))
-        }
-        14 => {
-            static ATOM_41: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_41, "slider").encode(env))
-        }
-        15 => {
-            static ATOM_42: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_42, "spinbutton").encode(env))
-        }
-        17 => {
-            static ATOM_43: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_43, "tab").encode(env))
-        }
-        18 => {
-            static ATOM_44: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_44, "tabpanel").encode(env))
-        }
-        19 => {
-            static ATOM_45: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_45, "textbox").encode(env))
-        }
-        20 => {
-            static ATOM_46: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_46, "treeitem").encode(env))
-        }
-        21 => {
-            static ATOM_47: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_47, "combobox").encode(env))
-        }
-        22 => {
-            static ATOM_48: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_48, "grid").encode(env))
-        }
-        23 => {
-            static ATOM_49: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_49, "listbox").encode(env))
-        }
-        24 => {
-            static ATOM_50: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_50, "menu").encode(env))
-        }
-        25 => {
-            static ATOM_51: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_51, "menubar").encode(env))
-        }
-        26 => {
-            static ATOM_52: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_52, "radiogroup").encode(env))
-        }
-        27 => {
-            static ATOM_53: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_53, "tablist").encode(env))
-        }
-        28 => {
-            static ATOM_54: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_54, "tree").encode(env))
-        }
-        29 => {
-            static ATOM_55: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_55, "treegrid").encode(env))
-        }
-        66 => {
-            static ATOM_56: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_56, "tooltip").encode(env))
-        }
-        75 => {
-            static ATOM_57: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_57, "alert").encode(env))
-        }
-        76 => {
-            static ATOM_58: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_58, "log").encode(env))
-        }
-        77 => {
-            static ATOM_59: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_59, "marquee").encode(env))
-        }
-        78 => {
-            static ATOM_60: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_60, "status").encode(env))
-        }
-        79 => {
-            static ATOM_61: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_61, "timer").encode(env))
-        }
-        80 => {
-            static ATOM_62: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_62, "alertdialog").encode(env))
-        }
-        81 => {
-            static ATOM_63: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_63, "dialog").encode(env))
-        }
-        12 => {
-            static ATOM_64: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_64, "searchbox").encode(env))
-        }
-        16 => {
-            static ATOM_65: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_65, "switch").encode(env))
-        }
-        32 => {
-            static ATOM_66: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_66, "blockquote").encode(env))
-        }
-        33 => {
-            static ATOM_67: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_67, "caption").encode(env))
-        }
-        34 => {
-            static ATOM_68: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_68, "cell").encode(env))
-        }
-        37 => {
-            static ATOM_69: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_69, "deletion").encode(env))
-        }
-        40 => {
-            static ATOM_70: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_70, "emphasis").encode(env))
-        }
-        41 => {
-            static ATOM_71: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_71, "feed").encode(env))
-        }
-        42 => {
-            static ATOM_72: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_72, "figure").encode(env))
-        }
-        43 => {
-            static ATOM_73: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_73, "generic").encode(env))
-        }
-        47 => {
-            static ATOM_74: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_74, "insertion").encode(env))
-        }
-        51 => {
-            static ATOM_75: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_75, "meter").encode(env))
-        }
-        54 => {
-            static ATOM_76: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_76, "paragraph").encode(env))
-        }
-        59 => {
-            static ATOM_77: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_77, "strong").encode(env))
-        }
-        60 => {
-            static ATOM_78: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_78, "subscript").encode(env))
-        }
-        61 => {
-            static ATOM_79: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_79, "superscript").encode(env))
-        }
-        63 => {
-            static ATOM_80: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_80, "term").encode(env))
-        }
-        64 => {
-            static ATOM_81: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_81, "time").encode(env))
-        }
-        82 => {
-            static ATOM_82: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_82, "image").encode(env))
-        }
-        83 => {
-            static ATOM_83: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_83, "heading_1").encode(env))
-        }
-        84 => {
-            static ATOM_84: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_84, "heading_2").encode(env))
-        }
-        85 => {
-            static ATOM_85: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_85, "heading_3").encode(env))
-        }
-        86 => {
-            static ATOM_86: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_86, "heading_4").encode(env))
-        }
-        87 => {
-            static ATOM_87: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_87, "heading_5").encode(env))
-        }
-        88 => {
-            static ATOM_88: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_88, "heading_6").encode(env))
-        }
-        89 => {
-            static ATOM_89: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_89, "header").encode(env))
-        }
-        90 => {
-            static ATOM_90: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_90, "footer").encode(env))
-        }
-        91 => {
-            static ATOM_91: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_91, "sidebar").encode(env))
-        }
-        92 => {
-            static ATOM_92: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_92, "section").encode(env))
-        }
-        93 => {
-            static ATOM_93: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_93, "maincontent").encode(env))
-        }
-        94 => {
-            static ATOM_94: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_94, "table_cell").encode(env))
-        }
-        95 => {
-            static ATOM_95: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_95, "widget").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_0, "auto").encode(env)),
+        52i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_1, "none").encode(env)),
+        30i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_2, "application").encode(env)),
+        67i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_3, "banner").encode(env)),
+        68i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_4, "complementary").encode(env)),
+        69i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_5, "contentinfo").encode(env)),
+        70i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_6, "form").encode(env)),
+        71i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_7, "main").encode(env)),
+        72i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_8, "navigation").encode(env)),
+        73i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_9, "region").encode(env)),
+        74i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_10, "search").encode(env)),
+        13i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_11, "separator").encode(env)),
+        31i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_12, "article").encode(env)),
+        35i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_13, "columnheader").encode(env)),
+        36i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_14, "definition").encode(env)),
+        38i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_15, "directory").encode(env)),
+        39i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_16, "document").encode(env)),
+        44i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_17, "group").encode(env)),
+        45i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_18, "heading").encode(env)),
+        46i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_19, "img").encode(env)),
+        48i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_20, "list").encode(env)),
+        49i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_21, "listitem").encode(env)),
+        50i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_22, "math").encode(env)),
+        53i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_23, "note").encode(env)),
+        55i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_24, "presentation").encode(env)),
+        56i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_25, "row").encode(env)),
+        57i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_26, "rowgroup").encode(env)),
+        58i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_27, "rowheader").encode(env)),
+        62i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_28, "table").encode(env)),
+        65i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_29, "toolbar").encode(env)),
+        1i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_30, "button").encode(env)),
+        2i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_31, "checkbox").encode(env)),
+        3i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_32, "gridcell").encode(env)),
+        4i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_33, "link").encode(env)),
+        5i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_34, "menuitem").encode(env)),
+        6i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_35, "menuitemcheckbox").encode(env)),
+        7i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_36, "menuitemradio").encode(env)),
+        8i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_37, "option").encode(env)),
+        9i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_38, "progressbar").encode(env)),
+        10i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_39, "radio").encode(env)),
+        11i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_40, "scrollbar").encode(env)),
+        14i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_41, "slider").encode(env)),
+        15i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_42, "spinbutton").encode(env)),
+        17i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_43, "tab").encode(env)),
+        18i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_44, "tabpanel").encode(env)),
+        19i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_45, "textbox").encode(env)),
+        20i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_46, "treeitem").encode(env)),
+        21i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_47, "combobox").encode(env)),
+        22i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_48, "grid").encode(env)),
+        23i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_49, "listbox").encode(env)),
+        24i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_50, "menu").encode(env)),
+        25i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_51, "menubar").encode(env)),
+        26i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_52, "radiogroup").encode(env)),
+        27i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_53, "tablist").encode(env)),
+        28i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_54, "tree").encode(env)),
+        29i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_55, "treegrid").encode(env)),
+        66i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_56, "tooltip").encode(env)),
+        75i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_57, "alert").encode(env)),
+        76i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_58, "log").encode(env)),
+        77i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_59, "marquee").encode(env)),
+        78i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_60, "status").encode(env)),
+        79i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_61, "timer").encode(env)),
+        80i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_62, "alertdialog").encode(env)),
+        81i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_63, "dialog").encode(env)),
+        12i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_64, "searchbox").encode(env)),
+        16i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_65, "switch").encode(env)),
+        32i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_66, "blockquote").encode(env)),
+        33i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_67, "caption").encode(env)),
+        34i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_68, "cell").encode(env)),
+        37i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_69, "deletion").encode(env)),
+        40i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_70, "emphasis").encode(env)),
+        41i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_71, "feed").encode(env)),
+        42i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_72, "figure").encode(env)),
+        43i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_73, "generic").encode(env)),
+        47i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_74, "insertion").encode(env)),
+        51i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_75, "meter").encode(env)),
+        54i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_76, "paragraph").encode(env)),
+        59i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_77, "strong").encode(env)),
+        60i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_78, "subscript").encode(env)),
+        61i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_79, "superscript").encode(env)),
+        63i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_80, "term").encode(env)),
+        64i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_81, "time").encode(env)),
+        82i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_82, "image").encode(env)),
+        83i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_83, "heading_1").encode(env)),
+        84i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_84, "heading_2").encode(env)),
+        85i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_85, "heading_3").encode(env)),
+        86i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_86, "heading_4").encode(env)),
+        87i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_87, "heading_5").encode(env)),
+        88i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_88, "heading_6").encode(env)),
+        89i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_89, "header").encode(env)),
+        90i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_90, "footer").encode(env)),
+        91i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_91, "sidebar").encode(env)),
+        92i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_92, "section").encode(env)),
+        93i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_93, "maincontent").encode(env)),
+        94i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_94, "table_cell").encode(env)),
+        95i64 => Ok(cached_atom(env, &ARIA_ROLE_ATOM_95, "widget").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_migration_status_from_decoder<'a>(
@@ -28097,60 +27144,61 @@ fn decode_migration_status_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static COLOR_PROFILE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static COLOR_PROFILE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_color_profile_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "srgb").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "display_p3").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &COLOR_PROFILE_ATOM_0, "srgb").encode(env)),
+        1i64 => Ok(cached_atom(env, &COLOR_PROFILE_ATOM_1, "display_p3").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static DOCUMENT_COLOR_PROFILE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static DOCUMENT_COLOR_PROFILE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static DOCUMENT_COLOR_PROFILE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_document_color_profile_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "legacy").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &DOCUMENT_COLOR_PROFILE_ATOM_0, "legacy").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "srgb").encode(env))
+        1i64 => Ok(cached_atom(env, &DOCUMENT_COLOR_PROFILE_ATOM_1, "srgb").encode(env)),
+        2i64 => {
+            Ok(
+                cached_atom(env, &DOCUMENT_COLOR_PROFILE_ATOM_2, "display_p3")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "display_p3").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static CHILD_READING_DIRECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static CHILD_READING_DIRECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static CHILD_READING_DIRECTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_child_reading_direction_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &CHILD_READING_DIRECTION_ATOM_0, "none").encode(env)),
+        1i64 => {
+            Ok(
+                cached_atom(env, &CHILD_READING_DIRECTION_ATOM_1, "left_to_right")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "left_to_right").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &CHILD_READING_DIRECTION_ATOM_2, "right_to_left")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "right_to_left").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_aria_attribute_any_value_from_decoder<'a>(
@@ -28209,32 +27257,33 @@ fn decode_aria_attribute_any_value_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
 fn decode_aria_attribute_data_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "boolean").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &ARIA_ATTRIBUTE_DATA_TYPE_ATOM_0, "boolean").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "string").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &ARIA_ATTRIBUTE_DATA_TYPE_ATOM_1, "string").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "float").encode(env))
+        2i64 => {
+            Ok(cached_atom(env, &ARIA_ATTRIBUTE_DATA_TYPE_ATOM_2, "float").encode(env))
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "int").encode(env))
+        3i64 => Ok(cached_atom(env, &ARIA_ATTRIBUTE_DATA_TYPE_ATOM_3, "int").encode(env)),
+        4i64 => {
+            Ok(
+                cached_atom(env, &ARIA_ATTRIBUTE_DATA_TYPE_ATOM_4, "string_list")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "string_list").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_aria_attribute_data_from_decoder<'a>(
@@ -28608,100 +27657,84 @@ fn decode_edit_scope_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static EDIT_SCOPE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EDIT_SCOPE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static EDIT_SCOPE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static EDIT_SCOPE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static EDIT_SCOPE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static EDIT_SCOPE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static EDIT_SCOPE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static EDIT_SCOPE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static EDIT_SCOPE_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
 fn decode_edit_scope_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "invalid").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "test_setup").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "user").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "plugin").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "system").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "rest_api").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "onboarding").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "autosave").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "ai").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_0, "invalid").encode(env)),
+        1i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_1, "test_setup").encode(env)),
+        2i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_2, "user").encode(env)),
+        3i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_3, "plugin").encode(env)),
+        4i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_4, "system").encode(env)),
+        5i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_5, "rest_api").encode(env)),
+        6i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_6, "onboarding").encode(env)),
+        7i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_7, "autosave").encode(env)),
+        8i64 => Ok(cached_atom(env, &EDIT_SCOPE_TYPE_ATOM_8, "ai").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SECTION_PRESET_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SECTION_PRESET_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_section_preset_state_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "inserted").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &SECTION_PRESET_STATE_ATOM_0, "inserted").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "user_edited").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &SECTION_PRESET_STATE_ATOM_1, "user_edited").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static EMOJI_IMAGE_SET_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static EMOJI_IMAGE_SET_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_emoji_image_set_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "apple").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "noto").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &EMOJI_IMAGE_SET_ATOM_0, "apple").encode(env)),
+        1i64 => Ok(cached_atom(env, &EMOJI_IMAGE_SET_ATOM_1, "noto").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static SELECTION_REGION_FOCUS_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SELECTION_REGION_FOCUS_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SELECTION_REGION_FOCUS_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_selection_region_focus_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &SELECTION_REGION_FOCUS_TYPE_ATOM_0, "none").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "primary").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &SELECTION_REGION_FOCUS_TYPE_ATOM_1, "primary")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "secondary").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &SELECTION_REGION_FOCUS_TYPE_ATOM_2, "secondary")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_section_preset_info_from_decoder<'a>(
@@ -28821,24 +27854,18 @@ fn decode_clipboard_selection_region_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static FIRST_DRAFT_KIT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FIRST_DRAFT_KIT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static FIRST_DRAFT_KIT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_first_draft_kit_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "local").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "library").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "none").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &FIRST_DRAFT_KIT_TYPE_ATOM_0, "local").encode(env)),
+        1i64 => Ok(cached_atom(env, &FIRST_DRAFT_KIT_TYPE_ATOM_1, "library").encode(env)),
+        2i64 => Ok(cached_atom(env, &FIRST_DRAFT_KIT_TYPE_ATOM_2, "none").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_first_draft_kit_from_decoder<'a>(
@@ -28919,24 +27946,37 @@ fn decode_first_draft_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_first_draft_kit_element_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_0, "none")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "building_block").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_1, "building_block")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "grouped_component").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_2,
+                        "grouped_component",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_first_draft_kit_element_data_from_decoder<'a>(
@@ -28978,48 +28018,60 @@ fn decode_first_draft_kit_element_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static PLATFORM_SHAPE_PROPERTY_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PLATFORM_SHAPE_PROPERTY_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PLATFORM_SHAPE_PROPERTY_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static PLATFORM_SHAPE_PROPERTY_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_platform_shape_property_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "fill").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &PLATFORM_SHAPE_PROPERTY_ATOM_0, "fill").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &PLATFORM_SHAPE_PROPERTY_ATOM_1, "stroke").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "stroke").encode(env))
+        2i64 => Ok(cached_atom(env, &PLATFORM_SHAPE_PROPERTY_ATOM_2, "text").encode(env)),
+        3i64 => {
+            Ok(
+                cached_atom(env, &PLATFORM_SHAPE_PROPERTY_ATOM_3, "stroke_color")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "text").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "stroke_color").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_platform_shape_behavior_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "shape").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_0, "shape")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "container").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_1, "container")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "advanced_container").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_2,
+                        "advanced_container",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_platform_shape_property_map_entry_from_decoder<'a>(
@@ -29278,52 +28330,56 @@ fn decode_behavior_transition_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static APPEAR_BEHAVIOR_TRIGGER_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static APPEAR_BEHAVIOR_TRIGGER_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static APPEAR_BEHAVIOR_TRIGGER_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static APPEAR_BEHAVIOR_TRIGGER_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_appear_behavior_trigger_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        1 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "page_load").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        1i64 => {
+            Ok(
+                cached_atom(env, &APPEAR_BEHAVIOR_TRIGGER_ATOM_0, "page_load")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "this_layer_in_view").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &APPEAR_BEHAVIOR_TRIGGER_ATOM_1, "this_layer_in_view")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "other_layer_in_view").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &APPEAR_BEHAVIOR_TRIGGER_ATOM_2, "other_layer_in_view")
+                    .encode(env),
+            )
         }
-        4 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "scroll_direction").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &APPEAR_BEHAVIOR_TRIGGER_ATOM_3, "scroll_direction")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static RELATIVE_DIRECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static RELATIVE_DIRECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static RELATIVE_DIRECTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static RELATIVE_DIRECTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_relative_direction_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        1 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "up").encode(env))
-        }
-        2 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "down").encode(env))
-        }
-        3 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "left").encode(env))
-        }
-        4 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "right").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        1i64 => Ok(cached_atom(env, &RELATIVE_DIRECTION_ATOM_0, "up").encode(env)),
+        2i64 => Ok(cached_atom(env, &RELATIVE_DIRECTION_ATOM_1, "down").encode(env)),
+        3i64 => Ok(cached_atom(env, &RELATIVE_DIRECTION_ATOM_2, "left").encode(env)),
+        4i64 => Ok(cached_atom(env, &RELATIVE_DIRECTION_ATOM_3, "right").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_appear_behavior_from_decoder<'a>(
@@ -29609,24 +28665,45 @@ fn decode_scroll_parallax_behavior_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_scroll_transform_behavior_trigger_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        1 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "page_height").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        1i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_0,
+                        "page_height",
+                    )
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "this_layer_in_view").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_1,
+                        "this_layer_in_view",
+                    )
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "other_layer_in_view").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_2,
+                        "other_layer_in_view",
+                    )
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_scroll_transform_behavior_from_decoder<'a>(
@@ -29944,20 +29021,16 @@ fn decode_client_rendered_metadata_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static LINK_BEHAVIOR_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static LINK_BEHAVIOR_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_link_behavior_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        1 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "url").encode(env))
-        }
-        2 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "page").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        1i64 => Ok(cached_atom(env, &LINK_BEHAVIOR_TYPE_ATOM_0, "url").encode(env)),
+        2i64 => Ok(cached_atom(env, &LINK_BEHAVIOR_TYPE_ATOM_1, "page").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_link_behavior_from_decoder<'a>(
@@ -30094,60 +29167,67 @@ fn decode_slide_theme_data_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static SLIDE_NUMBER_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static SLIDE_NUMBER_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static SLIDE_NUMBER_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static SLIDE_NUMBER_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static SLIDE_NUMBER_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static SLIDE_NUMBER_ATOM_5: OnceLock<Atom> = OnceLock::new();
 fn decode_slide_number_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "none").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &SLIDE_NUMBER_ATOM_0, "none").encode(env)),
+        1i64 => Ok(cached_atom(env, &SLIDE_NUMBER_ATOM_1, "slide").encode(env)),
+        2i64 => Ok(cached_atom(env, &SLIDE_NUMBER_ATOM_2, "section").encode(env)),
+        3i64 => Ok(cached_atom(env, &SLIDE_NUMBER_ATOM_3, "subsection").encode(env)),
+        4i64 => {
+            Ok(cached_atom(env, &SLIDE_NUMBER_ATOM_4, "total_within_deck").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "slide").encode(env))
+        5i64 => {
+            Ok(
+                cached_atom(env, &SLIDE_NUMBER_ATOM_5, "total_within_section")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "section").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "subsection").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "total_within_deck").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "total_within_section").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static NODE_CHAT_MESSAGE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static NODE_CHAT_MESSAGE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static NODE_CHAT_MESSAGE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static NODE_CHAT_MESSAGE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_node_chat_message_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "user_message").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &NODE_CHAT_MESSAGE_TYPE_ATOM_0, "user_message")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "assistant_message").encode(env))
+        1i64 => {
+            Ok(
+                cached_atom(env, &NODE_CHAT_MESSAGE_TYPE_ATOM_1, "assistant_message")
+                    .encode(env),
+            )
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "tool_message").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &NODE_CHAT_MESSAGE_TYPE_ATOM_2, "tool_message")
+                    .encode(env),
+            )
         }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "system_message").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &NODE_CHAT_MESSAGE_TYPE_ATOM_3, "system_message")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_node_chat_message_from_decoder<'a>(
@@ -30510,24 +29590,30 @@ fn decode_ai_chat_content_part_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static AI_CHAT_CONTENT_PART_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static AI_CHAT_CONTENT_PART_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static AI_CHAT_CONTENT_PART_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_ai_chat_content_part_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "invalid").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(
+                cached_atom(env, &AI_CHAT_CONTENT_PART_TYPE_ATOM_0, "invalid")
+                    .encode(env),
+            )
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "text").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &AI_CHAT_CONTENT_PART_TYPE_ATOM_1, "text").encode(env))
         }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "selected_node_ids").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &AI_CHAT_CONTENT_PART_TYPE_ATOM_2, "selected_node_ids")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_ai_chat_content_part_any_value_from_decoder<'a>(
@@ -30574,28 +29660,22 @@ fn decode_ai_chat_content_part_any_value_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static AI_CHAT_MESSAGE_ROLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static AI_CHAT_MESSAGE_ROLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static AI_CHAT_MESSAGE_ROLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static AI_CHAT_MESSAGE_ROLE_ATOM_3: OnceLock<Atom> = OnceLock::new();
 fn decode_ai_chat_message_role_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "user").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &AI_CHAT_MESSAGE_ROLE_ATOM_0, "user").encode(env)),
+        1i64 => {
+            Ok(cached_atom(env, &AI_CHAT_MESSAGE_ROLE_ATOM_1, "assistant").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "assistant").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "tool").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "system").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+        2i64 => Ok(cached_atom(env, &AI_CHAT_MESSAGE_ROLE_ATOM_2, "tool").encode(env)),
+        3i64 => Ok(cached_atom(env, &AI_CHAT_MESSAGE_ROLE_ATOM_3, "system").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_ai_chat_message_from_decoder<'a>(
@@ -30696,275 +29776,495 @@ fn decode_ai_chat_thread_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static COOPER_TEMPLATE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_30: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_31: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_32: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_33: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_34: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_35: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_36: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_37: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_38: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_39: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_40: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_41: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_42: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_43: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_44: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_45: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_46: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_47: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_48: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_49: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_50: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_51: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_52: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_53: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_54: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_55: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_56: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_57: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_58: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_59: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_60: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_61: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_62: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_63: OnceLock<Atom> = OnceLock::new();
+static COOPER_TEMPLATE_TYPE_ATOM_64: OnceLock<Atom> = OnceLock::new();
 fn decode_cooper_template_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "custom").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "twitter_post").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "linkedin_post").encode(env))
-        }
-        3 => {
-            static ATOM_3: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_3, "insta_post_square").encode(env))
-        }
-        4 => {
-            static ATOM_4: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_4, "insta_post_portrait").encode(env))
-        }
-        5 => {
-            static ATOM_5: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_5, "insta_story").encode(env))
-        }
-        6 => {
-            static ATOM_6: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_6, "insta_ad").encode(env))
-        }
-        7 => {
-            static ATOM_7: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_7, "facebook_post").encode(env))
-        }
-        8 => {
-            static ATOM_8: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_8, "facebook_cover_photo").encode(env))
-        }
-        9 => {
-            static ATOM_9: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_9, "facebook_event_cover").encode(env))
-        }
-        10 => {
-            static ATOM_10: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_10, "facebook_ad_portrait").encode(env))
-        }
-        11 => {
-            static ATOM_11: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_11, "facebook_ad_square").encode(env))
-        }
-        12 => {
-            static ATOM_12: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_12, "pinterest_ad_pin").encode(env))
-        }
-        13 => {
-            static ATOM_13: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_13, "twitter_banner").encode(env))
-        }
-        15 => {
-            static ATOM_14: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_14, "linkedin_post_square").encode(env))
-        }
-        16 => {
-            static ATOM_15: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_15, "linkedin_post_portrait").encode(env))
-        }
-        17 => {
-            static ATOM_16: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_16, "linkedin_post_landscape").encode(env))
-        }
-        18 => {
-            static ATOM_17: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_17, "linkedin_profile_banner").encode(env))
-        }
-        19 => {
-            static ATOM_18: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_18, "linkedin_article_banner").encode(env))
-        }
-        20 => {
-            static ATOM_19: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_19, "linkedin_ad_landscape").encode(env))
-        }
-        21 => {
-            static ATOM_20: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_20, "linkedin_ad_square").encode(env))
-        }
-        22 => {
-            static ATOM_21: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_21, "linkedin_ad_vertical").encode(env))
-        }
-        23 => {
-            static ATOM_22: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_22, "youtube_thumbnail").encode(env))
-        }
-        24 => {
-            static ATOM_23: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_23, "youtube_banner").encode(env))
-        }
-        25 => {
-            static ATOM_24: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_24, "youtube_ad").encode(env))
-        }
-        26 => {
-            static ATOM_25: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_25, "twitch_banner").encode(env))
-        }
-        27 => {
-            static ATOM_26: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_26, "google_leaderboard_ad").encode(env))
-        }
-        28 => {
-            static ATOM_27: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_27, "google_large_ad").encode(env))
-        }
-        29 => {
-            static ATOM_28: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_28, "google_med_ad").encode(env))
-        }
-        30 => {
-            static ATOM_29: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_29, "google_mobile_banner_ad").encode(env))
-        }
-        31 => {
-            static ATOM_30: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_30, "google_skyscraper_ad").encode(env))
-        }
-        32 => {
-            static ATOM_31: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_31, "card_horizontal").encode(env))
-        }
-        33 => {
-            static ATOM_32: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_32, "card_vertical").encode(env))
-        }
-        34 => {
-            static ATOM_33: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_33, "print_us_letter").encode(env))
-        }
-        35 => {
-            static ATOM_34: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_34, "poster").encode(env))
-        }
-        36 => {
-            static ATOM_35: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_35, "banner_standard").encode(env))
-        }
-        37 => {
-            static ATOM_36: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_36, "banner_wide").encode(env))
-        }
-        38 => {
-            static ATOM_37: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_37, "banner_ultrawide").encode(env))
-        }
-        39 => {
-            static ATOM_38: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_38, "name_tag_portrait").encode(env))
-        }
-        40 => {
-            static ATOM_39: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_39, "name_tag_landscape").encode(env))
-        }
-        41 => {
-            static ATOM_40: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_40, "insta_reel_cover").encode(env))
-        }
-        42 => {
-            static ATOM_41: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_41, "zoom_background").encode(env))
-        }
-        43 => {
-            static ATOM_42: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_42, "tiktok_post").encode(env))
-        }
-        44 => {
-            static ATOM_43: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_43, "insta_ad_portrait").encode(env))
-        }
-        45 => {
-            static ATOM_44: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_44, "insta_post_tall_portrait").encode(env))
-        }
-        46 => {
-            static ATOM_45: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_45, "twitter_post_square").encode(env))
-        }
-        47 => {
-            static ATOM_46: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_46, "facebook_post_square").encode(env))
-        }
-        48 => {
-            static ATOM_47: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_47, "facebook_post_portrait").encode(env))
-        }
-        49 => {
-            static ATOM_48: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_48, "facebook_story").encode(env))
-        }
-        50 => {
-            static ATOM_49: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_49, "google_square_ad").encode(env))
-        }
-        51 => {
-            static ATOM_50: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_50, "google_small_square_ad").encode(env))
-        }
-        52 => {
-            static ATOM_51: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_51, "google_narrow_skyscraper_ad").encode(env))
-        }
-        53 => {
-            static ATOM_52: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_52, "google_half_page_ad").encode(env))
-        }
-        54 => {
-            static ATOM_53: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_53, "google_large_leaderboard_ad").encode(env))
-        }
-        55 => {
-            static ATOM_54: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_54, "google_billboard_ad").encode(env))
-        }
-        56 => {
-            static ATOM_55: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_55, "google_banner_leaderboard_ad").encode(env))
-        }
-        57 => {
-            static ATOM_56: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_56, "google_top_banner_ad").encode(env))
-        }
-        58 => {
-            static ATOM_57: OnceLock<Atom> = OnceLock::new();
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_0, "custom").encode(env)),
+        1i64 => {
             Ok(
-                cached_atom(env, &ATOM_57, "google_mobile_leaderboard_banner_ad")
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_1, "twitter_post")
                     .encode(env),
             )
         }
-        59 => {
-            static ATOM_58: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_58, "google_large_mobile_banner_ad").encode(env))
+        2i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_2, "linkedin_post")
+                    .encode(env),
+            )
         }
-        60 => {
-            static ATOM_59: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_59, "google_mobile_interstitial_ad").encode(env))
+        3i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_3, "insta_post_square")
+                    .encode(env),
+            )
         }
-        61 => {
-            static ATOM_60: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_60, "google_mobile_med_rectangle_ad").encode(env))
+        4i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_4, "insta_post_portrait")
+                    .encode(env),
+            )
         }
-        62 => {
-            static ATOM_61: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_61, "pinterest_pin_standard").encode(env))
+        5i64 => {
+            Ok(cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_5, "insta_story").encode(env))
         }
-        63 => {
-            static ATOM_62: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_62, "pinterest_pin_square").encode(env))
+        6i64 => {
+            Ok(cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_6, "insta_ad").encode(env))
         }
-        64 => {
-            static ATOM_63: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_63, "pinterest_ad_square").encode(env))
+        7i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_7, "facebook_post")
+                    .encode(env),
+            )
         }
-        65 => {
-            static ATOM_64: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_64, "print_a4").encode(env))
+        8i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_8, "facebook_cover_photo")
+                    .encode(env),
+            )
         }
-        value => Ok((value as i64).encode(env)),
+        9i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_9, "facebook_event_cover")
+                    .encode(env),
+            )
+        }
+        10i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_10, "facebook_ad_portrait")
+                    .encode(env),
+            )
+        }
+        11i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_11, "facebook_ad_square")
+                    .encode(env),
+            )
+        }
+        12i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_12, "pinterest_ad_pin")
+                    .encode(env),
+            )
+        }
+        13i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_13, "twitter_banner")
+                    .encode(env),
+            )
+        }
+        15i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_14, "linkedin_post_square")
+                    .encode(env),
+            )
+        }
+        16i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_15, "linkedin_post_portrait")
+                    .encode(env),
+            )
+        }
+        17i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_16,
+                        "linkedin_post_landscape",
+                    )
+                    .encode(env),
+            )
+        }
+        18i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_17,
+                        "linkedin_profile_banner",
+                    )
+                    .encode(env),
+            )
+        }
+        19i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_18,
+                        "linkedin_article_banner",
+                    )
+                    .encode(env),
+            )
+        }
+        20i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_19, "linkedin_ad_landscape")
+                    .encode(env),
+            )
+        }
+        21i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_20, "linkedin_ad_square")
+                    .encode(env),
+            )
+        }
+        22i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_21, "linkedin_ad_vertical")
+                    .encode(env),
+            )
+        }
+        23i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_22, "youtube_thumbnail")
+                    .encode(env),
+            )
+        }
+        24i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_23, "youtube_banner")
+                    .encode(env),
+            )
+        }
+        25i64 => {
+            Ok(cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_24, "youtube_ad").encode(env))
+        }
+        26i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_25, "twitch_banner")
+                    .encode(env),
+            )
+        }
+        27i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_26, "google_leaderboard_ad")
+                    .encode(env),
+            )
+        }
+        28i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_27, "google_large_ad")
+                    .encode(env),
+            )
+        }
+        29i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_28, "google_med_ad")
+                    .encode(env),
+            )
+        }
+        30i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_29,
+                        "google_mobile_banner_ad",
+                    )
+                    .encode(env),
+            )
+        }
+        31i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_30, "google_skyscraper_ad")
+                    .encode(env),
+            )
+        }
+        32i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_31, "card_horizontal")
+                    .encode(env),
+            )
+        }
+        33i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_32, "card_vertical")
+                    .encode(env),
+            )
+        }
+        34i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_33, "print_us_letter")
+                    .encode(env),
+            )
+        }
+        35i64 => {
+            Ok(cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_34, "poster").encode(env))
+        }
+        36i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_35, "banner_standard")
+                    .encode(env),
+            )
+        }
+        37i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_36, "banner_wide")
+                    .encode(env),
+            )
+        }
+        38i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_37, "banner_ultrawide")
+                    .encode(env),
+            )
+        }
+        39i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_38, "name_tag_portrait")
+                    .encode(env),
+            )
+        }
+        40i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_39, "name_tag_landscape")
+                    .encode(env),
+            )
+        }
+        41i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_40, "insta_reel_cover")
+                    .encode(env),
+            )
+        }
+        42i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_41, "zoom_background")
+                    .encode(env),
+            )
+        }
+        43i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_42, "tiktok_post")
+                    .encode(env),
+            )
+        }
+        44i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_43, "insta_ad_portrait")
+                    .encode(env),
+            )
+        }
+        45i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_44,
+                        "insta_post_tall_portrait",
+                    )
+                    .encode(env),
+            )
+        }
+        46i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_45, "twitter_post_square")
+                    .encode(env),
+            )
+        }
+        47i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_46, "facebook_post_square")
+                    .encode(env),
+            )
+        }
+        48i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_47, "facebook_post_portrait")
+                    .encode(env),
+            )
+        }
+        49i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_48, "facebook_story")
+                    .encode(env),
+            )
+        }
+        50i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_49, "google_square_ad")
+                    .encode(env),
+            )
+        }
+        51i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_50, "google_small_square_ad")
+                    .encode(env),
+            )
+        }
+        52i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_51,
+                        "google_narrow_skyscraper_ad",
+                    )
+                    .encode(env),
+            )
+        }
+        53i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_52, "google_half_page_ad")
+                    .encode(env),
+            )
+        }
+        54i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_53,
+                        "google_large_leaderboard_ad",
+                    )
+                    .encode(env),
+            )
+        }
+        55i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_54, "google_billboard_ad")
+                    .encode(env),
+            )
+        }
+        56i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_55,
+                        "google_banner_leaderboard_ad",
+                    )
+                    .encode(env),
+            )
+        }
+        57i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_56, "google_top_banner_ad")
+                    .encode(env),
+            )
+        }
+        58i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_57,
+                        "google_mobile_leaderboard_banner_ad",
+                    )
+                    .encode(env),
+            )
+        }
+        59i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_58,
+                        "google_large_mobile_banner_ad",
+                    )
+                    .encode(env),
+            )
+        }
+        60i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_59,
+                        "google_mobile_interstitial_ad",
+                    )
+                    .encode(env),
+            )
+        }
+        61i64 => {
+            Ok(
+                cached_atom(
+                        env,
+                        &COOPER_TEMPLATE_TYPE_ATOM_60,
+                        "google_mobile_med_rectangle_ad",
+                    )
+                    .encode(env),
+            )
+        }
+        62i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_61, "pinterest_pin_standard")
+                    .encode(env),
+            )
+        }
+        63i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_62, "pinterest_pin_square")
+                    .encode(env),
+            )
+        }
+        64i64 => {
+            Ok(
+                cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_63, "pinterest_ad_square")
+                    .encode(env),
+            )
+        }
+        65i64 => {
+            Ok(cached_atom(env, &COOPER_TEMPLATE_TYPE_ATOM_64, "print_a4").encode(env))
+        }
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_cooper_template_data_from_decoder<'a>(
@@ -31078,24 +30378,18 @@ fn decode_image_import_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static INTERPOLATION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static INTERPOLATION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_interpolation_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "hold").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "bezier").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "spring").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &INTERPOLATION_TYPE_ATOM_0, "hold").encode(env)),
+        1i64 => Ok(cached_atom(env, &INTERPOLATION_TYPE_ATOM_1, "bezier").encode(env)),
+        2i64 => Ok(cached_atom(env, &INTERPOLATION_TYPE_ATOM_2, "spring").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 fn decode_bezier_handles_from_decoder<'a>(
@@ -31145,60 +30439,48 @@ fn decode_bezier_handles_from_decoder<'a>(
     }
     make_struct(env, keys, &values)
 }
+static KEYFRAME_OPERATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_OPERATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static KEYFRAME_OPERATION_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_keyframe_operation_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "set").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "scale").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "offset").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &KEYFRAME_OPERATION_ATOM_0, "set").encode(env)),
+        1i64 => Ok(cached_atom(env, &KEYFRAME_OPERATION_ATOM_1, "scale").encode(env)),
+        2i64 => Ok(cached_atom(env, &KEYFRAME_OPERATION_ATOM_2, "offset").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static TIMELINE_POSITION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static TIMELINE_POSITION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
 fn decode_timeline_position_type_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "absolute").encode(env))
+    match decoder.read_var_uint()? as i64 {
+        0i64 => {
+            Ok(cached_atom(env, &TIMELINE_POSITION_TYPE_ATOM_0, "absolute").encode(env))
         }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "relative").encode(env))
+        1i64 => {
+            Ok(cached_atom(env, &TIMELINE_POSITION_TYPE_ATOM_1, "relative").encode(env))
         }
-        value => Ok((value as i64).encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
+static PLAYBACK_STYLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
+static PLAYBACK_STYLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
+static PLAYBACK_STYLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
 fn decode_playback_style_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    match decoder.read_var_uint()? {
-        0 => {
-            static ATOM_0: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_0, "once").encode(env))
-        }
-        1 => {
-            static ATOM_1: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_1, "loop").encode(env))
-        }
-        2 => {
-            static ATOM_2: OnceLock<Atom> = OnceLock::new();
-            Ok(cached_atom(env, &ATOM_2, "boomerang").encode(env))
-        }
-        value => Ok((value as i64).encode(env)),
+    match decoder.read_var_uint()? as i64 {
+        0i64 => Ok(cached_atom(env, &PLAYBACK_STYLE_ATOM_0, "once").encode(env)),
+        1i64 => Ok(cached_atom(env, &PLAYBACK_STYLE_ATOM_1, "loop").encode(env)),
+        2i64 => Ok(cached_atom(env, &PLAYBACK_STYLE_ATOM_2, "boomerang").encode(env)),
+        value => Ok(value.encode(env)),
     }
 }
 #[rustler::nif(schedule = "DirtyCpu")]

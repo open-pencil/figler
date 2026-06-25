@@ -103,19 +103,11 @@ defmodule FigKiwi.MixProject do
   end
 
   defp rustq_dep do
-    if File.dir?("../rustq") do
-      {:rustq, "~> 0.4", path: "../rustq", runtime: false}
-    else
-      {:rustq, github: "dannote/rustq", branch: "master", runtime: false}
-    end
+    {:rustq, "~> 0.7", runtime: false}
   end
 
   defp json_codec_dep do
-    if File.dir?("../json_codec") do
-      {:json_codec, "~> 0.1.0", path: "../json_codec"}
-    else
-      {:json_codec, github: "dannote/json_codec", branch: "master"}
-    end
+    {:json_codec, "~> 0.1.0"}
   end
 
   defp package do
