@@ -31,7 +31,7 @@ defmodule FigKiwi.MixProject do
     [
       ci: [
         "compile --warnings-as-errors",
-        "native.gen.check",
+        "rustq.gen --check native",
         "format --check-formatted",
         "rust.fmt --check",
         "rust.check",
@@ -103,7 +103,7 @@ defmodule FigKiwi.MixProject do
   end
 
   defp rustq_dep do
-    {:rustq, "~> 0.7", runtime: false}
+    {:rustq, path: "../rustq", runtime: false}
   end
 
   defp json_codec_dep do

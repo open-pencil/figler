@@ -34,22 +34,24 @@ generate "native", "native/src/generated.rs" do
     |> File.read!()
     |> KiwiCodec.parse_schema!()
 
-  content(
-    KiwiCodec.RustlerGenerator.render_source!(schema,
-      definitions: ["GUID", "Vector", "Matrix", "ParentIndex", "Image", "NodeChange", "Message"],
-      entrypoints: [
-        decode_guid: "GUID",
-        decode_vector: "Vector",
-        decode_matrix: "Matrix",
-        decode_parent_index: "ParentIndex",
-        decode_image: "Image",
-        decode_node_change: "NodeChange",
-        decode_message: "Message"
-      ],
-      module_prefix: "FigKiwi.Schema",
-      template: "native/src/generated.template.rs",
-      extra_splices: FigKiwi.NativeSceneGenerator.render_splices(schema),
-      rustfmt: true
-    )
+  render(File.read!("native/src/generated.template.rs"),
+    filename: "native/src/generated.template.rs",
+    include_dir: "native/src",
+    rustfmt: true,
+    splice:
+      KiwiCodec.RustlerGenerator.splices(schema,
+        definitions: ["GUID", "Vector", "Matrix", "ParentIndex", "Image", "NodeChange", "Message"],
+        entrypoints: [
+          decode_guid: "GUID",
+          decode_vector: "Vector",
+          decode_matrix: "Matrix",
+          decode_parent_index: "ParentIndex",
+          decode_image: "Image",
+          decode_node_change: "NodeChange",
+          decode_message: "Message"
+        ],
+        module_prefix: "FigKiwi.Schema",
+        extra_splices: FigKiwi.NativeSceneGenerator.render_splices(schema)
+      )
   )
 end

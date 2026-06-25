@@ -1,9 +1,8 @@
-#[rustfmt::skip]
-mod generated;
-mod runtime;
+#![allow(dead_code)]
 
-fn load(env: rustler::Env, _term: rustler::Term) -> bool {
-    generated::load(env, _term)
-}
+#[rustfmt::skip]
+include!("generated.rs");
+
+mod runtime;
 
 rustler::init!("Elixir.FigKiwi.Native.Nif", load = load);
