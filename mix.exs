@@ -95,15 +95,11 @@ defmodule FigKiwi.MixProject do
   end
 
   defp kiwi_codec_dep do
-    if File.dir?("../kiwi_codec") do
-      {:kiwi_codec, "~> 0.1.0", path: "../kiwi_codec"}
-    else
-      {:kiwi_codec, github: "dannote/kiwi_codec", branch: "master"}
-    end
+    {:kiwi_codec, "~> 0.1.0"}
   end
 
   defp rustq_dep do
-    {:rustq, path: "../rustq", runtime: false}
+    {:rustq, "~> 0.8", runtime: false}
   end
 
   defp json_codec_dep do
