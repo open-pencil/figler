@@ -3,6 +3,7 @@ defmodule Figler.NativeSceneGeneratorTest do
 
   alias Figler.NativeSceneGenerator
   alias Figler.NativeSceneGenerator.Focus
+  alias Figler.NativeSceneGenerator.Rusty
   alias Figler.NativeSceneGenerator.Scene
   alias Figler.NativeSceneGenerator.Skip
   alias Figler.NativeSceneGenerator.Sparse
@@ -67,11 +68,19 @@ defmodule Figler.NativeSceneGeneratorTest do
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
     focus_source = Focus.render(definition_map, &Skip.message_arm/2, &Scene.render_template/2)
+    helper_source = Rusty.helper_items() |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
 
     assert focus_source =~ "graph_focus_read_symbol_data(decoder)?"
-    assert focus_source =~ "graph_focus_read_component_prop_assignment(decoder)?"
-    assert focus_source =~ "graph_focus_read_component_prop_value(decoder)?"
-    assert focus_source =~ "graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);"
+    assert focus_source =~ "graph_focus_extend_symbol_refs(data, &mut refs)?"
+    assert focus_source =~ "graph_focus_extend_component_prop_assignments(decoder, &mut refs)?"
+    assert focus_source =~ "graph_focus_extend_component_prop_value(decoder, &mut refs)?"
+    assert focus_source =~ "graph_focus_push_guid_ref(decoder, &mut refs)?"
+    assert helper_source =~ "fn graph_focus_push_guid_ref"
+    assert helper_source =~ "fn graph_focus_extend_symbol_refs"
+    assert helper_source =~ "fn graph_focus_extend_component_prop_assignments"
+    assert helper_source =~ "fn graph_focus_extend_component_prop_assignments_remaining"
+    assert helper_source =~ "graph_focus_read_component_prop_assignment(decoder)?"
+    assert helper_source =~ "fn graph_focus_extend_component_prop_value"
   end
 
   test "scene navigation NIF generation stays aligned with native stubs" do

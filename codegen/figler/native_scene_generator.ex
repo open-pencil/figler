@@ -5,6 +5,7 @@ defmodule Figler.NativeSceneGenerator do
   """
 
   alias Figler.NativeSceneGenerator.Focus
+  alias Figler.NativeSceneGenerator.Rusty
   alias Figler.NativeSceneGenerator.Scene
   alias Figler.NativeSceneGenerator.Skip
   alias Figler.NativeSceneGenerator.Sparse
@@ -15,6 +16,7 @@ defmodule Figler.NativeSceneGenerator do
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
     [
+      graph_focus_helpers: Rusty.helper_items(),
       node_type_name_arms: node_type_name_arms(definition_map),
       sparse_decoders: Sparse.render(schema.definitions, definition_map),
       skip_decoders: Skip.render(schema.definitions, definition_map),
@@ -29,6 +31,7 @@ defmodule Figler.NativeSceneGenerator do
       __rq_include!("templates/scene_types.rs");
       __rq_sparse_decoders!();
       __rq_skip_decoders!();
+      __rq_graph_focus_helpers!();
       __rq_graph_focus_decoders!();
       __rq_include!("templates/scene_xpath_runtime.rs");
       __rq_include!("templates/scene_summary_decoders.rs");

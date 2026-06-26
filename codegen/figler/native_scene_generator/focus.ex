@@ -49,18 +49,14 @@ defmodule Figler.NativeSceneGenerator.Focus do
         "symbolData" ->
           arm(field, [
             "let data = graph_focus_read_symbol_data(decoder)?;",
-            "symbol_id = data.symbol_id;",
-            "graph_focus_extend_refs(&mut refs, data.refs);"
+            "symbol_id = graph_focus_extend_symbol_refs(data, &mut refs)?;"
           ])
 
         "overriddenSymbolID" ->
-          arm(field, "graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);")
+          arm(field, "graph_focus_push_guid_ref(decoder, &mut refs)?;")
 
         "componentPropAssignments" ->
-          arm(field, [
-            "let len = decoder.read_var_uint()? as usize;",
-            "for _ in 0..len { let next = graph_focus_read_component_prop_assignment(decoder)?; graph_focus_extend_refs(&mut refs, next); }"
-          ])
+          arm(field, "graph_focus_extend_component_prop_assignments(decoder, &mut refs)?;")
 
         _other ->
           skip_arm.(field, definition_map)
@@ -78,10 +74,7 @@ defmodule Figler.NativeSceneGenerator.Focus do
     Enum.map(fields, fn field ->
       case field.name do
         "value" ->
-          arm(field, [
-            "let next = graph_focus_read_component_prop_value(decoder)?;",
-            "graph_focus_extend_refs(&mut refs, next);"
-          ])
+          arm(field, "graph_focus_extend_component_prop_value(decoder, &mut refs)?;")
 
         _other ->
           skip_arm.(field, definition_map)
@@ -93,7 +86,7 @@ defmodule Figler.NativeSceneGenerator.Focus do
     Enum.map(fields, fn field ->
       case field.name do
         "guidValue" ->
-          arm(field, "graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);")
+          arm(field, "graph_focus_push_guid_ref(decoder, &mut refs)?;")
 
         _other ->
           skip_arm.(field, definition_map)

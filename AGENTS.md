@@ -21,6 +21,9 @@ GitHub CI uses the shared `elixir-vibe/actions/.github/workflows/elixir-rustler-
 ## Generated Code Policy
 
 - Generate schema-shaped Rust with RustQ templates/splices when code depends on Kiwi field numbers, enum values, or generated schema structure.
+- Prefer `defrust` helpers for repeated generated Rust behavior when it can be expressed as valid Elixir.
+- Keep Rusty-Elixir functional: use recursion, pattern matching, and accumulator-style helper APIs for repeated/counting behavior instead of introducing imperative loop/break/continue generator snippets.
+- Treat loop/break/continue as RustQ-internal IR or last-resort Rust implementation details, not the normal Figler generator style.
 - Prefer templates under `native/src/templates/` plus `RustQ.Rust` fragments over ad-hoc multiline Rust string interpolation.
 - Keep Figma semantics in Elixir under `Figler.Scene.Graph`: instance population, overrides, component props, swaps, stack/layout, variables/styles, provenance, and unresolved diagnostics.
 - Do not add one-off native parsers for `.fig`, ZIP, or Kiwi containers in Figler. Reusable parsing/container speedups belong upstream in `kiwi_codec` or another shared package.

@@ -121096,6 +121096,53 @@ fn skip_playback_style_from_decoder(decoder: &mut Decoder<'_>) -> NifResult<()> 
     decoder.read_var_uint()?;
     Ok(())
 }
+fn graph_focus_push_guid_ref(
+    decoder: &mut Decoder<'_>,
+    refs: &mut Option<Vec<GraphFocusGuid>>,
+) -> NifResult<()> {
+    graph_focus_push_ref(refs, graph_focus_read_guid(decoder)?);
+    Ok(())
+}
+fn graph_focus_extend_symbol_refs(
+    data: GraphFocusSymbolData,
+    refs: &mut Option<Vec<GraphFocusGuid>>,
+) -> NifResult<Option<GraphFocusGuid>> {
+    let symbol_id = data.symbol_id;
+    graph_focus_extend_refs(refs, data.refs);
+    Ok(symbol_id)
+}
+fn graph_focus_extend_component_prop_assignments(
+    decoder: &mut Decoder<'_>,
+    refs: &mut Option<Vec<GraphFocusGuid>>,
+) -> NifResult<()> {
+    let remaining = decoder.read_var_uint()?;
+    graph_focus_extend_component_prop_assignments_remaining(decoder, refs, remaining)
+}
+fn graph_focus_extend_component_prop_assignments_remaining(
+    decoder: &mut Decoder<'_>,
+    refs: &mut Option<Vec<GraphFocusGuid>>,
+    remaining: u32,
+) -> NifResult<()> {
+    if remaining == 0 {
+        Ok(())
+    } else {
+        let next = graph_focus_read_component_prop_assignment(decoder)?;
+        graph_focus_extend_refs(refs, next);
+        graph_focus_extend_component_prop_assignments_remaining(
+            decoder,
+            refs,
+            remaining - 1,
+        )
+    }
+}
+fn graph_focus_extend_component_prop_value(
+    decoder: &mut Decoder<'_>,
+    refs: &mut Option<Vec<GraphFocusGuid>>,
+) -> NifResult<()> {
+    let next = graph_focus_read_component_prop_value(decoder)?;
+    graph_focus_extend_refs(refs, next);
+    Ok(())
+}
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 struct GraphFocusGuid {
     session_id: u32,
@@ -121193,7 +121240,7 @@ fn graph_focus_read_component_prop_value(
                 skip_text_data_from_decoder(decoder)?;
             }
             3 => {
-                graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);
+                graph_focus_push_guid_ref(decoder, &mut refs)?;
             }
             4 => {
                 decoder.read_var_float_value()?;
@@ -121248,8 +121295,7 @@ fn graph_focus_read_component_prop_assignment(
                 skip_guid_from_decoder(decoder)?;
             }
             2 => {
-                let next = graph_focus_read_component_prop_value(decoder)?;
-                graph_focus_extend_refs(&mut refs, next);
+                graph_focus_extend_component_prop_value(decoder, &mut refs)?;
             }
             3 => {
                 skip_variable_data_from_decoder(decoder)?;
@@ -121519,8 +121565,7 @@ fn graph_focus_index_node_change(
             }
             113 => {
                 let data = graph_focus_read_symbol_data(decoder)?;
-                symbol_id = data.symbol_id;
-                graph_focus_extend_refs(&mut refs, data.refs);
+                symbol_id = graph_focus_extend_symbol_refs(data, &mut refs)?;
             }
             114 => {
                 decoder.read_var_uint()?;
@@ -121535,14 +121580,10 @@ fn graph_focus_index_node_change(
                 decoder.read_bool()?;
             }
             143 => {
-                graph_focus_push_ref(&mut refs, graph_focus_read_guid(decoder)?);
+                graph_focus_push_guid_ref(decoder, &mut refs)?;
             }
             268 => {
-                let len = decoder.read_var_uint()? as usize;
-                for _ in 0..len {
-                    let next = graph_focus_read_component_prop_assignment(decoder)?;
-                    graph_focus_extend_refs(&mut refs, next);
-                }
+                graph_focus_extend_component_prop_assignments(decoder, &mut refs)?;
             }
             305 => {
                 decoder.read_bool()?;

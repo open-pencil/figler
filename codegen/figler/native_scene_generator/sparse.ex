@@ -9,7 +9,6 @@ defmodule Figler.NativeSceneGenerator.Sparse do
   alias Figler.NativeSceneGenerator.Rusty
   alias KiwiCodec.Schema.Enum, as: SchemaEnum
   alias KiwiCodec.Schema.{Message, Struct}
-  alias RustQ.Rust
 
   def render(definitions, definition_map) do
     Enum.map(definitions, &definition(&1, definition_map))
@@ -39,10 +38,7 @@ defmodule Figler.NativeSceneGenerator.Sparse do
   end
 
   defp enum_arm(field) do
-    Rust.arm(
-      Integer.to_string(field.value),
-      Rusty.enum_atom_result(field.value, Macro.underscore(field.name))
-    )
+    Rusty.arm(field.value, Rusty.enum_atom_result(field.value, Macro.underscore(field.name)))
   end
 
   defp render_template(template, opts) do
@@ -60,27 +56,18 @@ defmodule Figler.NativeSceneGenerator.Sparse do
     )
   end
 
-  defp struct_field(field, definition_map) do
-    field
-    |> field_block(definition_map)
-    |> Rust.to_fragment()
-  end
+  defp struct_field(field, definition_map), do: field_block(field, definition_map)
 
   defp message_arm(field, definition_map) do
-    Rust.arm(
-      Integer.to_string(field.id),
-      field |> field_block(definition_map) |> Rust.to_fragment()
-    )
+    Rusty.arm(field.id, field_block(field, definition_map))
   end
 
   defp field_block(field, definition_map) do
-    Rust.block([
-      Rusty.cached_atom_static("FIELD_ATOM_#{field.id}"),
-      Rusty.cached_atom("field_atom", "FIELD_ATOM_#{field.id}", Macro.underscore(field.name)),
-      decode_field(field, definition_map),
-      Rust.call_stmt("keys", :push, ["field_atom.encode(env)"]),
-      Rust.call_stmt("values", :push, ["value"])
-    ])
+    Rusty.field_value_block(
+      field.id,
+      Macro.underscore(field.name),
+      decode_field(field, definition_map)
+    )
   end
 
   defp decode_field(%{array?: true, type: "byte"}, _definition_map) do
