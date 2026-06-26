@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CirclePoint do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CirclePoint`."
   use KiwiCodec, kind: :message
   field(:center, 1, type: FigKiwi.Schema.Vector, source_name: "center")
   field(:radius, 2, type: :float, source_name: "radius")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Message do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Message`."
   use KiwiCodec, kind: :message
   field(:type, 1, type: {:enum, FigKiwi.Schema.MessageType}, source_name: "type")
   field(:session_id, 2, type: :uint, source_name: "sessionID")

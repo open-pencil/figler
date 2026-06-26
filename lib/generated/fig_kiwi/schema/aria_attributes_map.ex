@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ARIAAttributesMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ARIAAttributesMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.BuzzApprovalRequestInfo do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `BuzzApprovalRequestInfo`."
   use KiwiCodec, kind: :message
   field(:request_id, 1, type: :string, source_name: "requestId")
   field(:requester_user_id, 2, type: :string, source_name: "requesterUserId")

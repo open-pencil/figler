@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FixedOrderTransform3d do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `FixedOrderTransform3d`."
   use KiwiCodec, kind: :message
   field(:perspective, 1, type: :float, source_name: "perspective")
   field(:translate_z, 2, type: :float, source_name: "translateZ")

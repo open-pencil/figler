@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TimelineAssignmentsMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TimelineAssignmentsMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

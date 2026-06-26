@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeBehaviorData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CodeBehaviorData`."
   use KiwiCodec, kind: :message
   field(:name, 1, type: :string, source_name: "name")
   field(:icon, 2, type: :string, source_name: "icon")

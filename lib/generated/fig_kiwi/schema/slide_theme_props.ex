@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SlideThemeProps do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `SlideThemeProps`."
   use KiwiCodec, kind: :message
   field(:theme_version, 1, type: :string, source_name: "themeVersion")
   field(:variable_set_id, 2, type: FigKiwi.Schema.VariableSetID, source_name: "variableSetId")

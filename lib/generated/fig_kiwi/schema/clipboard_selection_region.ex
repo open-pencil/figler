@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ClipboardSelectionRegion do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ClipboardSelectionRegion`."
   use KiwiCodec, kind: :message
   field(:parent, 1, type: FigKiwi.Schema.GUID, source_name: "parent")
   field(:nodes, 2, repeated: true, type: FigKiwi.Schema.GUID, source_name: "nodes")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VariableWidthPoint do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `VariableWidthPoint`."
   use KiwiCodec, kind: :message
   field(:position, 1, type: :float, source_name: "position")
   field(:ascent, 2, type: :float, source_name: "ascent")

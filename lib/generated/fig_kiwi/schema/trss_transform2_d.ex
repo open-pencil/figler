@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TRSSTransform2D do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TRSSTransform2D`."
   use KiwiCodec, kind: :message
   field(:translation, 1, type: FigKiwi.Schema.Vector, source_name: "translation")
   field(:rotation, 2, type: :float, source_name: "rotation")

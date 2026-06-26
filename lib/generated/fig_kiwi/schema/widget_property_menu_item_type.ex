@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.WidgetPropertyMenuItemType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `WidgetPropertyMenuItemType`."
   use KiwiCodec, kind: :enum
   enum_value(:action, 0)
   enum_value(:separator, 1)

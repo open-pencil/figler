@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VariableFontStyle do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `VariableFontStyle`."
   use KiwiCodec, kind: :message
   field(:as_string, 1, type: FigKiwi.Schema.VariableData, source_name: "asString")
   field(:as_float, 2, type: FigKiwi.Schema.VariableData, source_name: "asFloat")

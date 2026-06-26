@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Annotation do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Annotation`."
   use KiwiCodec, kind: :message
   field(:label, 1, type: :string, source_name: "label")
 

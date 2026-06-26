@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CookieBannerText do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CookieBannerText`."
   use KiwiCodec, kind: :message
   field(:banner_header, 1, type: :string, source_name: "bannerHeader")
   field(:banner_disclaimer_explicit, 2, type: :string, source_name: "bannerDisclaimerExplicit")

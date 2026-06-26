@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransitionOverrideBindingLocation do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TransitionOverrideBindingLocation`."
   use KiwiCodec, kind: :message
 
   field(:top_level_field, 1,

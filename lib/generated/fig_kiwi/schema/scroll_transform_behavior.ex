@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ScrollTransformBehavior do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ScrollTransformBehavior`."
   use KiwiCodec, kind: :message
 
   field(:trigger, 1,

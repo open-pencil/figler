@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SpecBlockType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `SpecBlockType`."
   use KiwiCodec, kind: :enum
   enum_value(:default, 0)
   enum_value(:paragraph, 1)

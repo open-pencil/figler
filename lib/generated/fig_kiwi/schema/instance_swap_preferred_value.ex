@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.InstanceSwapPreferredValue do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `InstanceSwapPreferredValue`."
   use KiwiCodec, kind: :message
 
   field(:type, 1,

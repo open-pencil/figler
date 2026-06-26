@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ExportSettings do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ExportSettings`."
   use KiwiCodec, kind: :message
   field(:suffix, 1, type: :string, source_name: "suffix")
   field(:image_type, 2, type: {:enum, FigKiwi.Schema.ImageType}, source_name: "imageType")

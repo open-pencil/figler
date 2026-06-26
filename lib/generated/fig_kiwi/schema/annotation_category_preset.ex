@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AnnotationCategoryPreset do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `AnnotationCategoryPreset`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:accessibility, 1)

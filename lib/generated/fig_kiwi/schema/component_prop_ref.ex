@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ComponentPropRef do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ComponentPropRef`."
   use KiwiCodec, kind: :message
   field(:node_field, 1, type: :uint, source_name: "nodeField")
   field(:def_id, 2, type: FigKiwi.Schema.GUID, source_name: "defID")

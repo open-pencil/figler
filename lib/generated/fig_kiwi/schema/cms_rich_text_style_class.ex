@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CMSRichTextStyleClass do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CMSRichTextStyleClass`."
   use KiwiCodec, kind: :enum
   enum_value(:heading1, 0)
   enum_value(:heading2, 1)

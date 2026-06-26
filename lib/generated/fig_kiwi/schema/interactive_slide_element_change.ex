@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.InteractiveSlideElementChange do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `InteractiveSlideElementChange`."
   use KiwiCodec, kind: :message
   field(:user_id, 1, type: :string, source_name: "userID")
   field(:anonymous_user_id, 2, type: :string, source_name: "anonymousUserID")

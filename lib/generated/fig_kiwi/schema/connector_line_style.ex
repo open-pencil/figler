@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ConnectorLineStyle do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ConnectorLineStyle`."
   use KiwiCodec, kind: :enum
   enum_value(:elbowed, 0)
   enum_value(:straight, 1)

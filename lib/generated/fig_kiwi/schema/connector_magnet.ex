@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ConnectorMagnet do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ConnectorMagnet`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:auto, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PaintType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `PaintType`."
   use KiwiCodec, kind: :enum
   enum_value(:solid, 0)
   enum_value(:gradient_linear, 1)

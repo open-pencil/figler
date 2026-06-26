@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Scene3d do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Scene3d`."
   use KiwiCodec, kind: :message
   field(:perspective, 1, type: :float, source_name: "perspective")
 

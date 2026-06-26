@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.BooleanOperation do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `BooleanOperation`."
   use KiwiCodec, kind: :enum
   enum_value(:union, 0)
   enum_value(:intersect, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeSyntaxMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CodeSyntaxMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

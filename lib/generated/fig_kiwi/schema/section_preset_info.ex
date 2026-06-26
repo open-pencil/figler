@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SectionPresetInfo do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `SectionPresetInfo`."
   use KiwiCodec, kind: :message
   field(:shelf_id, 1, type: :uint64, source_name: "shelfId")
   field(:template_id, 2, type: :uint64, source_name: "templateId")

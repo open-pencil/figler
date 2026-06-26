@@ -8,7 +8,7 @@ defmodule FigKiwi.Inspect do
   def guid(nil), do: "nil"
 
   def present_fields(%module{} = struct) do
-    fields = module.__kiwi_props__().ordered_fields
+    fields = module.__kiwi_metadata__().ordered_fields
     values = Map.from_struct(struct)
 
     present =

@@ -1,5 +1,8 @@
 defmodule FigKiwi.NativeSceneGenerator do
-  @moduledoc false
+  @moduledoc """
+  Generates Fig-specific Rust scene decoder fragments that are appended to the
+  generic Kiwi Rustler decoder source.
+  """
 
   alias FigKiwi.NativeSceneGenerator.Focus
   alias FigKiwi.NativeSceneGenerator.Scene
@@ -20,6 +23,23 @@ defmodule FigKiwi.NativeSceneGenerator do
     ] ++ Scene.render(definition_map)
   end
 
+  def source(%Schema{} = schema) do
+    RustQ.render!(
+      """
+      __rq_include!("templates/scene_types.rs");
+      __rq_sparse_decoders!();
+      __rq_skip_decoders!();
+      __rq_graph_focus_decoders!();
+      __rq_include!("templates/scene_xpath_runtime.rs");
+      __rq_include!("templates/scene_summary_decoders.rs");
+      __rq_include!("templates/scene_nifs.rs");
+      """,
+      "native/src/generated.scene.rs",
+      include_dir: "native/src",
+      splice: render_splices(schema)
+    )
+  end
+
   def render(%Schema{} = schema) do
     schema
     |> render_splices()
@@ -30,7 +50,7 @@ defmodule FigKiwi.NativeSceneGenerator do
   defp node_type_name_arms(definition_map) do
     definition_map
     |> Map.fetch!("NodeType")
-    |> then(& &1.fields)
+    |> then(& &1.variants)
     |> Enum.map(fn field ->
       Rust.arm(Integer.to_string(field.value), ~s("#{Macro.underscore(field.name)}"))
     end)

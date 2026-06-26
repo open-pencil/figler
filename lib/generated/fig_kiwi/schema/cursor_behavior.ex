@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CursorBehavior do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CursorBehavior`."
   use KiwiCodec, kind: :message
   field(:hotspot_x, 1, type: :float, source_name: "hotspotX")
   field(:hotspot_y, 2, type: :float, source_name: "hotspotY")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ExportBackgroundType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ExportBackgroundType`."
   use KiwiCodec, kind: :enum
   enum_value(:solid, 0)
   enum_value(:transparent, 1)

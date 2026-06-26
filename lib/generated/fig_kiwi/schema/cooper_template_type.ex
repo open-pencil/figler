@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CooperTemplateType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CooperTemplateType`."
   use KiwiCodec, kind: :enum
   enum_value(:custom, 0)
   enum_value(:twitter_post, 1)

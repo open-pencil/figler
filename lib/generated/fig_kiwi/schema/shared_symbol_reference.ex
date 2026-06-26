@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SharedSymbolReference do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `SharedSymbolReference`."
   use KiwiCodec, kind: :message
   field(:file_key, 1, type: :string, source_name: "fileKey")
   field(:symbol_id, 2, type: FigKiwi.Schema.GUID, source_name: "symbolID")

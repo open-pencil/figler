@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.LayoutGrid do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `LayoutGrid`."
   use KiwiCodec, kind: :message
   field(:type, 1, type: {:enum, FigKiwi.Schema.LayoutGridType}, source_name: "type")
   field(:axis, 2, type: {:enum, FigKiwi.Schema.Axis}, source_name: "axis")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CookieYAlignment do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CookieYAlignment`."
   use KiwiCodec, kind: :enum
   enum_value(:top, 0)
   enum_value(:center, 1)

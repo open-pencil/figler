@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CollaborativePlainText do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CollaborativePlainText`."
   use KiwiCodec, kind: :message
 
   field(:history_ops_with_ids, 1,

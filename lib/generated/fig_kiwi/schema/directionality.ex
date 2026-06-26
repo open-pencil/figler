@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Directionality do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `Directionality`."
   use KiwiCodec, kind: :enum
   enum_value(:ltr, 0)
   enum_value(:rtl, 1)

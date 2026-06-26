@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SlideNumber do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `SlideNumber`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:slide, 1)

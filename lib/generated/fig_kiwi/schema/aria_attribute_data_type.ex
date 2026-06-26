@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ARIAAttributeDataType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ARIAAttributeDataType`."
   use KiwiCodec, kind: :enum
   enum_value(:boolean, 0)
   enum_value(:string, 1)

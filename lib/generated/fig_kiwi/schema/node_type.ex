@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NodeType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `NodeType`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:document, 1)

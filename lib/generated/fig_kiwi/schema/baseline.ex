@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Baseline do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Baseline`."
   use KiwiCodec, kind: :message
   field(:position, 1, type: FigKiwi.Schema.Vector, source_name: "position")
   field(:width, 2, type: :float, source_name: "width")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.OpenTypeFeature do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `OpenTypeFeature`."
   use KiwiCodec, kind: :enum
   enum_value(:pcap, 0)
   enum_value(:c2_pc, 1)

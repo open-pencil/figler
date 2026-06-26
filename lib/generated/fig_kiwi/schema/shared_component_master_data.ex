@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SharedComponentMasterData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `SharedComponentMasterData`."
   use KiwiCodec, kind: :message
   field(:component_key, 1, type: :string, source_name: "componentKey")
 

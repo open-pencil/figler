@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.BezierHandles do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `BezierHandles`."
   use KiwiCodec, kind: :message
   field(:p1x, 1, type: :float, source_name: "p1x")
   field(:p1y, 2, type: :float, source_name: "p1y")

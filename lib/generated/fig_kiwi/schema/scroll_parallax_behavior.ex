@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ScrollParallaxBehavior do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ScrollParallaxBehavior`."
   use KiwiCodec, kind: :message
   field(:axis, 1, type: {:enum, FigKiwi.Schema.ScrollDirection}, source_name: "axis")
   field(:speed, 2, type: :float, source_name: "speed")

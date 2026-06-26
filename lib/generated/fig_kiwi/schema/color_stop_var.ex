@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ColorStopVar do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ColorStopVar`."
   use KiwiCodec, kind: :message
   field(:color, 1, type: FigKiwi.Schema.Color, source_name: "color")
   field(:color_var, 2, type: FigKiwi.Schema.VariableData, source_name: "colorVar")

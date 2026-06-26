@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransitionType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `TransitionType`."
   use KiwiCodec, kind: :enum
   enum_value(:instant_transition, 0)
   enum_value(:dissolve, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.BuzzApprovalNodeStatusInfo do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `BuzzApprovalNodeStatusInfo`."
   use KiwiCodec, kind: :message
 
   field(:current_status, 1,

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NodeChatMessageType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `NodeChatMessageType`."
   use KiwiCodec, kind: :enum
   enum_value(:user_message, 0)
   enum_value(:assistant_message, 1)

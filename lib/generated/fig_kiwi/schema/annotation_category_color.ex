@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AnnotationCategoryColor do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `AnnotationCategoryColor`."
   use KiwiCodec, kind: :enum
   enum_value(:yellow, 0)
   enum_value(:orange, 1)

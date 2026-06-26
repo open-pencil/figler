@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AnimationTimelineAction do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `AnimationTimelineAction`."
   use KiwiCodec, kind: :enum
   enum_value(:play, 0)
   enum_value(:pause, 1)

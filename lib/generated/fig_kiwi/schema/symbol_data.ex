@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SymbolData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `SymbolData`."
   use KiwiCodec, kind: :message
   field(:symbol_id, 1, type: FigKiwi.Schema.GUID, source_name: "symbolID")
 

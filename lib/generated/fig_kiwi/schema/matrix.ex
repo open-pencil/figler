@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Matrix do
-  @moduledoc false
+  @moduledoc "Generated Kiwi struct module for `Matrix`."
   use KiwiCodec, kind: :struct
   field(:m00, 1, type: :float, source_name: "m00")
   field(:m01, 2, type: :float, source_name: "m01")

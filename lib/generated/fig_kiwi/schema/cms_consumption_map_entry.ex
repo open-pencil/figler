@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CMSConsumptionMapEntry do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CMSConsumptionMapEntry`."
   use KiwiCodec, kind: :message
 
   field(:consumption_field, 1,

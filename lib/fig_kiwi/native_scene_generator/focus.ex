@@ -97,7 +97,7 @@ defmodule FigKiwi.NativeSceneGenerator.Focus do
 
   defp arm(field, lines) do
     Rust.arm(
-      Integer.to_string(field.value),
+      Integer.to_string(field.id),
       lines |> List.wrap() |> Rust.block() |> Rust.to_fragment()
     )
   end

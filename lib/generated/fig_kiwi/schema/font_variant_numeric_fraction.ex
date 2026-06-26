@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FontVariantNumericFraction do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `FontVariantNumericFraction`."
   use KiwiCodec, kind: :enum
   enum_value(:normal, 0)
   enum_value(:diagonal, 1)

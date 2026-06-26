@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StyleSetType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `StyleSetType`."
   use KiwiCodec, kind: :enum
   enum_value(:personal, 0)
   enum_value(:team, 1)

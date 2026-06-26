@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeBlockTheme do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CodeBlockTheme`."
   use KiwiCodec, kind: :enum
   enum_value(:figjam_dark, 0)
   enum_value(:dracula, 1)

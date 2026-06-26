@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.InteractionType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `InteractionType`."
   use KiwiCodec, kind: :enum
   enum_value(:on_click, 0)
   enum_value(:after_timeout, 1)

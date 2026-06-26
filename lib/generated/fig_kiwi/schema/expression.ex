@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Expression do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Expression`."
   use KiwiCodec, kind: :message
 
   field(:expression_function, 1,

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NumberUnits do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `NumberUnits`."
   use KiwiCodec, kind: :enum
   enum_value(:raw, 0)
   enum_value(:pixels, 1)

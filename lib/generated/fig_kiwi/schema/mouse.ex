@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Mouse do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Mouse`."
   use KiwiCodec, kind: :message
   field(:cursor, 1, type: {:enum, FigKiwi.Schema.MouseCursor}, source_name: "cursor")
 

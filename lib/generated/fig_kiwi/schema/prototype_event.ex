@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PrototypeEvent do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PrototypeEvent`."
   use KiwiCodec, kind: :message
 
   field(:interaction_type, 1,

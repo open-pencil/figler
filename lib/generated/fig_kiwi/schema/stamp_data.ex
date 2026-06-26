@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StampData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `StampData`."
   use KiwiCodec, kind: :message
   field(:user_id, 1, type: :string, source_name: "userId")
   field(:voting_session_id, 2, type: :string, source_name: "votingSessionId")

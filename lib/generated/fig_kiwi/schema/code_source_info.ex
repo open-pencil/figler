@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeSourceInfo do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CodeSourceInfo`."
   use KiwiCodec, kind: :message
   field(:origin_reference_id, 1, type: :string, source_name: "originReferenceId")
   field(:origin_node_id, 2, type: FigKiwi.Schema.GUID, source_name: "originNodeId")

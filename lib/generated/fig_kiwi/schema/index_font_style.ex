@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.IndexFontStyle do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `IndexFontStyle`."
   use KiwiCodec, kind: :message
   field(:name, 1, type: :string, source_name: "name")
   field(:postscript, 2, type: :string, source_name: "postscript")

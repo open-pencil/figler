@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TextAlignHorizontal do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `TextAlignHorizontal`."
   use KiwiCodec, kind: :enum
   enum_value(:left, 0)
   enum_value(:center, 1)

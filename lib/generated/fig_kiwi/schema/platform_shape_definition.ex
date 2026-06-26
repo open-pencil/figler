@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PlatformShapeDefinition do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PlatformShapeDefinition`."
   use KiwiCodec, kind: :message
 
   field(:property_map_entries, 1,

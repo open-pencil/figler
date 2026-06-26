@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FlappType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `FlappType`."
   use KiwiCodec, kind: :enum
   enum_value(:poll, 0)
   enum_value(:embed, 1)

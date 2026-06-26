@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.DiffChunk do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `DiffChunk`."
   use KiwiCodec, kind: :message
   field(:node_changes, 1, repeated: true, type: :uint, source_name: "nodeChanges")
   field(:phase, 2, type: {:enum, FigKiwi.Schema.NodePhase}, source_name: "phase")

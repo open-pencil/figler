@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.WidgetHoverStyle do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `WidgetHoverStyle`."
   use KiwiCodec, kind: :message
   field(:fill_paints, 1, repeated: true, type: FigKiwi.Schema.Paint, source_name: "fillPaints")
 

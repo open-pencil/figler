@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Paint do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Paint`."
   use KiwiCodec, kind: :message
   field(:type, 1, type: {:enum, FigKiwi.Schema.PaintType}, source_name: "type")
   field(:color, 2, type: FigKiwi.Schema.Color, source_name: "color")

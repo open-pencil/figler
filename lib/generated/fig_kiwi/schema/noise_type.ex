@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NoiseType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `NoiseType`."
   use KiwiCodec, kind: :enum
   enum_value(:multitone, 0)
   enum_value(:monotone, 1)

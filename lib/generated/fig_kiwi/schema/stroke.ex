@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Stroke do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Stroke`."
   use KiwiCodec, kind: :message
   field(:stroke_id, 1, type: :int, source_name: "strokeId")
   field(:stroke_weight, 2, type: :float, source_name: "strokeWeight")

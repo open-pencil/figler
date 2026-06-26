@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PatternTileType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `PatternTileType`."
   use KiwiCodec, kind: :enum
   enum_value(:rectangular, 0)
   enum_value(:horizontal_hexagonal, 1)

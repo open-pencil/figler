@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Guide do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Guide`."
   use KiwiCodec, kind: :message
   field(:axis, 1, type: {:enum, FigKiwi.Schema.Axis}, source_name: "axis")
   field(:offset, 2, type: :float, source_name: "offset")

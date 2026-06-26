@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ImageType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ImageType`."
   use KiwiCodec, kind: :enum
   enum_value(:png, 0)
   enum_value(:jpeg, 1)

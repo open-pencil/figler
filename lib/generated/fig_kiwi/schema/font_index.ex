@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FontIndex do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `FontIndex`."
   use KiwiCodec, kind: :message
   field(:schema_version, 1, type: :uint, source_name: "schemaVersion")
   field(:files, 2, repeated: true, type: FigKiwi.Schema.IndexFontFile, source_name: "files")

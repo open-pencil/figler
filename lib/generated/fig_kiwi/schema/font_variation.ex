@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FontVariation do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `FontVariation`."
   use KiwiCodec, kind: :message
   field(:axis_tag, 1, type: :uint, source_name: "axisTag")
   field(:axis_name, 2, type: :string, source_name: "axisName")

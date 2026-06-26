@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StretchStrokeSettings do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `StretchStrokeSettings`."
   use KiwiCodec, kind: :message
 
   field(:orientation, 1,

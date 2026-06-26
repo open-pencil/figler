@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.WidgetPropertyMenuItem do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `WidgetPropertyMenuItem`."
   use KiwiCodec, kind: :message
   field(:property_name, 1, type: :string, source_name: "propertyName")
   field(:tooltip, 2, type: :string, source_name: "tooltip")

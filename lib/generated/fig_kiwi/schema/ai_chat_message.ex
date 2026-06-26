@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AIChatMessage do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `AIChatMessage`."
   use KiwiCodec, kind: :message
   field(:created_at_ms, 1, type: :uint, source_name: "createdAtMs")
   field(:role, 2, type: {:enum, FigKiwi.Schema.AIChatMessageRole}, source_name: "role")

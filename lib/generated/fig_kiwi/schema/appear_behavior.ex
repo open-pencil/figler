@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AppearBehavior do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `AppearBehavior`."
   use KiwiCodec, kind: :message
   field(:trigger, 1, type: {:enum, FigKiwi.Schema.AppearBehaviorTrigger}, source_name: "trigger")
   field(:direction, 2, type: {:enum, FigKiwi.Schema.RelativeDirection}, source_name: "direction")

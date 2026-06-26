@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CollaborativeTextOpRun do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CollaborativeTextOpRun`."
   use KiwiCodec, kind: :message
   field(:id, 1, type: FigKiwi.Schema.CollaborativeTextOpID, source_name: "id")
 

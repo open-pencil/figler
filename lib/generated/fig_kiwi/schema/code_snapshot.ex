@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeSnapshot do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CodeSnapshot`."
   use KiwiCodec, kind: :message
   field(:state, 6, type: {:enum, FigKiwi.Schema.CodeSnapshotState}, source_name: "state")
   field(:invalidated_at, 7, type: :uint, source_name: "invalidatedAt")

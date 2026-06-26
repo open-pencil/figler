@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.GridTrackSizingType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `GridTrackSizingType`."
   use KiwiCodec, kind: :enum
   enum_value(:flex, 0)
   enum_value(:fixed, 1)

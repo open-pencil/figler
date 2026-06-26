@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ComponentPropType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ComponentPropType`."
   use KiwiCodec, kind: :enum
   enum_value(:bool, 0)
   enum_value(:text, 1)

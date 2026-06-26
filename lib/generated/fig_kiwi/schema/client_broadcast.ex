@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ClientBroadcast do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ClientBroadcast`."
   use KiwiCodec, kind: :message
   field(:session_id, 1, type: :uint, source_name: "sessionID")
   field(:cursor_reaction, 2, type: FigKiwi.Schema.CursorReaction, source_name: "cursorReaction")

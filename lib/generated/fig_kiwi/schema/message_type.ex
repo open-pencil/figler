@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.MessageType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `MessageType`."
   use KiwiCodec, kind: :enum
   enum_value(:join_start, 0)
   enum_value(:node_changes, 1)

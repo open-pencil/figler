@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ResponsiveSetSettings do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ResponsiveSetSettings`."
   use KiwiCodec, kind: :message
   field(:title, 1, type: :string, source_name: "title")
   field(:description, 2, type: :string, source_name: "description")

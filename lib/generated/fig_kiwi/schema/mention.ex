@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Mention do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Mention`."
   use KiwiCodec, kind: :message
   field(:id, 1, type: FigKiwi.Schema.GUID, source_name: "id")
   field(:mentioned_user_id, 2, type: :string, source_name: "mentionedUserId")

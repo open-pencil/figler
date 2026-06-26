@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.EditorType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `EditorType`."
   use KiwiCodec, kind: :enum
   enum_value(:design, 0)
   enum_value(:whiteboard, 1)

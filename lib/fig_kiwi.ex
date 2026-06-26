@@ -57,7 +57,7 @@ defmodule FigKiwi do
   @spec decode_message_runtime(binary()) :: map()
   def decode_message_runtime(binary) when is_binary(binary) do
     schema()
-    |> KiwiCodec.Runtime.decode("Message", binary)
+    |> KiwiCodec.SchemaInterpreter.decode("Message", binary)
   end
 
   @doc """
@@ -66,6 +66,6 @@ defmodule FigKiwi do
   @spec encode_message_runtime(map()) :: binary()
   def encode_message_runtime(message) when is_map(message) do
     schema()
-    |> KiwiCodec.Runtime.encode("Message", message)
+    |> KiwiCodec.SchemaInterpreter.encode("Message", message)
   end
 end

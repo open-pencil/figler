@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.DerivedTextData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `DerivedTextData`."
   use KiwiCodec, kind: :message
   field(:layout_size, 1, type: FigKiwi.Schema.Vector, source_name: "layoutSize")
   field(:baselines, 2, repeated: true, type: FigKiwi.Schema.Baseline, source_name: "baselines")

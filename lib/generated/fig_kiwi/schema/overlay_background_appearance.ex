@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.OverlayBackgroundAppearance do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `OverlayBackgroundAppearance`."
   use KiwiCodec, kind: :message
 
   field(:background_type, 1,

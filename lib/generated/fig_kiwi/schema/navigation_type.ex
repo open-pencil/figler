@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NavigationType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `NavigationType`."
   use KiwiCodec, kind: :enum
   enum_value(:navigate, 0)
   enum_value(:overlay, 1)

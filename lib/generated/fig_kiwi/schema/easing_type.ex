@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.EasingType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `EasingType`."
   use KiwiCodec, kind: :enum
   enum_value(:in_cubic, 0)
   enum_value(:out_cubic, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CanvasNodeId do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CanvasNodeId`."
   use KiwiCodec, kind: :message
   field(:guid, 1, type: FigKiwi.Schema.GUID, source_name: "guid")
   field(:symbol_id, 2, type: FigKiwi.Schema.SymbolId, source_name: "symbolId")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PressBehavior do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PressBehavior`."
   use KiwiCodec, kind: :message
   field(:transition, 1, type: FigKiwi.Schema.BehaviorTransition, source_name: "transition")
   field(:state, 2, type: FigKiwi.Schema.NodeChange, source_name: "state")

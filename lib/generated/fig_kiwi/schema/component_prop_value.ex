@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ComponentPropValue do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ComponentPropValue`."
   use KiwiCodec, kind: :message
   field(:bool_value, 1, type: :bool, source_name: "boolValue")
   field(:text_value, 2, type: FigKiwi.Schema.TextData, source_name: "textValue")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PrototypeAction do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PrototypeAction`."
   use KiwiCodec, kind: :message
   field(:transition_node_id, 1, type: FigKiwi.Schema.GUID, source_name: "transitionNodeID")
 

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.OverlayPositionType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `OverlayPositionType`."
   use KiwiCodec, kind: :enum
   enum_value(:center, 0)
   enum_value(:top_left, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.GitRepoRefProvider do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `GitRepoRefProvider`."
   use KiwiCodec, kind: :enum
   enum_value(:ugit, 0)
   enum_value(:github, 1)

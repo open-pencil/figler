@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SpringParams do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `SpringParams`."
   use KiwiCodec, kind: :message
   field(:stiffness, 1, type: :float, source_name: "stiffness")
   field(:damping, 2, type: :float, source_name: "damping")

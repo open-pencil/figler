@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.DiffPayload do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `DiffPayload`."
   use KiwiCodec, kind: :message
 
   field(:node_changes, 1,

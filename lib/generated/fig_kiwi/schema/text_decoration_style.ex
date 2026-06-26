@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TextDecorationStyle do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `TextDecorationStyle`."
   use KiwiCodec, kind: :enum
   enum_value(:solid, 0)
   enum_value(:dotted, 1)

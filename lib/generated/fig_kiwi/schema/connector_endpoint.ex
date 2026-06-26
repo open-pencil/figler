@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ConnectorEndpoint do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ConnectorEndpoint`."
   use KiwiCodec, kind: :message
   field(:endpoint_node_id, 1, type: FigKiwi.Schema.GUID, source_name: "endpointNodeID")
   field(:position, 2, type: FigKiwi.Schema.Vector, source_name: "position")

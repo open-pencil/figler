@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransformSchemaValue do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TransformSchemaValue`."
   use KiwiCodec, kind: :message
 
   field(:fixed_order_transform3d, 1,

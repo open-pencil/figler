@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.WindingRule do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `WindingRule`."
   use KiwiCodec, kind: :enum
   enum_value(:nonzero, 0)
   enum_value(:odd, 1)

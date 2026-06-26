@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TriggeredSetVariableModeActionData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TriggeredSetVariableModeActionData`."
   use KiwiCodec, kind: :message
 
   field(:node_for_finding_topmost_screen_id, 1,

@@ -1,14 +1,15 @@
 defmodule FigKiwi.NativeSceneGenerator.Sparse do
   @moduledoc false
 
-  alias KiwiCodec.Schema.Definition
+  alias KiwiCodec.Schema.Enum, as: SchemaEnum
+  alias KiwiCodec.Schema.{Message, Struct}
   alias RustQ.Rust
 
   def render(definitions, definition_map) do
     Enum.map(definitions, &definition(&1, definition_map))
   end
 
-  defp definition(%Definition{kind: :struct, name: name, fields: fields}, definition_map) do
+  defp definition(%Struct{name: name, fields: fields}, definition_map) do
     render_template("sparse_struct_decoder.rs",
       name: name,
       capacity: length(fields) + 1,
@@ -16,14 +17,14 @@ defmodule FigKiwi.NativeSceneGenerator.Sparse do
     )
   end
 
-  defp definition(%Definition{kind: :enum, name: name, fields: fields}, _definition_map) do
+  defp definition(%SchemaEnum{name: name, variants: variants}, _definition_map) do
     render_template("sparse_enum_decoder.rs",
       name: name,
-      splice: [sparse_enum_arms: Enum.map(fields, &enum_arm/1)]
+      splice: [sparse_enum_arms: Enum.map(variants, &enum_arm/1)]
     )
   end
 
-  defp definition(%Definition{kind: :message, name: name, fields: fields}, definition_map) do
+  defp definition(%Message{name: name, fields: fields}, definition_map) do
     render_template("sparse_message_decoder.rs",
       name: name,
       capacity: length(fields) + 1,
@@ -61,15 +62,15 @@ defmodule FigKiwi.NativeSceneGenerator.Sparse do
 
   defp message_arm(field, definition_map) do
     Rust.arm(
-      Integer.to_string(field.value),
+      Integer.to_string(field.id),
       field |> field_block(definition_map) |> Rust.to_fragment()
     )
   end
 
   defp field_block(field, definition_map) do
     Rust.block([
-      "static FIELD_ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new();",
-      ~s|let field_atom = cached_atom(env, &FIELD_ATOM_#{field.value}, "#{Macro.underscore(field.name)}");|,
+      "static FIELD_ATOM_#{field.id}: OnceLock<Atom> = OnceLock::new();",
+      ~s|let field_atom = cached_atom(env, &FIELD_ATOM_#{field.id}, "#{Macro.underscore(field.name)}");|,
       decode_field(field, definition_map),
       "keys.push(field_atom.encode(env));",
       "values.push(value);"
@@ -100,17 +101,18 @@ defmodule FigKiwi.NativeSceneGenerator.Sparse do
       primitive = primitive_decode(type) ->
         primitive
 
-      Map.get(definition_map, type) && Map.fetch!(definition_map, type).kind == :enum ->
-        "decode_sparse_#{rust_ident(type)}_from_decoder(env, decoder)?"
-
-      Map.get(definition_map, type) &&
-          Map.fetch!(definition_map, type).kind in [:message, :struct] ->
+      sparse_definition?(Map.get(definition_map, type)) ->
         "decode_sparse_#{rust_ident(type)}_from_decoder(env, decoder)?"
 
       Map.has_key?(definition_map, type) ->
         "decode_#{rust_ident(type)}_from_decoder(env, decoder)?"
     end
   end
+
+  defp sparse_definition?(%SchemaEnum{}), do: true
+  defp sparse_definition?(%Struct{}), do: true
+  defp sparse_definition?(%Message{}), do: true
+  defp sparse_definition?(_definition), do: false
 
   defp primitive_decode("bool"), do: "decoder.read_bool()?.encode(env)"
   defp primitive_decode("byte"), do: "decoder.read_byte()?.encode(env)"

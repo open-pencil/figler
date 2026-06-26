@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.WidgetEvent do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `WidgetEvent`."
   use KiwiCodec, kind: :enum
   enum_value(:mouse_down, 0)
   enum_value(:click, 1)

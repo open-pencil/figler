@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AnimationType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `AnimationType`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:fade, 1)

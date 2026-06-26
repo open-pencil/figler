@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ManagedStringNode do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ManagedStringNode`."
   use KiwiCodec, kind: :message
   field(:type, 1, type: {:enum, FigKiwi.Schema.ManagedStringNodeType}, source_name: "type")
 

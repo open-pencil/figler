@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StrokeJoin do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `StrokeJoin`."
   use KiwiCodec, kind: :enum
   enum_value(:miter, 0)
   enum_value(:bevel, 1)

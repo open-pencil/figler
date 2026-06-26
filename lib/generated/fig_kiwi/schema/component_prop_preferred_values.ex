@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ComponentPropPreferredValues do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ComponentPropPreferredValues`."
   use KiwiCodec, kind: :message
   field(:string_values, 1, repeated: true, type: :string, source_name: "stringValues")
 

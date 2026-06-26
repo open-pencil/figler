@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CollaborativeTextOpType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CollaborativeTextOpType`."
   use KiwiCodec, kind: :enum
   enum_value(:insert, 0)
   enum_value(:delete, 1)

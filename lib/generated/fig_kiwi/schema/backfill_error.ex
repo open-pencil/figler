@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.BackfillError do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `BackfillError`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:transient_retrying, 1)

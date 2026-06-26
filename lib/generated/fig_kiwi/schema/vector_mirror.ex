@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VectorMirror do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `VectorMirror`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:angle, 1)

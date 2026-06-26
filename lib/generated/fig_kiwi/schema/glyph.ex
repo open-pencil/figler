@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Glyph do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Glyph`."
   use KiwiCodec, kind: :message
   field(:commands_blob, 1, type: :uint, source_name: "commandsBlob")
   field(:position, 2, type: FigKiwi.Schema.Vector, source_name: "position")

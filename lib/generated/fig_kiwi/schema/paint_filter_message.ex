@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PaintFilterMessage do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PaintFilterMessage`."
   use KiwiCodec, kind: :message
   field(:tint, 1, type: :float, source_name: "tint")
   field(:shadows, 2, type: :float, source_name: "shadows")

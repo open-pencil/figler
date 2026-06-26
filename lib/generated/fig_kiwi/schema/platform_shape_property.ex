@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PlatformShapeProperty do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `PlatformShapeProperty`."
   use KiwiCodec, kind: :enum
   enum_value(:fill, 0)
   enum_value(:stroke, 1)

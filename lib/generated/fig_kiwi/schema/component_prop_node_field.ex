@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ComponentPropNodeField do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ComponentPropNodeField`."
   use KiwiCodec, kind: :enum
   enum_value(:visible, 0)
   enum_value(:text_data, 1)

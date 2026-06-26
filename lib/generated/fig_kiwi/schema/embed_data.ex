@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.EmbedData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `EmbedData`."
   use KiwiCodec, kind: :message
   field(:url, 1, type: :string, source_name: "url")
   field(:src_url, 2, type: :string, source_name: "srcUrl")

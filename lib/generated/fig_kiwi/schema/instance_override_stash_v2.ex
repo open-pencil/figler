@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.InstanceOverrideStashV2 do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `InstanceOverrideStashV2`."
   use KiwiCodec, kind: :message
 
   field(:override_path_of_swapped_instance, 1,

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.WidgetInputBehavior do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `WidgetInputBehavior`."
   use KiwiCodec, kind: :enum
   enum_value(:wrap, 0)
   enum_value(:truncate, 1)

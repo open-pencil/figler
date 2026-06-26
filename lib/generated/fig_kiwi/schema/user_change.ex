@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.UserChange do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `UserChange`."
   use KiwiCodec, kind: :message
   field(:session_id, 1, type: :uint, source_name: "sessionID")
   field(:stable_session_id, 44, type: :string, source_name: "stableSessionID")

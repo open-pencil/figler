@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.DerivedTextLineData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `DerivedTextLineData`."
   use KiwiCodec, kind: :message
 
   field(:directionality, 1,

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CollaborativeTextStrippedOpRunWithLoc do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CollaborativeTextStrippedOpRunWithLoc`."
   use KiwiCodec, kind: :message
   field(:type, 1, type: {:enum, FigKiwi.Schema.CollaborativeTextOpType}, source_name: "type")
   field(:range, 2, type: FigKiwi.Schema.IndexRange, source_name: "range")

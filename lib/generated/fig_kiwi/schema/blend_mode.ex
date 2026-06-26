@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.BlendMode do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `BlendMode`."
   use KiwiCodec, kind: :enum
   enum_value(:pass_through, 0)
   enum_value(:normal, 1)

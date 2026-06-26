@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CollaborativeTextSelection do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CollaborativeTextSelection`."
   use KiwiCodec, kind: :message
   field(:node, 1, type: FigKiwi.Schema.GUID, source_name: "node")
   field(:field, 2, type: :uint, source_name: "field")

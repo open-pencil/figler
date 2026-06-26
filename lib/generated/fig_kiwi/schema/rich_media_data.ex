@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.RichMediaData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `RichMediaData`."
   use KiwiCodec, kind: :message
   field(:media_hash, 1, type: :string, source_name: "mediaHash")
 

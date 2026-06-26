@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Rect do
-  @moduledoc false
+  @moduledoc "Generated Kiwi struct module for `Rect`."
   use KiwiCodec, kind: :struct
   field(:x, 1, type: :float, source_name: "x")
   field(:y, 2, type: :float, source_name: "y")

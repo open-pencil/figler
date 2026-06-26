@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.KeyframeTrackAnyParameter do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `KeyframeTrackAnyParameter`."
   use KiwiCodec, kind: :message
   field(:manual, 1, type: FigKiwi.Schema.ManualKeyframeTrackParameter, source_name: "manual")
 

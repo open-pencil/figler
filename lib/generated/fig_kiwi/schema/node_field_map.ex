@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NodeFieldMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `NodeFieldMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

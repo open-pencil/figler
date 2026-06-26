@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CollaborativeTextStrippedOpRunWithIDs do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CollaborativeTextStrippedOpRunWithIDs`."
   use KiwiCodec, kind: :message
   field(:first_id, 1, type: FigKiwi.Schema.CollaborativeTextOpID, source_name: "firstId")
   field(:run_length, 2, type: :uint, source_name: "runLength")

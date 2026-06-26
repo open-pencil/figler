@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PlaybackUpdate do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PlaybackUpdate`."
   use KiwiCodec, kind: :message
 
   field(:last_top_level_change, 1,

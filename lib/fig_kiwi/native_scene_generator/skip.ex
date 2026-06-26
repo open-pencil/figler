@@ -1,7 +1,8 @@
 defmodule FigKiwi.NativeSceneGenerator.Skip do
   @moduledoc false
 
-  alias KiwiCodec.Schema.Definition
+  alias KiwiCodec.Schema.Enum, as: SchemaEnum
+  alias KiwiCodec.Schema.{Message, Struct}
   alias RustQ.Rust
 
   @primitive %{
@@ -20,7 +21,7 @@ defmodule FigKiwi.NativeSceneGenerator.Skip do
   end
 
   def message_arm(field, definition_map) do
-    Rust.arm(Integer.to_string(field.value), "{ #{field(field, definition_map)} }")
+    Rust.arm(Integer.to_string(field.id), "{ #{field(field, definition_map)} }")
   end
 
   def field(%{array?: true, type: "byte"}, _definition_map) do
@@ -48,18 +49,18 @@ defmodule FigKiwi.NativeSceneGenerator.Skip do
     end
   end
 
-  defp definition(%Definition{kind: :enum, name: name}, _definition_map) do
+  defp definition(%SchemaEnum{name: name}, _definition_map) do
     render_template("skip_enum_decoder.rs", name: name)
   end
 
-  defp definition(%Definition{kind: :struct, name: name, fields: fields}, definition_map) do
+  defp definition(%Struct{name: name, fields: fields}, definition_map) do
     render_template("skip_struct_decoder.rs",
       name: name,
       splice: [skip_fields: Enum.map(fields, &field(&1, definition_map))]
     )
   end
 
-  defp definition(%Definition{kind: :message, name: name, fields: fields}, definition_map) do
+  defp definition(%Message{name: name, fields: fields}, definition_map) do
     render_template("skip_message_decoder.rs",
       name: name,
       splice: [skip_field_arms: Enum.map(fields, &message_arm(&1, definition_map))]

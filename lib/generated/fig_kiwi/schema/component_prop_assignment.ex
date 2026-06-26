@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ComponentPropAssignment do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ComponentPropAssignment`."
   use KiwiCodec, kind: :message
   field(:def_id, 1, type: FigKiwi.Schema.GUID, source_name: "defID")
   field(:value, 2, type: FigKiwi.Schema.ComponentPropValue, source_name: "value")

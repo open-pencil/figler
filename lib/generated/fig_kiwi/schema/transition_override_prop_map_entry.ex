@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransitionOverridePropMapEntry do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TransitionOverridePropMapEntry`."
   use KiwiCodec, kind: :message
   field(:prop, 1, type: {:enum, FigKiwi.Schema.TransitionOverrideProp}, source_name: "prop")
 

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TextCase do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `TextCase`."
   use KiwiCodec, kind: :enum
   enum_value(:original, 0)
   enum_value(:upper, 1)

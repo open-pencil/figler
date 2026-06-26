@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FilterColorAdjust do
-  @moduledoc false
+  @moduledoc "Generated Kiwi struct module for `FilterColorAdjust`."
   use KiwiCodec, kind: :struct
   field(:tint, 1, type: :float, source_name: "tint")
   field(:shadows, 2, type: :float, source_name: "shadows")

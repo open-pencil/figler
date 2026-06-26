@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CustomEffects do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CustomEffects`."
   use KiwiCodec, kind: :message
 
   field(:custom_effects, 1,

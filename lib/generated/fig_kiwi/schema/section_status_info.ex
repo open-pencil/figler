@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SectionStatusInfo do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `SectionStatusInfo`."
   use KiwiCodec, kind: :message
   field(:status, 1, type: {:enum, FigKiwi.Schema.SectionStatus}, source_name: "status")
   field(:last_update_unix_timestamp, 2, type: :uint, source_name: "lastUpdateUnixTimestamp")

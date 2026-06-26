@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ManagedStringNodeType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ManagedStringNodeType`."
   use KiwiCodec, kind: :enum
   enum_value(:text, 0)
   enum_value(:concatenate, 1)

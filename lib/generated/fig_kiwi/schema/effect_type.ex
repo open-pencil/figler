@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.EffectType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `EffectType`."
   use KiwiCodec, kind: :enum
   enum_value(:inner_shadow, 0)
   enum_value(:drop_shadow, 1)

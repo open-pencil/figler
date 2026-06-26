@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AnimationPresetKeyframeTrackParameter do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `AnimationPresetKeyframeTrackParameter`."
   use KiwiCodec, kind: :message
 
   field(:animation_preset_id, 1,

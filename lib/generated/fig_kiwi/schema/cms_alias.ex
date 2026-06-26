@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CMSAlias do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CMSAlias`."
   use KiwiCodec, kind: :message
   field(:collection_id, 1, type: :string, source_name: "collectionId")
   field(:item_id, 2, type: :string, source_name: "itemId")

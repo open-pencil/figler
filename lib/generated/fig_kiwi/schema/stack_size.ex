@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StackSize do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `StackSize`."
   use KiwiCodec, kind: :enum
   enum_value(:fixed, 0)
   enum_value(:resize_to_fit, 1)

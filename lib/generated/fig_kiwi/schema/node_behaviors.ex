@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NodeBehaviors do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `NodeBehaviors`."
   use KiwiCodec, kind: :message
   field(:link, 1, type: FigKiwi.Schema.LinkBehavior, source_name: "link")
   field(:appear, 2, type: FigKiwi.Schema.AppearBehavior, source_name: "appear")

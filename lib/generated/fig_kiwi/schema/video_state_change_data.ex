@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VideoStateChangeData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `VideoStateChangeData`."
   use KiwiCodec, kind: :message
   field(:target_node_id, 1, type: FigKiwi.Schema.GUID, source_name: "targetNodeId")
   field(:is_playing, 2, type: :bool, source_name: "isPlaying")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PresentedState do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PresentedState`."
   use KiwiCodec, kind: :message
   field(:base_screen_id, 1, type: FigKiwi.Schema.GUID, source_name: "baseScreenID")
 

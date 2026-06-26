@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TextSelection do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TextSelection`."
   use KiwiCodec, kind: :message
 
   field(:selection_boxes, 1,

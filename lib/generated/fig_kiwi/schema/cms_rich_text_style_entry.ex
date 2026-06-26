@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CMSRichTextStyleEntry do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CMSRichTextStyleEntry`."
   use KiwiCodec, kind: :message
 
   field(:style_class, 1,

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.HTMLTag do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `HTMLTag`."
   use KiwiCodec, kind: :enum
   enum_value(:auto, 0)
   enum_value(:article, 1)

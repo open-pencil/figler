@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.KeyframeTrackParameterType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `KeyframeTrackParameterType`."
   use KiwiCodec, kind: :enum
   enum_value(:invalid, 0)
   enum_value(:manual, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.MultiplayerMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `MultiplayerMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

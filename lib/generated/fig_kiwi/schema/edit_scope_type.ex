@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.EditScopeType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `EditScopeType`."
   use KiwiCodec, kind: :enum
   enum_value(:invalid, 0)
   enum_value(:test_setup, 1)

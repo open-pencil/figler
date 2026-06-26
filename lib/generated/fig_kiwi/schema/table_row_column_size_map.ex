@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TableRowColumnSizeMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TableRowColumnSizeMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

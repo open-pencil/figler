@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FontVariantNumericSpacing do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `FontVariantNumericSpacing`."
   use KiwiCodec, kind: :enum
   enum_value(:normal, 0)
   enum_value(:proportional, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StrokeCap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `StrokeCap`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:round, 1)

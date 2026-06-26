@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StackCounterAlign do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `StackCounterAlign`."
   use KiwiCodec, kind: :enum
   enum_value(:min, 0)
   enum_value(:center, 1)

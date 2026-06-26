@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VariableScope do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `VariableScope`."
   use KiwiCodec, kind: :enum
   enum_value(:all_scopes, 0)
   enum_value(:text_content, 1)

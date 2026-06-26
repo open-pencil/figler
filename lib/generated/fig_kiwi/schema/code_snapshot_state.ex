@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeSnapshotState do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CodeSnapshotState`."
   use KiwiCodec, kind: :enum
   enum_value(:initial, 0)
   enum_value(:snapshotting, 1)

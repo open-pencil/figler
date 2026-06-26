@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.InterpolationHueMethod do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `InterpolationHueMethod`."
   use KiwiCodec, kind: :enum
   enum_value(:shorter, 0)
   enum_value(:longer, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ParameterConfig do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ParameterConfig`."
   use KiwiCodec, kind: :message
 
   field(:number_prop_config, 1,

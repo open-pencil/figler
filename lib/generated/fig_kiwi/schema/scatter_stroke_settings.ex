@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ScatterStrokeSettings do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ScatterStrokeSettings`."
   use KiwiCodec, kind: :message
   field(:gap, 1, type: :float, source_name: "gap")
   field(:wiggle, 2, type: :float, source_name: "wiggle")

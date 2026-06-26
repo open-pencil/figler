@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.LinkPreviewData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `LinkPreviewData`."
   use KiwiCodec, kind: :message
   field(:url, 1, type: :string, source_name: "url")
   field(:title, 2, type: :string, source_name: "title")

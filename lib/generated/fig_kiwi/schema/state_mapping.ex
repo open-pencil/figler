@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StateMapping do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `StateMapping`."
   use KiwiCodec, kind: :message
   field(:stable_path, 1, type: FigKiwi.Schema.GUIDPath, source_name: "stablePath")
 

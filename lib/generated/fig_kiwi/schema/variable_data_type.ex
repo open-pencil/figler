@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VariableDataType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `VariableDataType`."
   use KiwiCodec, kind: :enum
   enum_value(:boolean, 0)
   enum_value(:float, 1)

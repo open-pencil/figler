@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ResponsiveTextStyleVariant do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ResponsiveTextStyleVariant`."
   use KiwiCodec, kind: :message
   field(:min_width, 1, type: :float, source_name: "minWidth")
   field(:fields, 2, type: FigKiwi.Schema.NodeChange, source_name: "fields")

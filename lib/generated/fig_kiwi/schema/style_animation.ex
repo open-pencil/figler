@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StyleAnimation do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `StyleAnimation`."
   use KiwiCodec, kind: :message
 
   field(:animation_preset_id, 1,

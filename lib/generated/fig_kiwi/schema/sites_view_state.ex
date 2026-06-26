@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SitesViewState do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `SitesViewState`."
   use KiwiCodec, kind: :enum
   enum_value(:file, 0)
   enum_value(:code, 1)

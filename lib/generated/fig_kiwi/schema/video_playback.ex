@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VideoPlayback do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `VideoPlayback`."
   use KiwiCodec, kind: :message
   field(:autoplay, 1, type: :bool, source_name: "autoplay")
   field(:media_loop, 2, type: :bool, source_name: "mediaLoop")

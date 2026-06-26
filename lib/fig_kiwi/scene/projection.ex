@@ -138,10 +138,10 @@ defmodule FigKiwi.Scene.Projection do
 
   for {module, fields} <- @schema_checks,
       Code.ensure_loaded?(module),
-      function_exported?(module, :__kiwi_props__, 0),
-      props = module.__kiwi_props__(),
+      function_exported?(module, :__kiwi_metadata__, 0),
+      metadata = module.__kiwi_metadata__(),
       field <- fields do
-    unless Map.has_key?(props.fields_by_name, field) do
+    unless Map.has_key?(metadata.fields_by_name, field) do
       raise CompileError,
         description:
           "#{inspect(module)} is missing required scene projection field #{inspect(field)}"

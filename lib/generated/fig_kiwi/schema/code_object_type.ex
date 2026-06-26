@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeObjectType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CodeObjectType`."
   use KiwiCodec, kind: :enum
   enum_value(:web_layer, 0)
   enum_value(:web_interaction, 1)

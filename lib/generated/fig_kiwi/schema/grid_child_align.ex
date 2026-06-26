@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.GridChildAlign do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `GridChildAlign`."
   use KiwiCodec, kind: :enum
   enum_value(:auto, 0)
   enum_value(:min, 1)

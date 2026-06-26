@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.BuzzApprovalChange do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `BuzzApprovalChange`."
   use KiwiCodec, kind: :message
 
   field(:asset_entries, 1,

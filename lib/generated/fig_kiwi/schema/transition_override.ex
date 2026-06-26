@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransitionOverride do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TransitionOverride`."
   use KiwiCodec, kind: :message
   field(:id, 1, type: FigKiwi.Schema.GUID, source_name: "id")
   field(:duration, 2, type: :float, source_name: "duration")

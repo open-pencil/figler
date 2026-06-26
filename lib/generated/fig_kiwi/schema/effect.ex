@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Effect do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Effect`."
   use KiwiCodec, kind: :message
   field(:type, 1, type: {:enum, FigKiwi.Schema.EffectType}, source_name: "type")
   field(:offset, 3, type: FigKiwi.Schema.Vector, source_name: "offset")

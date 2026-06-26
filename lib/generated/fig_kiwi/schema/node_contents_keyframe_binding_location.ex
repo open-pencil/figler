@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NodeContentsKeyframeBindingLocation do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `NodeContentsKeyframeBindingLocation`."
   use KiwiCodec, kind: :message
 
   field(:top_level_field, 1,

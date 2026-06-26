@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VariableDataMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `VariableDataMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransformFnType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `TransformFnType`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:matrix_3_d, 1)

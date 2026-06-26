@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransformFnValue do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TransformFnValue`."
   use KiwiCodec, kind: :message
   field(:matrix3d, 1, type: FigKiwi.Schema.Matrix4f, source_name: "matrix3d")
   field(:perspective, 2, type: :float, source_name: "perspective")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.DocumentColorProfile do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `DocumentColorProfile`."
   use KiwiCodec, kind: :enum
   enum_value(:legacy, 0)
   enum_value(:srgb, 1)

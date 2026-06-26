@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.GUIDPositionMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `GUIDPositionMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

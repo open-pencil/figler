@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FontMetaData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `FontMetaData`."
   use KiwiCodec, kind: :message
   field(:key, 1, type: FigKiwi.Schema.FontName, source_name: "key")
   field(:font_line_height, 2, type: :float, source_name: "fontLineHeight")

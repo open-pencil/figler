@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ManagedStringAlias do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ManagedStringAlias`."
   use KiwiCodec, kind: :message
 
   field(:managed_string_id, 1,

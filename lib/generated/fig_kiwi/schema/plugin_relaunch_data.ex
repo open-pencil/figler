@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PluginRelaunchData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PluginRelaunchData`."
   use KiwiCodec, kind: :message
   field(:plugin_id, 1, type: :string, source_name: "pluginID")
   field(:message, 2, type: :string, source_name: "message")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CMSFilterCritera do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CMSFilterCritera`."
   use KiwiCodec, kind: :message
 
   field(:match_type, 1,

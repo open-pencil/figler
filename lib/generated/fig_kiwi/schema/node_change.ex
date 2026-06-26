@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NodeChange do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `NodeChange`."
   use KiwiCodec, kind: :message
   field(:guid, 1, type: FigKiwi.Schema.GUID, source_name: "guid")
   field(:guid_tag, 53, type: :uint, source_name: "guidTag")

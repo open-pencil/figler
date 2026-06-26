@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SelectionRegionFocusType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `SelectionRegionFocusType`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:primary, 1)

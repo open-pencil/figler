@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.BehaviorTransition do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `BehaviorTransition`."
   use KiwiCodec, kind: :message
   field(:easing_type, 1, type: {:enum, FigKiwi.Schema.EasingType}, source_name: "easingType")
   field(:easing_function, 2, repeated: true, type: :float, source_name: "easingFunction")

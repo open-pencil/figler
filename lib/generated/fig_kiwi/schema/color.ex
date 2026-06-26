@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Color do
-  @moduledoc false
+  @moduledoc "Generated Kiwi struct module for `Color`."
   use KiwiCodec, kind: :struct
   field(:r, 1, type: :float, source_name: "r")
   field(:g, 2, type: :float, source_name: "g")

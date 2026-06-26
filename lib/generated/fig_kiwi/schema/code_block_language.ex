@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeBlockLanguage do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CodeBlockLanguage`."
   use KiwiCodec, kind: :enum
   enum_value(:typescript, 0)
   enum_value(:cpp, 1)

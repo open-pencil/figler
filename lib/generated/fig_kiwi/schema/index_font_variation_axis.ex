@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.IndexFontVariationAxis do
-  @moduledoc false
+  @moduledoc "Generated Kiwi struct module for `IndexFontVariationAxis`."
   use KiwiCodec, kind: :struct
   field(:tag, 1, type: :string, source_name: "tag")
   field(:name, 2, type: :string, source_name: "name")

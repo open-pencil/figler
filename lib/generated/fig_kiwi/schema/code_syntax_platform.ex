@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CodeSyntaxPlatform do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `CodeSyntaxPlatform`."
   use KiwiCodec, kind: :enum
   enum_value(:web, 0)
   enum_value(:android, 1)

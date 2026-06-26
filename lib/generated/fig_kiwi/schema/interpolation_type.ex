@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.InterpolationType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `InterpolationType`."
   use KiwiCodec, kind: :enum
   enum_value(:hold, 0)
   enum_value(:bezier, 1)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ManagedStringPluralAstNodeData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ManagedStringPluralAstNodeData`."
   use KiwiCodec, kind: :message
   field(:identifier, 1, type: :string, source_name: "identifier")
 

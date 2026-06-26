@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VariableField do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `VariableField`."
   use KiwiCodec, kind: :enum
   enum_value(:missing, 0)
   enum_value(:corner_radius, 1)

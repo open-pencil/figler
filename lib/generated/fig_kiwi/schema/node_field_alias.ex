@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NodeFieldAlias do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `NodeFieldAlias`."
   use KiwiCodec, kind: :message
   field(:stable_path_to_node, 1, type: FigKiwi.Schema.GUIDPath, source_name: "stablePathToNode")
 

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ConnectionType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ConnectionType`."
   use KiwiCodec, kind: :enum
   enum_value(:none, 0)
   enum_value(:internal_node, 1)

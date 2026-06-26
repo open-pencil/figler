@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ConnectorTextMidpoint do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ConnectorTextMidpoint`."
   use KiwiCodec, kind: :message
   field(:section, 1, type: {:enum, FigKiwi.Schema.ConnectorTextSection}, source_name: "section")
   field(:offset, 2, type: :float, source_name: "offset")

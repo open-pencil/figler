@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.KeyframeBindingEffectParametrizedField do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `KeyframeBindingEffectParametrizedField`."
   use KiwiCodec, kind: :enum
   enum_value(:missing, 0)
   enum_value(:offset_x, 1)

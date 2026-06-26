@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.MusicInfo do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `MusicInfo`."
   use KiwiCodec, kind: :message
   field(:is_paused, 1, type: :bool, source_name: "isPaused")
   field(:message_id, 2, type: :uint, source_name: "messageID")

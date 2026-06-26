@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.HyperlinkBox do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `HyperlinkBox`."
   use KiwiCodec, kind: :message
   field(:bounds, 1, type: FigKiwi.Schema.Rect, source_name: "bounds")
   field(:url, 2, type: :string, source_name: "url")

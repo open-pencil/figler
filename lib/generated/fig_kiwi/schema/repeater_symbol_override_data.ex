@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.RepeaterSymbolOverrideData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `RepeaterSymbolOverrideData`."
   use KiwiCodec, kind: :message
 
   field(:overrides_by_position, 1,

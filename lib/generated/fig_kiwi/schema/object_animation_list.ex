@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ObjectAnimationList do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ObjectAnimationList`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

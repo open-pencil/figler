@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TriggeredOverlayData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TriggeredOverlayData`."
   use KiwiCodec, kind: :message
   field(:overlay_guid, 1, type: FigKiwi.Schema.GUID, source_name: "overlayGuid")
   field(:hotspot_guid, 2, type: FigKiwi.Schema.GUID, source_name: "hotspotGuid")

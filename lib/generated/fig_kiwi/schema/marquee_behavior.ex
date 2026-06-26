@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.MarqueeBehavior do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `MarqueeBehavior`."
   use KiwiCodec, kind: :message
   field(:direction, 1, type: {:enum, FigKiwi.Schema.RelativeDirection}, source_name: "direction")
   field(:speed, 2, type: :float, source_name: "speed")

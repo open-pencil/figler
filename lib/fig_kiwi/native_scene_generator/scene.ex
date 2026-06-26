@@ -12,7 +12,7 @@ defmodule FigKiwi.NativeSceneGenerator.Scene do
         definition_map
         |> Map.fetch!("Message")
         |> then(& &1.fields)
-        |> Enum.reject(&(&1.value == 4))
+        |> Enum.reject(&(&1.id == 4))
         |> Enum.map(&Skip.message_arm(&1, definition_map)),
       scene_node_skip_arms: scene_node_skip_arms(definition_map),
       scene_summary_node_arms: scene_summary_node_arms(definition_map),
@@ -20,13 +20,13 @@ defmodule FigKiwi.NativeSceneGenerator.Scene do
         definition_map
         |> Map.fetch!("TextData")
         |> then(& &1.fields)
-        |> Enum.reject(&(&1.value == 1))
+        |> Enum.reject(&(&1.id == 1))
         |> Enum.map(&Skip.message_arm(&1, definition_map)),
       scene_style_id_skip_arms:
         definition_map
         |> Map.fetch!("StyleId")
         |> then(& &1.fields)
-        |> Enum.reject(&(&1.value == 1))
+        |> Enum.reject(&(&1.id == 1))
         |> Enum.map(&Skip.message_arm(&1, definition_map)),
       scene_query_node_fields: scene_optional_struct_fields(),
       scene_record_fields: scene_record_struct_fields(),
@@ -127,7 +127,7 @@ defmodule FigKiwi.NativeSceneGenerator.Scene do
       definition_map
       |> Map.fetch!("NodeChange")
       |> then(& &1.fields)
-      |> Map.new(&{&1.name, &1.value})
+      |> Map.new(&{&1.name, &1.id})
 
     Projection.fields()
     |> Enum.reject(

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ShapeWithTextType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ShapeWithTextType`."
   use KiwiCodec, kind: :enum
   enum_value(:square, 0)
   enum_value(:ellipse, 1)

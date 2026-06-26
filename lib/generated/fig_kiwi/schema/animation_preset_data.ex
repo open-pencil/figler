@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AnimationPresetData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `AnimationPresetData`."
   use KiwiCodec, kind: :message
 
   field(:animation_preset_id, 1,

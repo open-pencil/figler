@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ImportedCodeFiles do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ImportedCodeFiles`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

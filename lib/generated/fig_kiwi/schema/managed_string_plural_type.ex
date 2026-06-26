@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ManagedStringPluralType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ManagedStringPluralType`."
   use KiwiCodec, kind: :enum
   enum_value(:zero, 0)
   enum_value(:one, 1)

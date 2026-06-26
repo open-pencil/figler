@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AgendaMetadata do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `AgendaMetadata`."
   use KiwiCodec, kind: :message
   field(:name, 1, type: :string, source_name: "name")
   field(:type, 2, type: {:enum, FigKiwi.Schema.AgendaItemType}, source_name: "type")

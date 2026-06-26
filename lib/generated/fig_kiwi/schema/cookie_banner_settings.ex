@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CookieBannerSettings do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CookieBannerSettings`."
   use KiwiCodec, kind: :message
   field(:enabled, 1, type: :bool, source_name: "enabled")
 

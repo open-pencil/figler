@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.Viewport do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `Viewport`."
   use KiwiCodec, kind: :message
   field(:canvas_space_bounds, 1, type: FigKiwi.Schema.Rect, source_name: "canvasSpaceBounds")
   field(:pixel_preview, 2, type: :bool, source_name: "pixelPreview")

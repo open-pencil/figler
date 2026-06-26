@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.PrototypeDevice do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `PrototypeDevice`."
   use KiwiCodec, kind: :message
   field(:type, 1, type: {:enum, FigKiwi.Schema.PrototypeDeviceType}, source_name: "type")
   field(:size, 2, type: FigKiwi.Schema.Vector, source_name: "size")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.InstanceStateChange do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `InstanceStateChange`."
   use KiwiCodec, kind: :message
   field(:state_id, 1, type: FigKiwi.Schema.GUID, source_name: "stateID")
   field(:interaction_id, 2, type: FigKiwi.Schema.GUID, source_name: "interactionID")

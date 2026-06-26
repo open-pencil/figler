@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.EffectAxis do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `EffectAxis`."
   use KiwiCodec, kind: :enum
   enum_value(:x, 0)
   enum_value(:y, 1)

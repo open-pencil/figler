@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.GUIDGridTrackSizeMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `GUIDGridTrackSizeMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

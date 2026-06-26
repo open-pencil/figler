@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransitionOverrideProp do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `TransitionOverrideProp`."
   use KiwiCodec, kind: :enum
   enum_value(:all, 0)
   enum_value(:opacity, 1)

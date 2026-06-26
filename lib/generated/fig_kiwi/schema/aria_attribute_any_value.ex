@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ARIAAttributeAnyValue do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ARIAAttributeAnyValue`."
   use KiwiCodec, kind: :message
   field(:bool_value, 1, type: :bool, source_name: "boolValue")
   field(:string_value, 2, type: :string, source_name: "stringValue")

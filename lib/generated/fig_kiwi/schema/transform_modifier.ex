@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransformModifier do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TransformModifier`."
   use KiwiCodec, kind: :message
   field(:type, 1, type: {:enum, FigKiwi.Schema.TransformModifierType}, source_name: "type")
   field(:offset, 2, type: FigKiwi.Schema.Vector, source_name: "offset")

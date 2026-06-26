@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TopLevelPlaybackChange do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TopLevelPlaybackChange`."
   use KiwiCodec, kind: :message
   field(:old_state, 1, type: FigKiwi.Schema.PresentedState, source_name: "oldState")
   field(:new_state, 2, type: FigKiwi.Schema.PresentedState, source_name: "newState")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FontVariantCaps do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `FontVariantCaps`."
   use KiwiCodec, kind: :enum
   enum_value(:normal, 0)
   enum_value(:small, 1)

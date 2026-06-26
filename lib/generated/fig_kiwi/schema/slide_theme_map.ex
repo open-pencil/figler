@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.SlideThemeMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `SlideThemeMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

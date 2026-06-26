@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.MentionSource do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `MentionSource`."
   use KiwiCodec, kind: :enum
   enum_value(:default, 0)
   enum_value(:copy_duplicate, 1)

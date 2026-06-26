@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.KeyframeAnyValue do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `KeyframeAnyValue`."
   use KiwiCodec, kind: :message
   field(:float_value, 1, type: :float, source_name: "floatValue")
   field(:color_value, 2, type: FigKiwi.Schema.Color, source_name: "colorValue")

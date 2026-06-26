@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.LineType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `LineType`."
   use KiwiCodec, kind: :enum
   enum_value(:plain, 0)
   enum_value(:ordered_list, 1)

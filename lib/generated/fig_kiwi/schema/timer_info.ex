@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TimerInfo do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TimerInfo`."
   use KiwiCodec, kind: :message
   field(:is_paused, 1, type: :bool, source_name: "isPaused")
   field(:time_remaining_ms, 2, type: :uint, source_name: "timeRemainingMs")

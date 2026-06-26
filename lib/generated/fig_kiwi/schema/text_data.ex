@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TextData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TextData`."
   use KiwiCodec, kind: :message
   field(:characters, 1, type: :string, source_name: "characters")
   field(:character_style_i_ds, 2, repeated: true, type: :uint, source_name: "characterStyleIDs")

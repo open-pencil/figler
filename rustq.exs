@@ -8,6 +8,10 @@ unless Code.ensure_loaded?(FigKiwi.Scene.Projection.Native) do
   Code.require_file("lib/fig_kiwi/scene/projection/native.ex")
 end
 
+unless Code.ensure_loaded?(FigKiwi.Native.Nifs) do
+  Code.require_file("lib/fig_kiwi/native/nifs.ex")
+end
+
 unless Code.ensure_loaded?(FigKiwi.NativeSceneGenerator.Focus) do
   Code.require_file("lib/fig_kiwi/native_scene_generator/focus.ex")
 end
@@ -34,24 +38,11 @@ generate "native", "native/src/generated.rs" do
     |> File.read!()
     |> KiwiCodec.parse_schema!()
 
-  render(File.read!("native/src/generated.template.rs"),
-    filename: "native/src/generated.template.rs",
-    include_dir: "native/src",
-    rustfmt: true,
-    splice:
-      KiwiCodec.RustlerGenerator.splices(schema,
-        definitions: ["GUID", "Vector", "Matrix", "ParentIndex", "Image", "NodeChange", "Message"],
-        entrypoints: [
-          decode_guid: "GUID",
-          decode_vector: "Vector",
-          decode_matrix: "Matrix",
-          decode_parent_index: "ParentIndex",
-          decode_image: "Image",
-          decode_node_change: "NodeChange",
-          decode_message: "Message"
-        ],
-        module_prefix: "FigKiwi.Schema",
-        extra_splices: FigKiwi.NativeSceneGenerator.render_splices(schema)
-      )
-  )
+  content [
+    KiwiCodec.RustlerGenerator.source(schema,
+      entrypoints: {:nif_stubs, FigKiwi.Native.Nifs},
+      module_prefix: "FigKiwi.Schema"
+    ),
+    FigKiwi.NativeSceneGenerator.source(schema)
+  ]
 end

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TriggerDevice do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `TriggerDevice`."
   use KiwiCodec, kind: :enum
   enum_value(:keyboard, 0)
   enum_value(:unknown_controller, 1)

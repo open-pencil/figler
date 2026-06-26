@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.IndexRenames do
-  @moduledoc false
+  @moduledoc "Generated Kiwi struct module for `IndexRenames`."
   use KiwiCodec, kind: :struct
   field(:family, 1, repeated: true, type: FigKiwi.Schema.IndexFamilyRename, source_name: "family")
 

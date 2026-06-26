@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.KeyTrigger do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `KeyTrigger`."
   use KiwiCodec, kind: :message
   field(:key_codes, 1, repeated: true, type: :int, source_name: "keyCodes")
 

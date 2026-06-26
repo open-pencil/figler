@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.CirclePointConfig do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `CirclePointConfig`."
   use KiwiCodec, kind: :message
   field(:mode, 1, type: {:enum, FigKiwi.Schema.PointMode}, source_name: "mode")
   field(:position_unit, 2, type: {:enum, FigKiwi.Schema.NumberUnits}, source_name: "positionUnit")

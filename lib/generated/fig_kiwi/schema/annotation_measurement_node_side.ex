@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AnnotationMeasurementNodeSide do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `AnnotationMeasurementNodeSide`."
   use KiwiCodec, kind: :enum
   enum_value(:top, 0)
   enum_value(:bottom, 1)

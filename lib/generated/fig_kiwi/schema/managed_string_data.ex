@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ManagedStringData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ManagedStringData`."
   use KiwiCodec, kind: :message
   field(:key, 1, type: :string, source_name: "key")
   field(:context, 2, type: :string, source_name: "context")

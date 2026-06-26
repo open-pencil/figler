@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.MentionBox do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `MentionBox`."
   use KiwiCodec, kind: :message
   field(:bounds, 1, type: FigKiwi.Schema.Rect, source_name: "bounds")
   field(:start_index, 2, type: :uint, source_name: "startIndex")

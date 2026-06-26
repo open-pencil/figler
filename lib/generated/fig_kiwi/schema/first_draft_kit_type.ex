@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.FirstDraftKitType do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `FirstDraftKitType`."
   use KiwiCodec, kind: :enum
   enum_value(:local, 0)
   enum_value(:library, 1)

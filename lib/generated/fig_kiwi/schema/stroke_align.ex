@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StrokeAlign do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `StrokeAlign`."
   use KiwiCodec, kind: :enum
   enum_value(:center, 0)
   enum_value(:inside, 1)

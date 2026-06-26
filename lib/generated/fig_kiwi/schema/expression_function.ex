@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ExpressionFunction do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ExpressionFunction`."
   use KiwiCodec, kind: :enum
   enum_value(:addition, 0)
   enum_value(:subtraction, 1)

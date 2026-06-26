@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.WidgetMetadata do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `WidgetMetadata`."
   use KiwiCodec, kind: :message
   field(:plugin_id, 1, type: :string, source_name: "pluginID")
   field(:plugin_version_id, 2, type: :string, source_name: "pluginVersionID")

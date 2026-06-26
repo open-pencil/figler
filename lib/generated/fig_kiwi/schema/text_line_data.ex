@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TextLineData do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TextLineData`."
   use KiwiCodec, kind: :message
   field(:line_type, 1, type: {:enum, FigKiwi.Schema.LineType}, source_name: "lineType")
   field(:style_id, 10, type: :int, source_name: "styleId")

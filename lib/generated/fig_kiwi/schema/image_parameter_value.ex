@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ImageParameterValue do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `ImageParameterValue`."
   use KiwiCodec, kind: :message
   field(:image, 1, type: FigKiwi.Schema.Image, source_name: "image")
   field(:image_thumbnail, 2, type: FigKiwi.Schema.Image, source_name: "imageThumbnail")

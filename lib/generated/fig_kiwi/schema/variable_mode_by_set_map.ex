@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.VariableModeBySetMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `VariableModeBySetMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TableRowColumnPositionMap do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TableRowColumnPositionMap`."
   use KiwiCodec, kind: :message
 
   field(:entries, 1,

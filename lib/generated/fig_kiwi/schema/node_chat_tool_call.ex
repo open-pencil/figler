@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.NodeChatToolCall do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `NodeChatToolCall`."
   use KiwiCodec, kind: :message
   field(:tool_call_id, 1, type: :string, source_name: "toolCallId")
   field(:tool_name, 2, type: :string, source_name: "toolName")

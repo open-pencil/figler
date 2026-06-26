@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.AiCanvasPrompt do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `AiCanvasPrompt`."
   use KiwiCodec, kind: :message
   field(:user_prompt, 1, type: :string, source_name: "userPrompt")
   field(:author_id, 2, type: :string, source_name: "authorId")

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TransitionOverrideBindingTopLevelField do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `TransitionOverrideBindingTopLevelField`."
   use KiwiCodec, kind: :enum
   enum_value(:missing, 0)
   enum_value(:parameter_consumption_map, 1)

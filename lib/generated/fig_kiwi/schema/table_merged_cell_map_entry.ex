@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.TableMergedCellMapEntry do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `TableMergedCellMapEntry`."
   use KiwiCodec, kind: :message
   field(:row_id, 1, type: FigKiwi.Schema.GUID, source_name: "rowId")
   field(:col_id, 2, type: FigKiwi.Schema.GUID, source_name: "colId")

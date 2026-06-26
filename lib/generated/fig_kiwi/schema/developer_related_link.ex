@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.DeveloperRelatedLink do
-  @moduledoc false
+  @moduledoc "Generated Kiwi message module for `DeveloperRelatedLink`."
   use KiwiCodec, kind: :message
   field(:node_id, 1, type: :string, source_name: "nodeId")
   field(:file_key, 2, type: :string, source_name: "fileKey")

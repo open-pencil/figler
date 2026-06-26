@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.ARIARole do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `ARIARole`."
   use KiwiCodec, kind: :enum
   enum_value(:auto, 0)
   enum_value(:none, 52)

@@ -1,5 +1,5 @@
 defmodule FigKiwi.Schema.StackJustify do
-  @moduledoc false
+  @moduledoc "Generated Kiwi enum module for `StackJustify`."
   use KiwiCodec, kind: :enum
   enum_value(:min, 0)
   enum_value(:center, 1)
