@@ -110,10 +110,28 @@ defmodule Figler.NativeSceneGenerator.Rusty do
   end
 
   @doc """
+  Declares a mutable `Option` local initialized to `None`.
+  """
+  @spec let_none(atom() | String.t()) :: RustQ.Rust.Fragment.t()
+  def let_none(name), do: Rust.let_mut(to_string(name), "None")
+
+  @doc """
   Assigns a decoded term expression to `value`.
   """
   @spec value(String.t()) :: RustQ.Rust.Fragment.t()
   def value(expression), do: Rust.let_("value", expression)
+
+  @doc """
+  Assigns an expression to a local.
+  """
+  @spec assign(atom() | String.t(), String.t()) :: RustQ.Rust.Fragment.t()
+  def assign(name, expression), do: Rust.assign(to_string(name), expression)
+
+  @doc """
+  Assigns `Some(expression)` to an optional local.
+  """
+  @spec assign_some(atom() | String.t(), String.t()) :: RustQ.Rust.Fragment.t()
+  def assign_some(name, expression), do: Rust.assign(to_string(name), "Some(#{expression})")
 
   @doc """
   Emits a schema field block that caches a field atom and appends its value.
@@ -180,6 +198,19 @@ defmodule Figler.NativeSceneGenerator.Rusty do
   end
 
   @doc """
+  Declares a static scene query field atom.
+  """
+  @spec query_field_atom(atom() | String.t()) :: String.t()
+  def query_field_atom(field), do: field |> query_field_atom_name() |> cached_atom_static()
+
+  @doc """
+  Returns the generated static atom name for a scene query field.
+  """
+  @spec query_field_atom_name(atom() | String.t()) :: String.t()
+  def query_field_atom_name(field),
+    do: field |> to_string() |> String.upcase() |> Kernel.<>("_ATOM")
+
+  @doc """
   Emits a scene query field encoder guarded by `wants_field/2`.
   """
   @spec query_field_encoder(String.t(), String.t(), String.t()) :: RustQ.Rust.Fragment.t()
@@ -200,6 +231,27 @@ defmodule Figler.NativeSceneGenerator.Rusty do
   @spec return_attr_if_cursor(String.t(), String.t()) :: RustQ.Rust.Fragment.t()
   def return_attr_if_cursor(attr, value_expr) do
     Rust.return_if("index == cursor", "Some((#{Rust.literal(attr)}, #{value_expr}))")
+  end
+
+  @doc """
+  Emits an XPath attribute lookup block for an optional field accessor.
+  """
+  @spec attr_lookup(String.t(), String.t(), String.t(), keyword()) :: String.t()
+  def attr_lookup(accessor, attr, value_expr, opts) do
+    lines = [return_attr_if_cursor(attr, value_expr)]
+
+    lines =
+      if Keyword.get(opts, :last?, false), do: lines, else: lines ++ [Rust.stmt("cursor += 1")]
+
+    Rust.to_fragment(Rust.if_let("Some(value)", accessor, lines))
+  end
+
+  @doc """
+  Emits an optional-field contribution to scene XPath attribute count.
+  """
+  @spec attr_count(atom(), pos_integer()) :: RustQ.Rust.Fragment.t()
+  def attr_count(field, count) do
+    Rust.if_("self.#{field}.is_some()", [Rust.stmt("count += #{count}")])
   end
 
   @doc """

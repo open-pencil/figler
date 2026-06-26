@@ -123,9 +123,7 @@ defmodule Figler.NativeSceneGenerator.Scene do
   end
 
   defp scene_decode_locals do
-    Enum.map(scene_optional_fields(), fn field ->
-      "let mut #{field} = None;"
-    end)
+    Enum.map(scene_optional_fields(), &Rusty.let_none/1)
   end
 
   defp scene_decode_arms(definition_map) do
@@ -146,24 +144,24 @@ defmodule Figler.NativeSceneGenerator.Scene do
 
   defp scene_decode_arm_for(%{decode: :font_name}, fields_by_source) do
     scene_decode_arm(Map.fetch!(fields_by_source, Projection.source_name(:font_name)), [
-      "let (family, style, postscript) = read_scene_font_name_value(decoder)?;",
-      "font_family = family;",
-      "font_style = style;",
-      "font_postscript = postscript;"
+      Rust.let_("(family, style, postscript)", "read_scene_font_name_value(decoder)?"),
+      Rusty.assign(:font_family, "family"),
+      Rusty.assign(:font_style, "style"),
+      Rusty.assign(:font_postscript, "postscript")
     ])
   end
 
   defp scene_decode_arm_for(%{decode: :text_data, name: name} = field, fields_by_source) do
     scene_decode_arm(
       Map.fetch!(fields_by_source, Projection.source_name(field)),
-      "#{name} = read_scene_text_data_value(decoder)?"
+      Rusty.assign(name, "read_scene_text_data_value(decoder)?")
     )
   end
 
   defp scene_decode_arm_for(%{source: {:style_id, :guid}, name: name} = field, fields_by_source) do
     scene_decode_arm(
       Map.fetch!(fields_by_source, Projection.source_name(field)),
-      "#{name} = read_scene_style_id_value(decoder)?"
+      Rusty.assign(name, "read_scene_style_id_value(decoder)?")
     )
   end
 
@@ -179,21 +177,23 @@ defmodule Figler.NativeSceneGenerator.Scene do
 
   defp scene_decode_arm_for(_field, _fields_by_source), do: nil
 
-  defp scene_decode_expr(name, %{decode: :bool}), do: "#{name} = Some(decoder.read_bool()?)"
+  defp scene_decode_expr(name, %{decode: :bool}),
+    do: Rusty.assign_some(name, "decoder.read_bool()?")
 
   defp scene_decode_expr(name, %{decode: :float}),
-    do: "#{name} = Some(decoder.read_var_float_value()?)"
+    do: Rusty.assign_some(name, "decoder.read_var_float_value()?")
 
   defp scene_decode_expr(_name, %{value: :vector}),
-    do: "size = Some(read_scene_size_value(decoder)?)"
+    do: Rusty.assign_some(:size, "read_scene_size_value(decoder)?")
 
   defp scene_decode_expr(_name, %{value: :matrix}),
-    do: "transform = Some(read_scene_transform_value(decoder)?)"
+    do: Rusty.assign_some(:transform, "read_scene_transform_value(decoder)?")
 
   defp scene_decode_expr(name, %{decode: :counted_paints}),
-    do: "#{name} = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"
+    do: Rusty.assign(name, "read_scene_counted_array_value(decoder, skip_paint_from_decoder)?")
 
-  defp scene_decode_expr(name, _field), do: "#{name} = Some(decoder.read_string_value()?)"
+  defp scene_decode_expr(name, _field),
+    do: Rusty.assign_some(name, "decoder.read_string_value()?")
 
   defp scene_decode_arm(id, lines), do: Rusty.arm(id, lines)
 
@@ -218,27 +218,20 @@ defmodule Figler.NativeSceneGenerator.Scene do
     accessor =
       if Keyword.get(opts, :by_ref?, true), do: "self.#{field}.as_ref()", else: "self.#{field}"
 
-    lines = [
-      Rust.stmt("if index == cursor { return Some((#{Rust.literal(attr)}, #{value_expr})); }")
-      | if(Keyword.get(opts, :last?, false), do: [], else: [Rust.stmt("cursor += 1")])
-    ]
-
-    Rust.to_fragment(Rust.if_let("Some(value)", accessor, lines))
+    Rusty.attr_lookup(accessor, attr, value_expr, opts)
   end
 
   defp scene_attr_count do
     Enum.map(scene_optional_fields(), fn
-      :size -> Rust.if_("self.size.is_some()", [Rust.stmt("count += 4")])
-      field -> Rust.if_("self.#{field}.is_some()", [Rust.stmt("count += 1")])
+      :size -> Rusty.attr_count(:size, 4)
+      field -> Rusty.attr_count(field, 1)
     end)
   end
 
   defp scene_query_field_atoms do
     Projection.field_names()
     |> Enum.reject(&(&1 in Projection.required_field_names()))
-    |> Enum.map(fn field ->
-      "static #{field |> Atom.to_string() |> String.upcase()}_ATOM: OnceLock<Atom> = OnceLock::new();"
-    end)
+    |> Enum.map(&Rusty.query_field_atom/1)
   end
 
   defp scene_query_field_encoders do
@@ -246,7 +239,7 @@ defmodule Figler.NativeSceneGenerator.Scene do
     |> Enum.reject(&(&1 in Projection.required_field_names()))
     |> Enum.map(fn field ->
       name = Atom.to_string(field)
-      atom = String.upcase(name)
+      atom = Rusty.query_field_atom_name(name)
 
       value =
         if field == :parent_guid do
@@ -255,10 +248,7 @@ defmodule Figler.NativeSceneGenerator.Scene do
           "node.#{name}.encode(env)"
         end
 
-      Rust.if_("wants_field(fields, #{Rust.literal(name)})", [
-        "keys.push(cached_atom(env, &#{atom}_ATOM, #{Rust.literal(name)}).encode(env));",
-        "values.push(#{value});"
-      ])
+      Rusty.query_field_encoder(name, atom, value)
     end)
   end
 

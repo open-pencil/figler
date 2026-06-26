@@ -125312,13 +125312,27 @@ mod scene_xpath_runtime {
                 4 => {
                     node_type = Some(scene_node_type_name(decoder.read_var_uint()?));
                 }
-                5 => name = Some(decoder.read_string_value()?),
-                11 => size = Some(read_scene_size_value(decoder)?),
-                12 => transform = Some(read_scene_transform_value(decoder)?),
-                6 => visible = Some(decoder.read_bool()?),
-                7 => locked = Some(decoder.read_bool()?),
-                8 => opacity = Some(decoder.read_var_float_value()?),
-                42 => text = read_scene_text_data_value(decoder)?,
+                5 => {
+                    name = Some(decoder.read_string_value()?);
+                }
+                11 => {
+                    size = Some(read_scene_size_value(decoder)?);
+                }
+                12 => {
+                    transform = Some(read_scene_transform_value(decoder)?);
+                }
+                6 => {
+                    visible = Some(decoder.read_bool()?);
+                }
+                7 => {
+                    locked = Some(decoder.read_bool()?);
+                }
+                8 => {
+                    opacity = Some(decoder.read_var_float_value()?);
+                }
+                42 => {
+                    text = read_scene_text_data_value(decoder)?;
+                }
                 41 => {
                     let (family, style, postscript) = read_scene_font_name_value(
                         decoder,
@@ -125327,14 +125341,30 @@ mod scene_xpath_runtime {
                     font_style = style;
                     font_postscript = postscript;
                 }
-                21 => font_size = Some(decoder.read_var_float_value()?),
-                334 => text_style_guid = read_scene_style_id_value(decoder)?,
-                216 => component_key = Some(decoder.read_string_value()?),
-                252 => origin_component_key = Some(decoder.read_string_value()?),
-                332 => fill_style_guid = read_scene_style_id_value(decoder)?,
-                333 => stroke_style_guid = read_scene_style_id_value(decoder)?,
-                335 => effect_style_guid = read_scene_style_id_value(decoder)?,
-                336 => grid_style_guid = read_scene_style_id_value(decoder)?,
+                21 => {
+                    font_size = Some(decoder.read_var_float_value()?);
+                }
+                334 => {
+                    text_style_guid = read_scene_style_id_value(decoder)?;
+                }
+                216 => {
+                    component_key = Some(decoder.read_string_value()?);
+                }
+                252 => {
+                    origin_component_key = Some(decoder.read_string_value()?);
+                }
+                332 => {
+                    fill_style_guid = read_scene_style_id_value(decoder)?;
+                }
+                333 => {
+                    stroke_style_guid = read_scene_style_id_value(decoder)?;
+                }
+                335 => {
+                    effect_style_guid = read_scene_style_id_value(decoder)?;
+                }
+                336 => {
+                    grid_style_guid = read_scene_style_id_value(decoder)?;
+                }
                 38 => {
                     fill_count = read_scene_counted_array_value(
                         decoder,
