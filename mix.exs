@@ -95,11 +95,11 @@ defmodule FigKiwi.MixProject do
   end
 
   defp kiwi_codec_dep do
-    {:kiwi_codec, "~> 0.1.0"}
+    {:kiwi_codec, "~> 0.1.1"}
   end
 
   defp rustq_dep do
-    {:rustq, "~> 0.8", runtime: false}
+    {:rustq, "~> 0.8.1", runtime: false}
   end
 
   defp json_codec_dep do

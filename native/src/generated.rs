@@ -5,8 +5,8 @@ use crate::runtime::Decoder;
 use rustler::types::atom::Atom;
 use rustler::{Binary, Encoder, Env, Error, NifResult, Term};
 use std::sync::OnceLock;
-fn cached_atom(env: Env<'_>, cache: &'static OnceLock<Atom>, name: &str) -> Atom {
-    *cache.get_or_init(|| Atom::from_str(env, name).unwrap())
+fn cached_atom(env: Env, cell: &OnceLock<Atom>, name: &str) -> Atom {
+    *cell.get_or_init(|| Atom::from_str(env, name).unwrap())
 }
 fn cached_struct_keys(
     env: Env<'_>,
@@ -15,27 +15,36 @@ fn cached_struct_keys(
 ) -> &'static [rustler::wrapper::NIF_TERM] {
     cache.get_or_init(|| {
         let mut keys = Vec::with_capacity(fields.len() + 1);
-        keys.push(rustler::types::atom::__struct__().as_c_arg());
+        keys.push(Atom::from_str(env, "__struct__").unwrap().as_c_arg());
         for field in fields {
             keys.push(Atom::from_str(env, field).unwrap().as_c_arg());
         }
         keys
     })
 }
-fn default_values(module: Atom, len: usize) -> Vec<rustler::wrapper::NIF_TERM> {
-    let mut values = vec![rustler::types::atom::nil().as_c_arg(); len + 1];
+fn default_struct_values(
+    env: Env<'_>,
+    module: Atom,
+    len: usize,
+) -> Vec<rustler::wrapper::NIF_TERM> {
+    let mut values = Vec::with_capacity(len + 1);
+    values.resize(len + 1, Atom::from_str(env, "nil").unwrap().as_c_arg());
     values[0] = module.as_c_arg();
     values
 }
-fn make_struct<'a>(
+fn make_struct_from_nif_term_arrays<'a>(
     env: Env<'a>,
     keys: &[rustler::wrapper::NIF_TERM],
     values: &[rustler::wrapper::NIF_TERM],
 ) -> NifResult<Term<'a>> {
-    unsafe {
-        rustler::wrapper::map::make_map_from_arrays(env.as_c_arg(), keys, values)
-            .map(|term| Term::new(env, term))
-            .ok_or(Error::BadArg)
+    if keys.len() == values.len() {
+        unsafe {
+            rustler::wrapper::map::make_map_from_arrays(env.as_c_arg(), keys, values)
+                .map(|term| Term::new(env, term))
+                .ok_or(rustler::Error::BadArg)
+        }
+    } else {
+        Err(rustler::Error::BadArg)
     }
 }
 #[derive(rustler::NifMap)]
@@ -1541,7 +1550,7 @@ fn decode_guid_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
             match decoder.read_var_uint() {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -1568,7 +1577,7 @@ fn decode_color_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
                             match decoder.read_var_float(env) {
                                 Ok(value) => {
                                     values.push(value.encode(env).as_c_arg());
-                                    make_struct(env, keys, &values)
+                                    make_struct_from_nif_term_arrays(env, keys, &values)
                                 }
                                 Err(reason) => Err(reason),
                             }
@@ -1595,7 +1604,7 @@ fn decode_vector_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
             match decoder.read_var_float(env) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -1622,7 +1631,7 @@ fn decode_rect_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
                             match decoder.read_var_float(env) {
                                 Ok(value) => {
                                     values.push(value.encode(env).as_c_arg());
-                                    make_struct(env, keys, &values)
+                                    make_struct_from_nif_term_arrays(env, keys, &values)
                                 }
                                 Err(reason) => Err(reason),
                             }
@@ -1656,7 +1665,7 @@ fn decode_color_stop_from_decoder<'a>(
             match decoder.read_var_float(env) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -1680,7 +1689,7 @@ fn decode_color_stop_var_from_decoder<'a>(
         &COLOR_STOP_VAR_STRUCT_KEYS,
         &["color", "color_var", "position"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_color_stop_var_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_color_stop_var_fields_from_decoder<'a>(
@@ -1692,7 +1701,7 @@ fn decode_color_stop_var_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_color_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -1748,7 +1757,9 @@ fn decode_matrix_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
                                             match decoder.read_var_float(env) {
                                                 Ok(value) => {
                                                     values.push(value.encode(env).as_c_arg());
-                                                    make_struct(env, keys, &values)
+                                                    make_struct_from_nif_term_arrays(
+                                                        env, keys, &values,
+                                                    )
                                                 }
                                                 Err(reason) => Err(reason),
                                             }
@@ -1788,7 +1799,7 @@ fn decode_parent_index_from_decoder<'a>(
             match decoder.read_string(env) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -1809,7 +1820,7 @@ fn decode_number_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
             match decode_number_units_from_decoder(env, decoder) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -1844,7 +1855,7 @@ fn decode_font_name_from_decoder<'a>(
                     match decoder.read_string(env) {
                         Ok(value) => {
                             values.push(value.encode(env).as_c_arg());
-                            make_struct(env, keys, &values)
+                            make_struct_from_nif_term_arrays(env, keys, &values)
                         }
                         Err(reason) => Err(reason),
                     }
@@ -2068,7 +2079,7 @@ fn decode_code_source_info_from_decoder<'a>(
             "source_element_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_source_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_source_info_fields_from_decoder<'a>(
@@ -2080,7 +2091,7 @@ fn decode_code_source_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -2179,7 +2190,7 @@ fn decode_custom_tool_artifact_ref_from_decoder<'a>(
             "published_custom_tool_version_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_custom_tool_artifact_ref_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_custom_tool_artifact_ref_fields_from_decoder<'a>(
@@ -2191,7 +2202,7 @@ fn decode_custom_tool_artifact_ref_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -2731,7 +2742,7 @@ fn decode_export_constraint_from_decoder<'a>(
             match decoder.read_var_float(env) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -2759,7 +2770,7 @@ fn decode_guid_mapping_from_decoder<'a>(
             match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -2777,7 +2788,7 @@ fn decode_blob_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
     match decoder.read_byte_array(env) {
         Ok(value) => {
             values.push(value.encode(env).as_c_arg());
-            make_struct(env, keys, &values)
+            make_struct_from_nif_term_arrays(env, keys, &values)
         }
         Err(reason) => Err(reason),
     }
@@ -2787,7 +2798,7 @@ static IMAGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::
 fn decode_image_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &IMAGE_MODULE_ATOM, "Elixir.FigKiwi.Schema.Image");
     let keys = cached_struct_keys(env, &IMAGE_STRUCT_KEYS, &["hash", "name", "data_blob"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_image_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_image_fields_from_decoder<'a>(
@@ -2799,7 +2810,7 @@ fn decode_image_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_byte_array(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -2831,7 +2842,7 @@ static VIDEO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::
 fn decode_video_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &VIDEO_MODULE_ATOM, "Elixir.FigKiwi.Schema.Video");
     let keys = cached_struct_keys(env, &VIDEO_STRUCT_KEYS, &["hash", "s3_url"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_video_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_video_fields_from_decoder<'a>(
@@ -2843,7 +2854,7 @@ fn decode_video_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_byte_array(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -2875,7 +2886,7 @@ fn decode_paste_source_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PasteSource",
     );
     let keys = cached_struct_keys(env, &PASTE_SOURCE_STRUCT_KEYS, &["src_file", "src_node"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_paste_source_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_paste_source_fields_from_decoder<'a>(
@@ -2887,7 +2898,7 @@ fn decode_paste_source_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -2963,7 +2974,9 @@ fn decode_filter_color_adjust_from_decoder<'a>(
                                                                             .encode(env)
                                                                             .as_c_arg(),
                                                                     );
-                                                                    make_struct(env, keys, &values)
+                                                                    make_struct_from_nif_term_arrays(
+                                                                        env, keys, &values,
+                                                                    )
                                                                 }
                                                                 Err(reason) => Err(reason),
                                                             }
@@ -3017,7 +3030,7 @@ fn decode_paint_filter_message_from_decoder<'a>(
             "brightness",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_paint_filter_message_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_paint_filter_message_fields_from_decoder<'a>(
@@ -3029,7 +3042,7 @@ fn decode_paint_filter_message_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -3157,7 +3170,7 @@ fn decode_paint_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
             "interpolation_hue_method",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_paint_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_paint_fields_from_decoder<'a>(
@@ -3169,7 +3182,7 @@ fn decode_paint_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_paint_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -3603,7 +3616,7 @@ fn decode_font_meta_data_from_decoder<'a>(
             "font_weight",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_font_meta_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_font_meta_data_fields_from_decoder<'a>(
@@ -3615,7 +3628,7 @@ fn decode_font_meta_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_font_name_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -3672,7 +3685,7 @@ fn decode_font_variation_from_decoder<'a>(
         &FONT_VARIATION_STRUCT_KEYS,
         &["axis_tag", "axis_name", "value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_font_variation_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_font_variation_fields_from_decoder<'a>(
@@ -3684,7 +3697,7 @@ fn decode_font_variation_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -3747,7 +3760,7 @@ fn decode_text_data_from_decoder<'a>(
             "derived_lines",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_text_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_text_data_fields_from_decoder<'a>(
@@ -3759,7 +3772,7 @@ fn decode_text_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -3961,7 +3974,7 @@ fn decode_derived_text_data_from_decoder<'a>(
             "derived_lines",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_derived_text_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_derived_text_data_fields_from_decoder<'a>(
@@ -3973,7 +3986,7 @@ fn decode_derived_text_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4111,7 +4124,7 @@ fn decode_hyperlink_box_from_decoder<'a>(
             "hyperlink_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_hyperlink_box_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_hyperlink_box_fields_from_decoder<'a>(
@@ -4123,7 +4136,7 @@ fn decode_hyperlink_box_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_rect_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4193,7 +4206,7 @@ fn decode_mention_box_from_decoder<'a>(
             "mention_key",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_mention_box_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_mention_box_fields_from_decoder<'a>(
@@ -4205,7 +4218,7 @@ fn decode_mention_box_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_rect_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4267,7 +4280,7 @@ fn decode_baseline_from_decoder<'a>(
             "end_character",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_baseline_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_baseline_fields_from_decoder<'a>(
@@ -4279,7 +4292,7 @@ fn decode_baseline_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4360,7 +4373,7 @@ fn decode_glyph_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
             "rotation",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_glyph_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_glyph_fields_from_decoder<'a>(
@@ -4372,7 +4385,7 @@ fn decode_glyph_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4453,7 +4466,7 @@ fn decode_decoration_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.Decoration",
     );
     let keys = cached_struct_keys(env, &DECORATION_STRUCT_KEYS, &["rects", "style_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_decoration_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_decoration_fields_from_decoder<'a>(
@@ -4465,7 +4478,7 @@ fn decode_decoration_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_repeated(|decoder| decode_rect_from_decoder(env, decoder)) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4501,7 +4514,7 @@ fn decode_blockquote_from_decoder<'a>(
         &BLOCKQUOTE_STRUCT_KEYS,
         &["vertical_bar", "quote_mark_bounds", "style_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_blockquote_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_blockquote_fields_from_decoder<'a>(
@@ -4513,7 +4526,7 @@ fn decode_blockquote_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_rect_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4560,7 +4573,7 @@ fn decode_vector_data_from_decoder<'a>(
             "style_override_table",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_vector_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_vector_data_fields_from_decoder<'a>(
@@ -4572,7 +4585,7 @@ fn decode_vector_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4614,7 +4627,7 @@ fn decode_text_path_start_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TextPathStart",
     );
     let keys = cached_struct_keys(env, &TEXT_PATH_START_STRUCT_KEYS, &["t_value", "forward"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_text_path_start_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_text_path_start_fields_from_decoder<'a>(
@@ -4626,7 +4639,7 @@ fn decode_text_path_start_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4658,7 +4671,7 @@ fn decode_guid_path_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDPath",
     );
     let keys = cached_struct_keys(env, &GUID_PATH_STRUCT_KEYS, &["guids"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_guid_path_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_guid_path_fields_from_decoder<'a>(
@@ -4670,7 +4683,7 @@ fn decode_guid_path_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder)) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4699,7 +4712,7 @@ fn decode_symbol_data_from_decoder<'a>(
         &SYMBOL_DATA_STRUCT_KEYS,
         &["symbol_id", "symbol_overrides", "uniform_scale_factor"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_symbol_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_symbol_data_fields_from_decoder<'a>(
@@ -4711,7 +4724,7 @@ fn decode_symbol_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4753,7 +4766,7 @@ fn decode_guid_path_mapping_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDPathMapping",
     );
     let keys = cached_struct_keys(env, &GUID_PATH_MAPPING_STRUCT_KEYS, &["id", "path"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_guid_path_mapping_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_guid_path_mapping_fields_from_decoder<'a>(
@@ -4765,7 +4778,7 @@ fn decode_guid_path_mapping_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -4798,7 +4811,7 @@ fn decode_derived_breakpoint_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DerivedBreakpointData",
     );
     let keys = cached_struct_keys(env, &DERIVED_BREAKPOINT_DATA_STRUCT_KEYS, &["overrides"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_derived_breakpoint_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_derived_breakpoint_data_fields_from_decoder<'a>(
@@ -4810,7 +4823,7 @@ fn decode_derived_breakpoint_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))
                 {
@@ -4849,7 +4862,7 @@ fn decode_node_generation_data_from_decoder<'a>(
             "diff_only_removals",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_generation_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_generation_data_fields_from_decoder<'a>(
@@ -4861,7 +4874,7 @@ fn decode_node_generation_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))
                 {
@@ -4911,7 +4924,7 @@ fn decode_derived_immutable_frame_data_from_decoder<'a>(
         &DERIVED_IMMUTABLE_FRAME_DATA_STRUCT_KEYS,
         &["overrides", "version"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_derived_immutable_frame_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_derived_immutable_frame_data_fields_from_decoder<'a>(
@@ -4923,7 +4936,7 @@ fn decode_derived_immutable_frame_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))
                 {
@@ -4958,7 +4971,7 @@ fn decode_jsx_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &JSX_DATA_MODULE_ATOM, "Elixir.FigKiwi.Schema.JsxData");
     let keys = cached_struct_keys(env, &JSX_DATA_STRUCT_KEYS, &["overrides"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_jsx_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_jsx_data_fields_from_decoder<'a>(
@@ -4970,7 +4983,7 @@ fn decode_jsx_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))
                 {
@@ -4998,7 +5011,7 @@ fn decode_derived_jsx_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.DerivedJsxData",
     );
     let keys = cached_struct_keys(env, &DERIVED_JSX_DATA_STRUCT_KEYS, &["overrides"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_derived_jsx_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_derived_jsx_data_fields_from_decoder<'a>(
@@ -5010,7 +5023,7 @@ fn decode_derived_jsx_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))
                 {
@@ -5038,7 +5051,7 @@ fn decode_asset_id_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AssetIdMap",
     );
     let keys = cached_struct_keys(env, &ASSET_ID_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_asset_id_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_asset_id_map_fields_from_decoder<'a>(
@@ -5050,7 +5063,7 @@ fn decode_asset_id_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_asset_id_entry_from_decoder(env, decoder))
@@ -5079,7 +5092,7 @@ fn decode_asset_id_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AssetIdEntry",
     );
     let keys = cached_struct_keys(env, &ASSET_ID_ENTRY_STRUCT_KEYS, &["asset_key", "asset_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_asset_id_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_asset_id_entry_fields_from_decoder<'a>(
@@ -5091,7 +5104,7 @@ fn decode_asset_id_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5123,7 +5136,7 @@ fn decode_asset_ref_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AssetRef",
     );
     let keys = cached_struct_keys(env, &ASSET_REF_STRUCT_KEYS, &["key", "version"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_asset_ref_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_asset_ref_fields_from_decoder<'a>(
@@ -5135,7 +5148,7 @@ fn decode_asset_ref_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5175,7 +5188,7 @@ fn decode_asset_id_from_decoder<'a>(
             "variable_set_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_asset_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_asset_id_fields_from_decoder<'a>(
@@ -5187,7 +5200,7 @@ fn decode_asset_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5254,7 +5267,7 @@ fn decode_state_group_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StateGroupId",
     );
     let keys = cached_struct_keys(env, &STATE_GROUP_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_state_group_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_state_group_id_fields_from_decoder<'a>(
@@ -5266,7 +5279,7 @@ fn decode_state_group_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5294,7 +5307,7 @@ fn decode_style_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &STYLE_ID_MODULE_ATOM, "Elixir.FigKiwi.Schema.StyleId");
     let keys = cached_struct_keys(env, &STYLE_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_style_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_style_id_fields_from_decoder<'a>(
@@ -5306,7 +5319,7 @@ fn decode_style_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5338,7 +5351,7 @@ fn decode_symbol_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SymbolId",
     );
     let keys = cached_struct_keys(env, &SYMBOL_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_symbol_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_symbol_id_fields_from_decoder<'a>(
@@ -5350,7 +5363,7 @@ fn decode_symbol_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5382,7 +5395,7 @@ fn decode_variable_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableID",
     );
     let keys = cached_struct_keys(env, &VARIABLE_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_id_fields_from_decoder<'a>(
@@ -5394,7 +5407,7 @@ fn decode_variable_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5431,7 +5444,7 @@ fn decode_variable_override_id_from_decoder<'a>(
         &VARIABLE_OVERRIDE_ID_STRUCT_KEYS,
         &["guid", "asset_ref"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_override_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_override_id_fields_from_decoder<'a>(
@@ -5443,7 +5456,7 @@ fn decode_variable_override_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5475,7 +5488,7 @@ fn decode_variable_set_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableSetID",
     );
     let keys = cached_struct_keys(env, &VARIABLE_SET_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_set_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_set_id_fields_from_decoder<'a>(
@@ -5487,7 +5500,7 @@ fn decode_variable_set_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5515,7 +5528,7 @@ fn decode_theme_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &THEME_ID_MODULE_ATOM, "Elixir.FigKiwi.Schema.ThemeID");
     let keys = cached_struct_keys(env, &THEME_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_theme_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_theme_id_fields_from_decoder<'a>(
@@ -5527,7 +5540,7 @@ fn decode_theme_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5559,7 +5572,7 @@ fn decode_code_library_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeLibraryId",
     );
     let keys = cached_struct_keys(env, &CODE_LIBRARY_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_library_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_library_id_fields_from_decoder<'a>(
@@ -5571,7 +5584,7 @@ fn decode_code_library_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5603,7 +5616,7 @@ fn decode_code_file_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeFileId",
     );
     let keys = cached_struct_keys(env, &CODE_FILE_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_file_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_file_id_fields_from_decoder<'a>(
@@ -5615,7 +5628,7 @@ fn decode_code_file_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5647,7 +5660,7 @@ fn decode_code_component_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeComponentId",
     );
     let keys = cached_struct_keys(env, &CODE_COMPONENT_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_component_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_component_id_fields_from_decoder<'a>(
@@ -5659,7 +5672,7 @@ fn decode_code_component_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5695,7 +5708,7 @@ fn decode_canvas_node_id_from_decoder<'a>(
         &CANVAS_NODE_ID_STRUCT_KEYS,
         &["guid", "symbol_id", "state_group_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_canvas_node_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_canvas_node_id_fields_from_decoder<'a>(
@@ -5707,7 +5720,7 @@ fn decode_canvas_node_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5758,7 +5771,7 @@ fn decode_index_range_from_decoder<'a>(
             match decoder.read_var_uint() {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -5791,7 +5804,7 @@ fn decode_collaborative_text_op_id_from_decoder<'a>(
             match decoder.read_var_uint() {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -5832,7 +5845,7 @@ fn decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder<'a>(
         &COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_I_DS_STRUCT_KEYS,
         &["first_id", "run_length", "parent_ids", "rebased_on_op_ids"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_collaborative_text_stripped_op_run_with_i_ds_fields_from_decoder(
         env, decoder, keys, values,
     )
@@ -5846,7 +5859,7 @@ fn decode_collaborative_text_stripped_op_run_with_i_ds_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_collaborative_text_op_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -5920,7 +5933,7 @@ fn decode_collaborative_text_stripped_op_run_with_loc_from_decoder<'a>(
             "rebased_range",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_collaborative_text_stripped_op_run_with_loc_fields_from_decoder(
         env, decoder, keys, values,
     )
@@ -5934,7 +5947,7 @@ fn decode_collaborative_text_stripped_op_run_with_loc_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_collaborative_text_op_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6011,7 +6024,7 @@ fn decode_collaborative_text_op_run_from_decoder<'a>(
             "rebased_range",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_collaborative_text_op_run_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_collaborative_text_op_run_fields_from_decoder<'a>(
@@ -6023,7 +6036,7 @@ fn decode_collaborative_text_op_run_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_collaborative_text_op_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6119,7 +6132,7 @@ fn decode_collaborative_plain_text_from_decoder<'a>(
             "changes_to_append",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_collaborative_plain_text_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_collaborative_plain_text_fields_from_decoder<'a>(
@@ -6131,7 +6144,7 @@ fn decode_collaborative_plain_text_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder(env, decoder)
@@ -6206,7 +6219,7 @@ fn decode_collaborative_text_selection_from_decoder<'a>(
             "text_version",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_collaborative_text_selection_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_collaborative_text_selection_fields_from_decoder<'a>(
@@ -6218,7 +6231,7 @@ fn decode_collaborative_text_selection_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6298,7 +6311,7 @@ fn decode_responsive_text_style_variant_from_decoder<'a>(
             "name",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_responsive_text_style_variant_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_responsive_text_style_variant_fields_from_decoder<'a>(
@@ -6310,7 +6323,7 @@ fn decode_responsive_text_style_variant_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6425,7 +6438,7 @@ fn decode_slide_theme_props_from_decoder<'a>(
             "is_generated_from_design",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_slide_theme_props_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_slide_theme_props_fields_from_decoder<'a>(
@@ -6437,7 +6450,7 @@ fn decode_slide_theme_props_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6513,7 +6526,7 @@ fn decode_slide_theme_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlideThemeMap",
     );
     let keys = cached_struct_keys(env, &SLIDE_THEME_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_slide_theme_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_slide_theme_map_fields_from_decoder<'a>(
@@ -6525,7 +6538,7 @@ fn decode_slide_theme_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_slide_theme_map_entry_from_decoder(env, decoder)
@@ -6559,7 +6572,7 @@ fn decode_slide_theme_map_entry_from_decoder<'a>(
         &SLIDE_THEME_MAP_ENTRY_STRUCT_KEYS,
         &["theme_id", "theme_props"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_slide_theme_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_slide_theme_map_entry_fields_from_decoder<'a>(
@@ -6571,7 +6584,7 @@ fn decode_slide_theme_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_theme_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6618,7 +6631,7 @@ fn decode_shared_symbol_reference_from_decoder<'a>(
             "is_unflattened",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_shared_symbol_reference_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_shared_symbol_reference_fields_from_decoder<'a>(
@@ -6630,7 +6643,7 @@ fn decode_shared_symbol_reference_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6738,7 +6751,7 @@ fn decode_shared_component_master_data_from_decoder<'a>(
             "is_unflattened",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_shared_component_master_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_shared_component_master_data_fields_from_decoder<'a>(
@@ -6750,7 +6763,7 @@ fn decode_shared_component_master_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6808,7 +6821,7 @@ fn decode_instance_override_stash_from_decoder<'a>(
             "overrides",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_instance_override_stash_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_instance_override_stash_fields_from_decoder<'a>(
@@ -6820,7 +6833,7 @@ fn decode_instance_override_stash_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_path_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6873,7 +6886,7 @@ fn decode_instance_override_stash_v2_from_decoder<'a>(
             "overrides",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_instance_override_stash_v2_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_instance_override_stash_v2_fields_from_decoder<'a>(
@@ -6885,7 +6898,7 @@ fn decode_instance_override_stash_v2_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_path_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6938,7 +6951,7 @@ fn decode_imported_code_file_entry_from_decoder<'a>(
         &IMPORTED_CODE_FILE_ENTRY_STRUCT_KEYS,
         &["code_file_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_imported_code_file_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_imported_code_file_entry_fields_from_decoder<'a>(
@@ -6950,7 +6963,7 @@ fn decode_imported_code_file_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_code_file_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -6975,7 +6988,7 @@ fn decode_imported_code_files_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ImportedCodeFiles",
     );
     let keys = cached_struct_keys(env, &IMPORTED_CODE_FILES_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_imported_code_files_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_imported_code_files_fields_from_decoder<'a>(
@@ -6987,7 +7000,7 @@ fn decode_imported_code_files_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_imported_code_file_entry_from_decoder(env, decoder)
@@ -7146,7 +7159,7 @@ fn decode_effect_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
             "id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_effect_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_effect_fields_from_decoder<'a>(
@@ -7158,7 +7171,7 @@ fn decode_effect_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_effect_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -7597,7 +7610,7 @@ fn decode_transform_modifier_from_decoder<'a>(
             "skew_y",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transform_modifier_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transform_modifier_fields_from_decoder<'a>(
@@ -7609,7 +7622,7 @@ fn decode_transform_modifier_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_transform_modifier_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -7780,7 +7793,7 @@ fn decode_matrix4f_from_decoder<'a>(
                                                                                                                             match decoder.read_var_float(env) {
                                                                                                                                 Ok(value) => {
                                                                                                                                     values.push(value.encode(env).as_c_arg());
-                                                                                                                                    make_struct(env, keys, &values)
+                                                                                                                                    make_struct_from_nif_term_arrays(env, keys, &values)
                                                                                                                                 }
                                                                                                                                 Err(reason) => Err(reason),
                                                                                                                             }
@@ -7855,7 +7868,7 @@ fn decode_fixed_order_transform3d_from_decoder<'a>(
             "rotate_z",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_fixed_order_transform3d_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_fixed_order_transform3d_fields_from_decoder<'a>(
@@ -7867,7 +7880,7 @@ fn decode_fixed_order_transform3d_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -7949,7 +7962,7 @@ fn decode_transform_fn_value_from_decoder<'a>(
         &TRANSFORM_FN_VALUE_STRUCT_KEYS,
         &["matrix3d", "perspective", "rotate_angle", "translate_value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transform_fn_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transform_fn_value_fields_from_decoder<'a>(
@@ -7961,7 +7974,7 @@ fn decode_transform_fn_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_matrix4f_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8007,7 +8020,7 @@ fn decode_transform_fn_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransformFn",
     );
     let keys = cached_struct_keys(env, &TRANSFORM_FN_STRUCT_KEYS, &["type", "value"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transform_fn_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transform_fn_fields_from_decoder<'a>(
@@ -8019,7 +8032,7 @@ fn decode_transform_fn_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_transform_fn_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8056,7 +8069,7 @@ fn decode_transform_schema_value_from_decoder<'a>(
         &TRANSFORM_SCHEMA_VALUE_STRUCT_KEYS,
         &["fixed_order_transform3d", "transform_functions"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transform_schema_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transform_schema_value_fields_from_decoder<'a>(
@@ -8068,7 +8081,7 @@ fn decode_transform_schema_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_fixed_order_transform3d_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8110,7 +8123,7 @@ fn decode_transform3d_from_decoder<'a>(
         &TRANSFORM3D_STRUCT_KEYS,
         &["type", "value", "backface_hidden"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transform3d_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transform3d_fields_from_decoder<'a>(
@@ -8122,7 +8135,7 @@ fn decode_transform3d_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_transform_schema_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8169,7 +8182,7 @@ fn decode_number_vector2_d_from_decoder<'a>(
             match decode_number_from_decoder(env, decoder) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -8186,7 +8199,7 @@ fn decode_scene3d_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
         &SCENE3D_STRUCT_KEYS,
         &["perspective", "perspective_origin", "preserve3d"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_scene3d_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_scene3d_fields_from_decoder<'a>(
@@ -8198,7 +8211,7 @@ fn decode_scene3d_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8237,7 +8250,7 @@ fn decode_transform_origin_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransformOrigin",
     );
     let keys = cached_struct_keys(env, &TRANSFORM_ORIGIN_STRUCT_KEYS, &["x", "y"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transform_origin_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transform_origin_fields_from_decoder<'a>(
@@ -8249,7 +8262,7 @@ fn decode_transform_origin_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_number_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8281,7 +8294,7 @@ fn decode_transition_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionInfo",
     );
     let keys = cached_struct_keys(env, &TRANSITION_INFO_STRUCT_KEYS, &["type", "duration"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transition_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transition_info_fields_from_decoder<'a>(
@@ -8293,7 +8306,7 @@ fn decode_transition_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_transition_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8363,7 +8376,7 @@ fn decode_prototype_device_from_decoder<'a>(
         &PROTOTYPE_DEVICE_STRUCT_KEYS,
         &["type", "size", "preset_identifier", "rotation"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_prototype_device_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_prototype_device_fields_from_decoder<'a>(
@@ -8375,7 +8388,7 @@ fn decode_prototype_device_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_prototype_device_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8494,7 +8507,7 @@ fn decode_overlay_background_appearance_from_decoder<'a>(
         &OVERLAY_BACKGROUND_APPEARANCE_STRUCT_KEYS,
         &["background_type", "background_color"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_overlay_background_appearance_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_overlay_background_appearance_fields_from_decoder<'a>(
@@ -8506,7 +8519,7 @@ fn decode_overlay_background_appearance_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_overlay_background_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8619,7 +8632,7 @@ fn decode_export_settings_from_decoder<'a>(
             "background_type",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_export_settings_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_export_settings_fields_from_decoder<'a>(
@@ -8631,7 +8644,7 @@ fn decode_export_settings_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8787,7 +8800,7 @@ fn decode_layout_grid_from_decoder<'a>(
             "gutter_size_var",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_layout_grid_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_layout_grid_fields_from_decoder<'a>(
@@ -8799,7 +8812,7 @@ fn decode_layout_grid_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_layout_grid_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8901,7 +8914,7 @@ static GUIDE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::
 fn decode_guide_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &GUIDE_MODULE_ATOM, "Elixir.FigKiwi.Schema.Guide");
     let keys = cached_struct_keys(env, &GUIDE_STRUCT_KEYS, &["axis", "offset", "guid"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_guide_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_guide_fields_from_decoder<'a>(
@@ -8913,7 +8926,7 @@ fn decode_guide_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_axis_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -8949,7 +8962,7 @@ fn decode_path_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifR
         &PATH_STRUCT_KEYS,
         &["winding_rule", "commands_blob", "style_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_path_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_path_fields_from_decoder<'a>(
@@ -8961,7 +8974,7 @@ fn decode_path_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_winding_rule_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9062,7 +9075,7 @@ fn decode_dynamic_stroke_settings_from_decoder<'a>(
         &DYNAMIC_STROKE_SETTINGS_STRUCT_KEYS,
         &["frequency", "wiggle", "smoothen"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_dynamic_stroke_settings_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_dynamic_stroke_settings_fields_from_decoder<'a>(
@@ -9074,7 +9087,7 @@ fn decode_dynamic_stroke_settings_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9118,7 +9131,7 @@ fn decode_scatter_stroke_settings_from_decoder<'a>(
         &SCATTER_STROKE_SETTINGS_STRUCT_KEYS,
         &["gap", "wiggle", "angular_jitter", "rotation", "size_jitter"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_scatter_stroke_settings_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_scatter_stroke_settings_fields_from_decoder<'a>(
@@ -9130,7 +9143,7 @@ fn decode_scatter_stroke_settings_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9184,7 +9197,7 @@ fn decode_stretch_stroke_settings_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StretchStrokeSettings",
     );
     let keys = cached_struct_keys(env, &STRETCH_STROKE_SETTINGS_STRUCT_KEYS, &["orientation"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_stretch_stroke_settings_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_stretch_stroke_settings_fields_from_decoder<'a>(
@@ -9196,7 +9209,7 @@ fn decode_stretch_stroke_settings_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_brush_orientation_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9221,7 +9234,7 @@ fn decode_stroke_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StrokeData",
     );
     let keys = cached_struct_keys(env, &STROKE_DATA_STRUCT_KEYS, &["strokes", "version"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_stroke_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_stroke_data_fields_from_decoder<'a>(
@@ -9233,7 +9246,7 @@ fn decode_stroke_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_stroke_from_decoder(env, decoder)) {
                     Ok(value) => {
@@ -9279,7 +9292,7 @@ fn decode_stroke_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Ni
             "is_deleted",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_stroke_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_stroke_fields_from_decoder<'a>(
@@ -9291,7 +9304,7 @@ fn decode_stroke_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_int() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9414,7 +9427,7 @@ fn decode_variable_width_point_from_decoder<'a>(
         &VARIABLE_WIDTH_POINT_STRUCT_KEYS,
         &["position", "ascent", "descent", "segment_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_width_point_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_width_point_fields_from_decoder<'a>(
@@ -9426,7 +9439,7 @@ fn decode_variable_width_point_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9477,7 +9490,7 @@ fn decode_shared_style_reference_from_decoder<'a>(
         &SHARED_STYLE_REFERENCE_STRUCT_KEYS,
         &["style_key", "version_hash"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_shared_style_reference_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_shared_style_reference_fields_from_decoder<'a>(
@@ -9489,7 +9502,7 @@ fn decode_shared_style_reference_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9526,7 +9539,7 @@ fn decode_shared_style_master_data_from_decoder<'a>(
         &SHARED_STYLE_MASTER_DATA_STRUCT_KEYS,
         &["style_key", "sort_position", "file_key"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_shared_style_master_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_shared_style_master_data_fields_from_decoder<'a>(
@@ -9538,7 +9551,7 @@ fn decode_shared_style_master_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9599,7 +9612,7 @@ fn decode_arc_data_from_decoder<'a>(
         &ARC_DATA_STRUCT_KEYS,
         &["starting_angle", "ending_angle", "inner_radius"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_arc_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_arc_data_fields_from_decoder<'a>(
@@ -9611,7 +9624,7 @@ fn decode_arc_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9654,7 +9667,7 @@ fn decode_symbol_link_from_decoder<'a>(
         &SYMBOL_LINK_STRUCT_KEYS,
         &["uri", "display_name", "display_text"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_symbol_link_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_symbol_link_fields_from_decoder<'a>(
@@ -9666,7 +9679,7 @@ fn decode_symbol_link_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9709,7 +9722,7 @@ fn decode_plugin_data_from_decoder<'a>(
         &PLUGIN_DATA_STRUCT_KEYS,
         &["plugin_id", "value", "key"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_plugin_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_plugin_data_fields_from_decoder<'a>(
@@ -9721,7 +9734,7 @@ fn decode_plugin_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9771,7 +9784,7 @@ fn decode_plugin_relaunch_data_from_decoder<'a>(
             "custom_tool_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_plugin_relaunch_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_plugin_relaunch_data_fields_from_decoder<'a>(
@@ -9783,7 +9796,7 @@ fn decode_plugin_relaunch_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9841,7 +9854,7 @@ fn decode_multiplayer_field_version_from_decoder<'a>(
         &MULTIPLAYER_FIELD_VERSION_STRUCT_KEYS,
         &["counter", "session_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_multiplayer_field_version_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_multiplayer_field_version_fields_from_decoder<'a>(
@@ -9853,7 +9866,7 @@ fn decode_multiplayer_field_version_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9925,7 +9938,7 @@ fn decode_connector_endpoint_from_decoder<'a>(
             "relative_position",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_connector_endpoint_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_connector_endpoint_fields_from_decoder<'a>(
@@ -9937,7 +9950,7 @@ fn decode_connector_endpoint_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -9988,7 +10001,7 @@ fn decode_connector_control_point_from_decoder<'a>(
         &CONNECTOR_CONTROL_POINT_STRUCT_KEYS,
         &["position", "axis"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_connector_control_point_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_connector_control_point_fields_from_decoder<'a>(
@@ -10000,7 +10013,7 @@ fn decode_connector_control_point_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10073,7 +10086,7 @@ fn decode_connector_text_midpoint_from_decoder<'a>(
         &CONNECTOR_TEXT_MIDPOINT_STRUCT_KEYS,
         &["section", "offset", "off_axis_offset"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_connector_text_midpoint_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_connector_text_midpoint_fields_from_decoder<'a>(
@@ -10085,7 +10098,7 @@ fn decode_connector_text_midpoint_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_connector_text_section_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10293,7 +10306,7 @@ fn decode_annotation_property_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnnotationProperty",
     );
     let keys = cached_struct_keys(env, &ANNOTATION_PROPERTY_STRUCT_KEYS, &["type"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_annotation_property_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_annotation_property_fields_from_decoder<'a>(
@@ -10305,7 +10318,7 @@ fn decode_annotation_property_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_annotation_property_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10393,7 +10406,7 @@ fn decode_annotation_category_custom_from_decoder<'a>(
         &ANNOTATION_CATEGORY_CUSTOM_STRUCT_KEYS,
         &["color", "custom_color", "label"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_annotation_category_custom_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_annotation_category_custom_fields_from_decoder<'a>(
@@ -10405,7 +10418,7 @@ fn decode_annotation_category_custom_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_annotation_category_color_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10454,7 +10467,7 @@ fn decode_annotation_category_from_decoder<'a>(
         &ANNOTATION_CATEGORY_STRUCT_KEYS,
         &["id", "preset", "custom"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_annotation_category_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_annotation_category_fields_from_decoder<'a>(
@@ -10466,7 +10479,7 @@ fn decode_annotation_category_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10510,7 +10523,7 @@ fn decode_annotation_categories_from_decoder<'a>(
         &ANNOTATION_CATEGORIES_STRUCT_KEYS,
         &["version", "items"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_annotation_categories_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_annotation_categories_fields_from_decoder<'a>(
@@ -10522,7 +10535,7 @@ fn decode_annotation_categories_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10562,7 +10575,7 @@ fn decode_annotation_from_decoder<'a>(
         &ANNOTATION_STRUCT_KEYS,
         &["label", "properties", "label_v2", "category_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_annotation_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_annotation_fields_from_decoder<'a>(
@@ -10574,7 +10587,7 @@ fn decode_annotation_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10666,7 +10679,7 @@ fn decode_annotation_measurement_from_decoder<'a>(
             "free_text",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_annotation_measurement_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_annotation_measurement_fields_from_decoder<'a>(
@@ -10678,7 +10691,7 @@ fn decode_annotation_measurement_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10763,7 +10776,7 @@ fn decode_library_move_info_from_decoder<'a>(
         &LIBRARY_MOVE_INFO_STRUCT_KEYS,
         &["old_key", "paste_file_key"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_library_move_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_library_move_info_fields_from_decoder<'a>(
@@ -10775,7 +10788,7 @@ fn decode_library_move_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10812,7 +10825,7 @@ fn decode_library_move_history_item_from_decoder<'a>(
         &LIBRARY_MOVE_HISTORY_ITEM_STRUCT_KEYS,
         &["source_node_id", "source_component_key"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_library_move_history_item_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_library_move_history_item_fields_from_decoder<'a>(
@@ -10824,7 +10837,7 @@ fn decode_library_move_history_item_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10861,7 +10874,7 @@ fn decode_developer_related_link_from_decoder<'a>(
         &DEVELOPER_RELATED_LINK_STRUCT_KEYS,
         &["node_id", "file_key", "link_name", "link_url"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_developer_related_link_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_developer_related_link_fields_from_decoder<'a>(
@@ -10873,7 +10886,7 @@ fn decode_developer_related_link_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10919,7 +10932,7 @@ fn decode_widget_pointer_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.WidgetPointer",
     );
     let keys = cached_struct_keys(env, &WIDGET_POINTER_STRUCT_KEYS, &["node_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_widget_pointer_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_widget_pointer_fields_from_decoder<'a>(
@@ -10931,7 +10944,7 @@ fn decode_widget_pointer_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -10965,7 +10978,7 @@ fn decode_edit_info_from_decoder<'a>(
             "created_at",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_edit_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_edit_info_fields_from_decoder<'a>(
@@ -10977,7 +10990,7 @@ fn decode_edit_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -11113,7 +11126,7 @@ fn decode_section_status_info_from_decoder<'a>(
             "prev_status",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_section_status_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_section_status_info_fields_from_decoder<'a>(
@@ -11125,7 +11138,7 @@ fn decode_section_status_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_section_status_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -11191,7 +11204,7 @@ fn decode_buzz_approval_request_info_from_decoder<'a>(
             "assets_in_request",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_buzz_approval_request_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_buzz_approval_request_info_fields_from_decoder<'a>(
@@ -11203,7 +11216,7 @@ fn decode_buzz_approval_request_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -11285,7 +11298,7 @@ fn decode_buzz_approval_requests_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.BuzzApprovalRequests",
     );
     let keys = cached_struct_keys(env, &BUZZ_APPROVAL_REQUESTS_STRUCT_KEYS, &["requests"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_buzz_approval_requests_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_buzz_approval_requests_fields_from_decoder<'a>(
@@ -11297,7 +11310,7 @@ fn decode_buzz_approval_requests_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_buzz_approval_request_info_from_decoder(env, decoder)
@@ -11361,7 +11374,7 @@ fn decode_buzz_approval_node_status_info_from_decoder<'a>(
             "approval_revoked_at_history",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_buzz_approval_node_status_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_buzz_approval_node_status_info_fields_from_decoder<'a>(
@@ -11373,7 +11386,7 @@ fn decode_buzz_approval_node_status_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_buzz_approval_node_status_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -11428,7 +11441,7 @@ fn decode_code_embed_info_from_decoder<'a>(
             "is_published_site",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_embed_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_embed_info_fields_from_decoder<'a>(
@@ -11440,7 +11453,7 @@ fn decode_code_embed_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -12107,7 +12120,7 @@ fn decode_node_change_from_decoder<'a>(
             "custom_tool_artifact_ref",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_change_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_change_fields_from_decoder<'a>(
@@ -12119,7 +12132,7 @@ fn decode_node_change_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16465,7 +16478,7 @@ fn decode_git_repo_ref_from_decoder<'a>(
         &GIT_REPO_REF_STRUCT_KEYS,
         &["provider", "git_repo", "git_ref"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_git_repo_ref_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_git_repo_ref_fields_from_decoder<'a>(
@@ -16477,7 +16490,7 @@ fn decode_git_repo_ref_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_git_repo_ref_provider_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16521,7 +16534,7 @@ fn decode_source_control_config_from_decoder<'a>(
         &SOURCE_CONTROL_CONFIG_STRUCT_KEYS,
         &["origin", "upstream"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_source_control_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_source_control_config_fields_from_decoder<'a>(
@@ -16533,7 +16546,7 @@ fn decode_source_control_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_git_repo_ref_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16577,7 +16590,7 @@ fn decode_code_snapshot_from_decoder<'a>(
             "device_pixel_ratio",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_snapshot_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_snapshot_fields_from_decoder<'a>(
@@ -16589,7 +16602,7 @@ fn decode_code_snapshot_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             6i64 => match decode_code_snapshot_state_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16658,7 +16671,7 @@ fn decode_code_output_layer_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeOutputLayer",
     );
     let keys = cached_struct_keys(env, &CODE_OUTPUT_LAYER_STRUCT_KEYS, &["node"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_output_layer_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_output_layer_fields_from_decoder<'a>(
@@ -16670,7 +16683,7 @@ fn decode_code_output_layer_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_node_change_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16700,7 +16713,7 @@ fn decode_code_snapshot_layers_from_decoder<'a>(
         &CODE_SNAPSHOT_LAYERS_STRUCT_KEYS,
         &["state", "invalidated_at", "layers"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_snapshot_layers_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_snapshot_layers_fields_from_decoder<'a>(
@@ -16712,7 +16725,7 @@ fn decode_code_snapshot_layers_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_code_snapshot_state_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16759,7 +16772,7 @@ fn decode_code_behavior_data_from_decoder<'a>(
         &CODE_BEHAVIOR_DATA_STRUCT_KEYS,
         &["name", "icon", "node_types", "category", "api_version"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_behavior_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_behavior_data_fields_from_decoder<'a>(
@@ -16771,7 +16784,7 @@ fn decode_code_behavior_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16828,7 +16841,7 @@ fn decode_code_example_from_decoder<'a>(
         &CODE_EXAMPLE_STRUCT_KEYS,
         &["example_name", "code_export_name"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_example_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_example_fields_from_decoder<'a>(
@@ -16840,7 +16853,7 @@ fn decode_code_example_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16872,7 +16885,7 @@ fn decode_used_make_library_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.UsedMakeLibrary",
     );
     let keys = cached_struct_keys(env, &USED_MAKE_LIBRARY_STRUCT_KEYS, &["make_library_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_used_make_library_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_used_make_library_fields_from_decoder<'a>(
@@ -16884,7 +16897,7 @@ fn decode_used_make_library_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -16932,7 +16945,7 @@ fn decode_cookie_banner_text_from_decoder<'a>(
             "trigger_label",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cookie_banner_text_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cookie_banner_text_fields_from_decoder<'a>(
@@ -16944,7 +16957,7 @@ fn decode_cookie_banner_text_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -17105,7 +17118,7 @@ fn decode_cookie_banner_settings_from_decoder<'a>(
             "locale",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cookie_banner_settings_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cookie_banner_settings_fields_from_decoder<'a>(
@@ -17117,7 +17130,7 @@ fn decode_cookie_banner_settings_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -17305,7 +17318,7 @@ fn decode_responsive_set_settings_from_decoder<'a>(
             "cookie_banner",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_responsive_set_settings_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_responsive_set_settings_fields_from_decoder<'a>(
@@ -17317,7 +17330,7 @@ fn decode_responsive_set_settings_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -17501,7 +17514,7 @@ fn decode_cms_selector_from_decoder<'a>(
         &CMS_SELECTOR_STRUCT_KEYS,
         &["cms_collection_id", "filter_criteria", "sorts", "limit"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_selector_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_selector_fields_from_decoder<'a>(
@@ -17513,7 +17526,7 @@ fn decode_cms_selector_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -17567,7 +17580,7 @@ fn decode_cms_filter_critera_from_decoder<'a>(
         &CMS_FILTER_CRITERA_STRUCT_KEYS,
         &["match_type", "filters"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_filter_critera_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_filter_critera_fields_from_decoder<'a>(
@@ -17579,7 +17592,7 @@ fn decode_cms_filter_critera_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_cms_filter_criteria_match_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -17638,7 +17651,7 @@ fn decode_cms_selector_filter_from_decoder<'a>(
         &CMS_SELECTOR_FILTER_STRUCT_KEYS,
         &["cms_field_id", "op", "comparison_value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_selector_filter_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_selector_filter_fields_from_decoder<'a>(
@@ -17650,7 +17663,7 @@ fn decode_cms_selector_filter_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -17708,7 +17721,7 @@ fn decode_cms_selector_sort_from_decoder<'a>(
         &CMS_SELECTOR_SORT_STRUCT_KEYS,
         &["cms_field_id", "order_by"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_selector_sort_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_selector_sort_fields_from_decoder<'a>(
@@ -17720,7 +17733,7 @@ fn decode_cms_selector_sort_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -17767,7 +17780,7 @@ fn decode_cms_consumption_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSConsumptionMap",
     );
     let keys = cached_struct_keys(env, &CMS_CONSUMPTION_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_consumption_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_consumption_map_fields_from_decoder<'a>(
@@ -17779,7 +17792,7 @@ fn decode_cms_consumption_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_cms_consumption_map_entry_from_decoder(env, decoder)
@@ -17813,7 +17826,7 @@ fn decode_cms_consumption_map_entry_from_decoder<'a>(
         &CMS_CONSUMPTION_MAP_ENTRY_STRUCT_KEYS,
         &["consumption_field", "cms_field_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_consumption_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_consumption_map_entry_fields_from_decoder<'a>(
@@ -17825,7 +17838,7 @@ fn decode_cms_consumption_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_cms_consumption_field_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -17873,7 +17886,7 @@ fn decode_cms_rich_text_style_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CMSRichTextStyleMap",
     );
     let keys = cached_struct_keys(env, &CMS_RICH_TEXT_STYLE_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_rich_text_style_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_rich_text_style_map_fields_from_decoder<'a>(
@@ -17885,7 +17898,7 @@ fn decode_cms_rich_text_style_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_cms_rich_text_style_entry_from_decoder(env, decoder)
@@ -17921,7 +17934,7 @@ fn decode_cms_rich_text_style_entry_from_decoder<'a>(
         &CMS_RICH_TEXT_STYLE_ENTRY_STRUCT_KEYS,
         &["style_class", "text_descriptor"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_rich_text_style_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_rich_text_style_entry_fields_from_decoder<'a>(
@@ -17933,7 +17946,7 @@ fn decode_cms_rich_text_style_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_cms_rich_text_style_class_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18003,7 +18016,7 @@ fn decode_cms_rich_text_descriptor_from_decoder<'a>(
         &CMS_RICH_TEXT_DESCRIPTOR_STRUCT_KEYS,
         &["text_style_id", "font_name_variants"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_rich_text_descriptor_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_rich_text_descriptor_fields_from_decoder<'a>(
@@ -18015,7 +18028,7 @@ fn decode_cms_rich_text_descriptor_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_style_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18052,7 +18065,7 @@ fn decode_repeater_cms_override_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.RepeaterCmsOverrideData",
     );
     let keys = cached_struct_keys(env, &REPEATER_CMS_OVERRIDE_DATA_STRUCT_KEYS, &["overrides"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_repeater_cms_override_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_repeater_cms_override_data_fields_from_decoder<'a>(
@@ -18064,7 +18077,7 @@ fn decode_repeater_cms_override_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))
                 {
@@ -18099,7 +18112,7 @@ fn decode_repeater_override_data_from_decoder<'a>(
         &REPEATER_OVERRIDE_DATA_STRUCT_KEYS,
         &["parent_index_overrides"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_repeater_override_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_repeater_override_data_fields_from_decoder<'a>(
@@ -18111,7 +18124,7 @@ fn decode_repeater_override_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))
                 {
@@ -18146,7 +18159,7 @@ fn decode_repeater_symbol_override_data_from_decoder<'a>(
         &REPEATER_SYMBOL_OVERRIDE_DATA_STRUCT_KEYS,
         &["overrides_by_position"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_repeater_symbol_override_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_repeater_symbol_override_data_fields_from_decoder<'a>(
@@ -18158,7 +18171,7 @@ fn decode_repeater_symbol_override_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_repeater_position_overrides_from_decoder(env, decoder)
@@ -18194,7 +18207,7 @@ fn decode_repeater_position_overrides_from_decoder<'a>(
         &REPEATER_POSITION_OVERRIDES_STRUCT_KEYS,
         &["position", "overrides"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_repeater_position_overrides_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_repeater_position_overrides_fields_from_decoder<'a>(
@@ -18206,7 +18219,7 @@ fn decode_repeater_position_overrides_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_parent_index_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18250,7 +18263,7 @@ fn decode_inherited_variables_data_from_decoder<'a>(
         &INHERITED_VARIABLES_DATA_STRUCT_KEYS,
         &["variable_ids"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_inherited_variables_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_inherited_variables_data_fields_from_decoder<'a>(
@@ -18262,7 +18275,7 @@ fn decode_inherited_variables_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_inherited_variable_entry_from_decoder(env, decoder)
@@ -18294,7 +18307,7 @@ fn decode_inherited_variable_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InheritedVariableEntry",
     );
     let keys = cached_struct_keys(env, &INHERITED_VARIABLE_ENTRY_STRUCT_KEYS, &["variable_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_inherited_variable_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_inherited_variable_entry_fields_from_decoder<'a>(
@@ -18306,7 +18319,7 @@ fn decode_inherited_variable_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18336,7 +18349,7 @@ fn decode_hub_file_attribution_from_decoder<'a>(
         &HUB_FILE_ATTRIBUTION_STRUCT_KEYS,
         &["hub_file_id", "hub_file_name"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_hub_file_attribution_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_hub_file_attribution_fields_from_decoder<'a>(
@@ -18348,7 +18361,7 @@ fn decode_hub_file_attribution_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18384,7 +18397,7 @@ fn decode_managed_string_data_from_decoder<'a>(
         &MANAGED_STRING_DATA_STRUCT_KEYS,
         &["key", "context", "locale", "content", "content_schema"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_data_fields_from_decoder<'a>(
@@ -18396,7 +18409,7 @@ fn decode_managed_string_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18495,7 +18508,7 @@ fn decode_managed_string_node_from_decoder<'a>(
             "placeholder_node_data",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_node_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_node_fields_from_decoder<'a>(
@@ -18507,7 +18520,7 @@ fn decode_managed_string_node_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_managed_string_node_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18565,7 +18578,7 @@ fn decode_managed_string_text_node_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringTextNodeData",
     );
     let keys = cached_struct_keys(env, &MANAGED_STRING_TEXT_NODE_DATA_STRUCT_KEYS, &["value"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_text_node_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_text_node_data_fields_from_decoder<'a>(
@@ -18577,7 +18590,7 @@ fn decode_managed_string_text_node_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18610,7 +18623,7 @@ fn decode_managed_string_concatenate_ast_node_data_from_decoder<'a>(
         &MANAGED_STRING_CONCATENATE_AST_NODE_DATA_STRUCT_KEYS,
         &["values"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_concatenate_ast_node_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_concatenate_ast_node_data_fields_from_decoder<'a>(
@@ -18622,7 +18635,7 @@ fn decode_managed_string_concatenate_ast_node_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_managed_string_node_from_decoder(env, decoder))
@@ -18681,7 +18694,7 @@ fn decode_managed_string_plural_ast_node_data_from_decoder<'a>(
         &MANAGED_STRING_PLURAL_AST_NODE_DATA_STRUCT_KEYS,
         &["identifier", "conditions"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_plural_ast_node_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_plural_ast_node_data_fields_from_decoder<'a>(
@@ -18693,7 +18706,7 @@ fn decode_managed_string_plural_ast_node_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18738,7 +18751,7 @@ fn decode_managed_string_plural_type_map_entry_from_decoder<'a>(
         &MANAGED_STRING_PLURAL_TYPE_MAP_ENTRY_STRUCT_KEYS,
         &["key", "value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_plural_type_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_plural_type_map_entry_fields_from_decoder<'a>(
@@ -18750,7 +18763,7 @@ fn decode_managed_string_plural_type_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_managed_string_plural_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18811,7 +18824,7 @@ fn decode_managed_string_placeholder_ast_node_data_from_decoder<'a>(
         &MANAGED_STRING_PLACEHOLDER_AST_NODE_DATA_STRUCT_KEYS,
         &["identifier", "format_type", "format_pattern"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_placeholder_ast_node_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_placeholder_ast_node_data_fields_from_decoder<'a>(
@@ -18823,7 +18836,7 @@ fn decode_managed_string_placeholder_ast_node_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18868,7 +18881,7 @@ fn decode_cooper_revert_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CooperRevertData",
     );
     let keys = cached_struct_keys(env, &COOPER_REVERT_DATA_STRUCT_KEYS, &["original_values"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cooper_revert_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cooper_revert_data_fields_from_decoder<'a>(
@@ -18880,7 +18893,7 @@ fn decode_cooper_revert_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_node_change_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -18916,7 +18929,7 @@ fn decode_video_playback_from_decoder<'a>(
             "end_time_ms",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_video_playback_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_video_playback_fields_from_decoder<'a>(
@@ -18928,7 +18941,7 @@ fn decode_video_playback_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -19054,7 +19067,7 @@ fn decode_widget_hover_style_from_decoder<'a>(
             "is_opacity_set",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_widget_hover_style_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_widget_hover_style_fields_from_decoder<'a>(
@@ -19066,7 +19079,7 @@ fn decode_widget_hover_style_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder)) {
                     Ok(value) => {
@@ -19135,7 +19148,7 @@ fn decode_widget_derived_subtree_cursor_from_decoder<'a>(
         &WIDGET_DERIVED_SUBTREE_CURSOR_STRUCT_KEYS,
         &["session_id", "counter"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_widget_derived_subtree_cursor_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_widget_derived_subtree_cursor_fields_from_decoder<'a>(
@@ -19147,7 +19160,7 @@ fn decode_widget_derived_subtree_cursor_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -19183,7 +19196,7 @@ fn decode_multiplayer_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.MultiplayerMap",
     );
     let keys = cached_struct_keys(env, &MULTIPLAYER_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_multiplayer_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_multiplayer_map_fields_from_decoder<'a>(
@@ -19195,7 +19208,7 @@ fn decode_multiplayer_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_multiplayer_map_entry_from_decoder(env, decoder)
@@ -19225,7 +19238,7 @@ fn decode_multiplayer_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.MultiplayerMapEntry",
     );
     let keys = cached_struct_keys(env, &MULTIPLAYER_MAP_ENTRY_STRUCT_KEYS, &["key", "value"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_multiplayer_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_multiplayer_map_entry_fields_from_decoder<'a>(
@@ -19237,7 +19250,7 @@ fn decode_multiplayer_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -19269,7 +19282,7 @@ fn decode_variable_data_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableDataMap",
     );
     let keys = cached_struct_keys(env, &VARIABLE_DATA_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_data_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_data_map_fields_from_decoder<'a>(
@@ -19281,7 +19294,7 @@ fn decode_variable_data_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_variable_data_map_entry_from_decoder(env, decoder)
@@ -19315,7 +19328,7 @@ fn decode_variable_data_map_entry_from_decoder<'a>(
         &VARIABLE_DATA_MAP_ENTRY_STRUCT_KEYS,
         &["node_field", "variable_data", "variable_field"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_data_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_data_map_entry_fields_from_decoder<'a>(
@@ -19327,7 +19340,7 @@ fn decode_variable_data_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -19572,7 +19585,7 @@ fn decode_variable_mode_by_set_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableModeBySetMap",
     );
     let keys = cached_struct_keys(env, &VARIABLE_MODE_BY_SET_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_mode_by_set_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_mode_by_set_map_fields_from_decoder<'a>(
@@ -19584,7 +19597,7 @@ fn decode_variable_mode_by_set_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_variable_mode_by_set_map_entry_from_decoder(env, decoder)
@@ -19624,7 +19637,7 @@ fn decode_variable_mode_by_set_map_entry_from_decoder<'a>(
             "variable_set_extension_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_mode_by_set_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_mode_by_set_map_entry_fields_from_decoder<'a>(
@@ -19636,7 +19649,7 @@ fn decode_variable_mode_by_set_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_set_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -19681,7 +19694,7 @@ fn decode_code_syntax_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CodeSyntaxMap",
     );
     let keys = cached_struct_keys(env, &CODE_SYNTAX_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_syntax_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_syntax_map_fields_from_decoder<'a>(
@@ -19693,7 +19706,7 @@ fn decode_code_syntax_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_code_syntax_map_entry_from_decoder(env, decoder)
@@ -19727,7 +19740,7 @@ fn decode_code_syntax_map_entry_from_decoder<'a>(
         &CODE_SYNTAX_MAP_ENTRY_STRUCT_KEYS,
         &["platform", "value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_syntax_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_syntax_map_entry_fields_from_decoder<'a>(
@@ -19739,7 +19752,7 @@ fn decode_code_syntax_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_code_syntax_platform_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -19772,7 +19785,7 @@ fn decode_table_merged_cell_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TableMergedCellMap",
     );
     let keys = cached_struct_keys(env, &TABLE_MERGED_CELL_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_table_merged_cell_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_table_merged_cell_map_fields_from_decoder<'a>(
@@ -19784,7 +19797,7 @@ fn decode_table_merged_cell_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_table_merged_cell_map_entry_from_decoder(env, decoder)
@@ -19818,7 +19831,7 @@ fn decode_table_merged_cell_map_entry_from_decoder<'a>(
         &TABLE_MERGED_CELL_MAP_ENTRY_STRUCT_KEYS,
         &["row_id", "col_id", "row_span", "col_span"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_table_merged_cell_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_table_merged_cell_map_entry_fields_from_decoder<'a>(
@@ -19830,7 +19843,7 @@ fn decode_table_merged_cell_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -19889,7 +19902,7 @@ fn decode_table_row_column_position_map_from_decoder<'a>(
         &TABLE_ROW_COLUMN_POSITION_MAP_STRUCT_KEYS,
         &["entries"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_table_row_column_position_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_table_row_column_position_map_fields_from_decoder<'a>(
@@ -19901,7 +19914,7 @@ fn decode_table_row_column_position_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_table_row_column_position_map_entry_from_decoder(env, decoder)
@@ -19937,7 +19950,7 @@ fn decode_table_row_column_position_map_entry_from_decoder<'a>(
         &TABLE_ROW_COLUMN_POSITION_MAP_ENTRY_STRUCT_KEYS,
         &["id", "position"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_table_row_column_position_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_table_row_column_position_map_entry_fields_from_decoder<'a>(
@@ -19949,7 +19962,7 @@ fn decode_table_row_column_position_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -19985,7 +19998,7 @@ fn decode_guid_position_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDPositionMap",
     );
     let keys = cached_struct_keys(env, &GUID_POSITION_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_guid_position_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_guid_position_map_fields_from_decoder<'a>(
@@ -19997,7 +20010,7 @@ fn decode_guid_position_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_guid_position_map_entry_from_decoder(env, decoder)
@@ -20031,7 +20044,7 @@ fn decode_guid_position_map_entry_from_decoder<'a>(
         &GUID_POSITION_MAP_ENTRY_STRUCT_KEYS,
         &["id", "position"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_guid_position_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_guid_position_map_entry_fields_from_decoder<'a>(
@@ -20043,7 +20056,7 @@ fn decode_guid_position_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20076,7 +20089,7 @@ fn decode_guid_grid_track_size_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GUIDGridTrackSizeMap",
     );
     let keys = cached_struct_keys(env, &GUID_GRID_TRACK_SIZE_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_guid_grid_track_size_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_guid_grid_track_size_map_fields_from_decoder<'a>(
@@ -20088,7 +20101,7 @@ fn decode_guid_grid_track_size_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_guid_grid_track_size_map_entry_from_decoder(env, decoder)
@@ -20124,7 +20137,7 @@ fn decode_guid_grid_track_size_map_entry_from_decoder<'a>(
         &GUID_GRID_TRACK_SIZE_MAP_ENTRY_STRUCT_KEYS,
         &["id", "track_size"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_guid_grid_track_size_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_guid_grid_track_size_map_entry_fields_from_decoder<'a>(
@@ -20136,7 +20149,7 @@ fn decode_guid_grid_track_size_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20173,7 +20186,7 @@ fn decode_object_animation_list_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ObjectAnimationList",
     );
     let keys = cached_struct_keys(env, &OBJECT_ANIMATION_LIST_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_object_animation_list_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_object_animation_list_fields_from_decoder<'a>(
@@ -20185,7 +20198,7 @@ fn decode_object_animation_list_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_object_animation_list_item_from_decoder(env, decoder)
@@ -20219,7 +20232,7 @@ fn decode_object_animation_list_item_from_decoder<'a>(
         &OBJECT_ANIMATION_LIST_ITEM_STRUCT_KEYS,
         &["target_node_id", "animation"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_object_animation_list_item_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_object_animation_list_item_fields_from_decoder<'a>(
@@ -20231,7 +20244,7 @@ fn decode_object_animation_list_item_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20271,7 +20284,7 @@ fn decode_grid_track_size_from_decoder<'a>(
         &GRID_TRACK_SIZE_STRUCT_KEYS,
         &["min_sizing", "max_sizing"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_grid_track_size_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_grid_track_size_fields_from_decoder<'a>(
@@ -20283,7 +20296,7 @@ fn decode_grid_track_size_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_grid_track_sizing_function_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20320,7 +20333,7 @@ fn decode_grid_track_sizing_function_from_decoder<'a>(
         &GRID_TRACK_SIZING_FUNCTION_STRUCT_KEYS,
         &["type", "value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_grid_track_sizing_function_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_grid_track_sizing_function_fields_from_decoder<'a>(
@@ -20332,7 +20345,7 @@ fn decode_grid_track_sizing_function_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_grid_track_sizing_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20386,7 +20399,7 @@ fn decode_table_row_column_size_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TableRowColumnSizeMap",
     );
     let keys = cached_struct_keys(env, &TABLE_ROW_COLUMN_SIZE_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_table_row_column_size_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_table_row_column_size_map_fields_from_decoder<'a>(
@@ -20398,7 +20411,7 @@ fn decode_table_row_column_size_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_table_row_column_size_map_entry_from_decoder(env, decoder)
@@ -20434,7 +20447,7 @@ fn decode_table_row_column_size_map_entry_from_decoder<'a>(
         &TABLE_ROW_COLUMN_SIZE_MAP_ENTRY_STRUCT_KEYS,
         &["id", "size"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_table_row_column_size_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_table_row_column_size_map_entry_fields_from_decoder<'a>(
@@ -20446,7 +20459,7 @@ fn decode_table_row_column_size_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20482,7 +20495,7 @@ fn decode_agenda_position_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaPositionMap",
     );
     let keys = cached_struct_keys(env, &AGENDA_POSITION_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agenda_position_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agenda_position_map_fields_from_decoder<'a>(
@@ -20494,7 +20507,7 @@ fn decode_agenda_position_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_agenda_position_map_entry_from_decoder(env, decoder)
@@ -20528,7 +20541,7 @@ fn decode_agenda_position_map_entry_from_decoder<'a>(
         &AGENDA_POSITION_MAP_ENTRY_STRUCT_KEYS,
         &["id", "position"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agenda_position_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agenda_position_map_entry_fields_from_decoder<'a>(
@@ -20540,7 +20553,7 @@ fn decode_agenda_position_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20587,7 +20600,7 @@ fn decode_agenda_metadata_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaMetadataMap",
     );
     let keys = cached_struct_keys(env, &AGENDA_METADATA_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agenda_metadata_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agenda_metadata_map_fields_from_decoder<'a>(
@@ -20599,7 +20612,7 @@ fn decode_agenda_metadata_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_agenda_metadata_map_entry_from_decoder(env, decoder)
@@ -20629,7 +20642,7 @@ fn decode_agenda_metadata_map_entry_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaMetadataMapEntry",
     );
     let keys = cached_struct_keys(env, &AGENDA_METADATA_MAP_ENTRY_STRUCT_KEYS, &["id", "data"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agenda_metadata_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agenda_metadata_map_entry_fields_from_decoder<'a>(
@@ -20641,7 +20654,7 @@ fn decode_agenda_metadata_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20684,7 +20697,7 @@ fn decode_agenda_metadata_from_decoder<'a>(
             "music_info",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agenda_metadata_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agenda_metadata_fields_from_decoder<'a>(
@@ -20696,7 +20709,7 @@ fn decode_agenda_metadata_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20756,7 +20769,7 @@ fn decode_agenda_timer_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaTimerInfo",
     );
     let keys = cached_struct_keys(env, &AGENDA_TIMER_INFO_STRUCT_KEYS, &["timer_length"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agenda_timer_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agenda_timer_info_fields_from_decoder<'a>(
@@ -20768,7 +20781,7 @@ fn decode_agenda_timer_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20793,7 +20806,7 @@ fn decode_agenda_vote_info_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AgendaVoteInfo",
     );
     let keys = cached_struct_keys(env, &AGENDA_VOTE_INFO_STRUCT_KEYS, &["vote_count"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agenda_vote_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agenda_vote_info_fields_from_decoder<'a>(
@@ -20805,7 +20818,7 @@ fn decode_agenda_vote_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20834,7 +20847,7 @@ fn decode_agenda_music_info_from_decoder<'a>(
         &AGENDA_MUSIC_INFO_STRUCT_KEYS,
         &["song_id", "start_time_ms"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agenda_music_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agenda_music_info_fields_from_decoder<'a>(
@@ -20846,7 +20859,7 @@ fn decode_agenda_music_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -20906,7 +20919,7 @@ fn decode_diagram_parent_index_from_decoder<'a>(
             match decoder.read_string(env) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -20951,7 +20964,7 @@ fn decode_component_prop_ref_from_decoder<'a>(
             "is_deleted",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_component_prop_ref_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_component_prop_ref_fields_from_decoder<'a>(
@@ -20963,7 +20976,7 @@ fn decode_component_prop_ref_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21056,7 +21069,7 @@ fn decode_component_prop_assignment_from_decoder<'a>(
         &COMPONENT_PROP_ASSIGNMENT_STRUCT_KEYS,
         &["def_id", "value", "var_value", "legacy_derived_text_data"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_component_prop_assignment_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_component_prop_assignment_fields_from_decoder<'a>(
@@ -21068,7 +21081,7 @@ fn decode_component_prop_assignment_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21132,7 +21145,7 @@ fn decode_component_prop_def_from_decoder<'a>(
             "color_array_config",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_component_prop_def_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_component_prop_def_fields_from_decoder<'a>(
@@ -21144,7 +21157,7 @@ fn decode_component_prop_def_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21271,7 +21284,7 @@ fn decode_component_prop_value_from_decoder<'a>(
             "color_point_value",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_component_prop_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_component_prop_value_fields_from_decoder<'a>(
@@ -21283,7 +21296,7 @@ fn decode_component_prop_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21394,7 +21407,7 @@ fn decode_timeline_data_from_decoder<'a>(
             "playback_style",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_timeline_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_timeline_data_fields_from_decoder<'a>(
@@ -21406,7 +21419,7 @@ fn decode_timeline_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint64() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21453,7 +21466,7 @@ fn decode_timeline_definitions_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineDefinitionsMap",
     );
     let keys = cached_struct_keys(env, &TIMELINE_DEFINITIONS_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_timeline_definitions_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_timeline_definitions_map_fields_from_decoder<'a>(
@@ -21465,7 +21478,7 @@ fn decode_timeline_definitions_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_timeline_definitions_map_entry_from_decoder(env, decoder)
@@ -21501,7 +21514,7 @@ fn decode_timeline_definitions_map_entry_from_decoder<'a>(
         &TIMELINE_DEFINITIONS_MAP_ENTRY_STRUCT_KEYS,
         &["id", "data"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_timeline_definitions_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_timeline_definitions_map_entry_fields_from_decoder<'a>(
@@ -21513,7 +21526,7 @@ fn decode_timeline_definitions_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21554,7 +21567,7 @@ fn decode_timeline_assignment_key_from_decoder<'a>(
         &TIMELINE_ASSIGNMENT_KEY_STRUCT_KEYS,
         &["assigned_timeline_id", "containing_timeline_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_timeline_assignment_key_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_timeline_assignment_key_fields_from_decoder<'a>(
@@ -21566,7 +21579,7 @@ fn decode_timeline_assignment_key_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21603,7 +21616,7 @@ fn decode_timeline_binding_data_from_decoder<'a>(
         &TIMELINE_BINDING_DATA_STRUCT_KEYS,
         &["offset_us", "disabled"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_timeline_binding_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_timeline_binding_data_fields_from_decoder<'a>(
@@ -21615,7 +21628,7 @@ fn decode_timeline_binding_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_int64() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21648,7 +21661,7 @@ fn decode_timeline_assignments_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TimelineAssignmentsMap",
     );
     let keys = cached_struct_keys(env, &TIMELINE_ASSIGNMENTS_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_timeline_assignments_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_timeline_assignments_map_fields_from_decoder<'a>(
@@ -21660,7 +21673,7 @@ fn decode_timeline_assignments_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_timeline_assignments_map_entry_from_decoder(env, decoder)
@@ -21696,7 +21709,7 @@ fn decode_timeline_assignments_map_entry_from_decoder<'a>(
         &TIMELINE_ASSIGNMENTS_MAP_ENTRY_STRUCT_KEYS,
         &["key", "value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_timeline_assignments_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_timeline_assignments_map_entry_fields_from_decoder<'a>(
@@ -21708,7 +21721,7 @@ fn decode_timeline_assignments_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_timeline_assignment_key_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21794,7 +21807,7 @@ fn decode_component_prop_preferred_values_from_decoder<'a>(
         &COMPONENT_PROP_PREFERRED_VALUES_STRUCT_KEYS,
         &["string_values", "instance_swap_values"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_component_prop_preferred_values_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_component_prop_preferred_values_fields_from_decoder<'a>(
@@ -21806,7 +21819,7 @@ fn decode_component_prop_preferred_values_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_repeated(|decoder| decoder.read_string(env)) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -21864,7 +21877,7 @@ fn decode_parameter_config_from_decoder<'a>(
             "show_divider_above",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_parameter_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_parameter_config_fields_from_decoder<'a>(
@@ -21876,7 +21889,7 @@ fn decode_parameter_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_number_prop_config_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22004,7 +22017,7 @@ fn decode_input_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InputConfig",
     );
     let keys = cached_struct_keys(env, &INPUT_CONFIG_STRUCT_KEYS, &["unit", "min", "max"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_input_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_input_config_fields_from_decoder<'a>(
@@ -22016,7 +22029,7 @@ fn decode_input_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_data_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22059,7 +22072,7 @@ fn decode_slider_config_from_decoder<'a>(
         &SLIDER_CONFIG_STRUCT_KEYS,
         &["min", "max", "step", "unit"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_slider_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_slider_config_fields_from_decoder<'a>(
@@ -22071,7 +22084,7 @@ fn decode_slider_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_data_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22134,7 +22147,7 @@ fn decode_point_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PointConfig",
     );
     let keys = cached_struct_keys(env, &POINT_CONFIG_STRUCT_KEYS, &["mode", "unit"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_point_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_point_config_fields_from_decoder<'a>(
@@ -22146,7 +22159,7 @@ fn decode_point_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_point_mode_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22171,7 +22184,7 @@ static LINE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::n
 fn decode_line_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &LINE_MODULE_ATOM, "Elixir.FigKiwi.Schema.Line");
     let keys = cached_struct_keys(env, &LINE_STRUCT_KEYS, &["a", "b"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_line_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_line_fields_from_decoder<'a>(
@@ -22183,7 +22196,7 @@ fn decode_line_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22215,7 +22228,7 @@ fn decode_line_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.LineConfig",
     );
     let keys = cached_struct_keys(env, &LINE_CONFIG_STRUCT_KEYS, &["mode", "unit"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_line_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_line_config_fields_from_decoder<'a>(
@@ -22227,7 +22240,7 @@ fn decode_line_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_point_mode_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22252,7 +22265,7 @@ static CIRCLE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock:
 fn decode_circle_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &CIRCLE_MODULE_ATOM, "Elixir.FigKiwi.Schema.Circle");
     let keys = cached_struct_keys(env, &CIRCLE_STRUCT_KEYS, &["center", "radius"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_circle_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_circle_fields_from_decoder<'a>(
@@ -22264,7 +22277,7 @@ fn decode_circle_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22306,7 +22319,7 @@ fn decode_point_radius_config_from_decoder<'a>(
             "max_radius",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_point_radius_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_point_radius_config_fields_from_decoder<'a>(
@@ -22318,7 +22331,7 @@ fn decode_point_radius_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_point_mode_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22375,7 +22388,7 @@ fn decode_rotation3_d_from_decoder<'a>(
         &ROTATION3_D_STRUCT_KEYS,
         &["x", "y", "z", "translate_z"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_rotation3_d_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_rotation3_d_fields_from_decoder<'a>(
@@ -22387,7 +22400,7 @@ fn decode_rotation3_d_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22433,7 +22446,7 @@ fn decode_rotation3_d_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.Rotation3DConfig",
     );
     let keys = cached_struct_keys(env, &ROTATION3_D_CONFIG_STRUCT_KEYS, &["mode"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_rotation3_d_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_rotation3_d_config_fields_from_decoder<'a>(
@@ -22445,7 +22458,7 @@ fn decode_rotation3_d_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_point_mode_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22474,7 +22487,7 @@ fn decode_circle_point_from_decoder<'a>(
         &CIRCLE_POINT_STRUCT_KEYS,
         &["center", "radius", "angle"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_circle_point_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_circle_point_fields_from_decoder<'a>(
@@ -22486,7 +22499,7 @@ fn decode_circle_point_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22535,7 +22548,7 @@ fn decode_circle_point_config_from_decoder<'a>(
             "max_radius",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_circle_point_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_circle_point_config_fields_from_decoder<'a>(
@@ -22547,7 +22560,7 @@ fn decode_circle_point_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_point_mode_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22600,7 +22613,7 @@ fn decode_color_point_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ColorPoint",
     );
     let keys = cached_struct_keys(env, &COLOR_POINT_STRUCT_KEYS, &["point", "color"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_color_point_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_color_point_fields_from_decoder<'a>(
@@ -22612,7 +22625,7 @@ fn decode_color_point_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22644,7 +22657,7 @@ fn decode_color_point_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ColorPointConfig",
     );
     let keys = cached_struct_keys(env, &COLOR_POINT_CONFIG_STRUCT_KEYS, &["mode", "unit"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_color_point_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_color_point_config_fields_from_decoder<'a>(
@@ -22656,7 +22669,7 @@ fn decode_color_point_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_point_mode_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22684,7 +22697,7 @@ fn decode_gradient_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &GRADIENT_MODULE_ATOM, "Elixir.FigKiwi.Schema.Gradient");
     let keys = cached_struct_keys(env, &GRADIENT_STRUCT_KEYS, &["stops"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_gradient_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_gradient_fields_from_decoder<'a>(
@@ -22696,7 +22709,7 @@ fn decode_gradient_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_gradient_stop_from_decoder(env, decoder))
@@ -22725,7 +22738,7 @@ fn decode_gradient_stop_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.GradientStop",
     );
     let keys = cached_struct_keys(env, &GRADIENT_STOP_STRUCT_KEYS, &["position", "color"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_gradient_stop_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_gradient_stop_fields_from_decoder<'a>(
@@ -22737,7 +22750,7 @@ fn decode_gradient_stop_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22769,7 +22782,7 @@ fn decode_select_option_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SelectOption",
     );
     let keys = cached_struct_keys(env, &SELECT_OPTION_STRUCT_KEYS, &["value", "label"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_select_option_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_select_option_fields_from_decoder<'a>(
@@ -22781,7 +22794,7 @@ fn decode_select_option_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_data_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22813,7 +22826,7 @@ fn decode_select_config_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SelectConfig",
     );
     let keys = cached_struct_keys(env, &SELECT_CONFIG_STRUCT_KEYS, &["options"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_select_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_select_config_fields_from_decoder<'a>(
@@ -22825,7 +22838,7 @@ fn decode_select_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_select_option_from_decoder(env, decoder))
@@ -22858,7 +22871,7 @@ fn decode_color_array_config_from_decoder<'a>(
         &COLOR_ARRAY_CONFIG_STRUCT_KEYS,
         &["min_length", "max_length"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_color_array_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_color_array_config_fields_from_decoder<'a>(
@@ -22870,7 +22883,7 @@ fn decode_color_array_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22912,7 +22925,7 @@ fn decode_slot_prop_config_from_decoder<'a>(
             "allow_preferred_values_only",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_slot_prop_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_slot_prop_config_fields_from_decoder<'a>(
@@ -22924,7 +22937,7 @@ fn decode_slot_prop_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -22981,7 +22994,7 @@ fn decode_number_prop_config_from_decoder<'a>(
         &NUMBER_PROP_CONFIG_STRUCT_KEYS,
         &["control", "min", "max", "step"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_number_prop_config_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_number_prop_config_fields_from_decoder<'a>(
@@ -22993,7 +23006,7 @@ fn decode_number_prop_config_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_parameter_config_control_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23044,7 +23057,7 @@ fn decode_instance_swap_preferred_value_from_decoder<'a>(
         &INSTANCE_SWAP_PREFERRED_VALUE_STRUCT_KEYS,
         &["type", "key"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_instance_swap_preferred_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_instance_swap_preferred_value_fields_from_decoder<'a>(
@@ -23056,7 +23069,7 @@ fn decode_instance_swap_preferred_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_instance_swap_preferred_value_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23165,7 +23178,7 @@ fn decode_widget_metadata_from_decoder<'a>(
             "is_rotatable",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_widget_metadata_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_widget_metadata_fields_from_decoder<'a>(
@@ -23177,7 +23190,7 @@ fn decode_widget_metadata_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23277,7 +23290,7 @@ fn decode_widget_property_menu_selector_option_from_decoder<'a>(
         &WIDGET_PROPERTY_MENU_SELECTOR_OPTION_STRUCT_KEYS,
         &["option", "tooltip"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_widget_property_menu_selector_option_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_widget_property_menu_selector_option_fields_from_decoder<'a>(
@@ -23289,7 +23302,7 @@ fn decode_widget_property_menu_selector_option_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23362,7 +23375,7 @@ fn decode_widget_property_menu_item_from_decoder<'a>(
             "allow_custom_color",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_widget_property_menu_item_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_widget_property_menu_item_fields_from_decoder<'a>(
@@ -23374,7 +23387,7 @@ fn decode_widget_property_menu_item_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23606,7 +23619,7 @@ fn decode_internal_data_for_test_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.InternalDataForTest",
     );
     let keys = cached_struct_keys(env, &INTERNAL_DATA_FOR_TEST_STRUCT_KEYS, &["test_field_a"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_internal_data_for_test_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_internal_data_for_test_fields_from_decoder<'a>(
@@ -23618,7 +23631,7 @@ fn decode_internal_data_for_test_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_int() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23648,7 +23661,7 @@ fn decode_state_group_property_value_order_from_decoder<'a>(
         &STATE_GROUP_PROPERTY_VALUE_ORDER_STRUCT_KEYS,
         &["property", "values"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_state_group_property_value_order_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_state_group_property_value_order_fields_from_decoder<'a>(
@@ -23660,7 +23673,7 @@ fn decode_state_group_property_value_order_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23720,7 +23733,7 @@ fn decode_partial_paste_annotation_from_decoder<'a>(
         &PARTIAL_PASTE_ANNOTATION_STRUCT_KEYS,
         &["is_partial", "annotated_at", "error_state"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_partial_paste_annotation_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_partial_paste_annotation_fields_from_decoder<'a>(
@@ -23732,7 +23745,7 @@ fn decode_partial_paste_annotation_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23775,7 +23788,7 @@ fn decode_variant_prop_spec_from_decoder<'a>(
         &VARIANT_PROP_SPEC_STRUCT_KEYS,
         &["prop_def_id", "value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variant_prop_spec_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variant_prop_spec_fields_from_decoder<'a>(
@@ -23787,7 +23800,7 @@ fn decode_variant_prop_spec_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23823,7 +23836,7 @@ fn decode_text_list_data_from_decoder<'a>(
         &TEXT_LIST_DATA_STRUCT_KEYS,
         &["list_id", "bullet_type", "indentation_level", "line_number"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_text_list_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_text_list_data_fields_from_decoder<'a>(
@@ -23835,7 +23848,7 @@ fn decode_text_list_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_int() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -23915,7 +23928,7 @@ fn decode_text_line_data_from_decoder<'a>(
             "is_first_line_of_list",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_text_line_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_text_line_data_fields_from_decoder<'a>(
@@ -23927,7 +23940,7 @@ fn decode_text_line_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_line_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24020,7 +24033,7 @@ fn decode_derived_text_line_data_from_decoder<'a>(
         &DERIVED_TEXT_LINE_DATA_STRUCT_KEYS,
         &["directionality"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_derived_text_line_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_derived_text_line_data_fields_from_decoder<'a>(
@@ -24032,7 +24045,7 @@ fn decode_derived_text_line_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_directionality_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24136,7 +24149,7 @@ fn decode_prototype_interaction_from_decoder<'a>(
             "state_management_version",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_prototype_interaction_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_prototype_interaction_fields_from_decoder<'a>(
@@ -24148,7 +24161,7 @@ fn decode_prototype_interaction_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24217,7 +24230,7 @@ fn decode_prototype_event_from_decoder<'a>(
             "media_hit_time",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_prototype_event_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_prototype_event_fields_from_decoder<'a>(
@@ -24229,7 +24242,7 @@ fn decode_prototype_event_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_interaction_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24301,7 +24314,7 @@ fn decode_prototype_variable_target_from_decoder<'a>(
         &PROTOTYPE_VARIABLE_TARGET_STRUCT_KEYS,
         &["id", "node_field_alias"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_prototype_variable_target_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_prototype_variable_target_fields_from_decoder<'a>(
@@ -24313,7 +24326,7 @@ fn decode_prototype_variable_target_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24349,7 +24362,7 @@ fn decode_conditional_actions_from_decoder<'a>(
         &CONDITIONAL_ACTIONS_STRUCT_KEYS,
         &["actions", "condition"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_conditional_actions_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_conditional_actions_fields_from_decoder<'a>(
@@ -24361,7 +24374,7 @@ fn decode_conditional_actions_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_prototype_action_from_decoder(env, decoder))
@@ -24444,7 +24457,7 @@ fn decode_prototype_action_from_decoder<'a>(
             "animation_skip_to_time",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_prototype_action_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_prototype_action_fields_from_decoder<'a>(
@@ -24456,7 +24469,7 @@ fn decode_prototype_action_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24814,7 +24827,7 @@ fn decode_animation_state_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnimationState",
     );
     let keys = cached_struct_keys(env, &ANIMATION_STATE_STRUCT_KEYS, &["opacity", "transform"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_animation_state_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_animation_state_fields_from_decoder<'a>(
@@ -24826,7 +24839,7 @@ fn decode_animation_state_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24863,7 +24876,7 @@ fn decode_prototype_starting_point_from_decoder<'a>(
         &PROTOTYPE_STARTING_POINT_STRUCT_KEYS,
         &["name", "description", "position"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_prototype_starting_point_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_prototype_starting_point_fields_from_decoder<'a>(
@@ -24875,7 +24888,7 @@ fn decode_prototype_starting_point_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24939,7 +24952,7 @@ fn decode_key_trigger_from_decoder<'a>(
         &KEY_TRIGGER_STRUCT_KEYS,
         &["key_codes", "trigger_device"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_key_trigger_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_key_trigger_fields_from_decoder<'a>(
@@ -24951,7 +24964,7 @@ fn decode_key_trigger_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_repeated(|decoder| decoder.read_var_int()) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -24987,7 +25000,7 @@ fn decode_hyperlink_from_decoder<'a>(
         &HYPERLINK_STRUCT_KEYS,
         &["url", "guid", "cms_target", "open_in_new_tab"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_hyperlink_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_hyperlink_fields_from_decoder<'a>(
@@ -24999,7 +25012,7 @@ fn decode_hyperlink_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25050,7 +25063,7 @@ fn decode_cms_item_page_target_from_decoder<'a>(
         &CMS_ITEM_PAGE_TARGET_STRUCT_KEYS,
         &["node_id", "cms_item_id", "field_schema_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_item_page_target_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_item_page_target_fields_from_decoder<'a>(
@@ -25062,7 +25075,7 @@ fn decode_cms_item_page_target_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25124,7 +25137,7 @@ fn decode_mention_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
             "mentioned_user_group_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_mention_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_mention_fields_from_decoder<'a>(
@@ -25136,7 +25149,7 @@ fn decode_mention_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25229,7 +25242,7 @@ fn decode_embed_data_from_decoder<'a>(
             "is_published_site",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_embed_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_embed_data_fields_from_decoder<'a>(
@@ -25241,7 +25254,7 @@ fn decode_embed_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25361,7 +25374,7 @@ fn decode_stamp_data_from_decoder<'a>(
         &STAMP_DATA_STRUCT_KEYS,
         &["user_id", "voting_session_id", "stamped_by_user_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_stamp_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_stamp_data_fields_from_decoder<'a>(
@@ -25373,7 +25386,7 @@ fn decode_stamp_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25425,7 +25438,7 @@ fn decode_link_preview_data_from_decoder<'a>(
             "thumbnail_image_height",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_link_preview_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_link_preview_data_fields_from_decoder<'a>(
@@ -25437,7 +25450,7 @@ fn decode_link_preview_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25516,7 +25529,7 @@ fn decode_viewport_from_decoder<'a>(
             "canvas_guid",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_viewport_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_viewport_fields_from_decoder<'a>(
@@ -25528,7 +25541,7 @@ fn decode_viewport_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_rect_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25577,7 +25590,7 @@ fn decode_mouse_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
             "cursor_hidden_reason",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_mouse_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_mouse_fields_from_decoder<'a>(
@@ -25589,7 +25602,7 @@ fn decode_mouse_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_mouse_cursor_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25643,7 +25656,7 @@ fn decode_click_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> Nif
             match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -25675,7 +25688,7 @@ fn decode_scroll_position_from_decoder<'a>(
             match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -25710,7 +25723,7 @@ fn decode_triggered_overlay_from_decoder<'a>(
                     match decode_guid_from_decoder(env, decoder) {
                         Ok(value) => {
                             values.push(value.encode(env).as_c_arg());
-                            make_struct(env, keys, &values)
+                            make_struct_from_nif_term_arrays(env, keys, &values)
                         }
                         Err(reason) => Err(reason),
                     }
@@ -25744,7 +25757,7 @@ fn decode_triggered_overlay_data_from_decoder<'a>(
             "hotspot_blueprint_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_triggered_overlay_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_triggered_overlay_data_fields_from_decoder<'a>(
@@ -25756,7 +25769,7 @@ fn decode_triggered_overlay_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25819,7 +25832,7 @@ fn decode_triggered_set_variable_action_data_from_decoder<'a>(
             "resolved_variable_modes",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_triggered_set_variable_action_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_triggered_set_variable_action_data_fields_from_decoder<'a>(
@@ -25831,7 +25844,7 @@ fn decode_triggered_set_variable_action_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25896,7 +25909,7 @@ fn decode_triggered_set_variable_mode_action_data_from_decoder<'a>(
             "target_variable_set_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_triggered_set_variable_mode_action_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_triggered_set_variable_mode_action_data_fields_from_decoder<'a>(
@@ -25908,7 +25921,7 @@ fn decode_triggered_set_variable_mode_action_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -25973,7 +25986,7 @@ fn decode_video_state_change_data_from_decoder<'a>(
             "action_taken_timestamp",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_video_state_change_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_video_state_change_data_fields_from_decoder<'a>(
@@ -25985,7 +25998,7 @@ fn decode_video_state_change_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26043,7 +26056,7 @@ fn decode_embedded_prototype_data_from_decoder<'a>(
         &EMBEDDED_PROTOTYPE_DATA_STRUCT_KEYS,
         &["node_id", "session_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_embedded_prototype_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_embedded_prototype_data_fields_from_decoder<'a>(
@@ -26055,7 +26068,7 @@ fn decode_embedded_prototype_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26091,7 +26104,7 @@ fn decode_presented_state_from_decoder<'a>(
         &PRESENTED_STATE_STRUCT_KEYS,
         &["base_screen_id", "overlays"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_presented_state_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_presented_state_fields_from_decoder<'a>(
@@ -26103,7 +26116,7 @@ fn decode_presented_state_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26167,7 +26180,7 @@ fn decode_top_level_playback_change_from_decoder<'a>(
             "instance_stable_path",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_top_level_playback_change_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_top_level_playback_change_fields_from_decoder<'a>(
@@ -26179,7 +26192,7 @@ fn decode_top_level_playback_change_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_presented_state_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26257,7 +26270,7 @@ fn decode_instance_state_change_from_decoder<'a>(
             "phase",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_instance_state_change_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_instance_state_change_fields_from_decoder<'a>(
@@ -26269,7 +26282,7 @@ fn decode_instance_state_change_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26326,7 +26339,7 @@ fn decode_text_cursor_from_decoder<'a>(
         &TEXT_CURSOR_STRUCT_KEYS,
         &["selection_box", "canvas_guid", "text_node_guid"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_text_cursor_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_text_cursor_fields_from_decoder<'a>(
@@ -26338,7 +26351,7 @@ fn decode_text_cursor_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_rect_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26389,7 +26402,7 @@ fn decode_text_selection_from_decoder<'a>(
             "table_cell_col_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_text_selection_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_text_selection_fields_from_decoder<'a>(
@@ -26401,7 +26414,7 @@ fn decode_text_selection_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_repeated(|decoder| decode_rect_from_decoder(env, decoder)) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26490,7 +26503,7 @@ fn decode_playback_change_keyframe_from_decoder<'a>(
         &PLAYBACK_CHANGE_KEYFRAME_STRUCT_KEYS,
         &["phase", "progress", "timestamp"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_playback_change_keyframe_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_playback_change_keyframe_fields_from_decoder<'a>(
@@ -26502,7 +26515,7 @@ fn decode_playback_change_keyframe_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_playback_change_phase_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26550,7 +26563,7 @@ fn decode_state_mapping_from_decoder<'a>(
             "timestamp",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_state_mapping_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_state_mapping_fields_from_decoder<'a>(
@@ -26562,7 +26575,7 @@ fn decode_state_mapping_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_path_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26612,7 +26625,7 @@ fn decode_scroll_mapping_from_decoder<'a>(
         &SCROLL_MAPPING_STRUCT_KEYS,
         &["blueprint_id", "overlay_index", "scroll_offset"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_scroll_mapping_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_scroll_mapping_fields_from_decoder<'a>(
@@ -26624,7 +26637,7 @@ fn decode_scroll_mapping_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_path_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26675,7 +26688,7 @@ fn decode_playback_update_from_decoder<'a>(
             "state_mappings",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_playback_update_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_playback_update_fields_from_decoder<'a>(
@@ -26687,7 +26700,7 @@ fn decode_playback_update_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_top_level_playback_change_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26762,7 +26775,7 @@ fn decode_chat_message_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ChatMessage",
     );
     let keys = cached_struct_keys(env, &CHAT_MESSAGE_STRUCT_KEYS, &["text", "previous_text"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_chat_message_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_chat_message_fields_from_decoder<'a>(
@@ -26774,7 +26787,7 @@ fn decode_chat_message_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26806,7 +26819,7 @@ fn decode_voice_metadata_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VoiceMetadata",
     );
     let keys = cached_struct_keys(env, &VOICE_METADATA_STRUCT_KEYS, &["connected_call_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_voice_metadata_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_voice_metadata_fields_from_decoder<'a>(
@@ -26818,7 +26831,7 @@ fn decode_voice_metadata_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26843,7 +26856,7 @@ fn decode_april_fun_cursor_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AprilFunCursor",
     );
     let keys = cached_struct_keys(env, &APRIL_FUN_CURSOR_STRUCT_KEYS, &["id", "trail_enabled"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_april_fun_cursor_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_april_fun_cursor_fields_from_decoder<'a>(
@@ -26855,7 +26868,7 @@ fn decode_april_fun_cursor_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26891,7 +26904,7 @@ fn decode_april_fun_fig_pal_from_decoder<'a>(
         &APRIL_FUN_FIG_PAL_STRUCT_KEYS,
         &["customization", "name"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_april_fun_fig_pal_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_april_fun_fig_pal_fields_from_decoder<'a>(
@@ -26903,7 +26916,7 @@ fn decode_april_fun_fig_pal_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -26998,7 +27011,7 @@ fn decode_agent_info_from_decoder<'a>(
         &AGENT_INFO_STRUCT_KEYS,
         &["name", "logo", "oauth_client_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_agent_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_agent_info_fields_from_decoder<'a>(
@@ -27010,7 +27023,7 @@ fn decode_agent_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -27100,7 +27113,7 @@ fn decode_user_change_from_decoder<'a>(
             "agent_info",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_user_change_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_user_change_fields_from_decoder<'a>(
@@ -27112,7 +27125,7 @@ fn decode_user_change_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -27501,7 +27514,7 @@ fn decode_interactive_slide_element_change_from_decoder<'a>(
         &INTERACTIVE_SLIDE_ELEMENT_CHANGE_STRUCT_KEYS,
         &["user_id", "anonymous_user_id", "node_id", "response_data"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_interactive_slide_element_change_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_interactive_slide_element_change_fields_from_decoder<'a>(
@@ -27513,7 +27526,7 @@ fn decode_interactive_slide_element_change_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -27571,7 +27584,7 @@ fn decode_node_status_change_from_decoder<'a>(
         &NODE_STATUS_CHANGE_STRUCT_KEYS,
         &["node_ids", "status_info"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_status_change_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_status_change_fields_from_decoder<'a>(
@@ -27583,7 +27596,7 @@ fn decode_node_status_change_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder)) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -27620,7 +27633,7 @@ fn decode_buzz_approval_asset_entry_from_decoder<'a>(
         &BUZZ_APPROVAL_ASSET_ENTRY_STRUCT_KEYS,
         &["asset_node_id", "approved"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_buzz_approval_asset_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_buzz_approval_asset_entry_fields_from_decoder<'a>(
@@ -27632,7 +27645,7 @@ fn decode_buzz_approval_asset_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -27669,7 +27682,7 @@ fn decode_buzz_approval_change_from_decoder<'a>(
         &BUZZ_APPROVAL_CHANGE_STRUCT_KEYS,
         &["asset_entries", "canvas_grid_node_id", "request_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_buzz_approval_change_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_buzz_approval_change_fields_from_decoder<'a>(
@@ -27681,7 +27694,7 @@ fn decode_buzz_approval_change_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_buzz_approval_asset_entry_from_decoder(env, decoder)
@@ -27762,7 +27775,7 @@ fn decode_scene_graph_query_from_decoder<'a>(
         &SCENE_GRAPH_QUERY_STRUCT_KEYS,
         &["starting_node", "depth", "behavior"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_scene_graph_query_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_scene_graph_query_fields_from_decoder<'a>(
@@ -27774,7 +27787,7 @@ fn decode_scene_graph_query_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -27818,7 +27831,7 @@ fn decode_node_changes_metadata_from_decoder<'a>(
         &NODE_CHANGES_METADATA_STRUCT_KEYS,
         &["blobs_field_offset"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_changes_metadata_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_changes_metadata_fields_from_decoder<'a>(
@@ -27830,7 +27843,7 @@ fn decode_node_changes_metadata_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -27855,7 +27868,7 @@ fn decode_cursor_reaction_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CursorReaction",
     );
     let keys = cached_struct_keys(env, &CURSOR_REACTION_STRUCT_KEYS, &["image_url"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cursor_reaction_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cursor_reaction_fields_from_decoder<'a>(
@@ -27867,7 +27880,7 @@ fn decode_cursor_reaction_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -27905,7 +27918,7 @@ fn decode_timer_info_from_decoder<'a>(
             "song_uuid",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_timer_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_timer_info_fields_from_decoder<'a>(
@@ -27917,7 +27930,7 @@ fn decode_timer_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -28001,7 +28014,7 @@ fn decode_music_info_from_decoder<'a>(
             "is_stopped",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_music_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_music_info_fields_from_decoder<'a>(
@@ -28013,7 +28026,7 @@ fn decode_music_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -28071,7 +28084,7 @@ fn decode_presenter_nomination_from_decoder<'a>(
         &PRESENTER_NOMINATION_STRUCT_KEYS,
         &["session_id", "is_cancelled"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_presenter_nomination_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_presenter_nomination_fields_from_decoder<'a>(
@@ -28083,7 +28096,7 @@ fn decode_presenter_nomination_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -28119,7 +28132,7 @@ fn decode_presenter_info_from_decoder<'a>(
         &PRESENTER_INFO_STRUCT_KEYS,
         &["session_id", "nomination", "is_reconnected"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_presenter_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_presenter_info_fields_from_decoder<'a>(
@@ -28131,7 +28144,7 @@ fn decode_presenter_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -28181,7 +28194,7 @@ fn decode_client_broadcast_from_decoder<'a>(
             "music",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_client_broadcast_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_client_broadcast_fields_from_decoder<'a>(
@@ -28193,7 +28206,7 @@ fn decode_client_broadcast_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -28311,7 +28324,7 @@ fn decode_message_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> N
             "scene_graph_query_mode",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_message_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_message_fields_from_decoder<'a>(
@@ -28323,7 +28336,7 @@ fn decode_message_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_message_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -28694,7 +28707,7 @@ fn decode_encoded_offsets_index_from_decoder<'a>(
             "node_change_offsets",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_encoded_offsets_index_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_encoded_offsets_index_fields_from_decoder<'a>(
@@ -28706,7 +28719,7 @@ fn decode_encoded_offsets_index_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -28769,7 +28782,7 @@ fn decode_guid_and_encoded_offset_from_decoder<'a>(
             match decoder.read_var_uint() {
                 Ok(value) => {
                     values.push(value.encode(env).as_c_arg());
-                    make_struct(env, keys, &values)
+                    make_struct_from_nif_term_arrays(env, keys, &values)
                 }
                 Err(reason) => Err(reason),
             }
@@ -28808,7 +28821,7 @@ fn decode_rich_media_data_from_decoder<'a>(
         &RICH_MEDIA_DATA_STRUCT_KEYS,
         &["media_hash", "rich_media_type"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_rich_media_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_rich_media_data_fields_from_decoder<'a>(
@@ -28820,7 +28833,7 @@ fn decode_rich_media_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29079,7 +29092,7 @@ fn decode_variable_any_value_from_decoder<'a>(
             "color_point_value",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_any_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_any_value_fields_from_decoder<'a>(
@@ -29091,7 +29104,7 @@ fn decode_variable_any_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29375,7 +29388,7 @@ fn decode_expression_from_decoder<'a>(
         &EXPRESSION_STRUCT_KEYS,
         &["expression_function", "expression_arguments"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_expression_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_expression_fields_from_decoder<'a>(
@@ -29387,7 +29400,7 @@ fn decode_expression_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_expression_function_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29427,7 +29440,7 @@ fn decode_variable_map_value_from_decoder<'a>(
         &VARIABLE_MAP_VALUE_STRUCT_KEYS,
         &["key", "value", "guid_key"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_map_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_map_value_fields_from_decoder<'a>(
@@ -29439,7 +29452,7 @@ fn decode_variable_map_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29478,7 +29491,7 @@ fn decode_variable_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableMap",
     );
     let keys = cached_struct_keys(env, &VARIABLE_MAP_STRUCT_KEYS, &["values"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_map_fields_from_decoder<'a>(
@@ -29490,7 +29503,7 @@ fn decode_variable_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_variable_map_value_from_decoder(env, decoder))
@@ -29519,7 +29532,7 @@ fn decode_color_array_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ColorArray",
     );
     let keys = cached_struct_keys(env, &COLOR_ARRAY_STRUCT_KEYS, &["colors"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_color_array_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_color_array_fields_from_decoder<'a>(
@@ -29531,7 +29544,7 @@ fn decode_color_array_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_variable_data_from_decoder(env, decoder))
@@ -29564,7 +29577,7 @@ fn decode_variable_font_style_from_decoder<'a>(
         &VARIABLE_FONT_STYLE_STRUCT_KEYS,
         &["as_string", "as_float", "as_variations"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_font_style_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_font_style_fields_from_decoder<'a>(
@@ -29576,7 +29589,7 @@ fn decode_variable_font_style_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_data_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29628,7 +29641,7 @@ fn decode_image_parameter_value_from_decoder<'a>(
             "animation_frame",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_image_parameter_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_image_parameter_value_fields_from_decoder<'a>(
@@ -29640,7 +29653,7 @@ fn decode_image_parameter_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_image_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29711,7 +29724,7 @@ fn decode_thumbnail_info_from_decoder<'a>(
         &THUMBNAIL_INFO_STRUCT_KEYS,
         &["node_id", "thumbnail_version"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_thumbnail_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_thumbnail_info_fields_from_decoder<'a>(
@@ -29723,7 +29736,7 @@ fn decode_thumbnail_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29759,7 +29772,7 @@ fn decode_ai_canvas_prompt_from_decoder<'a>(
         &AI_CANVAS_PROMPT_STRUCT_KEYS,
         &["user_prompt", "author_id", "parent_node_ids"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_ai_canvas_prompt_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_ai_canvas_prompt_fields_from_decoder<'a>(
@@ -29771,7 +29784,7 @@ fn decode_ai_canvas_prompt_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29814,7 +29827,7 @@ fn decode_node_field_alias_from_decoder<'a>(
         &NODE_FIELD_ALIAS_STRUCT_KEYS,
         &["stable_path_to_node", "node_field", "index_or_key"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_field_alias_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_field_alias_fields_from_decoder<'a>(
@@ -29826,7 +29839,7 @@ fn decode_node_field_alias_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_path_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29889,7 +29902,7 @@ fn decode_cms_alias_from_decoder<'a>(
         &CMS_ALIAS_STRUCT_KEYS,
         &["collection_id", "item_id", "field_id", "type"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cms_alias_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cms_alias_fields_from_decoder<'a>(
@@ -29901,7 +29914,7 @@ fn decode_cms_alias_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29947,7 +29960,7 @@ fn decode_js_runtime_alias_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.JsRuntimeAlias",
     );
     let keys = cached_struct_keys(env, &JS_RUNTIME_ALIAS_STRUCT_KEYS, &["lookup_key"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_js_runtime_alias_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_js_runtime_alias_fields_from_decoder<'a>(
@@ -29959,7 +29972,7 @@ fn decode_js_runtime_alias_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -29984,7 +29997,7 @@ fn decode_prop_ref_value_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.PropRefValue",
     );
     let keys = cached_struct_keys(env, &PROP_REF_VALUE_STRUCT_KEYS, &["def_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_prop_ref_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_prop_ref_value_fields_from_decoder<'a>(
@@ -29996,7 +30009,7 @@ fn decode_prop_ref_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30021,7 +30034,7 @@ fn decode_managed_string_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ManagedStringId",
     );
     let keys = cached_struct_keys(env, &MANAGED_STRING_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_id_fields_from_decoder<'a>(
@@ -30033,7 +30046,7 @@ fn decode_managed_string_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30070,7 +30083,7 @@ fn decode_managed_string_placeholder_map_entry_from_decoder<'a>(
         &MANAGED_STRING_PLACEHOLDER_MAP_ENTRY_STRUCT_KEYS,
         &["key", "value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_placeholder_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_placeholder_map_entry_fields_from_decoder<'a>(
@@ -30082,7 +30095,7 @@ fn decode_managed_string_placeholder_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30118,7 +30131,7 @@ fn decode_slot_content_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlotContentId",
     );
     let keys = cached_struct_keys(env, &SLOT_CONTENT_ID_STRUCT_KEYS, &["guid"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_slot_content_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_slot_content_id_fields_from_decoder<'a>(
@@ -30130,7 +30143,7 @@ fn decode_slot_content_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30160,7 +30173,7 @@ fn decode_managed_string_alias_from_decoder<'a>(
         &MANAGED_STRING_ALIAS_STRUCT_KEYS,
         &["managed_string_id", "placeholder_values"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_managed_string_alias_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_managed_string_alias_fields_from_decoder<'a>(
@@ -30172,7 +30185,7 @@ fn decode_managed_string_alias_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_managed_string_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30208,7 +30221,7 @@ fn decode_keyframe_track_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.KeyframeTrackId",
     );
     let keys = cached_struct_keys(env, &KEYFRAME_TRACK_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_keyframe_track_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_keyframe_track_id_fields_from_decoder<'a>(
@@ -30220,7 +30233,7 @@ fn decode_keyframe_track_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30256,7 +30269,7 @@ fn decode_animation_preset_id_from_decoder<'a>(
         &ANIMATION_PRESET_ID_STRUCT_KEYS,
         &["guid", "asset_ref"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_animation_preset_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_animation_preset_id_fields_from_decoder<'a>(
@@ -30268,7 +30281,7 @@ fn decode_animation_preset_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30293,7 +30306,7 @@ static TOOL_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock
 fn decode_tool_id_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &TOOL_ID_MODULE_ATOM, "Elixir.FigKiwi.Schema.ToolId");
     let keys = cached_struct_keys(env, &TOOL_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_tool_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_tool_id_fields_from_decoder<'a>(
@@ -30305,7 +30318,7 @@ fn decode_tool_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30337,7 +30350,7 @@ fn decode_custom_effect_id_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CustomEffectId",
     );
     let keys = cached_struct_keys(env, &CUSTOM_EFFECT_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_custom_effect_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_custom_effect_id_fields_from_decoder<'a>(
@@ -30349,7 +30362,7 @@ fn decode_custom_effect_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30385,7 +30398,7 @@ fn decode_trss_transform2_d_from_decoder<'a>(
         &TRSS_TRANSFORM2_D_STRUCT_KEYS,
         &["translation", "rotation", "scale", "shear_x"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_trss_transform2_d_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_trss_transform2_d_fields_from_decoder<'a>(
@@ -30397,7 +30410,7 @@ fn decode_trss_transform2_d_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30447,7 +30460,7 @@ fn decode_variable_data_from_decoder<'a>(
         &VARIABLE_DATA_STRUCT_KEYS,
         &["value", "data_type", "resolved_data_type"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_data_fields_from_decoder<'a>(
@@ -30459,7 +30472,7 @@ fn decode_variable_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_any_value_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30508,7 +30521,7 @@ fn decode_variable_set_mode_from_decoder<'a>(
             "parent_mode_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_set_mode_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_set_mode_fields_from_decoder<'a>(
@@ -30520,7 +30533,7 @@ fn decode_variable_set_mode_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30574,7 +30587,7 @@ fn decode_variable_data_values_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.VariableDataValues",
     );
     let keys = cached_struct_keys(env, &VARIABLE_DATA_VALUES_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_data_values_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_data_values_fields_from_decoder<'a>(
@@ -30586,7 +30599,7 @@ fn decode_variable_data_values_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_variable_data_values_entry_from_decoder(env, decoder)
@@ -30620,7 +30633,7 @@ fn decode_variable_data_values_entry_from_decoder<'a>(
         &VARIABLE_DATA_VALUES_ENTRY_STRUCT_KEYS,
         &["mode_id", "variable_data"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_data_values_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_data_values_entry_fields_from_decoder<'a>(
@@ -30632,7 +30645,7 @@ fn decode_variable_data_values_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30734,7 +30747,7 @@ fn decode_keyframe_any_value_from_decoder<'a>(
             "vector_value",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_keyframe_any_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_keyframe_any_value_fields_from_decoder<'a>(
@@ -30746,7 +30759,7 @@ fn decode_keyframe_any_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30817,7 +30830,7 @@ fn decode_keyframe_value_data_from_decoder<'a>(
         &KEYFRAME_VALUE_DATA_STRUCT_KEYS,
         &["value", "value_type"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_keyframe_value_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_keyframe_value_data_fields_from_decoder<'a>(
@@ -30829,7 +30842,7 @@ fn decode_keyframe_value_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_keyframe_any_value_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30892,7 +30905,7 @@ fn decode_manual_keyframe_track_parameter_from_decoder<'a>(
         &MANUAL_KEYFRAME_TRACK_PARAMETER_STRUCT_KEYS,
         &["keyframe_track_id", "timeline_def_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_manual_keyframe_track_parameter_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_manual_keyframe_track_parameter_fields_from_decoder<'a>(
@@ -30904,7 +30917,7 @@ fn decode_manual_keyframe_track_parameter_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_keyframe_track_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -30950,7 +30963,7 @@ fn decode_animation_preset_keyframe_track_parameter_from_decoder<'a>(
             "timeline_def_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_animation_preset_keyframe_track_parameter_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_animation_preset_keyframe_track_parameter_fields_from_decoder<'a>(
@@ -30962,7 +30975,7 @@ fn decode_animation_preset_keyframe_track_parameter_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_animation_preset_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31012,7 +31025,7 @@ fn decode_keyframe_track_any_parameter_from_decoder<'a>(
         &KEYFRAME_TRACK_ANY_PARAMETER_STRUCT_KEYS,
         &["manual", "animation_preset", "animation_style_binding_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_keyframe_track_any_parameter_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_keyframe_track_any_parameter_fields_from_decoder<'a>(
@@ -31024,7 +31037,7 @@ fn decode_keyframe_track_any_parameter_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_manual_keyframe_track_parameter_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31076,7 +31089,7 @@ fn decode_keyframe_track_parameter_from_decoder<'a>(
         &KEYFRAME_TRACK_PARAMETER_STRUCT_KEYS,
         &["value", "type"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_keyframe_track_parameter_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_keyframe_track_parameter_fields_from_decoder<'a>(
@@ -31088,7 +31101,7 @@ fn decode_keyframe_track_parameter_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_keyframe_track_any_parameter_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31125,7 +31138,7 @@ fn decode_keyframe_track_parameter_value_from_decoder<'a>(
         &KEYFRAME_TRACK_PARAMETER_VALUE_STRUCT_KEYS,
         &["parameters"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_keyframe_track_parameter_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_keyframe_track_parameter_value_fields_from_decoder<'a>(
@@ -31137,7 +31150,7 @@ fn decode_keyframe_track_parameter_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_keyframe_track_parameter_from_decoder(env, decoder)
@@ -31168,7 +31181,7 @@ fn decode_animation_presets_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AnimationPresets",
     );
     let keys = cached_struct_keys(env, &ANIMATION_PRESETS_STRUCT_KEYS, &["presets"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_animation_presets_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_animation_presets_fields_from_decoder<'a>(
@@ -31180,7 +31193,7 @@ fn decode_animation_presets_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_animation_preset_data_from_decoder(env, decoder)
@@ -31214,7 +31227,7 @@ fn decode_animation_preset_data_from_decoder<'a>(
         &ANIMATION_PRESET_DATA_STRUCT_KEYS,
         &["animation_preset_id", "timeline_def_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_animation_preset_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_animation_preset_data_fields_from_decoder<'a>(
@@ -31226,7 +31239,7 @@ fn decode_animation_preset_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_animation_preset_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31258,7 +31271,7 @@ fn decode_style_animation_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.StyleAnimation",
     );
     let keys = cached_struct_keys(env, &STYLE_ANIMATION_STRUCT_KEYS, &["animation_preset_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_style_animation_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_style_animation_fields_from_decoder<'a>(
@@ -31270,7 +31283,7 @@ fn decode_style_animation_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_animation_preset_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31305,7 +31318,7 @@ fn decode_style_id_for_animation_from_decoder<'a>(
             "timeline_offset",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_style_id_for_animation_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_style_id_for_animation_fields_from_decoder<'a>(
@@ -31317,7 +31330,7 @@ fn decode_style_id_for_animation_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31356,7 +31369,7 @@ static TOOLS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::
 fn decode_tools_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
     let module_atom = cached_atom(env, &TOOLS_MODULE_ATOM, "Elixir.FigKiwi.Schema.Tools");
     let keys = cached_struct_keys(env, &TOOLS_STRUCT_KEYS, &["tools"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_tools_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_tools_fields_from_decoder<'a>(
@@ -31368,7 +31381,7 @@ fn decode_tools_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_tool_data_from_decoder(env, decoder)) {
                     Ok(value) => {
@@ -31403,7 +31416,7 @@ fn decode_tool_data_from_decoder<'a>(
             "component_prop_assignments",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_tool_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_tool_data_fields_from_decoder<'a>(
@@ -31415,7 +31428,7 @@ fn decode_tool_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_tool_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31458,7 +31471,7 @@ fn decode_custom_effects_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CustomEffects",
     );
     let keys = cached_struct_keys(env, &CUSTOM_EFFECTS_STRUCT_KEYS, &["custom_effects"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_custom_effects_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_custom_effects_fields_from_decoder<'a>(
@@ -31470,7 +31483,7 @@ fn decode_custom_effects_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_custom_effect_data_from_decoder(env, decoder))
@@ -31499,7 +31512,7 @@ fn decode_custom_effect_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CustomEffectData",
     );
     let keys = cached_struct_keys(env, &CUSTOM_EFFECT_DATA_STRUCT_KEYS, &["custom_effect_id"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_custom_effect_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_custom_effect_data_fields_from_decoder<'a>(
@@ -31511,7 +31524,7 @@ fn decode_custom_effect_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_custom_effect_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31540,7 +31553,7 @@ fn decode_spring_params_from_decoder<'a>(
         &SPRING_PARAMS_STRUCT_KEYS,
         &["stiffness", "damping", "mass"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_spring_params_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_spring_params_fields_from_decoder<'a>(
@@ -31552,7 +31565,7 @@ fn decode_spring_params_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31596,7 +31609,7 @@ fn decode_transition_easing_any_value_from_decoder<'a>(
         &TRANSITION_EASING_ANY_VALUE_STRUCT_KEYS,
         &["spring_easing", "bezier_easing"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transition_easing_any_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transition_easing_any_value_fields_from_decoder<'a>(
@@ -31608,7 +31621,7 @@ fn decode_transition_easing_any_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_spring_params_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31648,7 +31661,7 @@ fn decode_easing_data_from_decoder<'a>(
         &EASING_DATA_STRUCT_KEYS,
         &["easing_type", "easing_value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_easing_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_easing_data_fields_from_decoder<'a>(
@@ -31660,7 +31673,7 @@ fn decode_easing_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_easing_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31707,7 +31720,7 @@ fn decode_transition_override_from_decoder<'a>(
             "disabled",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transition_override_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transition_override_fields_from_decoder<'a>(
@@ -31719,7 +31732,7 @@ fn decode_transition_override_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -31812,7 +31825,7 @@ fn decode_transition_override_data_from_decoder<'a>(
         &TRANSITION_OVERRIDE_DATA_STRUCT_KEYS,
         &["all", "property_overrides"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transition_override_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transition_override_data_fields_from_decoder<'a>(
@@ -31824,7 +31837,7 @@ fn decode_transition_override_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_transition_override_from_decoder(env, decoder))
@@ -31941,7 +31954,7 @@ fn decode_transition_override_binding_location_from_decoder<'a>(
             "effect_parametrized_field_value",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transition_override_binding_location_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transition_override_binding_location_fields_from_decoder<'a>(
@@ -31953,7 +31966,7 @@ fn decode_transition_override_binding_location_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decode_transition_override_binding_top_level_field_from_decoder(env, decoder)
                 {
@@ -32186,7 +32199,7 @@ fn decode_node_contents_keyframe_binding_location_from_decoder<'a>(
             "effect_parametrized_field_value",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_contents_keyframe_binding_location_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_contents_keyframe_binding_location_fields_from_decoder<'a>(
@@ -32198,7 +32211,7 @@ fn decode_node_contents_keyframe_binding_location_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decode_transition_override_binding_top_level_field_from_decoder(env, decoder)
                 {
@@ -32258,7 +32271,7 @@ fn decode_transition_override_prop_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.TransitionOverridePropMap",
     );
     let keys = cached_struct_keys(env, &TRANSITION_OVERRIDE_PROP_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transition_override_prop_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transition_override_prop_map_fields_from_decoder<'a>(
@@ -32270,7 +32283,7 @@ fn decode_transition_override_prop_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_transition_override_prop_map_entry_from_decoder(env, decoder)
@@ -32311,7 +32324,7 @@ fn decode_transition_override_prop_map_entry_from_decoder<'a>(
             "node_contents_binding_location",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_transition_override_prop_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_transition_override_prop_map_entry_fields_from_decoder<'a>(
@@ -32323,7 +32336,7 @@ fn decode_transition_override_prop_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_transition_override_prop_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -32400,7 +32413,7 @@ fn decode_optional_vector_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.OptionalVector",
     );
     let keys = cached_struct_keys(env, &OPTIONAL_VECTOR_STRUCT_KEYS, &["value"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_optional_vector_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_optional_vector_fields_from_decoder<'a>(
@@ -32412,7 +32425,7 @@ fn decode_optional_vector_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_vector_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -32805,7 +32818,7 @@ fn decode_migration_status_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.MigrationStatus",
     );
     let keys = cached_struct_keys(env, &MIGRATION_STATUS_STRUCT_KEYS, &["dsd_cleanup"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_migration_status_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_migration_status_fields_from_decoder<'a>(
@@ -32817,7 +32830,7 @@ fn decode_migration_status_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -32906,7 +32919,7 @@ fn decode_aria_attribute_any_value_from_decoder<'a>(
             "string_array_value",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_aria_attribute_any_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_aria_attribute_any_value_fields_from_decoder<'a>(
@@ -32918,7 +32931,7 @@ fn decode_aria_attribute_any_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_bool() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -32994,7 +33007,7 @@ fn decode_aria_attribute_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ARIAAttributeData",
     );
     let keys = cached_struct_keys(env, &ARIA_ATTRIBUTE_DATA_STRUCT_KEYS, &["type", "value"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_aria_attribute_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_aria_attribute_data_fields_from_decoder<'a>(
@@ -33006,7 +33019,7 @@ fn decode_aria_attribute_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_aria_attribute_data_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33038,7 +33051,7 @@ fn decode_aria_attributes_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ARIAAttributesMap",
     );
     let keys = cached_struct_keys(env, &ARIA_ATTRIBUTES_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_aria_attributes_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_aria_attributes_map_fields_from_decoder<'a>(
@@ -33050,7 +33063,7 @@ fn decode_aria_attributes_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_aria_attributes_map_entry_from_decoder(env, decoder)
@@ -33084,7 +33097,7 @@ fn decode_aria_attributes_map_entry_from_decoder<'a>(
         &ARIA_ATTRIBUTES_MAP_ENTRY_STRUCT_KEYS,
         &["attribute", "value"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_aria_attributes_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_aria_attributes_map_entry_fields_from_decoder<'a>(
@@ -33096,7 +33109,7 @@ fn decode_aria_attributes_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33133,7 +33146,7 @@ fn decode_handoff_status_map_entry_from_decoder<'a>(
         &HANDOFF_STATUS_MAP_ENTRY_STRUCT_KEYS,
         &["guid", "handoff_status"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_handoff_status_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_handoff_status_map_entry_fields_from_decoder<'a>(
@@ -33145,7 +33158,7 @@ fn decode_handoff_status_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33177,7 +33190,7 @@ fn decode_handoff_status_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.HandoffStatusMap",
     );
     let keys = cached_struct_keys(env, &HANDOFF_STATUS_MAP_STRUCT_KEYS, &["entries"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_handoff_status_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_handoff_status_map_fields_from_decoder<'a>(
@@ -33189,7 +33202,7 @@ fn decode_handoff_status_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_handoff_status_map_entry_from_decoder(env, decoder)
@@ -33222,7 +33235,7 @@ fn decode_edit_scope_info_from_decoder<'a>(
         &EDIT_SCOPE_INFO_STRUCT_KEYS,
         &["edit_scope_stacks", "snapshots"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_edit_scope_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_edit_scope_info_fields_from_decoder<'a>(
@@ -33234,7 +33247,7 @@ fn decode_edit_scope_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_edit_scope_stack_from_decoder(env, decoder))
@@ -33278,7 +33291,7 @@ fn decode_edit_scope_snapshot_from_decoder<'a>(
         &EDIT_SCOPE_SNAPSHOT_STRUCT_KEYS,
         &["frames", "node_change_field_numbers"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_edit_scope_snapshot_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_edit_scope_snapshot_fields_from_decoder<'a>(
@@ -33290,7 +33303,7 @@ fn decode_edit_scope_snapshot_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_edit_scope_stack_from_decoder(env, decoder))
@@ -33326,7 +33339,7 @@ fn decode_edit_scope_stack_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.EditScopeStack",
     );
     let keys = cached_struct_keys(env, &EDIT_SCOPE_STACK_STRUCT_KEYS, &["stack"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_edit_scope_stack_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_edit_scope_stack_fields_from_decoder<'a>(
@@ -33338,7 +33351,7 @@ fn decode_edit_scope_stack_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| decode_edit_scope_from_decoder(env, decoder))
                 {
@@ -33370,7 +33383,7 @@ fn decode_edit_scope_from_decoder<'a>(
         &EDIT_SCOPE_STRUCT_KEYS,
         &["type", "label", "editor_type"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_edit_scope_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_edit_scope_fields_from_decoder<'a>(
@@ -33382,7 +33395,7 @@ fn decode_edit_scope_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_edit_scope_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33505,7 +33518,7 @@ fn decode_section_preset_info_from_decoder<'a>(
         &SECTION_PRESET_INFO_STRUCT_KEYS,
         &["shelf_id", "template_id", "template_name", "state"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_section_preset_info_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_section_preset_info_fields_from_decoder<'a>(
@@ -33517,7 +33530,7 @@ fn decode_section_preset_info_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint64() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33574,7 +33587,7 @@ fn decode_clipboard_selection_region_from_decoder<'a>(
             "focus_type",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_clipboard_selection_region_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_clipboard_selection_region_fields_from_decoder<'a>(
@@ -33586,7 +33599,7 @@ fn decode_clipboard_selection_region_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33666,7 +33679,7 @@ fn decode_first_draft_kit_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FirstDraftKit",
     );
     let keys = cached_struct_keys(env, &FIRST_DRAFT_KIT_STRUCT_KEYS, &["key", "type"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_first_draft_kit_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_first_draft_kit_fields_from_decoder<'a>(
@@ -33678,7 +33691,7 @@ fn decode_first_draft_kit_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33714,7 +33727,7 @@ fn decode_first_draft_data_from_decoder<'a>(
         &FIRST_DRAFT_DATA_STRUCT_KEYS,
         &["generation_id", "kit"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_first_draft_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_first_draft_data_fields_from_decoder<'a>(
@@ -33726,7 +33739,7 @@ fn decode_first_draft_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33784,7 +33797,7 @@ fn decode_first_draft_kit_element_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.FirstDraftKitElementData",
     );
     let keys = cached_struct_keys(env, &FIRST_DRAFT_KIT_ELEMENT_DATA_STRUCT_KEYS, &["type"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_first_draft_kit_element_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_first_draft_kit_element_data_fields_from_decoder<'a>(
@@ -33796,7 +33809,7 @@ fn decode_first_draft_kit_element_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_first_draft_kit_element_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33873,7 +33886,7 @@ fn decode_platform_shape_property_map_entry_from_decoder<'a>(
         &PLATFORM_SHAPE_PROPERTY_MAP_ENTRY_STRUCT_KEYS,
         &["property", "node_paths"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_platform_shape_property_map_entry_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_platform_shape_property_map_entry_fields_from_decoder<'a>(
@@ -33885,7 +33898,7 @@ fn decode_platform_shape_property_map_entry_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_platform_shape_property_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -33928,7 +33941,7 @@ fn decode_platform_shape_definition_from_decoder<'a>(
         &PLATFORM_SHAPE_DEFINITION_STRUCT_KEYS,
         &["property_map_entries", "behavior_type", "thumbnail_node"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_platform_shape_definition_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_platform_shape_definition_fields_from_decoder<'a>(
@@ -33940,7 +33953,7 @@ fn decode_platform_shape_definition_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder.read_repeated(|decoder| {
                     decode_platform_shape_property_map_entry_from_decoder(env, decoder)
@@ -34000,7 +34013,7 @@ fn decode_node_behaviors_from_decoder<'a>(
             "code",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_behaviors_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_behaviors_fields_from_decoder<'a>(
@@ -34012,7 +34025,7 @@ fn decode_node_behaviors_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_link_behavior_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34115,7 +34128,7 @@ fn decode_behavior_transition_from_decoder<'a>(
             "delay_var",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_behavior_transition_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_behavior_transition_fields_from_decoder<'a>(
@@ -34127,7 +34140,7 @@ fn decode_behavior_transition_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_easing_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34247,7 +34260,7 @@ fn decode_appear_behavior_from_decoder<'a>(
             "is_deleted",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_appear_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_appear_behavior_fields_from_decoder<'a>(
@@ -34259,7 +34272,7 @@ fn decode_appear_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_appear_behavior_trigger_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34351,7 +34364,7 @@ fn decode_hover_behavior_from_decoder<'a>(
         &HOVER_BEHAVIOR_STRUCT_KEYS,
         &["transition", "state", "is_deleted"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_hover_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_hover_behavior_fields_from_decoder<'a>(
@@ -34363,7 +34376,7 @@ fn decode_hover_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_behavior_transition_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34406,7 +34419,7 @@ fn decode_press_behavior_from_decoder<'a>(
         &PRESS_BEHAVIOR_STRUCT_KEYS,
         &["transition", "state", "is_deleted"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_press_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_press_behavior_fields_from_decoder<'a>(
@@ -34418,7 +34431,7 @@ fn decode_press_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_behavior_transition_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34461,7 +34474,7 @@ fn decode_focus_behavior_from_decoder<'a>(
         &FOCUS_BEHAVIOR_STRUCT_KEYS,
         &["transition", "state", "is_deleted"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_focus_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_focus_behavior_fields_from_decoder<'a>(
@@ -34473,7 +34486,7 @@ fn decode_focus_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_behavior_transition_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34523,7 +34536,7 @@ fn decode_scroll_parallax_behavior_from_decoder<'a>(
             "is_deleted",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_scroll_parallax_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_scroll_parallax_behavior_fields_from_decoder<'a>(
@@ -34535,7 +34548,7 @@ fn decode_scroll_parallax_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_scroll_direction_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34635,7 +34648,7 @@ fn decode_scroll_transform_behavior_from_decoder<'a>(
             "is_deleted",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_scroll_transform_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_scroll_transform_behavior_fields_from_decoder<'a>(
@@ -34647,7 +34660,7 @@ fn decode_scroll_transform_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_scroll_transform_behavior_trigger_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34732,7 +34745,7 @@ fn decode_cursor_behavior_from_decoder<'a>(
         &CURSOR_BEHAVIOR_STRUCT_KEYS,
         &["hotspot_x", "hotspot_y", "cursor_guid", "is_deleted"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cursor_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cursor_behavior_fields_from_decoder<'a>(
@@ -34744,7 +34757,7 @@ fn decode_cursor_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34802,7 +34815,7 @@ fn decode_marquee_behavior_from_decoder<'a>(
             "is_deleted",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_marquee_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_marquee_behavior_fields_from_decoder<'a>(
@@ -34814,7 +34827,7 @@ fn decode_marquee_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_relative_direction_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34889,7 +34902,7 @@ fn decode_code_behavior_from_decoder<'a>(
             "is_deleted",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_code_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_code_behavior_fields_from_decoder<'a>(
@@ -34901,7 +34914,7 @@ fn decode_code_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_code_component_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -34954,7 +34967,7 @@ fn decode_client_rendered_metadata_from_decoder<'a>(
             "reconnect_id",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_client_rendered_metadata_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_client_rendered_metadata_fields_from_decoder<'a>(
@@ -34966,7 +34979,7 @@ fn decode_client_rendered_metadata_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35031,7 +35044,7 @@ fn decode_link_behavior_from_decoder<'a>(
         &LINK_BEHAVIOR_STRUCT_KEYS,
         &["type", "url", "page", "open_in_new_window"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_link_behavior_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_link_behavior_fields_from_decoder<'a>(
@@ -35043,7 +35056,7 @@ fn decode_link_behavior_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_link_behavior_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35094,7 +35107,7 @@ fn decode_variable_id_or_variable_override_id_from_decoder<'a>(
         &VARIABLE_ID_OR_VARIABLE_OVERRIDE_ID_STRUCT_KEYS,
         &["variable_id", "variable_override_id"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_variable_id_or_variable_override_id_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_variable_id_or_variable_override_id_fields_from_decoder<'a>(
@@ -35106,7 +35119,7 @@ fn decode_variable_id_or_variable_override_id_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_variable_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35142,7 +35155,7 @@ fn decode_slide_theme_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.SlideThemeData",
     );
     let keys = cached_struct_keys(env, &SLIDE_THEME_DATA_STRUCT_KEYS, &["theme_id", "version"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_slide_theme_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_slide_theme_data_fields_from_decoder<'a>(
@@ -35154,7 +35167,7 @@ fn decode_slide_theme_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_theme_id_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35249,7 +35262,7 @@ fn decode_node_chat_message_from_decoder<'a>(
             "sent_at64",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_chat_message_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_chat_message_fields_from_decoder<'a>(
@@ -35261,7 +35274,7 @@ fn decode_node_chat_message_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35347,7 +35360,7 @@ fn decode_node_chat_tool_call_from_decoder<'a>(
         &NODE_CHAT_TOOL_CALL_STRUCT_KEYS,
         &["tool_call_id", "tool_name", "args_json"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_chat_tool_call_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_chat_tool_call_fields_from_decoder<'a>(
@@ -35359,7 +35372,7 @@ fn decode_node_chat_tool_call_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35403,7 +35416,7 @@ fn decode_node_chat_tool_result_from_decoder<'a>(
         &NODE_CHAT_TOOL_RESULT_STRUCT_KEYS,
         &["tool_call_id", "tool_name", "result_json"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_chat_tool_result_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_chat_tool_result_fields_from_decoder<'a>(
@@ -35415,7 +35428,7 @@ fn decode_node_chat_tool_result_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35458,7 +35471,7 @@ fn decode_node_chat_exchange_from_decoder<'a>(
         &NODE_CHAT_EXCHANGE_STRUCT_KEYS,
         &["node", "messages", "is_typing", "file_updates"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_chat_exchange_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_chat_exchange_fields_from_decoder<'a>(
@@ -35470,7 +35483,7 @@ fn decode_node_chat_exchange_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_guid_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35528,7 +35541,7 @@ fn decode_node_chat_compression_state_from_decoder<'a>(
         &NODE_CHAT_COMPRESSION_STATE_STRUCT_KEYS,
         &["start_index", "summary"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_node_chat_compression_state_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_node_chat_compression_state_fields_from_decoder<'a>(
@@ -35540,7 +35553,7 @@ fn decode_node_chat_compression_state_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35580,7 +35593,7 @@ fn decode_file_update_from_decoder<'a>(
         &FILE_UPDATE_STRUCT_KEYS,
         &["name", "contents", "is_deleted"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_file_update_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_file_update_fields_from_decoder<'a>(
@@ -35592,7 +35605,7 @@ fn decode_file_update_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35632,7 +35645,7 @@ fn decode_ai_chat_content_part_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AIChatContentPart",
     );
     let keys = cached_struct_keys(env, &AI_CHAT_CONTENT_PART_STRUCT_KEYS, &["type", "value"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_ai_chat_content_part_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_ai_chat_content_part_fields_from_decoder<'a>(
@@ -35644,7 +35657,7 @@ fn decode_ai_chat_content_part_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_ai_chat_content_part_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35701,7 +35714,7 @@ fn decode_ai_chat_content_part_any_value_from_decoder<'a>(
         &AI_CHAT_CONTENT_PART_ANY_VALUE_STRUCT_KEYS,
         &["text_value", "selected_node_ids"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_ai_chat_content_part_any_value_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_ai_chat_content_part_any_value_fields_from_decoder<'a>(
@@ -35713,7 +35726,7 @@ fn decode_ai_chat_content_part_any_value_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35778,7 +35791,7 @@ fn decode_ai_chat_message_from_decoder<'a>(
             "created_at_ms64",
         ],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_ai_chat_message_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_ai_chat_message_fields_from_decoder<'a>(
@@ -35790,7 +35803,7 @@ fn decode_ai_chat_message_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_uint() {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -35847,7 +35860,7 @@ fn decode_ai_chat_thread_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.AIChatThread",
     );
     let keys = cached_struct_keys(env, &AI_CHAT_THREAD_STRUCT_KEYS, &["messages"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_ai_chat_thread_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_ai_chat_thread_fields_from_decoder<'a>(
@@ -35859,7 +35872,7 @@ fn decode_ai_chat_thread_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_ai_chat_message_from_decoder(env, decoder))
@@ -36180,7 +36193,7 @@ fn decode_cooper_template_data_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.CooperTemplateData",
     );
     let keys = cached_struct_keys(env, &COOPER_TEMPLATE_DATA_STRUCT_KEYS, &["type"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_cooper_template_data_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_cooper_template_data_fields_from_decoder<'a>(
@@ -36192,7 +36205,7 @@ fn decode_cooper_template_data_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decode_cooper_template_type_from_decoder(env, decoder) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -36217,7 +36230,7 @@ fn decode_image_import_map_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ImageImportMap",
     );
     let keys = cached_struct_keys(env, &IMAGE_IMPORT_MAP_STRUCT_KEYS, &["imports"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_image_import_map_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_image_import_map_fields_from_decoder<'a>(
@@ -36229,7 +36242,7 @@ fn decode_image_import_map_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => {
                 match decoder
                     .read_repeated(|decoder| decode_image_import_from_decoder(env, decoder))
@@ -36258,7 +36271,7 @@ fn decode_image_import_from_decoder<'a>(
         "Elixir.FigKiwi.Schema.ImageImport",
     );
     let keys = cached_struct_keys(env, &IMAGE_IMPORT_STRUCT_KEYS, &["name", "image"]);
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_image_import_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_image_import_fields_from_decoder<'a>(
@@ -36270,7 +36283,7 @@ fn decode_image_import_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_string(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
@@ -36323,7 +36336,7 @@ fn decode_bezier_handles_from_decoder<'a>(
         &BEZIER_HANDLES_STRUCT_KEYS,
         &["p1x", "p1y", "p2x", "p2y"],
     );
-    let values = default_values(module_atom, keys.len() - 1);
+    let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_bezier_handles_fields_from_decoder(env, decoder, keys, values)
 }
 fn decode_bezier_handles_fields_from_decoder<'a>(
@@ -36335,7 +36348,7 @@ fn decode_bezier_handles_fields_from_decoder<'a>(
     let mut values = values;
     match decoder.read_var_uint() {
         Ok(field) => match field as i64 {
-            0i64 => make_struct(env, keys, &values),
+            0i64 => make_struct_from_nif_term_arrays(env, keys, &values),
             1i64 => match decoder.read_var_float(env) {
                 Ok(value) => {
                     values[1] = value.encode(env).as_c_arg();
