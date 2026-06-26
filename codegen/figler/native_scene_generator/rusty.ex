@@ -122,18 +122,6 @@ defmodule Figler.NativeSceneGenerator.Rusty do
   def value(expression), do: Rust.let_("value", expression)
 
   @doc """
-  Assigns an expression to a local.
-  """
-  @spec assign(atom() | String.t(), String.t()) :: RustQ.Rust.Fragment.t()
-  def assign(name, expression), do: Rust.assign(to_string(name), expression)
-
-  @doc """
-  Assigns `Some(expression)` to an optional local.
-  """
-  @spec assign_some(atom() | String.t(), String.t()) :: RustQ.Rust.Fragment.t()
-  def assign_some(name, expression), do: Rust.assign(to_string(name), "Some(#{expression})")
-
-  @doc """
   Emits a schema field block that caches a field atom and appends its value.
   """
   @spec field_value_block(integer(), String.t(), term()) :: String.t()

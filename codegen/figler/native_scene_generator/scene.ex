@@ -10,7 +10,6 @@ defmodule Figler.NativeSceneGenerator.Scene do
   alias Figler.NativeSceneGenerator.Skip
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
-  alias RustQ.Rust
 
   def render(definition_map) do
     [
@@ -144,24 +143,24 @@ defmodule Figler.NativeSceneGenerator.Scene do
 
   defp scene_decode_arm_for(%{decode: :font_name}, fields_by_source) do
     scene_decode_arm(Map.fetch!(fields_by_source, Projection.source_name(:font_name)), [
-      Rust.let_("(family, style, postscript)", "read_scene_font_name_value(decoder)?"),
-      Rusty.assign(:font_family, "family"),
-      Rusty.assign(:font_style, "style"),
-      Rusty.assign(:font_postscript, "postscript")
+      "let (family, style, postscript) = read_scene_font_name_value(decoder)?;",
+      "font_family = family;",
+      "font_style = style;",
+      "font_postscript = postscript;"
     ])
   end
 
   defp scene_decode_arm_for(%{decode: :text_data, name: name} = field, fields_by_source) do
     scene_decode_arm(
       Map.fetch!(fields_by_source, Projection.source_name(field)),
-      Rusty.assign(name, "read_scene_text_data_value(decoder)?")
+      "#{name} = read_scene_text_data_value(decoder)?"
     )
   end
 
   defp scene_decode_arm_for(%{source: {:style_id, :guid}, name: name} = field, fields_by_source) do
     scene_decode_arm(
       Map.fetch!(fields_by_source, Projection.source_name(field)),
-      Rusty.assign(name, "read_scene_style_id_value(decoder)?")
+      "#{name} = read_scene_style_id_value(decoder)?"
     )
   end
 
@@ -177,23 +176,21 @@ defmodule Figler.NativeSceneGenerator.Scene do
 
   defp scene_decode_arm_for(_field, _fields_by_source), do: nil
 
-  defp scene_decode_expr(name, %{decode: :bool}),
-    do: Rusty.assign_some(name, "decoder.read_bool()?")
+  defp scene_decode_expr(name, %{decode: :bool}), do: "#{name} = Some(decoder.read_bool()?)"
 
   defp scene_decode_expr(name, %{decode: :float}),
-    do: Rusty.assign_some(name, "decoder.read_var_float_value()?")
+    do: "#{name} = Some(decoder.read_var_float_value()?)"
 
   defp scene_decode_expr(_name, %{value: :vector}),
-    do: Rusty.assign_some(:size, "read_scene_size_value(decoder)?")
+    do: "size = Some(read_scene_size_value(decoder)?)"
 
   defp scene_decode_expr(_name, %{value: :matrix}),
-    do: Rusty.assign_some(:transform, "read_scene_transform_value(decoder)?")
+    do: "transform = Some(read_scene_transform_value(decoder)?)"
 
   defp scene_decode_expr(name, %{decode: :counted_paints}),
-    do: Rusty.assign(name, "read_scene_counted_array_value(decoder, skip_paint_from_decoder)?")
+    do: "#{name} = read_scene_counted_array_value(decoder, skip_paint_from_decoder)?"
 
-  defp scene_decode_expr(name, _field),
-    do: Rusty.assign_some(name, "decoder.read_string_value()?")
+  defp scene_decode_expr(name, _field), do: "#{name} = Some(decoder.read_string_value()?)"
 
   defp scene_decode_arm(id, lines), do: Rusty.arm(id, lines)
 

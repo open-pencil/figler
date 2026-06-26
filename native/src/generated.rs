@@ -124745,17 +124745,15 @@ mod scene_xpath_runtime {
         let resource = build_scene_index_value(bytes)?;
         query_scene_index_fields_value(env, resource, xpath, fields)
     }
-    pub fn query_scene_index_value<'a>(
-        env: Env<'a>,
-        resource: ResourceArc<SceneIndexResource>,
-        xpath: String,
-    ) -> NifResult<Term<'a>> {
-        let index = resource.index.clone();
-        let root = SceneHandle::document(index.clone());
+    fn evaluate_scene_xpath(
+        index: Arc<SceneIndex>,
+        xpath: &str,
+    ) -> NifResult<Vec<usize>> {
+        let root = SceneHandle::document(index);
         let mut cx = ();
         let expression = servo_xpath::parse::<
             SceneNamespaceResolver,
-        >(&mut cx, &xpath, None, false)
+        >(&mut cx, xpath, None, false)
             .map_err(|error| Error::Term(
                 Box::new(format!("invalid XPath: {:?}", error)),
             ))?;
@@ -124765,23 +124763,32 @@ mod scene_xpath_runtime {
             .map_err(|error| Error::Term(
                 Box::new(format!("XPath evaluation failed: {:?}", error)),
             ))?;
-        let matched = match value {
-            Value::NodeSet(node_set) => {
-                node_set
-                    .into_iter()
-                    .filter_map(|handle| match handle.kind {
-                        SceneHandleKind::Element(node_index) => {
-                            Some(scene_query_node(&index, node_index))
-                        }
-                        SceneHandleKind::Attribute { owner, .. } => {
-                            Some(scene_query_node(&index, owner))
-                        }
-                        SceneHandleKind::Document => None,
-                    })
-                    .collect::<Vec<_>>()
-            }
-            _ => Vec::new(),
-        };
+        Ok(
+            match value {
+                Value::NodeSet(node_set) => {
+                    node_set
+                        .into_iter()
+                        .filter_map(|handle| match handle.kind {
+                            SceneHandleKind::Element(node_index) => Some(node_index),
+                            SceneHandleKind::Attribute { owner, .. } => Some(owner),
+                            SceneHandleKind::Document => None,
+                        })
+                        .collect()
+                }
+                _ => Vec::new(),
+            },
+        )
+    }
+    pub fn query_scene_index_value<'a>(
+        env: Env<'a>,
+        resource: ResourceArc<SceneIndexResource>,
+        xpath: String,
+    ) -> NifResult<Term<'a>> {
+        let index = resource.index.clone();
+        let matched = evaluate_scene_xpath(index.clone(), &xpath)?
+            .into_iter()
+            .map(|node_index| scene_query_node(&index, node_index))
+            .collect::<Vec<_>>();
         Ok(matched.encode(env))
     }
     pub fn query_scene_index_fields_value<'a>(
@@ -124791,39 +124798,10 @@ mod scene_xpath_runtime {
         fields: Vec<String>,
     ) -> NifResult<Term<'a>> {
         let index = resource.index.clone();
-        let root = SceneHandle::document(index.clone());
-        let mut cx = ();
-        let expression = servo_xpath::parse::<
-            SceneNamespaceResolver,
-        >(&mut cx, &xpath, None, false)
-            .map_err(|error| Error::Term(
-                Box::new(format!("invalid XPath: {:?}", error)),
-            ))?;
-        let value = servo_xpath::evaluate_parsed_xpath::<
-            SceneDom,
-        >(&mut cx, &expression, root)
-            .map_err(|error| Error::Term(
-                Box::new(format!("XPath evaluation failed: {:?}", error)),
-            ))?;
-        let matched = match value {
-            Value::NodeSet(node_set) => {
-                let mut out = Vec::new();
-                for handle in node_set {
-                    let node_index = match handle.kind {
-                        SceneHandleKind::Element(node_index) => Some(node_index),
-                        SceneHandleKind::Attribute { owner, .. } => Some(owner),
-                        SceneHandleKind::Document => None,
-                    };
-                    if let Some(node_index) = node_index {
-                        out.push(
-                            scene_query_node_term(env, &index, node_index, &fields)?,
-                        );
-                    }
-                }
-                out
-            }
-            _ => Vec::new(),
-        };
+        let matched = evaluate_scene_xpath(index.clone(), &xpath)?
+            .into_iter()
+            .map(|node_index| scene_query_node_term(env, &index, node_index, &fields))
+            .collect::<NifResult<Vec<_>>>()?;
         Ok(matched.encode(env))
     }
     fn find_node_index(index: &SceneIndex, guid: &str) -> Option<usize> {
@@ -125312,27 +125290,13 @@ mod scene_xpath_runtime {
                 4 => {
                     node_type = Some(scene_node_type_name(decoder.read_var_uint()?));
                 }
-                5 => {
-                    name = Some(decoder.read_string_value()?);
-                }
-                11 => {
-                    size = Some(read_scene_size_value(decoder)?);
-                }
-                12 => {
-                    transform = Some(read_scene_transform_value(decoder)?);
-                }
-                6 => {
-                    visible = Some(decoder.read_bool()?);
-                }
-                7 => {
-                    locked = Some(decoder.read_bool()?);
-                }
-                8 => {
-                    opacity = Some(decoder.read_var_float_value()?);
-                }
-                42 => {
-                    text = read_scene_text_data_value(decoder)?;
-                }
+                5 => name = Some(decoder.read_string_value()?),
+                11 => size = Some(read_scene_size_value(decoder)?),
+                12 => transform = Some(read_scene_transform_value(decoder)?),
+                6 => visible = Some(decoder.read_bool()?),
+                7 => locked = Some(decoder.read_bool()?),
+                8 => opacity = Some(decoder.read_var_float_value()?),
+                42 => text = read_scene_text_data_value(decoder)?,
                 41 => {
                     let (family, style, postscript) = read_scene_font_name_value(
                         decoder,
@@ -125341,30 +125305,14 @@ mod scene_xpath_runtime {
                     font_style = style;
                     font_postscript = postscript;
                 }
-                21 => {
-                    font_size = Some(decoder.read_var_float_value()?);
-                }
-                334 => {
-                    text_style_guid = read_scene_style_id_value(decoder)?;
-                }
-                216 => {
-                    component_key = Some(decoder.read_string_value()?);
-                }
-                252 => {
-                    origin_component_key = Some(decoder.read_string_value()?);
-                }
-                332 => {
-                    fill_style_guid = read_scene_style_id_value(decoder)?;
-                }
-                333 => {
-                    stroke_style_guid = read_scene_style_id_value(decoder)?;
-                }
-                335 => {
-                    effect_style_guid = read_scene_style_id_value(decoder)?;
-                }
-                336 => {
-                    grid_style_guid = read_scene_style_id_value(decoder)?;
-                }
+                21 => font_size = Some(decoder.read_var_float_value()?),
+                334 => text_style_guid = read_scene_style_id_value(decoder)?,
+                216 => component_key = Some(decoder.read_string_value()?),
+                252 => origin_component_key = Some(decoder.read_string_value()?),
+                332 => fill_style_guid = read_scene_style_id_value(decoder)?,
+                333 => stroke_style_guid = read_scene_style_id_value(decoder)?,
+                335 => effect_style_guid = read_scene_style_id_value(decoder)?,
+                336 => grid_style_guid = read_scene_style_id_value(decoder)?,
                 38 => {
                     fill_count = read_scene_counted_array_value(
                         decoder,

@@ -677,43 +677,37 @@ mod scene_xpath_runtime {
         query_scene_index_fields_value(env, resource, xpath, fields)
     }
 
+    fn evaluate_scene_xpath(index: Arc<SceneIndex>, xpath: &str) -> NifResult<Vec<usize>> {
+        let root = SceneHandle::document(index);
+        let mut cx = ();
+        let expression = servo_xpath::parse::<SceneNamespaceResolver>(&mut cx, xpath, None, false)
+            .map_err(|error| Error::Term(Box::new(format!("invalid XPath: {:?}", error))))?;
+        let value = servo_xpath::evaluate_parsed_xpath::<SceneDom>(&mut cx, &expression, root)
+            .map_err(|error| Error::Term(Box::new(format!("XPath evaluation failed: {:?}", error))))?;
+
+        Ok(match value {
+            Value::NodeSet(node_set) => node_set
+                .into_iter()
+                .filter_map(|handle| match handle.kind {
+                    SceneHandleKind::Element(node_index) => Some(node_index),
+                    SceneHandleKind::Attribute { owner, .. } => Some(owner),
+                    SceneHandleKind::Document => None,
+                })
+                .collect(),
+            _ => Vec::new(),
+        })
+    }
+
     pub fn query_scene_index_value<'a>(
         env: Env<'a>,
         resource: ResourceArc<SceneIndexResource>,
         xpath: String,
     ) -> NifResult<Term<'a>> {
         let index = resource.index.clone();
-        let root = SceneHandle::document(index.clone());
-        let mut cx = ();
-        let expression = servo_xpath::parse::<
-            SceneNamespaceResolver,
-        >(&mut cx, &xpath, None, false)
-            .map_err(|error| Error::Term(
-                Box::new(format!("invalid XPath: {:?}", error)),
-            ))?;
-        let value = servo_xpath::evaluate_parsed_xpath::<
-            SceneDom,
-        >(&mut cx, &expression, root)
-            .map_err(|error| Error::Term(
-                Box::new(format!("XPath evaluation failed: {:?}", error)),
-            ))?;
-        let matched = match value {
-            Value::NodeSet(node_set) => {
-                node_set
-                    .into_iter()
-                    .filter_map(|handle| match handle.kind {
-                        SceneHandleKind::Element(node_index) => {
-                            Some(scene_query_node(&index, node_index))
-                        }
-                        SceneHandleKind::Attribute { owner, .. } => {
-                            Some(scene_query_node(&index, owner))
-                        }
-                        SceneHandleKind::Document => None,
-                    })
-                    .collect::<Vec<_>>()
-            }
-            _ => Vec::new(),
-        };
+        let matched = evaluate_scene_xpath(index.clone(), &xpath)?
+            .into_iter()
+            .map(|node_index| scene_query_node(&index, node_index))
+            .collect::<Vec<_>>();
         Ok(matched.encode(env))
     }
 
@@ -724,37 +718,10 @@ mod scene_xpath_runtime {
         fields: Vec<String>,
     ) -> NifResult<Term<'a>> {
         let index = resource.index.clone();
-        let root = SceneHandle::document(index.clone());
-        let mut cx = ();
-        let expression = servo_xpath::parse::<
-            SceneNamespaceResolver,
-        >(&mut cx, &xpath, None, false)
-            .map_err(|error| Error::Term(
-                Box::new(format!("invalid XPath: {:?}", error)),
-            ))?;
-        let value = servo_xpath::evaluate_parsed_xpath::<
-            SceneDom,
-        >(&mut cx, &expression, root)
-            .map_err(|error| Error::Term(
-                Box::new(format!("XPath evaluation failed: {:?}", error)),
-            ))?;
-        let matched = match value {
-            Value::NodeSet(node_set) => {
-                let mut out = Vec::new();
-                for handle in node_set {
-                    let node_index = match handle.kind {
-                        SceneHandleKind::Element(node_index) => Some(node_index),
-                        SceneHandleKind::Attribute { owner, .. } => Some(owner),
-                        SceneHandleKind::Document => None,
-                    };
-                    if let Some(node_index) = node_index {
-                        out.push(scene_query_node_term(env, &index, node_index, &fields)?);
-                    }
-                }
-                out
-            }
-            _ => Vec::new(),
-        };
+        let matched = evaluate_scene_xpath(index.clone(), &xpath)?
+            .into_iter()
+            .map(|node_index| scene_query_node_term(env, &index, node_index, &fields))
+            .collect::<NifResult<Vec<_>>>()?;
         Ok(matched.encode(env))
     }
     fn find_node_index(index: &SceneIndex, guid: &str) -> Option<usize> {
