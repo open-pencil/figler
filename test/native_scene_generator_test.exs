@@ -1,13 +1,13 @@
-defmodule FigKiwi.NativeSceneGeneratorTest do
+defmodule Figler.NativeSceneGeneratorTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.NativeSceneGenerator
-  alias FigKiwi.NativeSceneGenerator.Scene
-  alias FigKiwi.NativeSceneGenerator.Skip
-  alias FigKiwi.NativeSceneGenerator.Sparse
+  alias Figler.NativeSceneGenerator
+  alias Figler.NativeSceneGenerator.Scene
+  alias Figler.NativeSceneGenerator.Skip
+  alias Figler.NativeSceneGenerator.Sparse
 
   test "root generator exposes expected splice groups" do
-    splices = NativeSceneGenerator.render_splices(FigKiwi.schema())
+    splices = NativeSceneGenerator.render_splices(Figler.schema())
 
     assert Keyword.has_key?(splices, :sparse_decoders)
     assert Keyword.has_key?(splices, :skip_decoders)
@@ -16,7 +16,7 @@ defmodule FigKiwi.NativeSceneGeneratorTest do
   end
 
   test "split generator modules render focused fragments" do
-    schema = FigKiwi.schema()
+    schema = Figler.schema()
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
     assert Sparse.render(schema.definitions, definition_map) |> List.flatten() |> Enum.join("\n") =~

@@ -1,3 +1,3 @@
 #!/usr/bin/env elixir
 
-Mix.Tasks.FigKiwi.Profile.Graph.run(System.argv())
+Mix.Tasks.Figler.Profile.Graph.run(System.argv())

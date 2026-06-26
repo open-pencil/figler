@@ -1,9 +1,9 @@
-defmodule FigKiwi.Scene.Graph.DiffTest do
+defmodule Figler.Scene.Graph.DiffTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene.Graph
+  alias Figler.Scene.Graph
 
-  import FigKiwi.Test.GraphBuilder
+  import Figler.Test.GraphBuilder
 
   test "diff reports effective changes in a graph subtree" do
     graph =

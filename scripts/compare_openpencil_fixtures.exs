@@ -1,4 +1,4 @@
-defmodule FigKiwi.FixtureCompare do
+defmodule Figler.FixtureCompare do
   @js ~S'''
   import { readFileSync, writeFileSync } from 'fs';
   import { unzipSync } from 'fflate';
@@ -71,7 +71,7 @@ defmodule FigKiwi.FixtureCompare do
     fixture = Path.expand(fixture)
 
     tmp_dir =
-      Path.join(System.tmp_dir!(), "fig-kiwi-compare-#{System.unique_integer([:positive])}")
+      Path.join(System.tmp_dir!(), "figler-compare-#{System.unique_integer([:positive])}")
 
     File.mkdir_p!(tmp_dir)
     raw_path = Path.join(tmp_dir, "message.bin")
@@ -86,10 +86,10 @@ defmodule FigKiwi.FixtureCompare do
           stderr_to_stdout: true
         )
 
-      data = fixture |> read_canvas!() |> FigKiwi.Container.decode() |> Map.fetch!(:data)
+      data = fixture |> read_canvas!() |> Figler.Container.decode() |> Map.fetch!(:data)
 
-      {elapsed, message} = :timer.tc(fn -> FigKiwi.decode_message(data) end)
-      {native_elapsed, native_message} = :timer.tc(fn -> FigKiwi.Native.decode_message(data) end)
+      {elapsed, message} = :timer.tc(fn -> Figler.decode_message(data) end)
+      {native_elapsed, native_message} = :timer.tc(fn -> Figler.Native.decode_message(data) end)
 
       elixir_summary = summary(fixture, message)
       js_summary = File.read!(js_summary_path)
@@ -203,4 +203,4 @@ defmodule FigKiwi.FixtureCompare do
   end
 end
 
-FigKiwi.FixtureCompare.run(System.argv())
+Figler.FixtureCompare.run(System.argv())

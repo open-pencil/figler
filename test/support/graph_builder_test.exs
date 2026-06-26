@@ -1,12 +1,18 @@
-defmodule FigKiwi.Test.GraphBuilder do
-  @moduledoc false
+defmodule Figler.Test.GraphBuilder do
+  @moduledoc """
+  Test helpers for constructing scene graph resolver inputs.
 
-  alias FigKiwi.Scene.Graph.ComponentPropAssignment
-  alias FigKiwi.Scene.Graph.ComponentPropRef
-  alias FigKiwi.Scene.Graph.DerivedSymbolData
-  alias FigKiwi.Scene.Graph.Resolver
-  alias FigKiwi.Scene.Graph.SeedNode
-  alias FigKiwi.Scene.Graph.SymbolOverride
+  The helpers keep graph resolver tests concise by building seed nodes,
+  overrides, component-property values, and resolved graphs with the same
+  structs used by production code.
+  """
+
+  alias Figler.Scene.Graph.ComponentPropAssignment
+  alias Figler.Scene.Graph.ComponentPropRef
+  alias Figler.Scene.Graph.DerivedSymbolData
+  alias Figler.Scene.Graph.Resolver
+  alias Figler.Scene.Graph.SeedNode
+  alias Figler.Scene.Graph.SymbolOverride
 
   def node(guid, type, attrs \\ []) do
     struct!(SeedNode, Keyword.merge([guid: guid, node_type: Atom.to_string(type)], attrs))
@@ -39,13 +45,13 @@ defmodule FigKiwi.Test.GraphBuilder do
   end
 
   def variable_ref(field, value) do
-    struct(FigKiwi.Schema.VariableDataMapEntry,
+    struct(Figler.Schema.VariableDataMapEntry,
       variable_field: field,
       variable_data:
-        struct(FigKiwi.Schema.VariableData,
+        struct(Figler.Schema.VariableData,
           data_type: :float,
           resolved_data_type: :float,
-          value: struct(FigKiwi.Schema.VariableAnyValue, float_value: value)
+          value: struct(Figler.Schema.VariableAnyValue, float_value: value)
         )
     )
   end

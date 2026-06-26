@@ -1,11 +1,11 @@
-defmodule FigKiwi.Scene.Graph.DerivedSymbolDataTest do
+defmodule Figler.Scene.Graph.DerivedSymbolDataTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
-  alias FigKiwi.Scene.Graph
-  alias FigKiwi.Scene.Node
+  alias Figler.Scene
+  alias Figler.Scene.Graph
+  alias Figler.Scene.Node
 
-  import FigKiwi.Test.GraphBuilder
+  import Figler.Test.GraphBuilder
 
   test "applies derived symbol layout data to cloned children" do
     transform = %{m00: 1.0, m01: 0.0, m02: 10.0, m10: 0.0, m11: 1.0, m12: 20.0}

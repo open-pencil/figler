@@ -1,10 +1,10 @@
-defmodule FigKiwi.Scene.Graph.TargetTest do
+defmodule Figler.Scene.Graph.TargetTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene.Graph.GUID
-  alias FigKiwi.Scene.Graph.Target
+  alias Figler.Scene.Graph.GUID
+  alias Figler.Scene.Graph.Target
 
-  import FigKiwi.Test.GraphBuilder
+  import Figler.Test.GraphBuilder
 
   test "falls back to deepest source target for invalid nested override paths" do
     graph =

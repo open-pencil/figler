@@ -1,0 +1,5 @@
+defmodule Figler.Schema.ColorArray do
+  @moduledoc "Generated Kiwi message module for `ColorArray`."
+  use KiwiCodec, kind: :message
+  field(:colors, 1, repeated: true, type: Figler.Schema.VariableData, source_name: "colors")
+end

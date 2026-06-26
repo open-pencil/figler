@@ -1,12 +1,12 @@
-defmodule FigKiwi.SparseTest do
+defmodule Figler.SparseTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Sparse
+  alias Figler.Sparse
 
   test "introspects sparse schema-backed maps" do
-    sparse = %{__kiwi_module__: FigKiwi.Schema.NodeChange, name: "Rect 1"}
+    sparse = %{__kiwi_module__: Figler.Schema.NodeChange, name: "Rect 1"}
 
-    assert Sparse.module(sparse) == FigKiwi.Schema.NodeChange
+    assert Sparse.module(sparse) == Figler.Schema.NodeChange
     assert Sparse.fields(sparse) == [:name]
     assert Sparse.present?(sparse, :name)
     refute Sparse.present?(sparse, :size)

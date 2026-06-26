@@ -1,34 +1,34 @@
-defmodule FigKiwi.InspectTest do
+defmodule Figler.InspectTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
-  alias FigKiwi.Scene.Graph
-  alias FigKiwi.Scene.Summary
+  alias Figler.Scene
+  alias Figler.Scene.Graph
+  alias Figler.Scene.Summary
 
   test "inspects compact schema structs" do
-    guid = struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34)
-    parent = struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!")
-    vector = struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0)
+    guid = struct(Figler.Schema.GUID, session_id: 12, local_id: 34)
+    parent = struct(Figler.Schema.ParentIndex, guid: guid, position: "!")
+    vector = struct(Figler.Schema.Vector, x: 100.0, y: 50.0)
 
     matrix =
-      struct(FigKiwi.Schema.Matrix, m00: 1.0, m01: 0.0, m02: 10.0, m10: 0.0, m11: 1.0, m12: 20.0)
+      struct(Figler.Schema.Matrix, m00: 1.0, m01: 0.0, m02: 10.0, m10: 0.0, m11: 1.0, m12: 20.0)
 
-    assert inspect(guid) == "#FigKiwi.Schema.GUID<12:34>"
+    assert inspect(guid) == "#Figler.Schema.GUID<12:34>"
 
     assert inspect(parent) ==
-             "#FigKiwi.Schema.ParentIndex<parent=#FigKiwi.Schema.GUID<12:34> pos=!>"
+             "#Figler.Schema.ParentIndex<parent=#Figler.Schema.GUID<12:34> pos=!>"
 
-    assert inspect(vector) == "#FigKiwi.Schema.Vector<x=100.0 y=50.0>"
-    assert inspect(matrix) == "#FigKiwi.Schema.Matrix<1.0,0.0,10.0,0.0,1.0,20.0>"
+    assert inspect(vector) == "#Figler.Schema.Vector<x=100.0 y=50.0>"
+    assert inspect(matrix) == "#Figler.Schema.Matrix<1.0,0.0,10.0,0.0,1.0,20.0>"
   end
 
   test "inspects node changes without dumping hundreds of nil fields" do
     node =
-      struct(FigKiwi.Schema.NodeChange,
-        guid: struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34),
+      struct(Figler.Schema.NodeChange,
+        guid: struct(Figler.Schema.GUID, session_id: 12, local_id: 34),
         parent_index:
-          struct(FigKiwi.Schema.ParentIndex,
-            guid: struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 1),
+          struct(Figler.Schema.ParentIndex,
+            guid: struct(Figler.Schema.GUID, session_id: 0, local_id: 1),
             position: "!"
           ),
         type: :rectangle,
@@ -36,7 +36,7 @@ defmodule FigKiwi.InspectTest do
       )
 
     assert inspect(node) ==
-             "#FigKiwi.Schema.NodeChange<rectangle \"Rect 1\" guid=12:34 parent=0:1 present=4/590>"
+             "#Figler.Schema.NodeChange<rectangle \"Rect 1\" guid=12:34 parent=0:1 present=4/590>"
   end
 
   test "inspects projected scene structs" do
@@ -53,7 +53,7 @@ defmodule FigKiwi.InspectTest do
     }
 
     assert inspect(node) ==
-             "#FigKiwi.Scene.Node<canvas \"Page 1\" 0:1 parent=0:0 pos=! size=100.0x50.0 visible=true locked=false children=1>"
+             "#Figler.Scene.Node<canvas \"Page 1\" 0:1 parent=0:0 pos=! size=100.0x50.0 visible=true locked=false children=1>"
 
     summary = %Summary{
       node_count: 10,
@@ -62,7 +62,7 @@ defmodule FigKiwi.InspectTest do
       type_counts: [{"canvas", 1}]
     }
 
-    assert inspect(summary) == "#FigKiwi.Scene.Summary<nodes=10 roots=1 parented=9 types=1>"
+    assert inspect(summary) == "#Figler.Scene.Summary<nodes=10 roots=1 parented=9 types=1>"
 
     graph = %Graph{
       resource: make_ref(),
@@ -72,6 +72,6 @@ defmodule FigKiwi.InspectTest do
     }
 
     assert inspect(graph) ==
-             "#FigKiwi.Scene.Graph<mode=projected stages=2 resolver=projected_index>"
+             "#Figler.Scene.Graph<mode=projected stages=2 resolver=projected_index>"
   end
 end

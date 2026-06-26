@@ -1,23 +1,23 @@
 # Scene Architecture
 
-FigKiwi keeps two scene layers separate:
+Figler keeps two scene layers separate:
 
-- `FigKiwi.Scene.Index` / native scene functions are the raw, fast projection of schema data.
-- `FigKiwi.Scene.Graph` is the effective-scene resolver for Figma semantics.
+- `Figler.Scene.Index` / native scene functions are the raw, fast projection of schema data.
+- `Figler.Scene.Graph` is the effective-scene resolver for Figma semantics.
 
 ## Projection specs
 
-`FigKiwi.Scene.Projection` is the semantic source of truth for public projected node fields.
+`Figler.Scene.Projection` is the semantic source of truth for public projected node fields.
 It defines field names and their schema sources.
 
-`FigKiwi.Scene.Projection.Native` contains Rust/native rendering policy for those projected fields:
+`Figler.Scene.Projection.Native` contains Rust/native rendering policy for those projected fields:
 Rust field types, copy/clone behavior, and XPath attribute fanout.
 
 ## Seed specs and extraction
 
-`FigKiwi.Scene.Graph.SeedProjection` contains resolver metadata field specs and defaults.
+`Figler.Scene.Graph.SeedProjection` contains resolver metadata field specs and defaults.
 
-`FigKiwi.Scene.Graph.SeedExtraction` converts generated schema-shaped `NodeChange` values into
+`Figler.Scene.Graph.SeedExtraction` converts generated schema-shaped `NodeChange` values into
 seed metadata. Conversion submodules keep concerns focused:
 
 - `SeedExtraction.SymbolOverrides`
@@ -27,7 +27,7 @@ seed metadata. Conversion submodules keep concerns focused:
 ## Tests
 
 Tests should mirror module boundaries instead of accumulating in one integration file.
-Keep top-level `test/scene_test.exs` for `FigKiwi.Scene` smoke/integration coverage.
+Keep top-level `test/scene_test.exs` for `Figler.Scene` smoke/integration coverage.
 Module-specific behavior belongs under matching paths, for example:
 
 - `test/scene/projection_test.exs`
@@ -38,11 +38,11 @@ Module-specific behavior belongs under matching paths, for example:
 
 Native generator modules mirror generated Rust concerns:
 
-- `FigKiwi.NativeSceneGenerator.Sparse` renders generic sparse schema decoders.
-- `FigKiwi.NativeSceneGenerator.Skip` renders generic skip decoders and skip arms.
-- `FigKiwi.NativeSceneGenerator.Focus` renders focused effective-graph seed traversal.
-- `FigKiwi.NativeSceneGenerator.Scene` renders projected scene records, queries, XPath attrs, summaries, and navigation NIFs.
-- `FigKiwi.NativeSceneGenerator` should stay a small facade/orchestrator.
+- `Figler.NativeSceneGenerator.Sparse` renders generic sparse schema decoders.
+- `Figler.NativeSceneGenerator.Skip` renders generic skip decoders and skip arms.
+- `Figler.NativeSceneGenerator.Focus` renders focused effective-graph seed traversal.
+- `Figler.NativeSceneGenerator.Scene` renders projected scene records, queries, XPath attrs, summaries, and navigation NIFs.
+- `Figler.NativeSceneGenerator` should stay a small facade/orchestrator.
 
 Reusable tiny scene fixtures live in `test/support/scene_fixture_test.exs`.
 Graph resolver builders live in `test/support/graph_builder_test.exs`.

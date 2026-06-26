@@ -3,18 +3,18 @@
 Mix.Task.run("app.start")
 
 fixture =
-  System.get_env("FIG_KIWI_ORACLE_FIXTURE") ||
-    raise "set FIG_KIWI_ORACLE_FIXTURE to an exported .fig fixture path"
+  System.get_env("FIGLER_ORACLE_FIXTURE") ||
+    raise "set FIGLER_ORACLE_FIXTURE to an exported .fig fixture path"
 
 manifest_path =
-  System.get_env("FIG_KIWI_ORACLE_MANIFEST") ||
+  System.get_env("FIGLER_ORACLE_MANIFEST") ||
     List.first(System.argv()) ||
-    raise "set FIG_KIWI_ORACLE_MANIFEST or pass a manifest JSON path"
+    raise "set FIGLER_ORACLE_MANIFEST or pass a manifest JSON path"
 
 base_dir = Path.dirname(Path.expand(manifest_path))
-entries = FigKiwi.Scene.Graph.Oracle.entries!(manifest_path)
-fixture_payload = fixture |> File.read!() |> FigKiwi.Scene.payload!()
-shared_graph? = System.get_env("FIG_KIWI_ORACLE_SHARED_GRAPH") in ["1", "true", "TRUE"]
+entries = Figler.Scene.Graph.Oracle.entries!(manifest_path)
+fixture_payload = fixture |> File.read!() |> Figler.Scene.payload!()
+shared_graph? = System.get_env("FIGLER_ORACLE_SHARED_GRAPH") in ["1", "true", "TRUE"]
 
 {build_us, compare_us, results} =
   if shared_graph? do
@@ -22,17 +22,17 @@ shared_graph? = System.get_env("FIG_KIWI_ORACLE_SHARED_GRAPH") in ["1", "true", 
 
     {build_us, graph} =
       :timer.tc(fn ->
-        FigKiwi.Scene.graph(fixture_payload, root: node_guids, until: :stack_layout)
+        Figler.Scene.graph(fixture_payload, root: node_guids, until: :stack_layout)
       end)
 
     {compare_us, results} =
-      :timer.tc(fn -> Enum.map(entries, &FigKiwi.Scene.Graph.Oracle.run(graph, base_dir, &1)) end)
+      :timer.tc(fn -> Enum.map(entries, &Figler.Scene.Graph.Oracle.run(graph, base_dir, &1)) end)
 
     {build_us, compare_us, results}
   else
     {total_us, results} =
       :timer.tc(fn ->
-        Enum.map(entries, &FigKiwi.Scene.Graph.Oracle.run(fixture_payload, base_dir, &1))
+        Enum.map(entries, &Figler.Scene.Graph.Oracle.run(fixture_payload, base_dir, &1))
       end)
 
     build_us =

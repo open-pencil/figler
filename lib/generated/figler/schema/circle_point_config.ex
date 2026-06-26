@@ -1,0 +1,9 @@
+defmodule Figler.Schema.CirclePointConfig do
+  @moduledoc "Generated Kiwi message module for `CirclePointConfig`."
+  use KiwiCodec, kind: :message
+  field(:mode, 1, type: {:enum, Figler.Schema.PointMode}, source_name: "mode")
+  field(:position_unit, 2, type: {:enum, Figler.Schema.NumberUnits}, source_name: "positionUnit")
+  field(:radius_unit, 3, type: {:enum, Figler.Schema.NumberUnits}, source_name: "radiusUnit")
+  field(:min_radius, 4, type: :float, source_name: "minRadius")
+  field(:max_radius, 5, type: :float, source_name: "maxRadius")
+end

@@ -1,0 +1,8 @@
+defmodule Figler.Schema.VariableWidthPoint do
+  @moduledoc "Generated Kiwi message module for `VariableWidthPoint`."
+  use KiwiCodec, kind: :message
+  field(:position, 1, type: :float, source_name: "position")
+  field(:ascent, 2, type: :float, source_name: "ascent")
+  field(:descent, 3, type: :float, source_name: "descent")
+  field(:segment_id, 4, type: :int, source_name: "segmentId")
+end

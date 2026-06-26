@@ -1,7 +1,13 @@
-defmodule FigKiwi.Test.SceneFixture do
-  @moduledoc false
+defmodule Figler.Test.SceneFixture do
+  @moduledoc """
+  Test fixture builders for small Figler scene payloads.
 
-  alias FigKiwi.Scene.Node
+  The fixture binary contains a minimal document and canvas so container,
+  sparse decode, and native scene tests can exercise real Kiwi payloads without
+  large external files.
+  """
+
+  alias Figler.Scene.Node
   alias KiwiCodec.Schema.Binary, as: SchemaBinary
 
   def scene_document do
@@ -35,33 +41,33 @@ defmodule FigKiwi.Test.SceneFixture do
   end
 
   def canvas_container do
-    FigKiwi.Container.build([
-      FigKiwi.Container.deflate(FigKiwi.schema() |> SchemaBinary.encode()),
-      FigKiwi.Container.deflate(message_payload())
+    Figler.Container.build([
+      Figler.Container.deflate(Figler.schema() |> SchemaBinary.encode()),
+      Figler.Container.deflate(message_payload())
     ])
   end
 
   def message_payload do
-    guid = struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 0)
+    guid = struct(Figler.Schema.GUID, session_id: 0, local_id: 0)
 
     message =
-      struct(FigKiwi.Schema.Message,
+      struct(Figler.Schema.Message,
         type: :node_changes,
         session_id: 0,
         node_changes: [
-          struct(FigKiwi.Schema.NodeChange,
+          struct(Figler.Schema.NodeChange,
             guid: guid,
             type: :document,
             name: "Document"
           ),
-          struct(FigKiwi.Schema.NodeChange,
-            guid: struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 1),
-            parent_index: struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!"),
+          struct(Figler.Schema.NodeChange,
+            guid: struct(Figler.Schema.GUID, session_id: 0, local_id: 1),
+            parent_index: struct(Figler.Schema.ParentIndex, guid: guid, position: "!"),
             type: :canvas,
             name: "Page 1",
-            size: struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0),
+            size: struct(Figler.Schema.Vector, x: 100.0, y: 50.0),
             transform:
-              struct(FigKiwi.Schema.Matrix,
+              struct(Figler.Schema.Matrix,
                 m00: 1.0,
                 m01: 0.0,
                 m02: 10.0,
@@ -71,16 +77,16 @@ defmodule FigKiwi.Test.SceneFixture do
               ),
             visible: true,
             locked: false,
-            text_data: struct(FigKiwi.Schema.TextData, characters: "Hello world"),
+            text_data: struct(Figler.Schema.TextData, characters: "Hello world"),
             font_name:
-              struct(FigKiwi.Schema.FontName,
+              struct(Figler.Schema.FontName,
                 family: "Inter",
                 style: "Regular",
                 postscript: "Inter-Regular"
               ),
             style_id_for_text:
-              struct(FigKiwi.Schema.StyleId,
-                guid: struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 2)
+              struct(Figler.Schema.StyleId,
+                guid: struct(Figler.Schema.GUID, session_id: 0, local_id: 2)
               )
           )
         ]

@@ -1,12 +1,12 @@
-defmodule FigKiwi.Scene.Graph.ApiTest do
+defmodule Figler.Scene.Graph.ApiTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
-  alias FigKiwi.Scene.Graph
-  alias FigKiwi.Scene.Graph.SeedNode
-  alias FigKiwi.Scene.Node
+  alias Figler.Scene
+  alias Figler.Scene.Graph
+  alias Figler.Scene.Graph.SeedNode
+  alias Figler.Scene.Node
 
-  import FigKiwi.Test.SceneFixture
+  import Figler.Test.SceneFixture
 
   test "graph public APIs expose projected effective scene data" do
     graph = Scene.graph(message_payload(), until: :component_props, skip: [:sync_overrides])

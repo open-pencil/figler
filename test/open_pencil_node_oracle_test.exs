@@ -1,10 +1,10 @@
-defmodule FigKiwi.OpenPencilNodeOracleTest do
+defmodule Figler.OpenPencilNodeOracleTest do
   use ExUnit.Case, async: true
 
   @moduletag :external_fixture
 
-  @cli_env "FIG_KIWI_OPEN_PENCIL_NODE_CLI"
-  @fixture_env "FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR"
+  @cli_env "FIGLER_OPEN_PENCIL_NODE_CLI"
+  @fixture_env "FIGLER_OPEN_PENCIL_FIXTURE_DIR"
 
   if System.get_env(@cli_env) && System.get_env(@fixture_env) do
     @tag timeout: 120_000
@@ -15,18 +15,18 @@ defmodule FigKiwi.OpenPencilNodeOracleTest do
       assert File.regular?(fixture)
 
       open_pencil = open_pencil_info!(cli, fixture)
-      summary = fixture |> File.read!() |> FigKiwi.Scene.summary()
+      summary = fixture |> File.read!() |> Figler.Scene.summary()
 
       assert summary.node_count == open_pencil["totalNodes"]
       assert {"canvas", canvas_count} = List.keyfind(summary.type_counts, "canvas", 0)
       assert canvas_count == open_pencil["pages"]
 
-      fig_kiwi_types = Map.new(summary.type_counts)
+      figler_types = Map.new(summary.type_counts)
       open_pencil_types = normalize_type_counts(open_pencil["types"])
 
       for type <- ["text", "frame", "component", "instance"],
           Map.has_key?(open_pencil_types, type) do
-        assert fig_kiwi_types[type] == open_pencil_types[type]
+        assert figler_types[type] == open_pencil_types[type]
       end
     end
 

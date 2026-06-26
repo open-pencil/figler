@@ -1,16 +1,16 @@
-defmodule FigKiwi.MixProject do
+defmodule Figler.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/dannote/fig_kiwi"
+  @source_url "https://github.com/dannote/figler"
 
   def project do
     [
-      app: :fig_kiwi,
+      app: :figler,
       version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      description: "Figma Kiwi schema helpers for Elixir",
+      description: "Read and query Figma files from Elixir",
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix], flags: [:no_opaque]],
       package: package(),
@@ -110,7 +110,17 @@ defmodule FigKiwi.MixProject do
     [
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
-      files: ["lib", "native", "priv", "mix.exs", "README.md", "CHANGELOG.md", "LICENSE*"]
+      files: [
+        "lib",
+        "native/Cargo.toml",
+        "native/Cargo.lock",
+        "native/src",
+        "priv/schema",
+        "mix.exs",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE*"
+      ]
     ]
   end
 
@@ -118,8 +128,19 @@ defmodule FigKiwi.MixProject do
     [
       main: "readme",
       extras: ["README.md", "CHANGELOG.md"],
+      groups_for_modules: docs_groups_for_modules(),
       source_ref: "v#{@version}",
       source_url: @source_url
+    ]
+  end
+
+  defp docs_groups_for_modules do
+    [
+      "Generated schema": [~r/^Figler\.Schema/],
+      "Scene graph": [~r/^Figler\.Scene\.Graph/],
+      "Scene projection": [~r/^Figler\.Scene(\.|$)/],
+      "Native bridge": [~r/^Figler\.Native(\.|$)/],
+      "Code generation": [~r/^Figler\.NativeSceneGenerator/]
     ]
   end
 end

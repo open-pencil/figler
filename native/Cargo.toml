@@ -1,11 +1,11 @@
 [package]
-name = "fig_kiwi_native"
+name = "figler_native"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "fig_kiwi_native"
+name = "figler_native"
 crate-type = ["cdylib"]
 
 [dependencies]

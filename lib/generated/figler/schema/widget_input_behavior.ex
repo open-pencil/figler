@@ -1,0 +1,7 @@
+defmodule Figler.Schema.WidgetInputBehavior do
+  @moduledoc "Generated Kiwi enum module for `WidgetInputBehavior`."
+  use KiwiCodec, kind: :enum
+  enum_value(:wrap, 0)
+  enum_value(:truncate, 1)
+  enum_value(:multiline, 2)
+end

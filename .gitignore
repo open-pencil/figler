@@ -20,10 +20,10 @@ erl_crash.dump
 *.ez
 
 # Ignore package tarball (built via "mix hex.build").
-fig_kiwi-*.tar
+figler-*.tar
 
 # Rustler build artifacts
 /native/target/
-/native/fig_kiwi_native/target/
+/native/figler_native/target/
 /priv/native/
 

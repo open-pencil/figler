@@ -1,25 +1,25 @@
-defmodule FigKiwi.Scene.Graph.ResolverTest do
+defmodule Figler.Scene.Graph.ResolverTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene.Graph.SeedNode
-  alias FigKiwi.Scene.Graph.SymbolOverride
+  alias Figler.Scene.Graph.SeedNode
+  alias Figler.Scene.Graph.SymbolOverride
 
   test "extracts graph seed metadata from generated node changes" do
-    target_guid = struct(FigKiwi.Schema.GUID, session_id: 1, local_id: 2)
+    target_guid = struct(Figler.Schema.GUID, session_id: 1, local_id: 2)
 
     seed =
-      struct(FigKiwi.Schema.NodeChange,
-        guid: struct(FigKiwi.Schema.GUID, session_id: 2, local_id: 1),
+      struct(Figler.Schema.NodeChange,
+        guid: struct(Figler.Schema.GUID, session_id: 2, local_id: 1),
         type: :instance,
         name: "Button instance",
-        override_key: struct(FigKiwi.Schema.GUID, session_id: 2, local_id: 9),
+        override_key: struct(Figler.Schema.GUID, session_id: 2, local_id: 9),
         symbol_data:
-          struct(FigKiwi.Schema.SymbolData,
-            symbol_id: struct(FigKiwi.Schema.GUID, session_id: 1, local_id: 1),
+          struct(Figler.Schema.SymbolData,
+            symbol_id: struct(Figler.Schema.GUID, session_id: 1, local_id: 1),
             symbol_overrides: [
-              struct(FigKiwi.Schema.NodeChange,
-                guid_path: struct(FigKiwi.Schema.GUIDPath, guids: [target_guid]),
-                text_data: struct(FigKiwi.Schema.TextData, characters: "Submit"),
+              struct(Figler.Schema.NodeChange,
+                guid_path: struct(Figler.Schema.GUIDPath, guids: [target_guid]),
+                text_data: struct(Figler.Schema.TextData, characters: "Submit"),
                 visible: false
               )
             ]

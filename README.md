@@ -1,93 +1,92 @@
-# FigKiwi
+# Figler
 
-FigKiwi is a companion package for [`kiwi_codec`](../kiwi_codec). It includes the Figma `.kiwi` schema, generated static schema modules, and helpers for Figma `Message` payloads.
+Read and query Figma files from Elixir.
 
-Generic Kiwi wire primitives, schema parsing, runtime interpretation, DSL, and code generation stay in `kiwi_codec`.
+Figler lets Elixir applications inspect Figma `.fig` files without shelling
+out to Node or materializing the entire Figma document into huge nested structs.
+It is designed for tooling that needs to answer questions like:
 
-## Usage
+- What pages, frames, components, and text nodes are in this file?
+- Which nodes match a type, name, text snippet, or XPath-style selector?
+- What does a scene look like after Figma instance overrides and component
+  properties are applied?
+- Can I decode a full Figma message when I need exact schema data?
+- Can I scan large files quickly when I only need a handful of fields?
 
-Prefer generated schema structs for normal use:
+Figler includes the Figma Kiwi schema, generated Elixir schema modules, native
+sparse decoders, a fast projected scene index, and an effective scene graph for
+resolved Figma semantics.
+
+## Why Figler?
+
+Figma files are large, deeply nested, and encoded with Figma's Kiwi schema.
+Naively decoding every field into every generated struct can be expensive and
+hard to work with. Figler gives you multiple levels of access:
+
+- **Fast scene queries** for common inspection tasks, backed by native decoding.
+- **Reusable indexes** when running many queries over the same file.
+- **Sparse decoding** when you need schema-shaped data but only fields present
+  on the wire.
+- **Full generated structs** when you need exact typed access to the complete
+  Figma message schema.
+- **Effective scene graphs** when raw nodes are not enough and you need Figma
+  semantics such as populated instances, symbol overrides, component props,
+  swaps, derived symbol data, and layout metadata.
+
+## Installation
 
 ```elixir
-message = %FigKiwi.Schema.Message{type: :node_changes, session_id: 12, node_changes: []}
-binary = FigKiwi.encode_message(message)
-message = FigKiwi.decode_message(binary)
+{:figler, "~> 0.1"}
 ```
 
-Sparse native decode is available when you need recursive schema-backed maps without materializing hundreds of absent `nil` fields:
+Figler uses a Rustler native extension for high-performance decoding and scene
+queries. Building from source requires a Rust toolchain.
+
+## Quick start: query a Figma file
+
+Most scene APIs accept a Figma `.fig` file directly. Lower-level APIs can also
+work with already-extracted Figma Kiwi binaries when you have them.
 
 ```elixir
-sparse = FigKiwi.decode_sparse_message(binary)
-FigKiwi.Sparse.module(sparse)
-FigKiwi.Sparse.get(sparse, :node_changes)
+alias Figler.Scene
+
+fig = File.read!("design.fig")
+
+summary = Scene.summary(fig)
+pages = Scene.pages(fig)
+text_nodes = Scene.query(fig, "//text[@text]", fields: [:name, :text])
 ```
 
-Map-based runtime encode/decode is available for tooling:
+For repeated queries, build an index once:
 
 ```elixir
-schema = FigKiwi.schema()
-message = FigKiwi.decode_message_runtime(binary)
-binary = FigKiwi.encode_message_runtime(%{"type" => "NODE_CHANGES"})
-```
+index = Scene.index(fig)
 
-For `fig-kiwi` chunk containers:
-
-```elixir
-parsed = FigKiwi.Container.parse(binary)
-chunks = Enum.map(parsed.chunks, &FigKiwi.Container.inflate/1)
-
-decoded = FigKiwi.Container.decode(binary)
-```
-
-Projected native scene queries avoid materializing the full generated schema tree. They accept raw Kiwi `Message` payloads, `canvas.fig` containers, or `.fig` ZIPs containing `canvas.fig`:
-
-```elixir
-alias FigKiwi.Scene
-
-summary = Scene.summary(fig_binary)
-canvases = Scene.query(fig_binary, "//canvas")
-text = Scene.query(fig_binary, "//text[@text]", fields: [:name, :text])
-
-index = Scene.index(fig_binary) # %FigKiwi.Scene.Index{}
-canvases = Scene.pages(index)
-node = Scene.node(index, "0:123")
-children = Scene.children(index, "0:123")
-descendants = Scene.descendants(index, "0:123")
-frames = Scene.find(index, type: :frame, name_contains: "Card")
+frames = Scene.by_type(index, :frame)
+buttons = Scene.name_contains(index, "Button")
+labels = Scene.text_contains(index, "Label", fields: [:name, :text])
 components = Scene.components(index)
 filled_nodes = Scene.with_fills(index)
-tree = Scene.tree(index, depth: 3)
-
-# A graph is the separate effective-scene surface for resolved Figma semantics:
-# populated instances, overrides, component props, swaps, derived symbol data,
-# and layout adjustments. Use `root:`/`focus:` for fast focused inspection.
-graph = Scene.graph(fig_binary, root: "0:123") # %FigKiwi.Scene.Graph{}
-text = Scene.text_contains(graph, "Submit")
-
-# Graph-specific helpers expose resolved trees, provenance, diffs, and instance
-# metadata for Figma debugging/tooling.
-tree = Scene.Graph.tree(graph, root: "0:123", depth: 3)
-explanation = Scene.Graph.explain(graph, "0:123")
-changes = Scene.Graph.diff(graph, root: "0:123")
-instance = Scene.Graph.instance(graph, "0:123")
 ```
 
-For dynamic values, prefer native helpers instead of interpolating XPath strings:
+Navigate the scene without writing selectors:
 
 ```elixir
-text_nodes = Scene.by_type(index, :text)
-buttons = Scene.name_contains(index, "Button")
-labels = Scene.text_contains(index, "Label")
-named = Scene.named(index, "Primary action")
+roots = Scene.roots(index)
+node = Scene.node(index, "0:123")
+parent = Scene.parent(index, "0:123")
+children = Scene.children(index, "0:123")
+descendants = Scene.descendants(index, "0:123")
+```
 
+Helpers also compose on returned node lists:
+
+```elixir
 button_labels =
   index
   |> Scene.by_type(:text)
   |> Scene.name_contains("Button")
   |> Scene.attribute(:text)
-
-# Helper APIs can push field filtering into native code when starting from an index.
-label_text_nodes = Scene.text_contains(index, "Label", fields: [:text])
 
 all_text =
   index
@@ -95,36 +94,178 @@ all_text =
   |> Scene.text(sep: "\n")
 ```
 
-Projected XPath nodes are returned as `%FigKiwi.Scene.Node{}` structs and expose `@guid`, `@type`, `@name`, `@parent_guid`, `@position`, geometry, visibility, text, font, and text-style attributes to XPath. Summaries are returned as `%FigKiwi.Scene.Summary{}` structs. Use `Scene.query/2` for raw XPath and build a reusable scene index when running multiple queries over the same file.
+Scene queries return `%Figler.Scene.Node{}` structs. Projected fields include
+GUID, type, name, parent GUID, position, size, transform, visibility, lock
+state, text, font metadata, style GUIDs, component keys, and paint counts.
 
-## Updating generated schema modules
+## XPath-style selectors
+
+Use `Scene.query/3` when a selector is clearer than helper calls:
+
+```elixir
+canvases = Scene.query(index, "//canvas")
+visible_text = Scene.query(index, "//text[@visible='true'][@text]")
+card_frames = Scene.query(index, "//frame[contains(@name, 'Card')]")
+```
+
+Use the `:fields` option to keep returned nodes small and push field filtering
+into native code:
+
+```elixir
+Scene.query(index, "//text[@text]", fields: [:name, :text])
+```
+
+For dynamic values, prefer helpers such as `Scene.name_contains/3` and
+`Scene.text_contains/3` instead of interpolating selector strings.
+
+## Effective scene graphs
+
+The projected index is the fast raw view. A graph is the semantic view.
+
+Use `Scene.graph/2` when you need resolved Figma behavior rather than only raw
+node records:
+
+```elixir
+graph = Scene.graph(fig, root: "0:123")
+
+resolved_text = Scene.text_contains(graph, "Submit")
+tree = Scene.Graph.tree(graph, root: "0:123", depth: 3)
+explanation = Scene.Graph.explain(graph, "0:123")
+changes = Scene.Graph.diff(graph, root: "0:123")
+instance = Scene.Graph.instance(graph, "0:123")
+stats = Scene.Graph.stats(graph)
+```
+
+Graphs are useful for debugging design systems, comparing fixtures, inspecting
+instances, and building tools that need effective scene structure. Use `root:`
+or `focus:` to limit work to a subtree and its semantic dependencies.
+
+## Decode Figma messages
+
+When you need exact schema data, decode into generated Elixir structs:
+
+```elixir
+message = Figler.decode_message(payload)
+
+%Figler.Schema.Message{
+  type: :node_changes,
+  node_changes: node_changes
+} = message
+```
+
+You can also encode generated structs back to Kiwi binary:
+
+```elixir
+binary = Figler.encode_message(message)
+```
+
+The vendored schema is available for tooling:
+
+```elixir
+schema_text = Figler.schema_text()
+schema = Figler.schema()
+```
+
+## Sparse decoding for large messages
+
+Sparse decoding keeps the schema shape but avoids allocating every absent field.
+It returns maps containing only values present in the encoded payload.
+
+```elixir
+sparse = Figler.decode_sparse_message(payload)
+
+Figler.Sparse.module(sparse)
+Figler.Sparse.fields(sparse)
+Figler.Sparse.present?(sparse, :node_changes)
+Figler.Sparse.get(sparse, :node_changes)
+```
+
+Sparse maps include `:__kiwi_module__`, so tooling can still identify the
+corresponding `Figler.Schema.*` module.
+
+## Low-level Figma Kiwi binaries
+
+Most users should start with `Figler.Scene` and pass a `.fig` file directly.
+If you are building import/export tooling and already have Figma's internal
+Kiwi container binary, `Figler.Container` can parse it directly:
+
+```elixir
+parsed = Figler.Container.parse(container_binary)
+chunks = Enum.map(parsed.chunks, &Figler.Container.inflate/1)
+
+decoded = Figler.Container.decode(container_binary)
+payload = Figler.Container.data(container_binary)
+```
+
+To normalize any supported input into the raw Figma Kiwi `Message` binary:
+
+```elixir
+payload = Figler.Scene.payload!(binary)
+```
+
+## Runtime map encoding/decoding
+
+For dynamic tools that do not want generated structs, use the runtime schema
+interpreter:
+
+```elixir
+message = Figler.decode_message_runtime(payload)
+binary = Figler.encode_message_runtime(%{"type" => "NODE_CHANGES"})
+```
+
+## Generated code
+
+Figler checks in generated Elixir schema modules and generated Rust source so
+consumers do not need to run code generation during normal use.
+
+Regenerate Elixir schema modules from `priv/schema/fig.kiwi`:
 
 ```sh
 rm -rf lib/generated
-mix kiwi.gen priv/schema/fig.kiwi --module-prefix FigKiwi.Schema --out lib/generated
+mix kiwi.gen priv/schema/fig.kiwi --module-prefix Figler.Schema --out lib/generated
 mix format
-mix ci
 ```
 
-## Benchmarks
+Regenerate native Rust source from `rustq.exs`:
+
+```sh
+mix rustq.gen native
+```
+
+Check generated files are fresh:
+
+```sh
+mix rustq.gen --check native
+```
+
+## Benchmarks and oracle fixtures
+
+Message benchmark:
 
 ```sh
 elixir bench/message_bench.exs
-
-FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
-  mix fig_kiwi.bench.fixtures
-
-# Skip expensive full materialization on large fixtures.
-FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
-FIG_KIWI_BENCH_FULL_DECODE=0 \
-  mix fig_kiwi.bench.fixtures nuxtui.fig
 ```
 
-OpenPencil oracle tests can use a Node-compatible OpenPencil CLI build:
+OpenPencil fixture benchmark:
 
 ```sh
-FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
-FIG_KIWI_OPEN_PENCIL_NODE_CLI=/path/to/openpencil-cli.js \
+FIGLER_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
+  mix figler.bench.fixtures
+```
+
+Skip expensive full materialization on large fixtures:
+
+```sh
+FIGLER_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
+FIGLER_BENCH_FULL_DECODE=0 \
+  mix figler.bench.fixtures nuxtui.fig
+```
+
+Oracle comparisons can use a Node-compatible OpenPencil CLI build:
+
+```sh
+FIGLER_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
+FIGLER_OPEN_PENCIL_NODE_CLI=/path/to/openpencil-cli.js \
   mix test test/open_pencil_node_oracle_test.exs
 ```
 
@@ -134,3 +275,7 @@ FIG_KIWI_OPEN_PENCIL_NODE_CLI=/path/to/openpencil-cli.js \
 mix deps.get
 mix ci
 ```
+
+`mix ci` checks Elixir compilation, generated native freshness, formatting,
+Rust formatting/checks/clippy, tests, Credo, Dialyzer, clone detection, and
+architecture/smell checks.

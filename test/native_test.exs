@@ -1,22 +1,22 @@
-defmodule FigKiwi.NativeTest do
+defmodule Figler.NativeTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Native.{Codec, Scene}
+  alias Figler.Native.{Codec, Scene}
 
   test "decodes generated primitive structs" do
-    guid = struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34)
-    vector = struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0)
+    guid = struct(Figler.Schema.GUID, session_id: 12, local_id: 34)
+    vector = struct(Figler.Schema.Vector, x: 100.0, y: 50.0)
 
-    parent_index = struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!")
-    image = struct(FigKiwi.Schema.Image, hash: <<1, 2, 3>>, name: "Preview", data_blob: 7)
-    partial_image = struct(FigKiwi.Schema.Image, name: "Preview")
+    parent_index = struct(Figler.Schema.ParentIndex, guid: guid, position: "!")
+    image = struct(Figler.Schema.Image, hash: <<1, 2, 3>>, name: "Preview", data_blob: 7)
+    partial_image = struct(Figler.Schema.Image, name: "Preview")
 
     assert Codec.decode_guid(KiwiCodec.encode(guid)) == guid
     assert Codec.decode_vector(KiwiCodec.encode(vector)) == vector
     assert Codec.decode_parent_index(KiwiCodec.encode(parent_index)) == parent_index
 
     node_change =
-      struct(FigKiwi.Schema.NodeChange,
+      struct(Figler.Schema.NodeChange,
         guid: guid,
         phase: :created,
         parent_index: parent_index,
@@ -26,14 +26,14 @@ defmodule FigKiwi.NativeTest do
       )
 
     message =
-      struct(FigKiwi.Schema.Message,
+      struct(Figler.Schema.Message,
         type: :node_changes,
         session_id: 12,
         node_changes: [node_change]
       )
 
-    partial_message = struct(FigKiwi.Schema.Message, session_id: 12)
-    unknown_enum_message = struct(FigKiwi.Schema.Message, type: 999)
+    partial_message = struct(Figler.Schema.Message, session_id: 12)
+    unknown_enum_message = struct(Figler.Schema.Message, type: 999)
 
     assert Codec.decode_image(KiwiCodec.encode(image)) == image
     assert Codec.decode_image(KiwiCodec.encode(partial_image)) == partial_image
@@ -46,16 +46,16 @@ defmodule FigKiwi.NativeTest do
   end
 
   test "decodes sparse messages without absent fields" do
-    guid = struct(FigKiwi.Schema.GUID, session_id: 12, local_id: 34)
-    parent_index = struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!")
-    size = struct(FigKiwi.Schema.Vector, x: 100.0, y: 50.0)
+    guid = struct(Figler.Schema.GUID, session_id: 12, local_id: 34)
+    parent_index = struct(Figler.Schema.ParentIndex, guid: guid, position: "!")
+    size = struct(Figler.Schema.Vector, x: 100.0, y: 50.0)
 
     message =
-      struct(FigKiwi.Schema.Message,
+      struct(Figler.Schema.Message,
         type: :node_changes,
         session_id: 12,
         node_changes: [
-          struct(FigKiwi.Schema.NodeChange,
+          struct(Figler.Schema.NodeChange,
             guid: guid,
             phase: :created,
             parent_index: parent_index,
@@ -66,7 +66,7 @@ defmodule FigKiwi.NativeTest do
         ]
       )
 
-    sparse = FigKiwi.decode_sparse_message(KiwiCodec.encode(message))
+    sparse = Figler.decode_sparse_message(KiwiCodec.encode(message))
 
     assert sparse == sparse_equivalent(message)
     refute Map.has_key?(hd(sparse.node_changes), :description)
@@ -129,20 +129,20 @@ defmodule FigKiwi.NativeTest do
   defp sparse_equivalent(value), do: value
 
   defp scene_message do
-    guid = struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 0)
+    guid = struct(Figler.Schema.GUID, session_id: 0, local_id: 0)
 
-    struct(FigKiwi.Schema.Message,
+    struct(Figler.Schema.Message,
       type: :node_changes,
       session_id: 0,
       node_changes: [
-        struct(FigKiwi.Schema.NodeChange,
+        struct(Figler.Schema.NodeChange,
           guid: guid,
           type: :document,
           name: "Document"
         ),
-        struct(FigKiwi.Schema.NodeChange,
-          guid: struct(FigKiwi.Schema.GUID, session_id: 0, local_id: 1),
-          parent_index: struct(FigKiwi.Schema.ParentIndex, guid: guid, position: "!"),
+        struct(Figler.Schema.NodeChange,
+          guid: struct(Figler.Schema.GUID, session_id: 0, local_id: 1),
+          parent_index: struct(Figler.Schema.ParentIndex, guid: guid, position: "!"),
           type: :canvas,
           name: "Page 1"
         )

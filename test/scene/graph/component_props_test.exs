@@ -1,11 +1,11 @@
-defmodule FigKiwi.Scene.Graph.ComponentPropsTest do
+defmodule Figler.Scene.Graph.ComponentPropsTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
-  alias FigKiwi.Scene.Graph
-  alias FigKiwi.Scene.Node
+  alias Figler.Scene
+  alias Figler.Scene.Graph
+  alias Figler.Scene.Node
 
-  import FigKiwi.Test.GraphBuilder
+  import Figler.Test.GraphBuilder
 
   test "applies basic component property assignments to cloned children" do
     graph =

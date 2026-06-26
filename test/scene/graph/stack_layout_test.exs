@@ -1,9 +1,9 @@
-defmodule FigKiwi.Scene.Graph.StackLayoutTest do
+defmodule Figler.Scene.Graph.StackLayoutTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
+  alias Figler.Scene
 
-  import FigKiwi.Test.GraphBuilder
+  import Figler.Test.GraphBuilder
 
   test "positions visible horizontal stack children from left padding and spacing" do
     graph =

@@ -1,6 +1,6 @@
 # Graph Resolver Pipeline
 
-`FigKiwi.Scene.Graph` builds an effective scene from raw projected scene nodes.
+`Figler.Scene.Graph` builds an effective scene from raw projected scene nodes.
 Use the raw `Scene.Index` for fast schema-shaped navigation and `Scene.Graph` when Figma semantics matter.
 
 Typical stage order:
@@ -17,13 +17,13 @@ Typical stage order:
 Use `until:` to stop at a stage while debugging:
 
 ```elixir
-graph = FigKiwi.Scene.graph(fig_binary, until: :component_props)
+graph = Figler.Scene.graph(fig_binary, until: :component_props)
 ```
 
 Use `skip:` for targeted experiments, not public performance flags:
 
 ```elixir
-graph = FigKiwi.Scene.graph(fig_binary, skip: [:sync_overrides])
+graph = Figler.Scene.graph(fig_binary, skip: [:sync_overrides])
 ```
 
 ## Provenance and unresolved diagnostics
@@ -31,8 +31,8 @@ graph = FigKiwi.Scene.graph(fig_binary, skip: [:sync_overrides])
 Resolver stages record provenance on effective nodes. Inspect it with:
 
 ```elixir
-FigKiwi.Scene.Graph.explain(graph, "0:1")
-FigKiwi.Scene.Graph.unresolved(graph)
+Figler.Scene.Graph.explain(graph, "0:1")
+Figler.Scene.Graph.unresolved(graph)
 ```
 
 Applied entries describe what changed; unresolved entries describe preserved or skipped semantic references.
@@ -42,7 +42,7 @@ Applied entries describe what changed; unresolved entries describe preserved or 
 Avoid strict timing assertions in CI. For local checks, use rough comparisons and record outputs in `/tmp`:
 
 ```sh
-mise exec rust@1.96.0 -- mix fig_kiwi.profile.graph \
+mise exec rust@1.96.0 -- mix figler.profile.graph \
   --fixture /tmp/figma-current.fig \
   --root 3740:112537 \
   --until variables \
@@ -52,7 +52,7 @@ mise exec rust@1.96.0 -- mix fig_kiwi.profile.graph \
 For current live-export oracle validation:
 
 ```sh
-FIG_KIWI_ORACLE_FIXTURE=/tmp/figma-current.fig \
+FIGLER_ORACLE_FIXTURE=/tmp/figma-current.fig \
   mise exec rust@1.96.0 -- mix run scripts/compare_figma_oracles.exs \
   /tmp/current_oracles_manifest.json
 ```

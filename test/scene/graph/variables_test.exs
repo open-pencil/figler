@@ -1,10 +1,10 @@
-defmodule FigKiwi.Scene.Graph.VariablesTest do
+defmodule Figler.Scene.Graph.VariablesTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
-  alias FigKiwi.Scene.Graph
+  alias Figler.Scene
+  alias Figler.Scene.Graph
 
-  import FigKiwi.Test.GraphBuilder
+  import Figler.Test.GraphBuilder
 
   test "preserves refs as unresolved provenance" do
     graph =
@@ -53,13 +53,13 @@ defmodule FigKiwi.Scene.Graph.VariablesTest do
         node({1, 1}, :text,
           font_family: "Inter",
           variable_consumption: [
-            struct(FigKiwi.Schema.VariableDataMapEntry,
+            struct(Figler.Schema.VariableDataMapEntry,
               variable_field: :font_family,
               variable_data:
-                struct(FigKiwi.Schema.VariableData,
+                struct(Figler.Schema.VariableData,
                   data_type: :string,
                   resolved_data_type: :string,
-                  value: struct(FigKiwi.Schema.VariableAnyValue, text_value: "Roboto")
+                  value: struct(Figler.Schema.VariableAnyValue, text_value: "Roboto")
                 )
             )
           ]
@@ -119,13 +119,13 @@ defmodule FigKiwi.Scene.Graph.VariablesTest do
       [
         node({1, 1}, :variable,
           variable_data_values: [
-            struct(FigKiwi.Schema.VariableDataValuesEntry,
-              mode_id: struct(FigKiwi.Schema.GUID, session_id: 9, local_id: 1),
+            struct(Figler.Schema.VariableDataValuesEntry,
+              mode_id: struct(Figler.Schema.GUID, session_id: 9, local_id: 1),
               variable_data:
-                struct(FigKiwi.Schema.VariableData,
+                struct(Figler.Schema.VariableData,
                   data_type: :float,
                   resolved_data_type: :float,
-                  value: struct(FigKiwi.Schema.VariableAnyValue, float_value: 12.5)
+                  value: struct(Figler.Schema.VariableAnyValue, float_value: 12.5)
                 )
             )
           ]

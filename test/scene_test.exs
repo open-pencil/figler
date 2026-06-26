@@ -1,12 +1,12 @@
-defmodule FigKiwi.SceneTest do
+defmodule Figler.SceneTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
-  alias FigKiwi.Scene.Graph
-  alias FigKiwi.Scene.Node
-  alias FigKiwi.Scene.Summary
+  alias Figler.Scene
+  alias Figler.Scene.Graph
+  alias Figler.Scene.Node
+  alias Figler.Scene.Summary
 
-  import FigKiwi.Test.SceneFixture
+  import Figler.Test.SceneFixture
 
   test "summarizes raw message payloads" do
     assert Scene.summary(message_payload()) == %Summary{

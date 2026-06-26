@@ -14,4 +14,4 @@ jobs:
     uses: elixir-vibe/actions/.github/workflows/elixir-rustler-ci.yml@v1
     with:
       rust-cache-workspaces: |
-        native/fig_kiwi_native -> target
+        native/figler_native -> target

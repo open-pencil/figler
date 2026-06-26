@@ -1,12 +1,12 @@
-defmodule FigKiwi.OpenPencilCompatibilityTest do
+defmodule Figler.OpenPencilCompatibilityTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Schema.{Color, GUID, Message, NodeChange, Paint, Vector}
+  alias Figler.Schema.{Color, GUID, Message, NodeChange, Paint, Vector}
 
   test "minimal Message bytes match OpenPencil TypeScript codec" do
     message = %Message{type: :node_changes, session_id: 12, node_changes: []}
 
-    assert FigKiwi.encode_message(message) == <<1, 1, 2, 12, 4, 0, 0>>
+    assert Figler.encode_message(message) == <<1, 1, 2, 12, 4, 0, 0>>
   end
 
   test "Vector bytes match OpenPencil TypeScript codec" do
@@ -60,7 +60,7 @@ defmodule FigKiwi.OpenPencilCompatibilityTest do
       ]
     }
 
-    assert FigKiwi.encode_message(message) ==
+    assert Figler.encode_message(message) ==
              <<1, 1, 2, 12, 4, 1, 1, 12, 34, 4, 10, 5, 82, 101, 99, 116, 32, 49, 0, 11, 133, 0, 0,
                144, 132, 0, 0, 144, 0, 0>>
   end

@@ -1,0 +1,18 @@
+defmodule Figler.Schema.CollaborativeTextStrippedOpRunWithLoc do
+  @moduledoc "Generated Kiwi message module for `CollaborativeTextStrippedOpRunWithLoc`."
+  use KiwiCodec, kind: :message
+  field(:type, 1, type: {:enum, Figler.Schema.CollaborativeTextOpType}, source_name: "type")
+  field(:range, 2, type: Figler.Schema.IndexRange, source_name: "range")
+
+  field(:range_should_be_iterated_in_reverse, 3,
+    type: :bool,
+    source_name: "rangeShouldBeIteratedInReverse"
+  )
+
+  field(:content_bytes_in_buffer, 4,
+    type: Figler.Schema.IndexRange,
+    source_name: "contentBytesInBuffer"
+  )
+
+  field(:rebased_range, 5, type: Figler.Schema.IndexRange, source_name: "rebasedRange")
+end

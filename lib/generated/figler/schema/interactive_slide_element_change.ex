@@ -1,0 +1,8 @@
+defmodule Figler.Schema.InteractiveSlideElementChange do
+  @moduledoc "Generated Kiwi message module for `InteractiveSlideElementChange`."
+  use KiwiCodec, kind: :message
+  field(:user_id, 1, type: :string, source_name: "userID")
+  field(:anonymous_user_id, 2, type: :string, source_name: "anonymousUserID")
+  field(:node_id, 3, type: Figler.Schema.GUID, source_name: "nodeID")
+  field(:response_data, 4, type: :string, source_name: "responseData")
+end

@@ -1,4 +1,4 @@
-defmodule FigKiwi.OpenPencilFixtureSceneTest do
+defmodule Figler.OpenPencilFixtureSceneTest do
   use ExUnit.Case, async: true
 
   fixtures = [
@@ -7,16 +7,16 @@ defmodule FigKiwi.OpenPencilFixtureSceneTest do
     {"nuxtui", "nuxtui.fig", 315_274}
   ]
 
-  if fixture_dir = System.get_env("FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR") do
-    alias FigKiwi.Scene.Graph
+  if fixture_dir = System.get_env("FIGLER_OPEN_PENCIL_FIXTURE_DIR") do
+    alias Figler.Scene.Graph
 
-    if System.get_env("FIG_KIWI_OPEN_PENCIL_GRAPH_FIXTURE") do
+    if System.get_env("FIGLER_OPEN_PENCIL_GRAPH_FIXTURE") do
       path = Path.join(fixture_dir, "gold-preview.fig")
 
       if File.exists?(path) do
         @tag timeout: 120_000
         test "builds graph for OpenPencil gold preview fixture" do
-          graph = unquote(path) |> File.read!() |> FigKiwi.Scene.graph()
+          graph = unquote(path) |> File.read!() |> Figler.Scene.graph()
           stats = Graph.stats(graph)
 
           assert stats.node_count >= 3_519
@@ -34,7 +34,7 @@ defmodule FigKiwi.OpenPencilFixtureSceneTest do
       if File.exists?(path) do
         @tag timeout: 120_000
         test "summarizes OpenPencil fixture #{name}" do
-          summary = unquote(path) |> File.read!() |> FigKiwi.Scene.summary()
+          summary = unquote(path) |> File.read!() |> Figler.Scene.summary()
 
           assert summary.node_count == unquote(expected_nodes)
           assert summary.parented_count > 0
@@ -45,12 +45,12 @@ defmodule FigKiwi.OpenPencilFixtureSceneTest do
 
         @tag timeout: 120_000
         test "projects text fields from OpenPencil fixture #{name}" do
-          index = unquote(path) |> File.read!() |> FigKiwi.Scene.index()
+          index = unquote(path) |> File.read!() |> Figler.Scene.index()
 
           text_nodes =
-            FigKiwi.Scene.query(index, "//text[@text]", fields: [:name, :text, :font_family])
+            Figler.Scene.query(index, "//text[@text]", fields: [:name, :text, :font_family])
 
-          assert [%FigKiwi.Scene.Node{node_type: "text", text: text} | _] = text_nodes
+          assert [%Figler.Scene.Node{node_type: "text", text: text} | _] = text_nodes
           assert is_binary(text)
           assert text != ""
 
@@ -59,21 +59,21 @@ defmodule FigKiwi.OpenPencilFixtureSceneTest do
 
         @tag timeout: 120_000
         test "projects component and paint summary fields from OpenPencil fixture #{name}" do
-          index = unquote(path) |> File.read!() |> FigKiwi.Scene.index()
+          index = unquote(path) |> File.read!() |> Figler.Scene.index()
 
-          assert [%FigKiwi.Scene.Node{component_key: component_key} | _] =
-                   FigKiwi.Scene.components(index)
+          assert [%Figler.Scene.Node{component_key: component_key} | _] =
+                   Figler.Scene.components(index)
 
           assert is_binary(component_key)
           assert component_key != ""
 
-          assert [%FigKiwi.Scene.Node{fill_count: fill_count} | _] =
-                   FigKiwi.Scene.with_fills(index)
+          assert [%Figler.Scene.Node{fill_count: fill_count} | _] =
+                   Figler.Scene.with_fills(index)
 
           assert fill_count > 0
 
-          assert [%FigKiwi.Scene.Node{stroke_count: stroke_count} | _] =
-                   FigKiwi.Scene.with_strokes(index)
+          assert [%Figler.Scene.Node{stroke_count: stroke_count} | _] =
+                   Figler.Scene.with_strokes(index)
 
           assert stroke_count > 0
         end
@@ -82,7 +82,7 @@ defmodule FigKiwi.OpenPencilFixtureSceneTest do
   else
     @tag :external_fixture
     test "OpenPencil fixture tests are disabled" do
-      assert System.get_env("FIG_KIWI_OPEN_PENCIL_FIXTURE_DIR") in [nil, ""]
+      assert System.get_env("FIGLER_OPEN_PENCIL_FIXTURE_DIR") in [nil, ""]
     end
   end
 end

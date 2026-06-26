@@ -1,11 +1,11 @@
 ---
 name: figma-browser-oracle
-description: Use agent-browser against the live Figma web editor as an oracle for FigKiwi scene decoding.
+description: Use agent-browser against the live Figma web editor as an oracle for Figler scene decoding.
 ---
 
-# Figma browser oracle for FigKiwi
+# Figma browser oracle for Figler
 
-Use this when comparing `fig_kiwi` decoded data against Figma's live web editor internals.
+Use this when comparing `figler` decoded data against Figma's live web editor internals.
 
 ## Preconditions
 
@@ -190,7 +190,7 @@ Notes:
   Wait until it disappears before using the file.
 - A valid exported `.fig` is a ZIP containing `canvas.fig`, `meta.json`,
   `thumbnail.png`, and possibly `images/`.
-- Use the exported path as `FIG_KIWI_ORACLE_FIXTURE=/tmp/figma-current.fig` for
+- Use the exported path as `FIGLER_ORACLE_FIXTURE=/tmp/figma-current.fig` for
   oracle comparisons so the Kiwi payload and browser scene graph are the same
   file version.
 
@@ -219,7 +219,7 @@ Example manifest:
 Run it against the current browser export:
 
 ```sh
-FIG_KIWI_ORACLE_FIXTURE=/tmp/figma-current.fig \
+FIGLER_ORACLE_FIXTURE=/tmp/figma-current.fig \
   mise exec rust@1.96.0 -- mix run scripts/compare_figma_oracles.exs /tmp/oracles.json
 ```
 
@@ -227,9 +227,9 @@ The script prints a per-node summary and exits non-zero with the collected diffs
 if any comparison fails. Relative `json` paths are resolved from the manifest's
 directory.
 
-## Comparison fields for FigKiwi
+## Comparison fields for Figler
 
-Good oracle fields for `fig_kiwi` tests:
+Good oracle fields for `figler` tests:
 
 - `guid` / `id`
 - `type`

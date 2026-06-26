@@ -21,7 +21,7 @@ A manifest is a JSON array (or an object with `comparisons`) whose entries have:
 Run with:
 
 ```sh
-FIG_KIWI_ORACLE_FIXTURE=/path/to/fixture.fig \
+FIGLER_ORACLE_FIXTURE=/path/to/fixture.fig \
   mise exec rust@1.96.0 -- mix run scripts/compare_figma_oracles.exs manifest.json
 ```
 
@@ -31,14 +31,14 @@ committed oracle manifests. Do not commit larger binary fixtures directly.
 For local or CI environments that provide external real fixtures, set:
 
 ```sh
-FIG_KIWI_EXTERNAL_ORACLE_DIR=/path/to/oracle-fixtures \
+FIGLER_EXTERNAL_ORACLE_DIR=/path/to/oracle-fixtures \
   mise exec rust@1.96.0 -- mix test test/oracle_fixture_test.exs
 ```
 
 or directly with:
 
 ```sh
-mise exec rust@1.96.0 -- mix fig_kiwi.oracles --dir /path/to/oracle-fixtures
+mise exec rust@1.96.0 -- mix figler.oracles --dir /path/to/oracle-fixtures
 ```
 
 Each external fixture directory should contain a `.fig`, a `manifest.json`, and

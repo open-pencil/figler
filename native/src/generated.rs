@@ -3444,7 +3444,7 @@ fn decode_guid_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(env, &GUID_MODULE_ATOM, "Elixir.FigKiwi.Schema.GUID");
+    let module_atom = cached_atom(env, &GUID_MODULE_ATOM, "Elixir.Figler.Schema.GUID");
     let keys = cached_struct_keys(env, &GUID_STRUCT_KEYS, &["session_id", "local_id"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -3474,11 +3474,7 @@ fn decode_color_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &COLOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Color",
-    );
+    let module_atom = cached_atom(env, &COLOR_MODULE_ATOM, "Elixir.Figler.Schema.Color");
     let keys = cached_struct_keys(env, &COLOR_STRUCT_KEYS, &["r", "g", "b", "a"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -3523,7 +3519,7 @@ fn decode_vector_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VECTOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Vector",
+        "Elixir.Figler.Schema.Vector",
     );
     let keys = cached_struct_keys(env, &VECTOR_STRUCT_KEYS, &["x", "y"]);
     let mut values = Vec::with_capacity(keys.len());
@@ -3554,7 +3550,7 @@ fn decode_rect_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(env, &RECT_MODULE_ATOM, "Elixir.FigKiwi.Schema.Rect");
+    let module_atom = cached_atom(env, &RECT_MODULE_ATOM, "Elixir.Figler.Schema.Rect");
     let keys = cached_struct_keys(env, &RECT_STRUCT_KEYS, &["x", "y", "w", "h"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -3599,7 +3595,7 @@ fn decode_color_stop_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLOR_STOP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorStop",
+        "Elixir.Figler.Schema.ColorStop",
     );
     let keys = cached_struct_keys(env, &COLOR_STOP_STRUCT_KEYS, &["color", "position"]);
     let mut values = Vec::with_capacity(keys.len());
@@ -3633,7 +3629,7 @@ fn decode_color_stop_var_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLOR_STOP_VAR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorStopVar",
+        "Elixir.Figler.Schema.ColorStopVar",
     );
     let keys = cached_struct_keys(
         env,
@@ -3719,7 +3715,7 @@ fn decode_matrix_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MATRIX_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Matrix",
+        "Elixir.Figler.Schema.Matrix",
     );
     let keys = cached_struct_keys(
         env,
@@ -3781,7 +3777,7 @@ fn decode_parent_index_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PARENT_INDEX_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ParentIndex",
+        "Elixir.Figler.Schema.ParentIndex",
     );
     let keys = cached_struct_keys(env, &PARENT_INDEX_STRUCT_KEYS, &["guid", "position"]);
     let mut values = Vec::with_capacity(keys.len());
@@ -3815,7 +3811,7 @@ fn decode_number_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NUMBER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Number",
+        "Elixir.Figler.Schema.Number",
     );
     let keys = cached_struct_keys(env, &NUMBER_STRUCT_KEYS, &["value", "units"]);
     let mut values = Vec::with_capacity(keys.len());
@@ -3849,7 +3845,7 @@ fn decode_font_name_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FONT_NAME_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FontName",
+        "Elixir.Figler.Schema.FontName",
     );
     let keys = cached_struct_keys(
         env,
@@ -4307,7 +4303,7 @@ fn decode_code_source_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_SOURCE_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSourceInfo",
+        "Elixir.Figler.Schema.CodeSourceInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -4532,7 +4528,7 @@ fn decode_custom_tool_artifact_ref_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CUSTOM_TOOL_ARTIFACT_REF_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CustomToolArtifactRef",
+        "Elixir.Figler.Schema.CustomToolArtifactRef",
     );
     let keys = cached_struct_keys(
         env,
@@ -6058,7 +6054,7 @@ fn decode_export_constraint_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EXPORT_CONSTRAINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ExportConstraint",
+        "Elixir.Figler.Schema.ExportConstraint",
     );
     let keys = cached_struct_keys(
         env,
@@ -6096,7 +6092,7 @@ fn decode_guid_mapping_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GUID_MAPPING_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDMapping",
+        "Elixir.Figler.Schema.GUIDMapping",
     );
     let keys = cached_struct_keys(env, &GUID_MAPPING_STRUCT_KEYS, &["from", "to"]);
     let mut values = Vec::with_capacity(keys.len());
@@ -6127,7 +6123,7 @@ fn decode_blob_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(env, &BLOB_MODULE_ATOM, "Elixir.FigKiwi.Schema.Blob");
+    let module_atom = cached_atom(env, &BLOB_MODULE_ATOM, "Elixir.Figler.Schema.Blob");
     let keys = cached_struct_keys(env, &BLOB_STRUCT_KEYS, &["bytes"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -6151,11 +6147,7 @@ fn decode_image_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &IMAGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Image",
-    );
+    let module_atom = cached_atom(env, &IMAGE_MODULE_ATOM, "Elixir.Figler.Schema.Image");
     let keys = cached_struct_keys(
         env,
         &IMAGE_STRUCT_KEYS,
@@ -6222,11 +6214,7 @@ fn decode_video_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &VIDEO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Video",
-    );
+    let module_atom = cached_atom(env, &VIDEO_MODULE_ATOM, "Elixir.Figler.Schema.Video");
     let keys = cached_struct_keys(env, &VIDEO_STRUCT_KEYS, &["hash", "s3_url"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_video_fields_from_decoder(env, decoder, keys, values)
@@ -6283,7 +6271,7 @@ fn decode_paste_source_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PASTE_SOURCE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PasteSource",
+        "Elixir.Figler.Schema.PasteSource",
     );
     let keys = cached_struct_keys(
         env,
@@ -6355,7 +6343,7 @@ fn decode_filter_color_adjust_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FILTER_COLOR_ADJUST_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FilterColorAdjust",
+        "Elixir.Figler.Schema.FilterColorAdjust",
     );
     let keys = cached_struct_keys(
         env,
@@ -6438,7 +6426,7 @@ fn decode_paint_filter_message_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PAINT_FILTER_MESSAGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PaintFilterMessage",
+        "Elixir.Figler.Schema.PaintFilterMessage",
     );
     let keys = cached_struct_keys(
         env,
@@ -6630,11 +6618,7 @@ fn decode_paint_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &PAINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Paint",
-    );
+    let module_atom = cached_atom(env, &PAINT_MODULE_ATOM, "Elixir.Figler.Schema.Paint");
     let keys = cached_struct_keys(
         env,
         &PAINT_STRUCT_KEYS,
@@ -7334,7 +7318,7 @@ fn decode_font_meta_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FONT_META_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FontMetaData",
+        "Elixir.Figler.Schema.FontMetaData",
     );
     let keys = cached_struct_keys(
         env,
@@ -7448,7 +7432,7 @@ fn decode_font_variation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FONT_VARIATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FontVariation",
+        "Elixir.Figler.Schema.FontVariation",
     );
     let keys = cached_struct_keys(
         env,
@@ -7534,7 +7518,7 @@ fn decode_text_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TEXT_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextData",
+        "Elixir.Figler.Schema.TextData",
     );
     let keys = cached_struct_keys(
         env,
@@ -7916,7 +7900,7 @@ fn decode_derived_text_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DERIVED_TEXT_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedTextData",
+        "Elixir.Figler.Schema.DerivedTextData",
     );
     let keys = cached_struct_keys(
         env,
@@ -8178,7 +8162,7 @@ fn decode_hyperlink_box_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &HYPERLINK_BOX_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HyperlinkBox",
+        "Elixir.Figler.Schema.HyperlinkBox",
     );
     let keys = cached_struct_keys(
         env,
@@ -8306,7 +8290,7 @@ fn decode_mention_box_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MENTION_BOX_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MentionBox",
+        "Elixir.Figler.Schema.MentionBox",
     );
     let keys = cached_struct_keys(
         env,
@@ -8420,7 +8404,7 @@ fn decode_baseline_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BASELINE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Baseline",
+        "Elixir.Figler.Schema.Baseline",
     );
     let keys = cached_struct_keys(
         env,
@@ -8582,11 +8566,7 @@ fn decode_glyph_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &GLYPH_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Glyph",
-    );
+    let module_atom = cached_atom(env, &GLYPH_MODULE_ATOM, "Elixir.Figler.Schema.Glyph");
     let keys = cached_struct_keys(
         env,
         &GLYPH_STRUCT_KEYS,
@@ -8720,7 +8700,7 @@ fn decode_decoration_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DECORATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Decoration",
+        "Elixir.Figler.Schema.Decoration",
     );
     let keys = cached_struct_keys(env, &DECORATION_STRUCT_KEYS, &["rects", "style_id"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -8790,7 +8770,7 @@ fn decode_blockquote_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BLOCKQUOTE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Blockquote",
+        "Elixir.Figler.Schema.Blockquote",
     );
     let keys = cached_struct_keys(
         env,
@@ -8876,7 +8856,7 @@ fn decode_vector_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VECTOR_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VectorData",
+        "Elixir.Figler.Schema.VectorData",
     );
     let keys = cached_struct_keys(
         env,
@@ -8967,7 +8947,7 @@ fn decode_text_path_start_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TEXT_PATH_START_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextPathStart",
+        "Elixir.Figler.Schema.TextPathStart",
     );
     let keys = cached_struct_keys(
         env,
@@ -9039,7 +9019,7 @@ fn decode_guid_path_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GUID_PATH_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDPath",
+        "Elixir.Figler.Schema.GUIDPath",
     );
     let keys = cached_struct_keys(env, &GUID_PATH_STRUCT_KEYS, &["guids"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -9095,7 +9075,7 @@ fn decode_symbol_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SYMBOL_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SymbolData",
+        "Elixir.Figler.Schema.SymbolData",
     );
     let keys = cached_struct_keys(
         env,
@@ -9186,7 +9166,7 @@ fn decode_guid_path_mapping_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GUID_PATH_MAPPING_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDPathMapping",
+        "Elixir.Figler.Schema.GUIDPathMapping",
     );
     let keys = cached_struct_keys(env, &GUID_PATH_MAPPING_STRUCT_KEYS, &["id", "path"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -9254,7 +9234,7 @@ fn decode_derived_breakpoint_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DERIVED_BREAKPOINT_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedBreakpointData",
+        "Elixir.Figler.Schema.DerivedBreakpointData",
     );
     let keys = cached_struct_keys(
         env,
@@ -9317,7 +9297,7 @@ fn decode_node_generation_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_GENERATION_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeGenerationData",
+        "Elixir.Figler.Schema.NodeGenerationData",
     );
     let keys = cached_struct_keys(
         env,
@@ -9415,7 +9395,7 @@ fn decode_derived_immutable_frame_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DERIVED_IMMUTABLE_FRAME_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedImmutableFrameData",
+        "Elixir.Figler.Schema.DerivedImmutableFrameData",
     );
     let keys = cached_struct_keys(
         env,
@@ -9492,7 +9472,7 @@ fn decode_jsx_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &JSX_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.JsxData",
+        "Elixir.Figler.Schema.JsxData",
     );
     let keys = cached_struct_keys(env, &JSX_DATA_STRUCT_KEYS, &["overrides"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -9551,7 +9531,7 @@ fn decode_derived_jsx_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DERIVED_JSX_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedJsxData",
+        "Elixir.Figler.Schema.DerivedJsxData",
     );
     let keys = cached_struct_keys(env, &DERIVED_JSX_DATA_STRUCT_KEYS, &["overrides"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -9610,7 +9590,7 @@ fn decode_asset_id_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ASSET_ID_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AssetIdMap",
+        "Elixir.Figler.Schema.AssetIdMap",
     );
     let keys = cached_struct_keys(env, &ASSET_ID_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -9669,7 +9649,7 @@ fn decode_asset_id_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ASSET_ID_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AssetIdEntry",
+        "Elixir.Figler.Schema.AssetIdEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -9741,7 +9721,7 @@ fn decode_asset_ref_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ASSET_REF_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AssetRef",
+        "Elixir.Figler.Schema.AssetRef",
     );
     let keys = cached_struct_keys(env, &ASSET_REF_STRUCT_KEYS, &["key", "version"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -9809,7 +9789,7 @@ fn decode_asset_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ASSET_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AssetId",
+        "Elixir.Figler.Schema.AssetId",
     );
     let keys = cached_struct_keys(
         env,
@@ -9959,7 +9939,7 @@ fn decode_state_group_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STATE_GROUP_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StateGroupId",
+        "Elixir.Figler.Schema.StateGroupId",
     );
     let keys = cached_struct_keys(
         env,
@@ -10031,7 +10011,7 @@ fn decode_style_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STYLE_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StyleId",
+        "Elixir.Figler.Schema.StyleId",
     );
     let keys = cached_struct_keys(env, &STYLE_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -10099,7 +10079,7 @@ fn decode_symbol_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SYMBOL_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SymbolId",
+        "Elixir.Figler.Schema.SymbolId",
     );
     let keys = cached_struct_keys(env, &SYMBOL_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -10167,7 +10147,7 @@ fn decode_variable_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableID",
+        "Elixir.Figler.Schema.VariableID",
     );
     let keys = cached_struct_keys(env, &VARIABLE_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -10235,7 +10215,7 @@ fn decode_variable_override_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_OVERRIDE_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableOverrideId",
+        "Elixir.Figler.Schema.VariableOverrideId",
     );
     let keys = cached_struct_keys(
         env,
@@ -10307,7 +10287,7 @@ fn decode_variable_set_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_SET_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableSetID",
+        "Elixir.Figler.Schema.VariableSetID",
     );
     let keys = cached_struct_keys(
         env,
@@ -10379,7 +10359,7 @@ fn decode_theme_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &THEME_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ThemeID",
+        "Elixir.Figler.Schema.ThemeID",
     );
     let keys = cached_struct_keys(env, &THEME_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -10447,7 +10427,7 @@ fn decode_code_library_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_LIBRARY_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeLibraryId",
+        "Elixir.Figler.Schema.CodeLibraryId",
     );
     let keys = cached_struct_keys(
         env,
@@ -10519,7 +10499,7 @@ fn decode_code_file_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_FILE_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeFileId",
+        "Elixir.Figler.Schema.CodeFileId",
     );
     let keys = cached_struct_keys(
         env,
@@ -10591,7 +10571,7 @@ fn decode_code_component_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_COMPONENT_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeComponentId",
+        "Elixir.Figler.Schema.CodeComponentId",
     );
     let keys = cached_struct_keys(
         env,
@@ -10663,7 +10643,7 @@ fn decode_canvas_node_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CANVAS_NODE_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CanvasNodeId",
+        "Elixir.Figler.Schema.CanvasNodeId",
     );
     let keys = cached_struct_keys(
         env,
@@ -10749,7 +10729,7 @@ fn decode_index_range_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INDEX_RANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexRange",
+        "Elixir.Figler.Schema.IndexRange",
     );
     let keys = cached_struct_keys(
         env,
@@ -10787,7 +10767,7 @@ fn decode_collaborative_text_op_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLLABORATIVE_TEXT_OP_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextOpID",
+        "Elixir.Figler.Schema.CollaborativeTextOpID",
     );
     let keys = cached_struct_keys(
         env,
@@ -10860,7 +10840,7 @@ fn decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_I_DS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextStrippedOpRunWithIDs",
+        "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithIDs",
     );
     let keys = cached_struct_keys(
         env,
@@ -10977,7 +10957,7 @@ fn decode_collaborative_text_stripped_op_run_with_loc_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_LOC_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextStrippedOpRunWithLoc",
+        "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithLoc",
     );
     let keys = cached_struct_keys(
         env,
@@ -11104,7 +11084,7 @@ fn decode_collaborative_text_op_run_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLLABORATIVE_TEXT_OP_RUN_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextOpRun",
+        "Elixir.Figler.Schema.CollaborativeTextOpRun",
     );
     let keys = cached_struct_keys(
         env,
@@ -11279,7 +11259,7 @@ fn decode_collaborative_plain_text_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLLABORATIVE_PLAIN_TEXT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativePlainText",
+        "Elixir.Figler.Schema.CollaborativePlainText",
     );
     let keys = cached_struct_keys(
         env,
@@ -11401,7 +11381,7 @@ fn decode_collaborative_text_selection_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLLABORATIVE_TEXT_SELECTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextSelection",
+        "Elixir.Figler.Schema.CollaborativeTextSelection",
     );
     let keys = cached_struct_keys(
         env,
@@ -11522,7 +11502,7 @@ fn decode_responsive_text_style_variant_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &RESPONSIVE_TEXT_STYLE_VARIANT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ResponsiveTextStyleVariant",
+        "Elixir.Figler.Schema.ResponsiveTextStyleVariant",
     );
     let keys = cached_struct_keys(
         env,
@@ -11707,7 +11687,7 @@ fn decode_slide_theme_props_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SLIDE_THEME_PROPS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlideThemeProps",
+        "Elixir.Figler.Schema.SlideThemeProps",
     );
     let keys = cached_struct_keys(
         env,
@@ -11877,7 +11857,7 @@ fn decode_slide_theme_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SLIDE_THEME_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlideThemeMap",
+        "Elixir.Figler.Schema.SlideThemeMap",
     );
     let keys = cached_struct_keys(env, &SLIDE_THEME_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -11936,7 +11916,7 @@ fn decode_slide_theme_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SLIDE_THEME_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlideThemeMapEntry",
+        "Elixir.Figler.Schema.SlideThemeMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -12008,7 +11988,7 @@ fn decode_shared_symbol_reference_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SHARED_SYMBOL_REFERENCE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SharedSymbolReference",
+        "Elixir.Figler.Schema.SharedSymbolReference",
     );
     let keys = cached_struct_keys(
         env,
@@ -12205,7 +12185,7 @@ fn decode_shared_component_master_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SHARED_COMPONENT_MASTER_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SharedComponentMasterData",
+        "Elixir.Figler.Schema.SharedComponentMasterData",
     );
     let keys = cached_struct_keys(
         env,
@@ -12296,7 +12276,7 @@ fn decode_instance_override_stash_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INSTANCE_OVERRIDE_STASH_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InstanceOverrideStash",
+        "Elixir.Figler.Schema.InstanceOverrideStash",
     );
     let keys = cached_struct_keys(
         env,
@@ -12389,7 +12369,7 @@ fn decode_instance_override_stash_v2_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INSTANCE_OVERRIDE_STASH_V2_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InstanceOverrideStashV2",
+        "Elixir.Figler.Schema.InstanceOverrideStashV2",
     );
     let keys = cached_struct_keys(
         env,
@@ -12480,7 +12460,7 @@ fn decode_imported_code_file_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &IMPORTED_CODE_FILE_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImportedCodeFileEntry",
+        "Elixir.Figler.Schema.ImportedCodeFileEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -12538,7 +12518,7 @@ fn decode_imported_code_files_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &IMPORTED_CODE_FILES_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImportedCodeFiles",
+        "Elixir.Figler.Schema.ImportedCodeFiles",
     );
     let keys = cached_struct_keys(env, &IMPORTED_CODE_FILES_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -12718,7 +12698,7 @@ fn decode_effect_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EFFECT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Effect",
+        "Elixir.Figler.Schema.Effect",
     );
     let keys = cached_struct_keys(
         env,
@@ -13360,7 +13340,7 @@ fn decode_transform_modifier_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSFORM_MODIFIER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformModifier",
+        "Elixir.Figler.Schema.TransformModifier",
     );
     let keys = cached_struct_keys(
         env,
@@ -13597,7 +13577,7 @@ fn decode_matrix4f_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MATRIX4F_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Matrix4f",
+        "Elixir.Figler.Schema.Matrix4f",
     );
     let keys = cached_struct_keys(
         env,
@@ -13736,7 +13716,7 @@ fn decode_fixed_order_transform3d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FIXED_ORDER_TRANSFORM3D_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FixedOrderTransform3d",
+        "Elixir.Figler.Schema.FixedOrderTransform3d",
     );
     let keys = cached_struct_keys(
         env,
@@ -13925,7 +13905,7 @@ fn decode_transform_fn_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSFORM_FN_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformFnValue",
+        "Elixir.Figler.Schema.TransformFnValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -14025,7 +14005,7 @@ fn decode_transform_fn_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSFORM_FN_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformFn",
+        "Elixir.Figler.Schema.TransformFn",
     );
     let keys = cached_struct_keys(env, &TRANSFORM_FN_STRUCT_KEYS, &["type", "value"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -14093,7 +14073,7 @@ fn decode_transform_schema_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSFORM_SCHEMA_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformSchemaValue",
+        "Elixir.Figler.Schema.TransformSchemaValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -14170,7 +14150,7 @@ fn decode_transform3d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSFORM3D_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Transform3d",
+        "Elixir.Figler.Schema.Transform3d",
     );
     let keys = cached_struct_keys(
         env,
@@ -14256,7 +14236,7 @@ fn decode_number_vector2_d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NUMBER_VECTOR2_D_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NumberVector2D",
+        "Elixir.Figler.Schema.NumberVector2D",
     );
     let keys = cached_struct_keys(env, &NUMBER_VECTOR2_D_STRUCT_KEYS, &["x", "y"]);
     let mut values = Vec::with_capacity(keys.len());
@@ -14290,7 +14270,7 @@ fn decode_scene3d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SCENE3D_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Scene3d",
+        "Elixir.Figler.Schema.Scene3d",
     );
     let keys = cached_struct_keys(
         env,
@@ -14376,7 +14356,7 @@ fn decode_transform_origin_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSFORM_ORIGIN_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformOrigin",
+        "Elixir.Figler.Schema.TransformOrigin",
     );
     let keys = cached_struct_keys(env, &TRANSFORM_ORIGIN_STRUCT_KEYS, &["x", "y"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -14444,7 +14424,7 @@ fn decode_transition_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSITION_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionInfo",
+        "Elixir.Figler.Schema.TransitionInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -14592,7 +14572,7 @@ fn decode_prototype_device_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PROTOTYPE_DEVICE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeDevice",
+        "Elixir.Figler.Schema.PrototypeDevice",
     );
     let keys = cached_struct_keys(
         env,
@@ -14851,7 +14831,7 @@ fn decode_overlay_background_appearance_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &OVERLAY_BACKGROUND_APPEARANCE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.OverlayBackgroundAppearance",
+        "Elixir.Figler.Schema.OverlayBackgroundAppearance",
     );
     let keys = cached_struct_keys(
         env,
@@ -15065,7 +15045,7 @@ fn decode_export_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EXPORT_SETTINGS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ExportSettings",
+        "Elixir.Figler.Schema.ExportSettings",
     );
     let keys = cached_struct_keys(
         env,
@@ -15365,7 +15345,7 @@ fn decode_layout_grid_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &LAYOUT_GRID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LayoutGrid",
+        "Elixir.Figler.Schema.LayoutGrid",
     );
     let keys = cached_struct_keys(
         env,
@@ -15602,11 +15582,7 @@ fn decode_guide_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &GUIDE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Guide",
-    );
+    let module_atom = cached_atom(env, &GUIDE_MODULE_ATOM, "Elixir.Figler.Schema.Guide");
     let keys = cached_struct_keys(env, &GUIDE_STRUCT_KEYS, &["axis", "offset", "guid"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_guide_fields_from_decoder(env, decoder, keys, values)
@@ -15669,7 +15645,7 @@ fn decode_path_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(env, &PATH_MODULE_ATOM, "Elixir.FigKiwi.Schema.Path");
+    let module_atom = cached_atom(env, &PATH_MODULE_ATOM, "Elixir.Figler.Schema.Path");
     let keys = cached_struct_keys(
         env,
         &PATH_STRUCT_KEYS,
@@ -15842,7 +15818,7 @@ fn decode_dynamic_stroke_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DYNAMIC_STROKE_SETTINGS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DynamicStrokeSettings",
+        "Elixir.Figler.Schema.DynamicStrokeSettings",
     );
     let keys = cached_struct_keys(
         env,
@@ -15928,7 +15904,7 @@ fn decode_scatter_stroke_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SCATTER_STROKE_SETTINGS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScatterStrokeSettings",
+        "Elixir.Figler.Schema.ScatterStrokeSettings",
     );
     let keys = cached_struct_keys(
         env,
@@ -16042,7 +16018,7 @@ fn decode_stretch_stroke_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STRETCH_STROKE_SETTINGS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StretchStrokeSettings",
+        "Elixir.Figler.Schema.StretchStrokeSettings",
     );
     let keys = cached_struct_keys(
         env,
@@ -16100,7 +16076,7 @@ fn decode_stroke_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STROKE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StrokeData",
+        "Elixir.Figler.Schema.StrokeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -16177,7 +16153,7 @@ fn decode_stroke_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STROKE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Stroke",
+        "Elixir.Figler.Schema.Stroke",
     );
     let keys = cached_struct_keys(
         env,
@@ -16364,7 +16340,7 @@ fn decode_variable_width_point_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_WIDTH_POINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableWidthPoint",
+        "Elixir.Figler.Schema.VariableWidthPoint",
     );
     let keys = cached_struct_keys(
         env,
@@ -16464,7 +16440,7 @@ fn decode_shared_style_reference_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SHARED_STYLE_REFERENCE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SharedStyleReference",
+        "Elixir.Figler.Schema.SharedStyleReference",
     );
     let keys = cached_struct_keys(
         env,
@@ -16536,7 +16512,7 @@ fn decode_shared_style_master_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SHARED_STYLE_MASTER_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SharedStyleMasterData",
+        "Elixir.Figler.Schema.SharedStyleMasterData",
     );
     let keys = cached_struct_keys(
         env,
@@ -16665,7 +16641,7 @@ fn decode_arc_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ARC_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ArcData",
+        "Elixir.Figler.Schema.ArcData",
     );
     let keys = cached_struct_keys(
         env,
@@ -16751,7 +16727,7 @@ fn decode_symbol_link_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SYMBOL_LINK_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SymbolLink",
+        "Elixir.Figler.Schema.SymbolLink",
     );
     let keys = cached_struct_keys(
         env,
@@ -16837,7 +16813,7 @@ fn decode_plugin_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PLUGIN_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PluginData",
+        "Elixir.Figler.Schema.PluginData",
     );
     let keys = cached_struct_keys(
         env,
@@ -16923,7 +16899,7 @@ fn decode_plugin_relaunch_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PLUGIN_RELAUNCH_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PluginRelaunchData",
+        "Elixir.Figler.Schema.PluginRelaunchData",
     );
     let keys = cached_struct_keys(
         env,
@@ -17039,7 +17015,7 @@ fn decode_multiplayer_field_version_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MULTIPLAYER_FIELD_VERSION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MultiplayerFieldVersion",
+        "Elixir.Figler.Schema.MultiplayerFieldVersion",
     );
     let keys = cached_struct_keys(
         env,
@@ -17190,7 +17166,7 @@ fn decode_connector_endpoint_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CONNECTOR_ENDPOINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ConnectorEndpoint",
+        "Elixir.Figler.Schema.ConnectorEndpoint",
     );
     let keys = cached_struct_keys(
         env,
@@ -17290,7 +17266,7 @@ fn decode_connector_control_point_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CONNECTOR_CONTROL_POINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ConnectorControlPoint",
+        "Elixir.Figler.Schema.ConnectorControlPoint",
     );
     let keys = cached_struct_keys(
         env,
@@ -17441,7 +17417,7 @@ fn decode_connector_text_midpoint_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CONNECTOR_TEXT_MIDPOINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ConnectorTextMidpoint",
+        "Elixir.Figler.Schema.ConnectorTextMidpoint",
     );
     let keys = cached_struct_keys(
         env,
@@ -17980,7 +17956,7 @@ fn decode_annotation_property_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANNOTATION_PROPERTY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationProperty",
+        "Elixir.Figler.Schema.AnnotationProperty",
     );
     let keys = cached_struct_keys(env, &ANNOTATION_PROPERTY_STRUCT_KEYS, &["type"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -18204,7 +18180,7 @@ fn decode_annotation_category_custom_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANNOTATION_CATEGORY_CUSTOM_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationCategoryCustom",
+        "Elixir.Figler.Schema.AnnotationCategoryCustom",
     );
     let keys = cached_struct_keys(
         env,
@@ -18290,7 +18266,7 @@ fn decode_annotation_category_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANNOTATION_CATEGORY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationCategory",
+        "Elixir.Figler.Schema.AnnotationCategory",
     );
     let keys = cached_struct_keys(
         env,
@@ -18376,7 +18352,7 @@ fn decode_annotation_categories_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANNOTATION_CATEGORIES_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationCategories",
+        "Elixir.Figler.Schema.AnnotationCategories",
     );
     let keys = cached_struct_keys(
         env,
@@ -18453,7 +18429,7 @@ fn decode_annotation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANNOTATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Annotation",
+        "Elixir.Figler.Schema.Annotation",
     );
     let keys = cached_struct_keys(
         env,
@@ -18621,7 +18597,7 @@ fn decode_annotation_measurement_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANNOTATION_MEASUREMENT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationMeasurement",
+        "Elixir.Figler.Schema.AnnotationMeasurement",
     );
     let keys = cached_struct_keys(
         env,
@@ -18804,7 +18780,7 @@ fn decode_library_move_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &LIBRARY_MOVE_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LibraryMoveInfo",
+        "Elixir.Figler.Schema.LibraryMoveInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -18878,7 +18854,7 @@ fn decode_library_move_history_item_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &LIBRARY_MOVE_HISTORY_ITEM_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LibraryMoveHistoryItem",
+        "Elixir.Figler.Schema.LibraryMoveHistoryItem",
     );
     let keys = cached_struct_keys(
         env,
@@ -18950,7 +18926,7 @@ fn decode_developer_related_link_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DEVELOPER_RELATED_LINK_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DeveloperRelatedLink",
+        "Elixir.Figler.Schema.DeveloperRelatedLink",
     );
     let keys = cached_struct_keys(
         env,
@@ -19050,7 +19026,7 @@ fn decode_widget_pointer_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &WIDGET_POINTER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetPointer",
+        "Elixir.Figler.Schema.WidgetPointer",
     );
     let keys = cached_struct_keys(env, &WIDGET_POINTER_STRUCT_KEYS, &["node_id"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -19104,7 +19080,7 @@ fn decode_edit_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EDIT_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EditInfo",
+        "Elixir.Figler.Schema.EditInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -19348,7 +19324,7 @@ fn decode_section_status_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SECTION_STATUS_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SectionStatusInfo",
+        "Elixir.Figler.Schema.SectionStatusInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -19470,7 +19446,7 @@ fn decode_buzz_approval_request_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BUZZ_APPROVAL_REQUEST_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalRequestInfo",
+        "Elixir.Figler.Schema.BuzzApprovalRequestInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -19622,7 +19598,7 @@ fn decode_buzz_approval_requests_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BUZZ_APPROVAL_REQUESTS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalRequests",
+        "Elixir.Figler.Schema.BuzzApprovalRequests",
     );
     let keys = cached_struct_keys(
         env,
@@ -19742,7 +19718,7 @@ fn decode_buzz_approval_node_status_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BUZZ_APPROVAL_NODE_STATUS_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalNodeStatusInfo",
+        "Elixir.Figler.Schema.BuzzApprovalNodeStatusInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -19828,7 +19804,7 @@ fn decode_code_embed_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_EMBED_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeEmbedInfo",
+        "Elixir.Figler.Schema.CodeEmbedInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -19979,7 +19955,7 @@ fn decode_node_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_CHANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChange",
+        "Elixir.Figler.Schema.NodeChange",
     );
     let keys = cached_struct_keys(
         env,
@@ -29186,7 +29162,7 @@ fn decode_git_repo_ref_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GIT_REPO_REF_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GitRepoRef",
+        "Elixir.Figler.Schema.GitRepoRef",
     );
     let keys = cached_struct_keys(
         env,
@@ -29272,7 +29248,7 @@ fn decode_source_control_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SOURCE_CONTROL_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SourceControlConfig",
+        "Elixir.Figler.Schema.SourceControlConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -29344,7 +29320,7 @@ fn decode_code_snapshot_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_SNAPSHOT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSnapshot",
+        "Elixir.Figler.Schema.CodeSnapshot",
     );
     let keys = cached_struct_keys(
         env,
@@ -29496,7 +29472,7 @@ fn decode_code_output_layer_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_OUTPUT_LAYER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeOutputLayer",
+        "Elixir.Figler.Schema.CodeOutputLayer",
     );
     let keys = cached_struct_keys(env, &CODE_OUTPUT_LAYER_STRUCT_KEYS, &["node"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -29550,7 +29526,7 @@ fn decode_code_snapshot_layers_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_SNAPSHOT_LAYERS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSnapshotLayers",
+        "Elixir.Figler.Schema.CodeSnapshotLayers",
     );
     let keys = cached_struct_keys(
         env,
@@ -29641,7 +29617,7 @@ fn decode_code_behavior_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_BEHAVIOR_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeBehaviorData",
+        "Elixir.Figler.Schema.CodeBehaviorData",
     );
     let keys = cached_struct_keys(
         env,
@@ -29755,7 +29731,7 @@ fn decode_code_example_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_EXAMPLE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeExample",
+        "Elixir.Figler.Schema.CodeExample",
     );
     let keys = cached_struct_keys(
         env,
@@ -29827,7 +29803,7 @@ fn decode_used_make_library_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &USED_MAKE_LIBRARY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.UsedMakeLibrary",
+        "Elixir.Figler.Schema.UsedMakeLibrary",
     );
     let keys = cached_struct_keys(
         env,
@@ -29885,7 +29861,7 @@ fn decode_cookie_banner_text_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COOKIE_BANNER_TEXT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CookieBannerText",
+        "Elixir.Figler.Schema.CookieBannerText",
     );
     let keys = cached_struct_keys(
         env,
@@ -30200,7 +30176,7 @@ fn decode_cookie_banner_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COOKIE_BANNER_SETTINGS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CookieBannerSettings",
+        "Elixir.Figler.Schema.CookieBannerSettings",
     );
     let keys = cached_struct_keys(
         env,
@@ -30554,7 +30530,7 @@ fn decode_responsive_set_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &RESPONSIVE_SET_SETTINGS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ResponsiveSetSettings",
+        "Elixir.Figler.Schema.ResponsiveSetSettings",
     );
     let keys = cached_struct_keys(
         env,
@@ -30947,7 +30923,7 @@ fn decode_cms_selector_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_SELECTOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSSelector",
+        "Elixir.Figler.Schema.CMSSelector",
     );
     let keys = cached_struct_keys(
         env,
@@ -31052,7 +31028,7 @@ fn decode_cms_filter_critera_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_FILTER_CRITERA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSFilterCritera",
+        "Elixir.Figler.Schema.CMSFilterCritera",
     );
     let keys = cached_struct_keys(
         env,
@@ -31173,7 +31149,7 @@ fn decode_cms_selector_filter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_SELECTOR_FILTER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSSelectorFilter",
+        "Elixir.Figler.Schema.CMSSelectorFilter",
     );
     let keys = cached_struct_keys(
         env,
@@ -31286,7 +31262,7 @@ fn decode_cms_selector_sort_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_SELECTOR_SORT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSSelectorSort",
+        "Elixir.Figler.Schema.CMSSelectorSort",
     );
     let keys = cached_struct_keys(
         env,
@@ -31391,7 +31367,7 @@ fn decode_cms_consumption_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_CONSUMPTION_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSConsumptionMap",
+        "Elixir.Figler.Schema.CMSConsumptionMap",
     );
     let keys = cached_struct_keys(env, &CMS_CONSUMPTION_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -31452,7 +31428,7 @@ fn decode_cms_consumption_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_CONSUMPTION_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSConsumptionMapEntry",
+        "Elixir.Figler.Schema.CMSConsumptionMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -31557,7 +31533,7 @@ fn decode_cms_rich_text_style_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_RICH_TEXT_STYLE_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSRichTextStyleMap",
+        "Elixir.Figler.Schema.CMSRichTextStyleMap",
     );
     let keys = cached_struct_keys(
         env,
@@ -31622,7 +31598,7 @@ fn decode_cms_rich_text_style_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_RICH_TEXT_STYLE_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSRichTextStyleEntry",
+        "Elixir.Figler.Schema.CMSRichTextStyleEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -31790,7 +31766,7 @@ fn decode_cms_rich_text_descriptor_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_RICH_TEXT_DESCRIPTOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSRichTextDescriptor",
+        "Elixir.Figler.Schema.CMSRichTextDescriptor",
     );
     let keys = cached_struct_keys(
         env,
@@ -31869,7 +31845,7 @@ fn decode_repeater_cms_override_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &REPEATER_CMS_OVERRIDE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RepeaterCmsOverrideData",
+        "Elixir.Figler.Schema.RepeaterCmsOverrideData",
     );
     let keys = cached_struct_keys(
         env,
@@ -31932,7 +31908,7 @@ fn decode_repeater_override_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &REPEATER_OVERRIDE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RepeaterOverrideData",
+        "Elixir.Figler.Schema.RepeaterOverrideData",
     );
     let keys = cached_struct_keys(
         env,
@@ -31997,7 +31973,7 @@ fn decode_repeater_symbol_override_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &REPEATER_SYMBOL_OVERRIDE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RepeaterSymbolOverrideData",
+        "Elixir.Figler.Schema.RepeaterSymbolOverrideData",
     );
     let keys = cached_struct_keys(
         env,
@@ -32062,7 +32038,7 @@ fn decode_repeater_position_overrides_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &REPEATER_POSITION_OVERRIDES_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RepeaterPositionOverrides",
+        "Elixir.Figler.Schema.RepeaterPositionOverrides",
     );
     let keys = cached_struct_keys(
         env,
@@ -32139,7 +32115,7 @@ fn decode_inherited_variables_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INHERITED_VARIABLES_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InheritedVariablesData",
+        "Elixir.Figler.Schema.InheritedVariablesData",
     );
     let keys = cached_struct_keys(
         env,
@@ -32202,7 +32178,7 @@ fn decode_inherited_variable_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INHERITED_VARIABLE_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InheritedVariableEntry",
+        "Elixir.Figler.Schema.InheritedVariableEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -32260,7 +32236,7 @@ fn decode_hub_file_attribution_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &HUB_FILE_ATTRIBUTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HubFileAttribution",
+        "Elixir.Figler.Schema.HubFileAttribution",
     );
     let keys = cached_struct_keys(
         env,
@@ -32332,7 +32308,7 @@ fn decode_managed_string_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringData",
+        "Elixir.Figler.Schema.ManagedStringData",
     );
     let keys = cached_struct_keys(
         env,
@@ -32524,7 +32500,7 @@ fn decode_managed_string_node_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_NODE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringNode",
+        "Elixir.Figler.Schema.ManagedStringNode",
     );
     let keys = cached_struct_keys(
         env,
@@ -32658,7 +32634,7 @@ fn decode_managed_string_text_node_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_TEXT_NODE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringTextNodeData",
+        "Elixir.Figler.Schema.ManagedStringTextNodeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -32718,7 +32694,7 @@ fn decode_managed_string_concatenate_ast_node_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_CONCATENATE_AST_NODE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringConcatenateAstNodeData",
+        "Elixir.Figler.Schema.ManagedStringConcatenateAstNodeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -32857,7 +32833,7 @@ fn decode_managed_string_plural_ast_node_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_PLURAL_AST_NODE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringPluralAstNodeData",
+        "Elixir.Figler.Schema.ManagedStringPluralAstNodeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -32941,7 +32917,7 @@ fn decode_managed_string_plural_type_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_PLURAL_TYPE_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringPluralTypeMapEntry",
+        "Elixir.Figler.Schema.ManagedStringPluralTypeMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -33071,7 +33047,7 @@ fn decode_managed_string_placeholder_ast_node_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_PLACEHOLDER_AST_NODE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringPlaceholderAstNodeData",
+        "Elixir.Figler.Schema.ManagedStringPlaceholderAstNodeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -33162,7 +33138,7 @@ fn decode_cooper_revert_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COOPER_REVERT_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CooperRevertData",
+        "Elixir.Figler.Schema.CooperRevertData",
     );
     let keys = cached_struct_keys(
         env,
@@ -33220,7 +33196,7 @@ fn decode_video_playback_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VIDEO_PLAYBACK_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VideoPlayback",
+        "Elixir.Figler.Schema.VideoPlayback",
     );
     let keys = cached_struct_keys(
         env,
@@ -33494,7 +33470,7 @@ fn decode_widget_hover_style_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &WIDGET_HOVER_STYLE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetHoverStyle",
+        "Elixir.Figler.Schema.WidgetHoverStyle",
     );
     let keys = cached_struct_keys(
         env,
@@ -33635,7 +33611,7 @@ fn decode_widget_derived_subtree_cursor_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &WIDGET_DERIVED_SUBTREE_CURSOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetDerivedSubtreeCursor",
+        "Elixir.Figler.Schema.WidgetDerivedSubtreeCursor",
     );
     let keys = cached_struct_keys(
         env,
@@ -33707,7 +33683,7 @@ fn decode_multiplayer_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MULTIPLAYER_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MultiplayerMap",
+        "Elixir.Figler.Schema.MultiplayerMap",
     );
     let keys = cached_struct_keys(env, &MULTIPLAYER_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -33766,7 +33742,7 @@ fn decode_multiplayer_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MULTIPLAYER_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MultiplayerMapEntry",
+        "Elixir.Figler.Schema.MultiplayerMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -33838,7 +33814,7 @@ fn decode_variable_data_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_DATA_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableDataMap",
+        "Elixir.Figler.Schema.VariableDataMap",
     );
     let keys = cached_struct_keys(env, &VARIABLE_DATA_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -33897,7 +33873,7 @@ fn decode_variable_data_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_DATA_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableDataMapEntry",
+        "Elixir.Figler.Schema.VariableDataMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -34630,7 +34606,7 @@ fn decode_variable_mode_by_set_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_MODE_BY_SET_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableModeBySetMap",
+        "Elixir.Figler.Schema.VariableModeBySetMap",
     );
     let keys = cached_struct_keys(
         env,
@@ -34695,7 +34671,7 @@ fn decode_variable_mode_by_set_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_MODE_BY_SET_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableModeBySetMapEntry",
+        "Elixir.Figler.Schema.VariableModeBySetMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -34781,7 +34757,7 @@ fn decode_code_syntax_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_SYNTAX_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSyntaxMap",
+        "Elixir.Figler.Schema.CodeSyntaxMap",
     );
     let keys = cached_struct_keys(env, &CODE_SYNTAX_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -34840,7 +34816,7 @@ fn decode_code_syntax_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_SYNTAX_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSyntaxMapEntry",
+        "Elixir.Figler.Schema.CodeSyntaxMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -34912,7 +34888,7 @@ fn decode_table_merged_cell_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TABLE_MERGED_CELL_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableMergedCellMap",
+        "Elixir.Figler.Schema.TableMergedCellMap",
     );
     let keys = cached_struct_keys(env, &TABLE_MERGED_CELL_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -34973,7 +34949,7 @@ fn decode_table_merged_cell_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TABLE_MERGED_CELL_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableMergedCellMapEntry",
+        "Elixir.Figler.Schema.TableMergedCellMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -35075,7 +35051,7 @@ fn decode_table_row_column_position_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TABLE_ROW_COLUMN_POSITION_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableRowColumnPositionMap",
+        "Elixir.Figler.Schema.TableRowColumnPositionMap",
     );
     let keys = cached_struct_keys(
         env,
@@ -35140,7 +35116,7 @@ fn decode_table_row_column_position_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TABLE_ROW_COLUMN_POSITION_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableRowColumnPositionMapEntry",
+        "Elixir.Figler.Schema.TableRowColumnPositionMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -35217,7 +35193,7 @@ fn decode_guid_position_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GUID_POSITION_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDPositionMap",
+        "Elixir.Figler.Schema.GUIDPositionMap",
     );
     let keys = cached_struct_keys(env, &GUID_POSITION_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -35276,7 +35252,7 @@ fn decode_guid_position_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GUID_POSITION_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDPositionMapEntry",
+        "Elixir.Figler.Schema.GUIDPositionMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -35348,7 +35324,7 @@ fn decode_guid_grid_track_size_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GUID_GRID_TRACK_SIZE_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDGridTrackSizeMap",
+        "Elixir.Figler.Schema.GUIDGridTrackSizeMap",
     );
     let keys = cached_struct_keys(
         env,
@@ -35413,7 +35389,7 @@ fn decode_guid_grid_track_size_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GUID_GRID_TRACK_SIZE_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDGridTrackSizeMapEntry",
+        "Elixir.Figler.Schema.GUIDGridTrackSizeMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -35485,7 +35461,7 @@ fn decode_object_animation_list_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &OBJECT_ANIMATION_LIST_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ObjectAnimationList",
+        "Elixir.Figler.Schema.ObjectAnimationList",
     );
     let keys = cached_struct_keys(env, &OBJECT_ANIMATION_LIST_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -35546,7 +35522,7 @@ fn decode_object_animation_list_item_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &OBJECT_ANIMATION_LIST_ITEM_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ObjectAnimationListItem",
+        "Elixir.Figler.Schema.ObjectAnimationListItem",
     );
     let keys = cached_struct_keys(
         env,
@@ -35618,7 +35594,7 @@ fn decode_grid_track_size_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GRID_TRACK_SIZE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GridTrackSize",
+        "Elixir.Figler.Schema.GridTrackSize",
     );
     let keys = cached_struct_keys(
         env,
@@ -35692,7 +35668,7 @@ fn decode_grid_track_sizing_function_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GRID_TRACK_SIZING_FUNCTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GridTrackSizingFunction",
+        "Elixir.Figler.Schema.GridTrackSizingFunction",
     );
     let keys = cached_struct_keys(
         env,
@@ -35808,7 +35784,7 @@ fn decode_table_row_column_size_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TABLE_ROW_COLUMN_SIZE_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableRowColumnSizeMap",
+        "Elixir.Figler.Schema.TableRowColumnSizeMap",
     );
     let keys = cached_struct_keys(
         env,
@@ -35873,7 +35849,7 @@ fn decode_table_row_column_size_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TABLE_ROW_COLUMN_SIZE_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableRowColumnSizeMapEntry",
+        "Elixir.Figler.Schema.TableRowColumnSizeMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -35950,7 +35926,7 @@ fn decode_agenda_position_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENDA_POSITION_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaPositionMap",
+        "Elixir.Figler.Schema.AgendaPositionMap",
     );
     let keys = cached_struct_keys(env, &AGENDA_POSITION_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -36011,7 +35987,7 @@ fn decode_agenda_position_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENDA_POSITION_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaPositionMapEntry",
+        "Elixir.Figler.Schema.AgendaPositionMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -36110,7 +36086,7 @@ fn decode_agenda_metadata_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENDA_METADATA_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaMetadataMap",
+        "Elixir.Figler.Schema.AgendaMetadataMap",
     );
     let keys = cached_struct_keys(env, &AGENDA_METADATA_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -36171,7 +36147,7 @@ fn decode_agenda_metadata_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENDA_METADATA_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaMetadataMapEntry",
+        "Elixir.Figler.Schema.AgendaMetadataMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -36243,7 +36219,7 @@ fn decode_agenda_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENDA_METADATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaMetadata",
+        "Elixir.Figler.Schema.AgendaMetadata",
     );
     let keys = cached_struct_keys(
         env,
@@ -36371,7 +36347,7 @@ fn decode_agenda_timer_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENDA_TIMER_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaTimerInfo",
+        "Elixir.Figler.Schema.AgendaTimerInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -36429,7 +36405,7 @@ fn decode_agenda_vote_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENDA_VOTE_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaVoteInfo",
+        "Elixir.Figler.Schema.AgendaVoteInfo",
     );
     let keys = cached_struct_keys(env, &AGENDA_VOTE_INFO_STRUCT_KEYS, &["vote_count"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -36483,7 +36459,7 @@ fn decode_agenda_music_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENDA_MUSIC_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaMusicInfo",
+        "Elixir.Figler.Schema.AgendaMusicInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -36588,7 +36564,7 @@ fn decode_diagram_parent_index_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DIAGRAM_PARENT_INDEX_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DiagramParentIndex",
+        "Elixir.Figler.Schema.DiagramParentIndex",
     );
     let keys = cached_struct_keys(
         env,
@@ -36656,7 +36632,7 @@ fn decode_component_prop_ref_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COMPONENT_PROP_REF_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropRef",
+        "Elixir.Figler.Schema.ComponentPropRef",
     );
     let keys = cached_struct_keys(
         env,
@@ -36850,7 +36826,7 @@ fn decode_component_prop_assignment_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COMPONENT_PROP_ASSIGNMENT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropAssignment",
+        "Elixir.Figler.Schema.ComponentPropAssignment",
     );
     let keys = cached_struct_keys(
         env,
@@ -36950,7 +36926,7 @@ fn decode_component_prop_def_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COMPONENT_PROP_DEF_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropDef",
+        "Elixir.Figler.Schema.ComponentPropDef",
     );
     let keys = cached_struct_keys(
         env,
@@ -37193,7 +37169,7 @@ fn decode_component_prop_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COMPONENT_PROP_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropValue",
+        "Elixir.Figler.Schema.ComponentPropValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -37418,7 +37394,7 @@ fn decode_timeline_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TIMELINE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineData",
+        "Elixir.Figler.Schema.TimelineData",
     );
     let keys = cached_struct_keys(
         env,
@@ -37518,7 +37494,7 @@ fn decode_timeline_definitions_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TIMELINE_DEFINITIONS_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineDefinitionsMap",
+        "Elixir.Figler.Schema.TimelineDefinitionsMap",
     );
     let keys = cached_struct_keys(
         env,
@@ -37583,7 +37559,7 @@ fn decode_timeline_definitions_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TIMELINE_DEFINITIONS_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineDefinitionsMapEntry",
+        "Elixir.Figler.Schema.TimelineDefinitionsMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -37655,7 +37631,7 @@ fn decode_timeline_assignment_key_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TIMELINE_ASSIGNMENT_KEY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineAssignmentKey",
+        "Elixir.Figler.Schema.TimelineAssignmentKey",
     );
     let keys = cached_struct_keys(
         env,
@@ -37727,7 +37703,7 @@ fn decode_timeline_binding_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TIMELINE_BINDING_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineBindingData",
+        "Elixir.Figler.Schema.TimelineBindingData",
     );
     let keys = cached_struct_keys(
         env,
@@ -37799,7 +37775,7 @@ fn decode_timeline_assignments_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TIMELINE_ASSIGNMENTS_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineAssignmentsMap",
+        "Elixir.Figler.Schema.TimelineAssignmentsMap",
     );
     let keys = cached_struct_keys(
         env,
@@ -37864,7 +37840,7 @@ fn decode_timeline_assignments_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TIMELINE_ASSIGNMENTS_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineAssignmentsMapEntry",
+        "Elixir.Figler.Schema.TimelineAssignmentsMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -38097,7 +38073,7 @@ fn decode_component_prop_preferred_values_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COMPONENT_PROP_PREFERRED_VALUES_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropPreferredValues",
+        "Elixir.Figler.Schema.ComponentPropPreferredValues",
     );
     let keys = cached_struct_keys(
         env,
@@ -38179,7 +38155,7 @@ fn decode_parameter_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PARAMETER_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ParameterConfig",
+        "Elixir.Figler.Schema.ParameterConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -38470,7 +38446,7 @@ fn decode_input_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INPUT_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InputConfig",
+        "Elixir.Figler.Schema.InputConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -38556,7 +38532,7 @@ fn decode_slider_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SLIDER_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SliderConfig",
+        "Elixir.Figler.Schema.SliderConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -38685,7 +38661,7 @@ fn decode_point_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &POINT_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PointConfig",
+        "Elixir.Figler.Schema.PointConfig",
     );
     let keys = cached_struct_keys(env, &POINT_CONFIG_STRUCT_KEYS, &["mode", "unit"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -38750,7 +38726,7 @@ fn decode_line_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(env, &LINE_MODULE_ATOM, "Elixir.FigKiwi.Schema.Line");
+    let module_atom = cached_atom(env, &LINE_MODULE_ATOM, "Elixir.Figler.Schema.Line");
     let keys = cached_struct_keys(env, &LINE_STRUCT_KEYS, &["a", "b"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_line_fields_from_decoder(env, decoder, keys, values)
@@ -38807,7 +38783,7 @@ fn decode_line_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &LINE_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LineConfig",
+        "Elixir.Figler.Schema.LineConfig",
     );
     let keys = cached_struct_keys(env, &LINE_CONFIG_STRUCT_KEYS, &["mode", "unit"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -38875,7 +38851,7 @@ fn decode_circle_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CIRCLE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Circle",
+        "Elixir.Figler.Schema.Circle",
     );
     let keys = cached_struct_keys(env, &CIRCLE_STRUCT_KEYS, &["center", "radius"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -38933,7 +38909,7 @@ fn decode_point_radius_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &POINT_RADIUS_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PointRadiusConfig",
+        "Elixir.Figler.Schema.PointRadiusConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -39047,7 +39023,7 @@ fn decode_rotation3_d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ROTATION3_D_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Rotation3D",
+        "Elixir.Figler.Schema.Rotation3D",
     );
     let keys = cached_struct_keys(
         env,
@@ -39147,7 +39123,7 @@ fn decode_rotation3_d_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ROTATION3_D_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Rotation3DConfig",
+        "Elixir.Figler.Schema.Rotation3DConfig",
     );
     let keys = cached_struct_keys(env, &ROTATION3_D_CONFIG_STRUCT_KEYS, &["mode"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -39201,7 +39177,7 @@ fn decode_circle_point_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CIRCLE_POINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CirclePoint",
+        "Elixir.Figler.Schema.CirclePoint",
     );
     let keys = cached_struct_keys(
         env,
@@ -39287,7 +39263,7 @@ fn decode_circle_point_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CIRCLE_POINT_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CirclePointConfig",
+        "Elixir.Figler.Schema.CirclePointConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -39401,7 +39377,7 @@ fn decode_color_point_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLOR_POINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorPoint",
+        "Elixir.Figler.Schema.ColorPoint",
     );
     let keys = cached_struct_keys(env, &COLOR_POINT_STRUCT_KEYS, &["point", "color"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -39469,7 +39445,7 @@ fn decode_color_point_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLOR_POINT_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorPointConfig",
+        "Elixir.Figler.Schema.ColorPointConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -39541,7 +39517,7 @@ fn decode_gradient_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GRADIENT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Gradient",
+        "Elixir.Figler.Schema.Gradient",
     );
     let keys = cached_struct_keys(env, &GRADIENT_STRUCT_KEYS, &["stops"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -39600,7 +39576,7 @@ fn decode_gradient_stop_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GRADIENT_STOP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GradientStop",
+        "Elixir.Figler.Schema.GradientStop",
     );
     let keys = cached_struct_keys(
         env,
@@ -39672,7 +39648,7 @@ fn decode_select_option_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SELECT_OPTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SelectOption",
+        "Elixir.Figler.Schema.SelectOption",
     );
     let keys = cached_struct_keys(env, &SELECT_OPTION_STRUCT_KEYS, &["value", "label"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -39740,7 +39716,7 @@ fn decode_select_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SELECT_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SelectConfig",
+        "Elixir.Figler.Schema.SelectConfig",
     );
     let keys = cached_struct_keys(env, &SELECT_CONFIG_STRUCT_KEYS, &["options"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -39799,7 +39775,7 @@ fn decode_color_array_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLOR_ARRAY_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorArrayConfig",
+        "Elixir.Figler.Schema.ColorArrayConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -39871,7 +39847,7 @@ fn decode_slot_prop_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SLOT_PROP_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlotPropConfig",
+        "Elixir.Figler.Schema.SlotPropConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -39991,7 +39967,7 @@ fn decode_number_prop_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NUMBER_PROP_CONFIG_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NumberPropConfig",
+        "Elixir.Figler.Schema.NumberPropConfig",
     );
     let keys = cached_struct_keys(
         env,
@@ -40093,7 +40069,7 @@ fn decode_instance_swap_preferred_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INSTANCE_SWAP_PREFERRED_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InstanceSwapPreferredValue",
+        "Elixir.Figler.Schema.InstanceSwapPreferredValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -40307,7 +40283,7 @@ fn decode_widget_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &WIDGET_METADATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetMetadata",
+        "Elixir.Figler.Schema.WidgetMetadata",
     );
     let keys = cached_struct_keys(
         env,
@@ -40527,7 +40503,7 @@ fn decode_widget_property_menu_selector_option_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &WIDGET_PROPERTY_MENU_SELECTOR_OPTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetPropertyMenuSelectorOption",
+        "Elixir.Figler.Schema.WidgetPropertyMenuSelectorOption",
     );
     let keys = cached_struct_keys(
         env,
@@ -40647,7 +40623,7 @@ fn decode_widget_property_menu_item_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &WIDGET_PROPERTY_MENU_ITEM_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetPropertyMenuItem",
+        "Elixir.Figler.Schema.WidgetPropertyMenuItem",
     );
     let keys = cached_struct_keys(
         env,
@@ -41281,7 +41257,7 @@ fn decode_internal_data_for_test_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INTERNAL_DATA_FOR_TEST_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InternalDataForTest",
+        "Elixir.Figler.Schema.InternalDataForTest",
     );
     let keys = cached_struct_keys(
         env,
@@ -41341,7 +41317,7 @@ fn decode_state_group_property_value_order_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STATE_GROUP_PROPERTY_VALUE_ORDER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StateGroupPropertyValueOrder",
+        "Elixir.Figler.Schema.StateGroupPropertyValueOrder",
     );
     let keys = cached_struct_keys(
         env,
@@ -41464,7 +41440,7 @@ fn decode_partial_paste_annotation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PARTIAL_PASTE_ANNOTATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PartialPasteAnnotation",
+        "Elixir.Figler.Schema.PartialPasteAnnotation",
     );
     let keys = cached_struct_keys(
         env,
@@ -41550,7 +41526,7 @@ fn decode_variant_prop_spec_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIANT_PROP_SPEC_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariantPropSpec",
+        "Elixir.Figler.Schema.VariantPropSpec",
     );
     let keys = cached_struct_keys(
         env,
@@ -41622,7 +41598,7 @@ fn decode_text_list_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TEXT_LIST_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextListData",
+        "Elixir.Figler.Schema.TextListData",
     );
     let keys = cached_struct_keys(
         env,
@@ -41755,7 +41731,7 @@ fn decode_text_line_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TEXT_LINE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextLineData",
+        "Elixir.Figler.Schema.TextLineData",
     );
     let keys = cached_struct_keys(
         env,
@@ -41950,7 +41926,7 @@ fn decode_derived_text_line_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &DERIVED_TEXT_LINE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedTextLineData",
+        "Elixir.Figler.Schema.DerivedTextLineData",
     );
     let keys = cached_struct_keys(
         env,
@@ -42145,7 +42121,7 @@ fn decode_prototype_interaction_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PROTOTYPE_INTERACTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeInteraction",
+        "Elixir.Figler.Schema.PrototypeInteraction",
     );
     let keys = cached_struct_keys(
         env,
@@ -42264,7 +42240,7 @@ fn decode_prototype_event_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PROTOTYPE_EVENT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeEvent",
+        "Elixir.Figler.Schema.PrototypeEvent",
     );
     let keys = cached_struct_keys(
         env,
@@ -42416,7 +42392,7 @@ fn decode_prototype_variable_target_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PROTOTYPE_VARIABLE_TARGET_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeVariableTarget",
+        "Elixir.Figler.Schema.PrototypeVariableTarget",
     );
     let keys = cached_struct_keys(
         env,
@@ -42488,7 +42464,7 @@ fn decode_conditional_actions_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CONDITIONAL_ACTIONS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ConditionalActions",
+        "Elixir.Figler.Schema.ConditionalActions",
     );
     let keys = cached_struct_keys(
         env,
@@ -42565,7 +42541,7 @@ fn decode_prototype_action_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PROTOTYPE_ACTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeAction",
+        "Elixir.Figler.Schema.PrototypeAction",
     );
     let keys = cached_struct_keys(
         env,
@@ -43332,7 +43308,7 @@ fn decode_animation_state_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANIMATION_STATE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationState",
+        "Elixir.Figler.Schema.AnimationState",
     );
     let keys = cached_struct_keys(
         env,
@@ -43404,7 +43380,7 @@ fn decode_prototype_starting_point_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PROTOTYPE_STARTING_POINT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeStartingPoint",
+        "Elixir.Figler.Schema.PrototypeStartingPoint",
     );
     let keys = cached_struct_keys(
         env,
@@ -43539,7 +43515,7 @@ fn decode_key_trigger_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &KEY_TRIGGER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyTrigger",
+        "Elixir.Figler.Schema.KeyTrigger",
     );
     let keys = cached_struct_keys(
         env,
@@ -43611,7 +43587,7 @@ fn decode_hyperlink_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &HYPERLINK_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Hyperlink",
+        "Elixir.Figler.Schema.Hyperlink",
     );
     let keys = cached_struct_keys(
         env,
@@ -43711,7 +43687,7 @@ fn decode_cms_item_page_target_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_ITEM_PAGE_TARGET_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSItemPageTarget",
+        "Elixir.Figler.Schema.CMSItemPageTarget",
     );
     let keys = cached_struct_keys(
         env,
@@ -43836,7 +43812,7 @@ fn decode_mention_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MENTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Mention",
+        "Elixir.Figler.Schema.Mention",
     );
     let keys = cached_struct_keys(
         env,
@@ -44001,7 +43977,7 @@ fn decode_embed_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EMBED_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EmbedData",
+        "Elixir.Figler.Schema.EmbedData",
     );
     let keys = cached_struct_keys(
         env,
@@ -44256,7 +44232,7 @@ fn decode_stamp_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STAMP_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StampData",
+        "Elixir.Figler.Schema.StampData",
     );
     let keys = cached_struct_keys(
         env,
@@ -44342,7 +44318,7 @@ fn decode_link_preview_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &LINK_PREVIEW_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LinkPreviewData",
+        "Elixir.Figler.Schema.LinkPreviewData",
     );
     let keys = cached_struct_keys(
         env,
@@ -44507,7 +44483,7 @@ fn decode_viewport_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VIEWPORT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Viewport",
+        "Elixir.Figler.Schema.Viewport",
     );
     let keys = cached_struct_keys(
         env,
@@ -44604,11 +44580,7 @@ fn decode_mouse_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &MOUSE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Mouse",
-    );
+    let module_atom = cached_atom(env, &MOUSE_MODULE_ATOM, "Elixir.Figler.Schema.Mouse");
     let keys = cached_struct_keys(
         env,
         &MOUSE_STRUCT_KEYS,
@@ -44699,11 +44671,7 @@ fn decode_click_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &CLICK_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Click",
-    );
+    let module_atom = cached_atom(env, &CLICK_MODULE_ATOM, "Elixir.Figler.Schema.Click");
     let keys = cached_struct_keys(env, &CLICK_STRUCT_KEYS, &["id", "point"]);
     let mut values = Vec::with_capacity(keys.len());
     values.push(module_atom.as_c_arg());
@@ -44736,7 +44704,7 @@ fn decode_scroll_position_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SCROLL_POSITION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScrollPosition",
+        "Elixir.Figler.Schema.ScrollPosition",
     );
     let keys = cached_struct_keys(
         env,
@@ -44774,7 +44742,7 @@ fn decode_triggered_overlay_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRIGGERED_OVERLAY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TriggeredOverlay",
+        "Elixir.Figler.Schema.TriggeredOverlay",
     );
     let keys = cached_struct_keys(
         env,
@@ -44818,7 +44786,7 @@ fn decode_triggered_overlay_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRIGGERED_OVERLAY_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TriggeredOverlayData",
+        "Elixir.Figler.Schema.TriggeredOverlayData",
     );
     let keys = cached_struct_keys(
         env,
@@ -44940,7 +44908,7 @@ fn decode_triggered_set_variable_action_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRIGGERED_SET_VARIABLE_ACTION_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TriggeredSetVariableActionData",
+        "Elixir.Figler.Schema.TriggeredSetVariableActionData",
     );
     let keys = cached_struct_keys(
         env,
@@ -45052,7 +45020,7 @@ fn decode_triggered_set_variable_mode_action_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRIGGERED_SET_VARIABLE_MODE_ACTION_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TriggeredSetVariableModeActionData",
+        "Elixir.Figler.Schema.TriggeredSetVariableModeActionData",
     );
     let keys = cached_struct_keys(
         env,
@@ -45162,7 +45130,7 @@ fn decode_video_state_change_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VIDEO_STATE_CHANGE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VideoStateChangeData",
+        "Elixir.Figler.Schema.VideoStateChangeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -45282,7 +45250,7 @@ fn decode_embedded_prototype_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EMBEDDED_PROTOTYPE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EmbeddedPrototypeData",
+        "Elixir.Figler.Schema.EmbeddedPrototypeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -45354,7 +45322,7 @@ fn decode_presented_state_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PRESENTED_STATE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PresentedState",
+        "Elixir.Figler.Schema.PresentedState",
     );
     let keys = cached_struct_keys(
         env,
@@ -45466,7 +45434,7 @@ fn decode_top_level_playback_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TOP_LEVEL_PLAYBACK_CHANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TopLevelPlaybackChange",
+        "Elixir.Figler.Schema.TopLevelPlaybackChange",
     );
     let keys = cached_struct_keys(
         env,
@@ -45616,7 +45584,7 @@ fn decode_instance_state_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INSTANCE_STATE_CHANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InstanceStateChange",
+        "Elixir.Figler.Schema.InstanceStateChange",
     );
     let keys = cached_struct_keys(
         env,
@@ -45736,7 +45704,7 @@ fn decode_text_cursor_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TEXT_CURSOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextCursor",
+        "Elixir.Figler.Schema.TextCursor",
     );
     let keys = cached_struct_keys(
         env,
@@ -45822,7 +45790,7 @@ fn decode_text_selection_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TEXT_SELECTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextSelection",
+        "Elixir.Figler.Schema.TextSelection",
     );
     let keys = cached_struct_keys(
         env,
@@ -46016,7 +45984,7 @@ fn decode_playback_change_keyframe_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PLAYBACK_CHANGE_KEYFRAME_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PlaybackChangeKeyframe",
+        "Elixir.Figler.Schema.PlaybackChangeKeyframe",
     );
     let keys = cached_struct_keys(
         env,
@@ -46102,7 +46070,7 @@ fn decode_state_mapping_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STATE_MAPPING_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StateMapping",
+        "Elixir.Figler.Schema.StateMapping",
     );
     let keys = cached_struct_keys(
         env,
@@ -46207,7 +46175,7 @@ fn decode_scroll_mapping_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SCROLL_MAPPING_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScrollMapping",
+        "Elixir.Figler.Schema.ScrollMapping",
     );
     let keys = cached_struct_keys(
         env,
@@ -46293,7 +46261,7 @@ fn decode_playback_update_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PLAYBACK_UPDATE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PlaybackUpdate",
+        "Elixir.Figler.Schema.PlaybackUpdate",
     );
     let keys = cached_struct_keys(
         env,
@@ -46453,7 +46421,7 @@ fn decode_chat_message_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CHAT_MESSAGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ChatMessage",
+        "Elixir.Figler.Schema.ChatMessage",
     );
     let keys = cached_struct_keys(
         env,
@@ -46525,7 +46493,7 @@ fn decode_voice_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VOICE_METADATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VoiceMetadata",
+        "Elixir.Figler.Schema.VoiceMetadata",
     );
     let keys = cached_struct_keys(
         env,
@@ -46583,7 +46551,7 @@ fn decode_april_fun_cursor_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &APRIL_FUN_CURSOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AprilFunCursor",
+        "Elixir.Figler.Schema.AprilFunCursor",
     );
     let keys = cached_struct_keys(
         env,
@@ -46655,7 +46623,7 @@ fn decode_april_fun_fig_pal_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &APRIL_FUN_FIG_PAL_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AprilFunFigPal",
+        "Elixir.Figler.Schema.AprilFunFigPal",
     );
     let keys = cached_struct_keys(
         env,
@@ -46857,7 +46825,7 @@ fn decode_agent_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AGENT_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgentInfo",
+        "Elixir.Figler.Schema.AgentInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -46943,7 +46911,7 @@ fn decode_user_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &USER_CHANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.UserChange",
+        "Elixir.Figler.Schema.UserChange",
     );
     let keys = cached_struct_keys(
         env,
@@ -47739,7 +47707,7 @@ fn decode_interactive_slide_element_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &INTERACTIVE_SLIDE_ELEMENT_CHANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InteractiveSlideElementChange",
+        "Elixir.Figler.Schema.InteractiveSlideElementChange",
     );
     let keys = cached_struct_keys(
         env,
@@ -47844,7 +47812,7 @@ fn decode_node_status_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_STATUS_CHANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeStatusChange",
+        "Elixir.Figler.Schema.NodeStatusChange",
     );
     let keys = cached_struct_keys(
         env,
@@ -47920,7 +47888,7 @@ fn decode_buzz_approval_asset_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BUZZ_APPROVAL_ASSET_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalAssetEntry",
+        "Elixir.Figler.Schema.BuzzApprovalAssetEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -47992,7 +47960,7 @@ fn decode_buzz_approval_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BUZZ_APPROVAL_CHANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalChange",
+        "Elixir.Figler.Schema.BuzzApprovalChange",
     );
     let keys = cached_struct_keys(
         env,
@@ -48162,7 +48130,7 @@ fn decode_scene_graph_query_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SCENE_GRAPH_QUERY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SceneGraphQuery",
+        "Elixir.Figler.Schema.SceneGraphQuery",
     );
     let keys = cached_struct_keys(
         env,
@@ -48248,7 +48216,7 @@ fn decode_node_changes_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_CHANGES_METADATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChangesMetadata",
+        "Elixir.Figler.Schema.NodeChangesMetadata",
     );
     let keys = cached_struct_keys(
         env,
@@ -48306,7 +48274,7 @@ fn decode_cursor_reaction_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CURSOR_REACTION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CursorReaction",
+        "Elixir.Figler.Schema.CursorReaction",
     );
     let keys = cached_struct_keys(env, &CURSOR_REACTION_STRUCT_KEYS, &["image_url"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -48360,7 +48328,7 @@ fn decode_timer_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TIMER_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimerInfo",
+        "Elixir.Figler.Schema.TimerInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -48525,7 +48493,7 @@ fn decode_music_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MUSIC_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MusicInfo",
+        "Elixir.Figler.Schema.MusicInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -48645,7 +48613,7 @@ fn decode_presenter_nomination_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PRESENTER_NOMINATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PresenterNomination",
+        "Elixir.Figler.Schema.PresenterNomination",
     );
     let keys = cached_struct_keys(
         env,
@@ -48717,7 +48685,7 @@ fn decode_presenter_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PRESENTER_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PresenterInfo",
+        "Elixir.Figler.Schema.PresenterInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -48803,7 +48771,7 @@ fn decode_client_broadcast_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CLIENT_BROADCAST_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ClientBroadcast",
+        "Elixir.Figler.Schema.ClientBroadcast",
     );
     let keys = cached_struct_keys(
         env,
@@ -48968,7 +48936,7 @@ fn decode_message_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MESSAGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Message",
+        "Elixir.Figler.Schema.Message",
     );
     let keys = cached_struct_keys(
         env,
@@ -49735,7 +49703,7 @@ fn decode_encoded_offsets_index_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ENCODED_OFFSETS_INDEX_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EncodedOffsetsIndex",
+        "Elixir.Figler.Schema.EncodedOffsetsIndex",
     );
     let keys = cached_struct_keys(
         env,
@@ -49845,7 +49813,7 @@ fn decode_guid_and_encoded_offset_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &GUID_AND_ENCODED_OFFSET_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDAndEncodedOffset",
+        "Elixir.Figler.Schema.GUIDAndEncodedOffset",
     );
     let keys = cached_struct_keys(
         env,
@@ -49913,7 +49881,7 @@ fn decode_rich_media_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &RICH_MEDIA_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RichMediaData",
+        "Elixir.Figler.Schema.RichMediaData",
     );
     let keys = cached_struct_keys(
         env,
@@ -50558,7 +50526,7 @@ fn decode_variable_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_ANY_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableAnyValue",
+        "Elixir.Figler.Schema.VariableAnyValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -51235,7 +51203,7 @@ fn decode_expression_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EXPRESSION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Expression",
+        "Elixir.Figler.Schema.Expression",
     );
     let keys = cached_struct_keys(
         env,
@@ -51312,7 +51280,7 @@ fn decode_variable_map_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_MAP_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableMapValue",
+        "Elixir.Figler.Schema.VariableMapValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -51398,7 +51366,7 @@ fn decode_variable_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableMap",
+        "Elixir.Figler.Schema.VariableMap",
     );
     let keys = cached_struct_keys(env, &VARIABLE_MAP_STRUCT_KEYS, &["values"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -51457,7 +51425,7 @@ fn decode_color_array_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COLOR_ARRAY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorArray",
+        "Elixir.Figler.Schema.ColorArray",
     );
     let keys = cached_struct_keys(env, &COLOR_ARRAY_STRUCT_KEYS, &["colors"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -51516,7 +51484,7 @@ fn decode_variable_font_style_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_FONT_STYLE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableFontStyle",
+        "Elixir.Figler.Schema.VariableFontStyle",
     );
     let keys = cached_struct_keys(
         env,
@@ -51602,7 +51570,7 @@ fn decode_image_parameter_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &IMAGE_PARAMETER_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImageParameterValue",
+        "Elixir.Figler.Schema.ImageParameterValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -51752,7 +51720,7 @@ fn decode_thumbnail_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &THUMBNAIL_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ThumbnailInfo",
+        "Elixir.Figler.Schema.ThumbnailInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -51824,7 +51792,7 @@ fn decode_ai_canvas_prompt_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AI_CANVAS_PROMPT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AiCanvasPrompt",
+        "Elixir.Figler.Schema.AiCanvasPrompt",
     );
     let keys = cached_struct_keys(
         env,
@@ -51912,7 +51880,7 @@ fn decode_node_field_alias_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_FIELD_ALIAS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeFieldAlias",
+        "Elixir.Figler.Schema.NodeFieldAlias",
     );
     let keys = cached_struct_keys(
         env,
@@ -52035,7 +52003,7 @@ fn decode_cms_alias_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CMS_ALIAS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSAlias",
+        "Elixir.Figler.Schema.CMSAlias",
     );
     let keys = cached_struct_keys(
         env,
@@ -52135,7 +52103,7 @@ fn decode_js_runtime_alias_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &JS_RUNTIME_ALIAS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.JsRuntimeAlias",
+        "Elixir.Figler.Schema.JsRuntimeAlias",
     );
     let keys = cached_struct_keys(env, &JS_RUNTIME_ALIAS_STRUCT_KEYS, &["lookup_key"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -52189,7 +52157,7 @@ fn decode_prop_ref_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PROP_REF_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PropRefValue",
+        "Elixir.Figler.Schema.PropRefValue",
     );
     let keys = cached_struct_keys(env, &PROP_REF_VALUE_STRUCT_KEYS, &["def_id"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -52243,7 +52211,7 @@ fn decode_managed_string_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringId",
+        "Elixir.Figler.Schema.ManagedStringId",
     );
     let keys = cached_struct_keys(
         env,
@@ -52317,7 +52285,7 @@ fn decode_managed_string_placeholder_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_PLACEHOLDER_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringPlaceholderMapEntry",
+        "Elixir.Figler.Schema.ManagedStringPlaceholderMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -52394,7 +52362,7 @@ fn decode_slot_content_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SLOT_CONTENT_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlotContentId",
+        "Elixir.Figler.Schema.SlotContentId",
     );
     let keys = cached_struct_keys(env, &SLOT_CONTENT_ID_STRUCT_KEYS, &["guid"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -52448,7 +52416,7 @@ fn decode_managed_string_alias_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANAGED_STRING_ALIAS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringAlias",
+        "Elixir.Figler.Schema.ManagedStringAlias",
     );
     let keys = cached_struct_keys(
         env,
@@ -52525,7 +52493,7 @@ fn decode_keyframe_track_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &KEYFRAME_TRACK_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeTrackId",
+        "Elixir.Figler.Schema.KeyframeTrackId",
     );
     let keys = cached_struct_keys(
         env,
@@ -52597,7 +52565,7 @@ fn decode_animation_preset_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANIMATION_PRESET_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationPresetId",
+        "Elixir.Figler.Schema.AnimationPresetId",
     );
     let keys = cached_struct_keys(
         env,
@@ -52669,7 +52637,7 @@ fn decode_tool_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TOOL_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ToolId",
+        "Elixir.Figler.Schema.ToolId",
     );
     let keys = cached_struct_keys(env, &TOOL_ID_STRUCT_KEYS, &["guid", "asset_ref"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -52737,7 +52705,7 @@ fn decode_custom_effect_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CUSTOM_EFFECT_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CustomEffectId",
+        "Elixir.Figler.Schema.CustomEffectId",
     );
     let keys = cached_struct_keys(
         env,
@@ -52809,7 +52777,7 @@ fn decode_trss_transform2_d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRSS_TRANSFORM2_D_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TRSSTransform2D",
+        "Elixir.Figler.Schema.TRSSTransform2D",
     );
     let keys = cached_struct_keys(
         env,
@@ -52909,7 +52877,7 @@ fn decode_variable_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableData",
+        "Elixir.Figler.Schema.VariableData",
     );
     let keys = cached_struct_keys(
         env,
@@ -52995,7 +52963,7 @@ fn decode_variable_set_mode_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_SET_MODE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableSetMode",
+        "Elixir.Figler.Schema.VariableSetMode",
     );
     let keys = cached_struct_keys(
         env,
@@ -53109,7 +53077,7 @@ fn decode_variable_data_values_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_DATA_VALUES_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableDataValues",
+        "Elixir.Figler.Schema.VariableDataValues",
     );
     let keys = cached_struct_keys(env, &VARIABLE_DATA_VALUES_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -53170,7 +53138,7 @@ fn decode_variable_data_values_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_DATA_VALUES_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableDataValuesEntry",
+        "Elixir.Figler.Schema.VariableDataValuesEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -53447,7 +53415,7 @@ fn decode_keyframe_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &KEYFRAME_ANY_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeAnyValue",
+        "Elixir.Figler.Schema.KeyframeAnyValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -53607,7 +53575,7 @@ fn decode_keyframe_value_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &KEYFRAME_VALUE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeValueData",
+        "Elixir.Figler.Schema.KeyframeValueData",
     );
     let keys = cached_struct_keys(
         env,
@@ -53731,7 +53699,7 @@ fn decode_manual_keyframe_track_parameter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MANUAL_KEYFRAME_TRACK_PARAMETER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManualKeyframeTrackParameter",
+        "Elixir.Figler.Schema.ManualKeyframeTrackParameter",
     );
     let keys = cached_struct_keys(
         env,
@@ -53810,7 +53778,7 @@ fn decode_animation_preset_keyframe_track_parameter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANIMATION_PRESET_KEYFRAME_TRACK_PARAMETER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationPresetKeyframeTrackParameter",
+        "Elixir.Figler.Schema.AnimationPresetKeyframeTrackParameter",
     );
     let keys = cached_struct_keys(
         env,
@@ -53903,7 +53871,7 @@ fn decode_keyframe_track_any_parameter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &KEYFRAME_TRACK_ANY_PARAMETER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeTrackAnyParameter",
+        "Elixir.Figler.Schema.KeyframeTrackAnyParameter",
     );
     let keys = cached_struct_keys(
         env,
@@ -53995,7 +53963,7 @@ fn decode_keyframe_track_parameter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &KEYFRAME_TRACK_PARAMETER_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeTrackParameter",
+        "Elixir.Figler.Schema.KeyframeTrackParameter",
     );
     let keys = cached_struct_keys(
         env,
@@ -54075,7 +54043,7 @@ fn decode_keyframe_track_parameter_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &KEYFRAME_TRACK_PARAMETER_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeTrackParameterValue",
+        "Elixir.Figler.Schema.KeyframeTrackParameterValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -54138,7 +54106,7 @@ fn decode_animation_presets_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANIMATION_PRESETS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationPresets",
+        "Elixir.Figler.Schema.AnimationPresets",
     );
     let keys = cached_struct_keys(env, &ANIMATION_PRESETS_STRUCT_KEYS, &["presets"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -54197,7 +54165,7 @@ fn decode_animation_preset_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ANIMATION_PRESET_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationPresetData",
+        "Elixir.Figler.Schema.AnimationPresetData",
     );
     let keys = cached_struct_keys(
         env,
@@ -54269,7 +54237,7 @@ fn decode_style_animation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STYLE_ANIMATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StyleAnimation",
+        "Elixir.Figler.Schema.StyleAnimation",
     );
     let keys = cached_struct_keys(
         env,
@@ -54327,7 +54295,7 @@ fn decode_style_id_for_animation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &STYLE_ID_FOR_ANIMATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StyleIdForAnimation",
+        "Elixir.Figler.Schema.StyleIdForAnimation",
     );
     let keys = cached_struct_keys(
         env,
@@ -54424,11 +54392,7 @@ fn decode_tools_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let module_atom = cached_atom(
-        env,
-        &TOOLS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Tools",
-    );
+    let module_atom = cached_atom(env, &TOOLS_MODULE_ATOM, "Elixir.Figler.Schema.Tools");
     let keys = cached_struct_keys(env, &TOOLS_STRUCT_KEYS, &["tools"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
     decode_tools_fields_from_decoder(env, decoder, keys, values)
@@ -54481,7 +54445,7 @@ fn decode_tool_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TOOL_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ToolData",
+        "Elixir.Figler.Schema.ToolData",
     );
     let keys = cached_struct_keys(
         env,
@@ -54572,7 +54536,7 @@ fn decode_custom_effects_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CUSTOM_EFFECTS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CustomEffects",
+        "Elixir.Figler.Schema.CustomEffects",
     );
     let keys = cached_struct_keys(env, &CUSTOM_EFFECTS_STRUCT_KEYS, &["custom_effects"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -54631,7 +54595,7 @@ fn decode_custom_effect_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CUSTOM_EFFECT_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CustomEffectData",
+        "Elixir.Figler.Schema.CustomEffectData",
     );
     let keys = cached_struct_keys(
         env,
@@ -54689,7 +54653,7 @@ fn decode_spring_params_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SPRING_PARAMS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SpringParams",
+        "Elixir.Figler.Schema.SpringParams",
     );
     let keys = cached_struct_keys(
         env,
@@ -54777,7 +54741,7 @@ fn decode_transition_easing_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSITION_EASING_ANY_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionEasingAnyValue",
+        "Elixir.Figler.Schema.TransitionEasingAnyValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -54849,7 +54813,7 @@ fn decode_easing_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EASING_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EasingData",
+        "Elixir.Figler.Schema.EasingData",
     );
     let keys = cached_struct_keys(
         env,
@@ -54921,7 +54885,7 @@ fn decode_transition_override_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSITION_OVERRIDE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverride",
+        "Elixir.Figler.Schema.TransitionOverride",
     );
     let keys = cached_struct_keys(
         env,
@@ -55118,7 +55082,7 @@ fn decode_transition_override_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSITION_OVERRIDE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverrideData",
+        "Elixir.Figler.Schema.TransitionOverrideData",
     );
     let keys = cached_struct_keys(
         env,
@@ -55340,7 +55304,7 @@ fn decode_transition_override_binding_location_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSITION_OVERRIDE_BINDING_LOCATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverrideBindingLocation",
+        "Elixir.Figler.Schema.TransitionOverrideBindingLocation",
     );
     let keys = cached_struct_keys(
         env,
@@ -55756,7 +55720,7 @@ fn decode_node_contents_keyframe_binding_location_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_CONTENTS_KEYFRAME_BINDING_LOCATION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeContentsKeyframeBindingLocation",
+        "Elixir.Figler.Schema.NodeContentsKeyframeBindingLocation",
     );
     let keys = cached_struct_keys(
         env,
@@ -55874,7 +55838,7 @@ fn decode_transition_override_prop_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSITION_OVERRIDE_PROP_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverridePropMap",
+        "Elixir.Figler.Schema.TransitionOverridePropMap",
     );
     let keys = cached_struct_keys(
         env,
@@ -55939,7 +55903,7 @@ fn decode_transition_override_prop_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &TRANSITION_OVERRIDE_PROP_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverridePropMapEntry",
+        "Elixir.Figler.Schema.TransitionOverridePropMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -56094,7 +56058,7 @@ fn decode_optional_vector_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &OPTIONAL_VECTOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.OptionalVector",
+        "Elixir.Figler.Schema.OptionalVector",
     );
     let keys = cached_struct_keys(env, &OPTIONAL_VECTOR_STRUCT_KEYS, &["value"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -56939,7 +56903,7 @@ fn decode_migration_status_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MIGRATION_STATUS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MigrationStatus",
+        "Elixir.Figler.Schema.MigrationStatus",
     );
     let keys = cached_struct_keys(env, &MIGRATION_STATUS_STRUCT_KEYS, &["dsd_cleanup"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -57110,7 +57074,7 @@ fn decode_aria_attribute_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ARIA_ATTRIBUTE_ANY_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ARIAAttributeAnyValue",
+        "Elixir.Figler.Schema.ARIAAttributeAnyValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -57284,7 +57248,7 @@ fn decode_aria_attribute_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ARIA_ATTRIBUTE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ARIAAttributeData",
+        "Elixir.Figler.Schema.ARIAAttributeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -57356,7 +57320,7 @@ fn decode_aria_attributes_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ARIA_ATTRIBUTES_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ARIAAttributesMap",
+        "Elixir.Figler.Schema.ARIAAttributesMap",
     );
     let keys = cached_struct_keys(env, &ARIA_ATTRIBUTES_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -57417,7 +57381,7 @@ fn decode_aria_attributes_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &ARIA_ATTRIBUTES_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ARIAAttributesMapEntry",
+        "Elixir.Figler.Schema.ARIAAttributesMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -57489,7 +57453,7 @@ fn decode_handoff_status_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &HANDOFF_STATUS_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HandoffStatusMapEntry",
+        "Elixir.Figler.Schema.HandoffStatusMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -57561,7 +57525,7 @@ fn decode_handoff_status_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &HANDOFF_STATUS_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HandoffStatusMap",
+        "Elixir.Figler.Schema.HandoffStatusMap",
     );
     let keys = cached_struct_keys(env, &HANDOFF_STATUS_MAP_STRUCT_KEYS, &["entries"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -57620,7 +57584,7 @@ fn decode_edit_scope_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EDIT_SCOPE_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EditScopeInfo",
+        "Elixir.Figler.Schema.EditScopeInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -57702,7 +57666,7 @@ fn decode_edit_scope_snapshot_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EDIT_SCOPE_SNAPSHOT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EditScopeSnapshot",
+        "Elixir.Figler.Schema.EditScopeSnapshot",
     );
     let keys = cached_struct_keys(
         env,
@@ -57779,7 +57743,7 @@ fn decode_edit_scope_stack_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EDIT_SCOPE_STACK_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EditScopeStack",
+        "Elixir.Figler.Schema.EditScopeStack",
     );
     let keys = cached_struct_keys(env, &EDIT_SCOPE_STACK_STRUCT_KEYS, &["stack"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -57838,7 +57802,7 @@ fn decode_edit_scope_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &EDIT_SCOPE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EditScope",
+        "Elixir.Figler.Schema.EditScope",
     );
     let keys = cached_struct_keys(
         env,
@@ -58099,7 +58063,7 @@ fn decode_section_preset_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SECTION_PRESET_INFO_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SectionPresetInfo",
+        "Elixir.Figler.Schema.SectionPresetInfo",
     );
     let keys = cached_struct_keys(
         env,
@@ -58201,7 +58165,7 @@ fn decode_clipboard_selection_region_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CLIPBOARD_SELECTION_REGION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ClipboardSelectionRegion",
+        "Elixir.Figler.Schema.ClipboardSelectionRegion",
     );
     let keys = cached_struct_keys(
         env,
@@ -58365,7 +58329,7 @@ fn decode_first_draft_kit_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FIRST_DRAFT_KIT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FirstDraftKit",
+        "Elixir.Figler.Schema.FirstDraftKit",
     );
     let keys = cached_struct_keys(env, &FIRST_DRAFT_KIT_STRUCT_KEYS, &["key", "type"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -58433,7 +58397,7 @@ fn decode_first_draft_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FIRST_DRAFT_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FirstDraftData",
+        "Elixir.Figler.Schema.FirstDraftData",
     );
     let keys = cached_struct_keys(
         env,
@@ -58557,7 +58521,7 @@ fn decode_first_draft_kit_element_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FIRST_DRAFT_KIT_ELEMENT_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FirstDraftKitElementData",
+        "Elixir.Figler.Schema.FirstDraftKitElementData",
     );
     let keys = cached_struct_keys(
         env,
@@ -58721,7 +58685,7 @@ fn decode_platform_shape_property_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PLATFORM_SHAPE_PROPERTY_MAP_ENTRY_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PlatformShapePropertyMapEntry",
+        "Elixir.Figler.Schema.PlatformShapePropertyMapEntry",
     );
     let keys = cached_struct_keys(
         env,
@@ -58805,7 +58769,7 @@ fn decode_platform_shape_definition_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PLATFORM_SHAPE_DEFINITION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PlatformShapeDefinition",
+        "Elixir.Figler.Schema.PlatformShapeDefinition",
     );
     let keys = cached_struct_keys(
         env,
@@ -58899,7 +58863,7 @@ fn decode_node_behaviors_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_BEHAVIORS_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeBehaviors",
+        "Elixir.Figler.Schema.NodeBehaviors",
     );
     let keys = cached_struct_keys(
         env,
@@ -59099,7 +59063,7 @@ fn decode_behavior_transition_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BEHAVIOR_TRANSITION_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BehaviorTransition",
+        "Elixir.Figler.Schema.BehaviorTransition",
     );
     let keys = cached_struct_keys(
         env,
@@ -59336,7 +59300,7 @@ fn decode_appear_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &APPEAR_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AppearBehavior",
+        "Elixir.Figler.Schema.AppearBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -59531,7 +59495,7 @@ fn decode_hover_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &HOVER_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HoverBehavior",
+        "Elixir.Figler.Schema.HoverBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -59617,7 +59581,7 @@ fn decode_press_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &PRESS_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PressBehavior",
+        "Elixir.Figler.Schema.PressBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -59703,7 +59667,7 @@ fn decode_focus_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FOCUS_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FocusBehavior",
+        "Elixir.Figler.Schema.FocusBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -59789,7 +59753,7 @@ fn decode_scroll_parallax_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SCROLL_PARALLAX_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScrollParallaxBehavior",
+        "Elixir.Figler.Schema.ScrollParallaxBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -59959,7 +59923,7 @@ fn decode_scroll_transform_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SCROLL_TRANSFORM_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScrollTransformBehavior",
+        "Elixir.Figler.Schema.ScrollTransformBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -60142,7 +60106,7 @@ fn decode_cursor_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CURSOR_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CursorBehavior",
+        "Elixir.Figler.Schema.CursorBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -60242,7 +60206,7 @@ fn decode_marquee_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MARQUEE_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MarqueeBehavior",
+        "Elixir.Figler.Schema.MarqueeBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -60392,7 +60356,7 @@ fn decode_code_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CODE_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeBehavior",
+        "Elixir.Figler.Schema.CodeBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -60483,7 +60447,7 @@ fn decode_client_rendered_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &CLIENT_RENDERED_METADATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ClientRenderedMetadata",
+        "Elixir.Figler.Schema.ClientRenderedMetadata",
     );
     let keys = cached_struct_keys(
         env,
@@ -60615,7 +60579,7 @@ fn decode_link_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &LINK_BEHAVIOR_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LinkBehavior",
+        "Elixir.Figler.Schema.LinkBehavior",
     );
     let keys = cached_struct_keys(
         env,
@@ -60717,7 +60681,7 @@ fn decode_variable_id_or_variable_override_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &VARIABLE_ID_OR_VARIABLE_OVERRIDE_ID_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableIdOrVariableOverrideId",
+        "Elixir.Figler.Schema.VariableIdOrVariableOverrideId",
     );
     let keys = cached_struct_keys(
         env,
@@ -60794,7 +60758,7 @@ fn decode_slide_theme_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &SLIDE_THEME_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlideThemeData",
+        "Elixir.Figler.Schema.SlideThemeData",
     );
     let keys = cached_struct_keys(
         env,
@@ -60976,7 +60940,7 @@ fn decode_node_chat_message_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_CHAT_MESSAGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatMessage",
+        "Elixir.Figler.Schema.NodeChatMessage",
     );
     let keys = cached_struct_keys(
         env,
@@ -61151,7 +61115,7 @@ fn decode_node_chat_tool_call_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_CHAT_TOOL_CALL_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatToolCall",
+        "Elixir.Figler.Schema.NodeChatToolCall",
     );
     let keys = cached_struct_keys(
         env,
@@ -61237,7 +61201,7 @@ fn decode_node_chat_tool_result_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_CHAT_TOOL_RESULT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatToolResult",
+        "Elixir.Figler.Schema.NodeChatToolResult",
     );
     let keys = cached_struct_keys(
         env,
@@ -61323,7 +61287,7 @@ fn decode_node_chat_exchange_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_CHAT_EXCHANGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatExchange",
+        "Elixir.Figler.Schema.NodeChatExchange",
     );
     let keys = cached_struct_keys(
         env,
@@ -61435,7 +61399,7 @@ fn decode_node_chat_compression_state_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &NODE_CHAT_COMPRESSION_STATE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatCompressionState",
+        "Elixir.Figler.Schema.NodeChatCompressionState",
     );
     let keys = cached_struct_keys(
         env,
@@ -61507,7 +61471,7 @@ fn decode_file_update_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &FILE_UPDATE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FileUpdate",
+        "Elixir.Figler.Schema.FileUpdate",
     );
     let keys = cached_struct_keys(
         env,
@@ -61593,7 +61557,7 @@ fn decode_ai_chat_content_part_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AI_CHAT_CONTENT_PART_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AIChatContentPart",
+        "Elixir.Figler.Schema.AIChatContentPart",
     );
     let keys = cached_struct_keys(
         env,
@@ -61716,7 +61680,7 @@ fn decode_ai_chat_content_part_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AI_CHAT_CONTENT_PART_ANY_VALUE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AIChatContentPartAnyValue",
+        "Elixir.Figler.Schema.AIChatContentPartAnyValue",
     );
     let keys = cached_struct_keys(
         env,
@@ -61839,7 +61803,7 @@ fn decode_ai_chat_message_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AI_CHAT_MESSAGE_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AIChatMessage",
+        "Elixir.Figler.Schema.AIChatMessage",
     );
     let keys = cached_struct_keys(
         env,
@@ -61958,7 +61922,7 @@ fn decode_ai_chat_thread_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &AI_CHAT_THREAD_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AIChatThread",
+        "Elixir.Figler.Schema.AIChatThread",
     );
     let keys = cached_struct_keys(env, &AI_CHAT_THREAD_STRUCT_KEYS, &["messages"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -62809,7 +62773,7 @@ fn decode_cooper_template_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &COOPER_TEMPLATE_DATA_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CooperTemplateData",
+        "Elixir.Figler.Schema.CooperTemplateData",
     );
     let keys = cached_struct_keys(env, &COOPER_TEMPLATE_DATA_STRUCT_KEYS, &["type"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -62863,7 +62827,7 @@ fn decode_image_import_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &IMAGE_IMPORT_MAP_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImageImportMap",
+        "Elixir.Figler.Schema.ImageImportMap",
     );
     let keys = cached_struct_keys(env, &IMAGE_IMPORT_MAP_STRUCT_KEYS, &["imports"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -62922,7 +62886,7 @@ fn decode_image_import_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &IMAGE_IMPORT_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImageImport",
+        "Elixir.Figler.Schema.ImageImport",
     );
     let keys = cached_struct_keys(env, &IMAGE_IMPORT_STRUCT_KEYS, &["name", "image"]);
     let values = default_struct_values(env, module_atom, keys.len() - 1);
@@ -63029,7 +62993,7 @@ fn decode_bezier_handles_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &BEZIER_HANDLES_MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BezierHandles",
+        "Elixir.Figler.Schema.BezierHandles",
     );
     let keys = cached_struct_keys(
         env,
@@ -65390,7 +65354,7 @@ fn decode_sparse_guid_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GUID");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.GUID");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
@@ -65418,7 +65382,7 @@ fn decode_sparse_color_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Color");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Color");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
@@ -65460,7 +65424,7 @@ fn decode_sparse_vector_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Vector");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Vector");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
@@ -65488,7 +65452,7 @@ fn decode_sparse_rect_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Rect");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Rect");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(5);
     let mut values = Vec::with_capacity(5);
@@ -65530,7 +65494,7 @@ fn decode_sparse_color_stop_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorStop");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ColorStop");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
@@ -65561,7 +65525,7 @@ fn decode_sparse_color_stop_var_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorStopVar",
+        "Elixir.Figler.Schema.ColorStopVar",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ColorStopVar";
@@ -65615,7 +65579,7 @@ fn decode_sparse_matrix_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Matrix");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Matrix");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(7);
     let mut values = Vec::with_capacity(7);
@@ -65671,11 +65635,7 @@ fn decode_sparse_parent_index_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ParentIndex",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ParentIndex");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
@@ -65703,7 +65663,7 @@ fn decode_sparse_number_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Number");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Number");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
@@ -65731,7 +65691,7 @@ fn decode_sparse_font_name_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FontName");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.FontName");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
@@ -65977,7 +65937,7 @@ fn decode_sparse_code_source_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSourceInfo",
+        "Elixir.Figler.Schema.CodeSourceInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeSourceInfo";
@@ -66102,7 +66062,7 @@ fn decode_sparse_custom_tool_artifact_ref_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CustomToolArtifactRef",
+        "Elixir.Figler.Schema.CustomToolArtifactRef",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CustomToolArtifactRef";
@@ -67118,7 +67078,7 @@ fn decode_sparse_export_constraint_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ExportConstraint",
+        "Elixir.Figler.Schema.ExportConstraint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -67147,11 +67107,7 @@ fn decode_sparse_guid_mapping_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDMapping",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.GUIDMapping");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
@@ -67179,7 +67135,7 @@ fn decode_sparse_blob_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Blob");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Blob");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(2);
     let mut values = Vec::with_capacity(2);
@@ -67200,7 +67156,7 @@ fn decode_sparse_image_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Image");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Image");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Image";
     let mut keys = Vec::with_capacity(4);
@@ -67253,7 +67209,7 @@ fn decode_sparse_video_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Video");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Video");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Video";
     let mut keys = Vec::with_capacity(3);
@@ -67299,11 +67255,7 @@ fn decode_sparse_paste_source_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PasteSource",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.PasteSource");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PasteSource";
     let mut keys = Vec::with_capacity(3);
@@ -67352,7 +67304,7 @@ fn decode_sparse_filter_color_adjust_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FilterColorAdjust",
+        "Elixir.Figler.Schema.FilterColorAdjust",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(9);
@@ -67426,7 +67378,7 @@ fn decode_sparse_paint_filter_message_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PaintFilterMessage",
+        "Elixir.Figler.Schema.PaintFilterMessage",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PaintFilterMessage";
@@ -67529,7 +67481,7 @@ fn decode_sparse_paint_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Paint");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Paint");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Paint";
     let mut keys = Vec::with_capacity(43);
@@ -68037,7 +67989,7 @@ fn decode_sparse_font_meta_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FontMetaData",
+        "Elixir.Figler.Schema.FontMetaData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FontMetaData";
@@ -68108,7 +68060,7 @@ fn decode_sparse_font_variation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FontVariation",
+        "Elixir.Figler.Schema.FontVariation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FontVariation";
@@ -68162,7 +68114,7 @@ fn decode_sparse_text_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TextData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.TextData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TextData";
     let mut keys = Vec::with_capacity(20);
@@ -68419,7 +68371,7 @@ fn decode_sparse_derived_text_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedTextData",
+        "Elixir.Figler.Schema.DerivedTextData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DerivedTextData";
@@ -68604,7 +68556,7 @@ fn decode_sparse_hyperlink_box_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HyperlinkBox",
+        "Elixir.Figler.Schema.HyperlinkBox",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "HyperlinkBox";
@@ -68682,7 +68634,7 @@ fn decode_sparse_mention_box_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.MentionBox");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.MentionBox");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "MentionBox";
     let mut keys = Vec::with_capacity(6);
@@ -68749,7 +68701,7 @@ fn decode_sparse_baseline_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Baseline");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Baseline");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Baseline";
     let mut keys = Vec::with_capacity(9);
@@ -68837,7 +68789,7 @@ fn decode_sparse_glyph_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Glyph");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Glyph");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Glyph";
     let mut keys = Vec::with_capacity(10);
@@ -68938,7 +68890,7 @@ fn decode_sparse_decoration_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Decoration");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Decoration");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Decoration";
     let mut keys = Vec::with_capacity(3);
@@ -68990,7 +68942,7 @@ fn decode_sparse_blockquote_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Blockquote");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Blockquote");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Blockquote";
     let mut keys = Vec::with_capacity(4);
@@ -69043,7 +68995,7 @@ fn decode_sparse_vector_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VectorData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.VectorData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VectorData";
     let mut keys = Vec::with_capacity(4);
@@ -69105,7 +69057,7 @@ fn decode_sparse_text_path_start_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextPathStart",
+        "Elixir.Figler.Schema.TextPathStart",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TextPathStart";
@@ -69152,7 +69104,7 @@ fn decode_sparse_guid_path_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GUIDPath");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.GUIDPath");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GUIDPath";
     let mut keys = Vec::with_capacity(2);
@@ -69197,7 +69149,7 @@ fn decode_sparse_symbol_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SymbolData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.SymbolData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SymbolData";
     let mut keys = Vec::with_capacity(4);
@@ -69259,7 +69211,7 @@ fn decode_sparse_guid_path_mapping_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDPathMapping",
+        "Elixir.Figler.Schema.GUIDPathMapping",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GUIDPathMapping";
@@ -69309,7 +69261,7 @@ fn decode_sparse_derived_breakpoint_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedBreakpointData",
+        "Elixir.Figler.Schema.DerivedBreakpointData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DerivedBreakpointData";
@@ -69358,7 +69310,7 @@ fn decode_sparse_node_generation_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeGenerationData",
+        "Elixir.Figler.Schema.NodeGenerationData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeGenerationData";
@@ -69431,7 +69383,7 @@ fn decode_sparse_derived_immutable_frame_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedImmutableFrameData",
+        "Elixir.Figler.Schema.DerivedImmutableFrameData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DerivedImmutableFrameData";
@@ -69484,7 +69436,7 @@ fn decode_sparse_jsx_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.JsxData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.JsxData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "JsxData";
     let mut keys = Vec::with_capacity(2);
@@ -69532,7 +69484,7 @@ fn decode_sparse_derived_jsx_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedJsxData",
+        "Elixir.Figler.Schema.DerivedJsxData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DerivedJsxData";
@@ -69578,7 +69530,7 @@ fn decode_sparse_asset_id_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AssetIdMap");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.AssetIdMap");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AssetIdMap";
     let mut keys = Vec::with_capacity(2);
@@ -69626,7 +69578,7 @@ fn decode_sparse_asset_id_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AssetIdEntry",
+        "Elixir.Figler.Schema.AssetIdEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AssetIdEntry";
@@ -69673,7 +69625,7 @@ fn decode_sparse_asset_ref_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AssetRef");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.AssetRef");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AssetRef";
     let mut keys = Vec::with_capacity(3);
@@ -69719,7 +69671,7 @@ fn decode_sparse_asset_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AssetId");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.AssetId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AssetId";
     let mut keys = Vec::with_capacity(8);
@@ -69803,7 +69755,7 @@ fn decode_sparse_state_group_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StateGroupId",
+        "Elixir.Figler.Schema.StateGroupId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StateGroupId";
@@ -69850,7 +69802,7 @@ fn decode_sparse_style_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StyleId");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.StyleId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StyleId";
     let mut keys = Vec::with_capacity(3);
@@ -69896,7 +69848,7 @@ fn decode_sparse_symbol_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SymbolId");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.SymbolId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SymbolId";
     let mut keys = Vec::with_capacity(3);
@@ -69942,7 +69894,7 @@ fn decode_sparse_variable_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.VariableID");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.VariableID");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableID";
     let mut keys = Vec::with_capacity(3);
@@ -69991,7 +69943,7 @@ fn decode_sparse_variable_override_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableOverrideId",
+        "Elixir.Figler.Schema.VariableOverrideId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableOverrideId";
@@ -70041,7 +69993,7 @@ fn decode_sparse_variable_set_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableSetID",
+        "Elixir.Figler.Schema.VariableSetID",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableSetID";
@@ -70088,7 +70040,7 @@ fn decode_sparse_module_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ModuleId");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ModuleId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ModuleId";
     let mut keys = Vec::with_capacity(3);
@@ -70137,7 +70089,7 @@ fn decode_sparse_responsive_set_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ResponsiveSetId",
+        "Elixir.Figler.Schema.ResponsiveSetId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ResponsiveSetId";
@@ -70184,7 +70136,7 @@ fn decode_sparse_webpage_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.WebpageId");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.WebpageId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "WebpageId";
     let mut keys = Vec::with_capacity(3);
@@ -70230,7 +70182,7 @@ fn decode_sparse_theme_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ThemeID");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ThemeID");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ThemeID";
     let mut keys = Vec::with_capacity(3);
@@ -70279,7 +70231,7 @@ fn decode_sparse_code_library_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeLibraryId",
+        "Elixir.Figler.Schema.CodeLibraryId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeLibraryId";
@@ -70326,7 +70278,7 @@ fn decode_sparse_code_file_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CodeFileId");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.CodeFileId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeFileId";
     let mut keys = Vec::with_capacity(3);
@@ -70375,7 +70327,7 @@ fn decode_sparse_code_component_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeComponentId",
+        "Elixir.Figler.Schema.CodeComponentId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeComponentId";
@@ -70425,7 +70377,7 @@ fn decode_sparse_canvas_node_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CanvasNodeId",
+        "Elixir.Figler.Schema.CanvasNodeId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CanvasNodeId";
@@ -70479,7 +70431,7 @@ fn decode_sparse_index_range_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.IndexRange");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.IndexRange");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
@@ -70510,7 +70462,7 @@ fn decode_sparse_collaborative_text_op_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextOpID",
+        "Elixir.Figler.Schema.CollaborativeTextOpID",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -70558,7 +70510,7 @@ fn decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextStrippedOpRunWithIDs",
+        "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithIDs",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CollaborativeTextStrippedOpRunWithIDs";
@@ -70643,7 +70595,7 @@ fn decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextStrippedOpRunWithLoc",
+        "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithLoc",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CollaborativeTextStrippedOpRunWithLoc";
@@ -70725,7 +70677,7 @@ fn decode_sparse_collaborative_text_op_run_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextOpRun",
+        "Elixir.Figler.Schema.CollaborativeTextOpRun",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CollaborativeTextOpRun";
@@ -70845,7 +70797,7 @@ fn decode_sparse_collaborative_plain_text_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativePlainText",
+        "Elixir.Figler.Schema.CollaborativePlainText",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CollaborativePlainText";
@@ -70940,7 +70892,7 @@ fn decode_sparse_collaborative_text_selection_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CollaborativeTextSelection",
+        "Elixir.Figler.Schema.CollaborativeTextSelection",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CollaborativeTextSelection";
@@ -71020,7 +70972,7 @@ fn decode_sparse_responsive_text_style_variant_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ResponsiveTextStyleVariant",
+        "Elixir.Figler.Schema.ResponsiveTextStyleVariant",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ResponsiveTextStyleVariant";
@@ -71141,7 +71093,7 @@ fn decode_sparse_slide_theme_props_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlideThemeProps",
+        "Elixir.Figler.Schema.SlideThemeProps",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SlideThemeProps";
@@ -71251,7 +71203,7 @@ fn decode_sparse_slide_theme_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlideThemeMap",
+        "Elixir.Figler.Schema.SlideThemeMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SlideThemeMap";
@@ -71303,7 +71255,7 @@ fn decode_sparse_slide_theme_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlideThemeMapEntry",
+        "Elixir.Figler.Schema.SlideThemeMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SlideThemeMapEntry";
@@ -71353,7 +71305,7 @@ fn decode_sparse_shared_symbol_reference_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SharedSymbolReference",
+        "Elixir.Figler.Schema.SharedSymbolReference",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SharedSymbolReference";
@@ -71484,7 +71436,7 @@ fn decode_sparse_shared_component_master_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SharedComponentMasterData",
+        "Elixir.Figler.Schema.SharedComponentMasterData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SharedComponentMasterData";
@@ -71554,7 +71506,7 @@ fn decode_sparse_instance_override_stash_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InstanceOverrideStash",
+        "Elixir.Figler.Schema.InstanceOverrideStash",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InstanceOverrideStash";
@@ -71621,7 +71573,7 @@ fn decode_sparse_instance_override_stash_v2_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InstanceOverrideStashV2",
+        "Elixir.Figler.Schema.InstanceOverrideStashV2",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InstanceOverrideStashV2";
@@ -71688,7 +71640,7 @@ fn decode_sparse_imported_code_file_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImportedCodeFileEntry",
+        "Elixir.Figler.Schema.ImportedCodeFileEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ImportedCodeFileEntry";
@@ -71731,7 +71683,7 @@ fn decode_sparse_imported_code_files_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImportedCodeFiles",
+        "Elixir.Figler.Schema.ImportedCodeFiles",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ImportedCodeFiles";
@@ -71864,7 +71816,7 @@ fn decode_sparse_effect_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Effect");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Effect");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Effect";
     let mut keys = Vec::with_capacity(56);
@@ -72345,7 +72297,7 @@ fn decode_sparse_transform_modifier_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformModifier",
+        "Elixir.Figler.Schema.TransformModifier",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransformModifier";
@@ -72471,7 +72423,7 @@ fn decode_sparse_matrix4f_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Matrix4f");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Matrix4f");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(17);
     let mut values = Vec::with_capacity(17);
@@ -72600,7 +72552,7 @@ fn decode_sparse_fixed_order_transform3d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FixedOrderTransform3d",
+        "Elixir.Figler.Schema.FixedOrderTransform3d",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FixedOrderTransform3d";
@@ -72707,7 +72659,7 @@ fn decode_sparse_transform_fn_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformFnValue",
+        "Elixir.Figler.Schema.TransformFnValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransformFnValue";
@@ -72768,11 +72720,7 @@ fn decode_sparse_transform_fn_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformFn",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.TransformFn");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransformFn";
     let mut keys = Vec::with_capacity(3);
@@ -72821,7 +72769,7 @@ fn decode_sparse_transform_schema_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformSchemaValue",
+        "Elixir.Figler.Schema.TransformSchemaValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransformSchemaValue";
@@ -72881,11 +72829,7 @@ fn decode_sparse_transform3d_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Transform3d",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Transform3d");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Transform3d";
     let mut keys = Vec::with_capacity(4);
@@ -72947,7 +72891,7 @@ fn decode_sparse_number_vector2_d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NumberVector2D",
+        "Elixir.Figler.Schema.NumberVector2D",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -72976,7 +72920,7 @@ fn decode_sparse_scene3d_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Scene3d");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Scene3d");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Scene3d";
     let mut keys = Vec::with_capacity(4);
@@ -73032,7 +72976,7 @@ fn decode_sparse_transform_origin_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransformOrigin",
+        "Elixir.Figler.Schema.TransformOrigin",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransformOrigin";
@@ -73082,7 +73026,7 @@ fn decode_sparse_transition_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionInfo",
+        "Elixir.Figler.Schema.TransitionInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransitionInfo";
@@ -73172,7 +73116,7 @@ fn decode_sparse_prototype_device_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeDevice",
+        "Elixir.Figler.Schema.PrototypeDevice",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PrototypeDevice";
@@ -73311,7 +73255,7 @@ fn decode_sparse_overlay_background_appearance_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.OverlayBackgroundAppearance",
+        "Elixir.Figler.Schema.OverlayBackgroundAppearance",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "OverlayBackgroundAppearance";
@@ -73436,7 +73380,7 @@ fn decode_sparse_export_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ExportSettings",
+        "Elixir.Figler.Schema.ExportSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ExportSettings";
@@ -73600,7 +73544,7 @@ fn decode_sparse_layout_grid_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.LayoutGrid");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.LayoutGrid");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "LayoutGrid";
     let mut keys = Vec::with_capacity(14);
@@ -73726,7 +73670,7 @@ fn decode_sparse_guide_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Guide");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Guide");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Guide";
     let mut keys = Vec::with_capacity(4);
@@ -73779,7 +73723,7 @@ fn decode_sparse_path_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Path");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Path");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Path";
     let mut keys = Vec::with_capacity(4);
@@ -73907,7 +73851,7 @@ fn decode_sparse_dynamic_stroke_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DynamicStrokeSettings",
+        "Elixir.Figler.Schema.DynamicStrokeSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DynamicStrokeSettings";
@@ -73964,7 +73908,7 @@ fn decode_sparse_scatter_stroke_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScatterStrokeSettings",
+        "Elixir.Figler.Schema.ScatterStrokeSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ScatterStrokeSettings";
@@ -74035,7 +73979,7 @@ fn decode_sparse_stretch_stroke_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StretchStrokeSettings",
+        "Elixir.Figler.Schema.StretchStrokeSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StretchStrokeSettings";
@@ -74075,7 +74019,7 @@ fn decode_sparse_stroke_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StrokeData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.StrokeData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StrokeData";
     let mut keys = Vec::with_capacity(3);
@@ -74127,7 +74071,7 @@ fn decode_sparse_stroke_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Stroke");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Stroke");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Stroke";
     let mut keys = Vec::with_capacity(15);
@@ -74276,7 +74220,7 @@ fn decode_sparse_variable_width_point_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableWidthPoint",
+        "Elixir.Figler.Schema.VariableWidthPoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableWidthPoint";
@@ -74340,7 +74284,7 @@ fn decode_sparse_shared_style_reference_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SharedStyleReference",
+        "Elixir.Figler.Schema.SharedStyleReference",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SharedStyleReference";
@@ -74390,7 +74334,7 @@ fn decode_sparse_shared_style_master_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SharedStyleMasterData",
+        "Elixir.Figler.Schema.SharedStyleMasterData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SharedStyleMasterData";
@@ -74467,7 +74411,7 @@ fn decode_sparse_arc_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ArcData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ArcData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ArcData";
     let mut keys = Vec::with_capacity(4);
@@ -74520,7 +74464,7 @@ fn decode_sparse_symbol_link_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.SymbolLink");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.SymbolLink");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SymbolLink";
     let mut keys = Vec::with_capacity(4);
@@ -74573,7 +74517,7 @@ fn decode_sparse_plugin_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.PluginData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.PluginData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PluginData";
     let mut keys = Vec::with_capacity(4);
@@ -74629,7 +74573,7 @@ fn decode_sparse_plugin_relaunch_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PluginRelaunchData",
+        "Elixir.Figler.Schema.PluginRelaunchData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PluginRelaunchData";
@@ -74700,7 +74644,7 @@ fn decode_sparse_multiplayer_field_version_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MultiplayerFieldVersion",
+        "Elixir.Figler.Schema.MultiplayerFieldVersion",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "MultiplayerFieldVersion";
@@ -74798,7 +74742,7 @@ fn decode_sparse_connector_endpoint_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ConnectorEndpoint",
+        "Elixir.Figler.Schema.ConnectorEndpoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ConnectorEndpoint";
@@ -74862,7 +74806,7 @@ fn decode_sparse_connector_control_point_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ConnectorControlPoint",
+        "Elixir.Figler.Schema.ConnectorControlPoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ConnectorControlPoint";
@@ -74948,7 +74892,7 @@ fn decode_sparse_connector_text_midpoint_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ConnectorTextMidpoint",
+        "Elixir.Figler.Schema.ConnectorTextMidpoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ConnectorTextMidpoint";
@@ -75187,7 +75131,7 @@ fn decode_sparse_annotation_property_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationProperty",
+        "Elixir.Figler.Schema.AnnotationProperty",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnnotationProperty";
@@ -75305,7 +75249,7 @@ fn decode_sparse_annotation_category_custom_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationCategoryCustom",
+        "Elixir.Figler.Schema.AnnotationCategoryCustom",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnnotationCategoryCustom";
@@ -75365,7 +75309,7 @@ fn decode_sparse_annotation_category_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationCategory",
+        "Elixir.Figler.Schema.AnnotationCategory",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnnotationCategory";
@@ -75428,7 +75372,7 @@ fn decode_sparse_annotation_categories_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationCategories",
+        "Elixir.Figler.Schema.AnnotationCategories",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnnotationCategories";
@@ -75484,7 +75428,7 @@ fn decode_sparse_annotation_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Annotation");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Annotation");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Annotation";
     let mut keys = Vec::with_capacity(5);
@@ -75580,7 +75524,7 @@ fn decode_sparse_annotation_measurement_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnnotationMeasurement",
+        "Elixir.Figler.Schema.AnnotationMeasurement",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnnotationMeasurement";
@@ -75686,7 +75630,7 @@ fn decode_sparse_library_move_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LibraryMoveInfo",
+        "Elixir.Figler.Schema.LibraryMoveInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "LibraryMoveInfo";
@@ -75736,7 +75680,7 @@ fn decode_sparse_library_move_history_item_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LibraryMoveHistoryItem",
+        "Elixir.Figler.Schema.LibraryMoveHistoryItem",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "LibraryMoveHistoryItem";
@@ -75786,7 +75730,7 @@ fn decode_sparse_developer_related_link_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DeveloperRelatedLink",
+        "Elixir.Figler.Schema.DeveloperRelatedLink",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DeveloperRelatedLink";
@@ -75850,7 +75794,7 @@ fn decode_sparse_widget_pointer_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetPointer",
+        "Elixir.Figler.Schema.WidgetPointer",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "WidgetPointer";
@@ -75890,7 +75834,7 @@ fn decode_sparse_edit_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EditInfo");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.EditInfo");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EditInfo";
     let mut keys = Vec::with_capacity(5);
@@ -76057,7 +76001,7 @@ fn decode_sparse_section_status_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SectionStatusInfo",
+        "Elixir.Figler.Schema.SectionStatusInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SectionStatusInfo";
@@ -76132,7 +76076,7 @@ fn decode_sparse_buzz_approval_request_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalRequestInfo",
+        "Elixir.Figler.Schema.BuzzApprovalRequestInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "BuzzApprovalRequestInfo";
@@ -76229,7 +76173,7 @@ fn decode_sparse_buzz_approval_requests_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalRequests",
+        "Elixir.Figler.Schema.BuzzApprovalRequests",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "BuzzApprovalRequests";
@@ -76305,7 +76249,7 @@ fn decode_sparse_buzz_approval_node_status_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalNodeStatusInfo",
+        "Elixir.Figler.Schema.BuzzApprovalNodeStatusInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "BuzzApprovalNodeStatusInfo";
@@ -76379,7 +76323,7 @@ fn decode_sparse_code_embed_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeEmbedInfo",
+        "Elixir.Figler.Schema.CodeEmbedInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeEmbedInfo";
@@ -76463,7 +76407,7 @@ fn decode_sparse_node_change_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.NodeChange");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.NodeChange");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeChange";
     let mut keys = Vec::with_capacity(591);
@@ -82415,7 +82359,7 @@ fn decode_sparse_git_repo_ref_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.GitRepoRef");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.GitRepoRef");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GitRepoRef";
     let mut keys = Vec::with_capacity(4);
@@ -82474,7 +82418,7 @@ fn decode_sparse_source_control_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SourceControlConfig",
+        "Elixir.Figler.Schema.SourceControlConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SourceControlConfig";
@@ -82524,7 +82468,7 @@ fn decode_sparse_code_snapshot_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSnapshot",
+        "Elixir.Figler.Schema.CodeSnapshot",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeSnapshot";
@@ -82618,7 +82562,7 @@ fn decode_sparse_code_output_layer_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeOutputLayer",
+        "Elixir.Figler.Schema.CodeOutputLayer",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeOutputLayer";
@@ -82661,7 +82605,7 @@ fn decode_sparse_code_snapshot_layers_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSnapshotLayers",
+        "Elixir.Figler.Schema.CodeSnapshotLayers",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeSnapshotLayers";
@@ -82730,7 +82674,7 @@ fn decode_sparse_code_behavior_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeBehaviorData",
+        "Elixir.Figler.Schema.CodeBehaviorData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeBehaviorData";
@@ -82804,11 +82748,7 @@ fn decode_sparse_code_example_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeExample",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.CodeExample");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeExample";
     let mut keys = Vec::with_capacity(3);
@@ -82857,7 +82797,7 @@ fn decode_sparse_used_make_library_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.UsedMakeLibrary",
+        "Elixir.Figler.Schema.UsedMakeLibrary",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "UsedMakeLibrary";
@@ -82900,7 +82840,7 @@ fn decode_sparse_cookie_banner_text_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CookieBannerText",
+        "Elixir.Figler.Schema.CookieBannerText",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CookieBannerText";
@@ -83086,7 +83026,7 @@ fn decode_sparse_cookie_banner_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CookieBannerSettings",
+        "Elixir.Figler.Schema.CookieBannerSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CookieBannerSettings";
@@ -83281,7 +83221,7 @@ fn decode_sparse_responsive_set_settings_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ResponsiveSetSettings",
+        "Elixir.Figler.Schema.ResponsiveSetSettings",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ResponsiveSetSettings";
@@ -83523,11 +83463,7 @@ fn decode_sparse_cms_selector_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSSelector",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.CMSSelector");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSSelector";
     let mut keys = Vec::with_capacity(5);
@@ -83599,7 +83535,7 @@ fn decode_sparse_cms_filter_critera_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSFilterCritera",
+        "Elixir.Figler.Schema.CMSFilterCritera",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSFilterCritera";
@@ -83677,7 +83613,7 @@ fn decode_sparse_cms_selector_filter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSSelectorFilter",
+        "Elixir.Figler.Schema.CMSSelectorFilter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSSelectorFilter";
@@ -83749,7 +83685,7 @@ fn decode_sparse_cms_selector_sort_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSSelectorSort",
+        "Elixir.Figler.Schema.CMSSelectorSort",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSSelectorSort";
@@ -83815,7 +83751,7 @@ fn decode_sparse_cms_consumption_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSConsumptionMap",
+        "Elixir.Figler.Schema.CMSConsumptionMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSConsumptionMap";
@@ -83867,7 +83803,7 @@ fn decode_sparse_cms_consumption_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSConsumptionMapEntry",
+        "Elixir.Figler.Schema.CMSConsumptionMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSConsumptionMapEntry";
@@ -83936,7 +83872,7 @@ fn decode_sparse_cms_rich_text_style_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSRichTextStyleMap",
+        "Elixir.Figler.Schema.CMSRichTextStyleMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSRichTextStyleMap";
@@ -83988,7 +83924,7 @@ fn decode_sparse_cms_rich_text_style_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSRichTextStyleEntry",
+        "Elixir.Figler.Schema.CMSRichTextStyleEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSRichTextStyleEntry";
@@ -84088,7 +84024,7 @@ fn decode_sparse_cms_rich_text_descriptor_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSRichTextDescriptor",
+        "Elixir.Figler.Schema.CMSRichTextDescriptor",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSRichTextDescriptor";
@@ -84144,7 +84080,7 @@ fn decode_sparse_repeater_cms_override_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RepeaterCmsOverrideData",
+        "Elixir.Figler.Schema.RepeaterCmsOverrideData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "RepeaterCmsOverrideData";
@@ -84193,7 +84129,7 @@ fn decode_sparse_repeater_override_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RepeaterOverrideData",
+        "Elixir.Figler.Schema.RepeaterOverrideData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "RepeaterOverrideData";
@@ -84246,7 +84182,7 @@ fn decode_sparse_repeater_symbol_override_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RepeaterSymbolOverrideData",
+        "Elixir.Figler.Schema.RepeaterSymbolOverrideData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "RepeaterSymbolOverrideData";
@@ -84302,7 +84238,7 @@ fn decode_sparse_repeater_position_overrides_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RepeaterPositionOverrides",
+        "Elixir.Figler.Schema.RepeaterPositionOverrides",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "RepeaterPositionOverrides";
@@ -84358,7 +84294,7 @@ fn decode_sparse_inherited_variables_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InheritedVariablesData",
+        "Elixir.Figler.Schema.InheritedVariablesData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InheritedVariablesData";
@@ -84410,7 +84346,7 @@ fn decode_sparse_inherited_variable_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InheritedVariableEntry",
+        "Elixir.Figler.Schema.InheritedVariableEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InheritedVariableEntry";
@@ -84453,7 +84389,7 @@ fn decode_sparse_hub_file_attribution_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HubFileAttribution",
+        "Elixir.Figler.Schema.HubFileAttribution",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "HubFileAttribution";
@@ -84503,7 +84439,7 @@ fn decode_sparse_managed_string_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringData",
+        "Elixir.Figler.Schema.ManagedStringData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringData";
@@ -84616,7 +84552,7 @@ fn decode_sparse_managed_string_node_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringNode",
+        "Elixir.Figler.Schema.ManagedStringNode",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringNode";
@@ -84710,7 +84646,7 @@ fn decode_sparse_managed_string_text_node_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringTextNodeData",
+        "Elixir.Figler.Schema.ManagedStringTextNodeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringTextNodeData";
@@ -84753,7 +84689,7 @@ fn decode_sparse_managed_string_concatenate_ast_node_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringConcatenateAstNodeData",
+        "Elixir.Figler.Schema.ManagedStringConcatenateAstNodeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringConcatenateAstNodeData";
@@ -84837,7 +84773,7 @@ fn decode_sparse_managed_string_plural_ast_node_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringPluralAstNodeData",
+        "Elixir.Figler.Schema.ManagedStringPluralAstNodeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringPluralAstNodeData";
@@ -84896,7 +84832,7 @@ fn decode_sparse_managed_string_plural_type_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringPluralTypeMapEntry",
+        "Elixir.Figler.Schema.ManagedStringPluralTypeMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringPluralTypeMapEntry";
@@ -84976,7 +84912,7 @@ fn decode_sparse_managed_string_placeholder_ast_node_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringPlaceholderAstNodeData",
+        "Elixir.Figler.Schema.ManagedStringPlaceholderAstNodeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringPlaceholderAstNodeData";
@@ -85036,7 +84972,7 @@ fn decode_sparse_cooper_revert_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CooperRevertData",
+        "Elixir.Figler.Schema.CooperRevertData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CooperRevertData";
@@ -85079,7 +85015,7 @@ fn decode_sparse_video_playback_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VideoPlayback",
+        "Elixir.Figler.Schema.VideoPlayback",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VideoPlayback";
@@ -85229,7 +85165,7 @@ fn decode_sparse_widget_hover_style_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetHoverStyle",
+        "Elixir.Figler.Schema.WidgetHoverStyle",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "WidgetHoverStyle";
@@ -85323,7 +85259,7 @@ fn decode_sparse_widget_derived_subtree_cursor_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetDerivedSubtreeCursor",
+        "Elixir.Figler.Schema.WidgetDerivedSubtreeCursor",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "WidgetDerivedSubtreeCursor";
@@ -85373,7 +85309,7 @@ fn decode_sparse_multiplayer_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MultiplayerMap",
+        "Elixir.Figler.Schema.MultiplayerMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "MultiplayerMap";
@@ -85425,7 +85361,7 @@ fn decode_sparse_multiplayer_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MultiplayerMapEntry",
+        "Elixir.Figler.Schema.MultiplayerMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "MultiplayerMapEntry";
@@ -85475,7 +85411,7 @@ fn decode_sparse_variable_data_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableDataMap",
+        "Elixir.Figler.Schema.VariableDataMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableDataMap";
@@ -85527,7 +85463,7 @@ fn decode_sparse_variable_data_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableDataMapEntry",
+        "Elixir.Figler.Schema.VariableDataMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableDataMapEntry";
@@ -85868,7 +85804,7 @@ fn decode_sparse_variable_mode_by_set_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableModeBySetMap",
+        "Elixir.Figler.Schema.VariableModeBySetMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableModeBySetMap";
@@ -85920,7 +85856,7 @@ fn decode_sparse_variable_mode_by_set_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableModeBySetMapEntry",
+        "Elixir.Figler.Schema.VariableModeBySetMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableModeBySetMapEntry";
@@ -85981,7 +85917,7 @@ fn decode_sparse_code_syntax_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSyntaxMap",
+        "Elixir.Figler.Schema.CodeSyntaxMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeSyntaxMap";
@@ -86033,7 +85969,7 @@ fn decode_sparse_code_syntax_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeSyntaxMapEntry",
+        "Elixir.Figler.Schema.CodeSyntaxMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeSyntaxMapEntry";
@@ -86086,7 +86022,7 @@ fn decode_sparse_table_merged_cell_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableMergedCellMap",
+        "Elixir.Figler.Schema.TableMergedCellMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TableMergedCellMap";
@@ -86138,7 +86074,7 @@ fn decode_sparse_table_merged_cell_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableMergedCellMapEntry",
+        "Elixir.Figler.Schema.TableMergedCellMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TableMergedCellMapEntry";
@@ -86202,7 +86138,7 @@ fn decode_sparse_table_row_column_position_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableRowColumnPositionMap",
+        "Elixir.Figler.Schema.TableRowColumnPositionMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TableRowColumnPositionMap";
@@ -86254,7 +86190,7 @@ fn decode_sparse_table_row_column_position_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableRowColumnPositionMapEntry",
+        "Elixir.Figler.Schema.TableRowColumnPositionMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TableRowColumnPositionMapEntry";
@@ -86304,7 +86240,7 @@ fn decode_sparse_guid_position_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDPositionMap",
+        "Elixir.Figler.Schema.GUIDPositionMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GUIDPositionMap";
@@ -86356,7 +86292,7 @@ fn decode_sparse_guid_position_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDPositionMapEntry",
+        "Elixir.Figler.Schema.GUIDPositionMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GUIDPositionMapEntry";
@@ -86406,7 +86342,7 @@ fn decode_sparse_guid_grid_track_size_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDGridTrackSizeMap",
+        "Elixir.Figler.Schema.GUIDGridTrackSizeMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GUIDGridTrackSizeMap";
@@ -86458,7 +86394,7 @@ fn decode_sparse_guid_grid_track_size_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDGridTrackSizeMapEntry",
+        "Elixir.Figler.Schema.GUIDGridTrackSizeMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GUIDGridTrackSizeMapEntry";
@@ -86508,7 +86444,7 @@ fn decode_sparse_object_animation_list_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ObjectAnimationList",
+        "Elixir.Figler.Schema.ObjectAnimationList",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ObjectAnimationList";
@@ -86560,7 +86496,7 @@ fn decode_sparse_object_animation_list_item_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ObjectAnimationListItem",
+        "Elixir.Figler.Schema.ObjectAnimationListItem",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ObjectAnimationListItem";
@@ -86610,7 +86546,7 @@ fn decode_sparse_grid_track_size_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GridTrackSize",
+        "Elixir.Figler.Schema.GridTrackSize",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GridTrackSize";
@@ -86666,7 +86602,7 @@ fn decode_sparse_grid_track_sizing_function_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GridTrackSizingFunction",
+        "Elixir.Figler.Schema.GridTrackSizingFunction",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GridTrackSizingFunction";
@@ -86739,7 +86675,7 @@ fn decode_sparse_table_row_column_size_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableRowColumnSizeMap",
+        "Elixir.Figler.Schema.TableRowColumnSizeMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TableRowColumnSizeMap";
@@ -86791,7 +86727,7 @@ fn decode_sparse_table_row_column_size_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TableRowColumnSizeMapEntry",
+        "Elixir.Figler.Schema.TableRowColumnSizeMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TableRowColumnSizeMapEntry";
@@ -86841,7 +86777,7 @@ fn decode_sparse_agenda_position_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaPositionMap",
+        "Elixir.Figler.Schema.AgendaPositionMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgendaPositionMap";
@@ -86893,7 +86829,7 @@ fn decode_sparse_agenda_position_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaPositionMapEntry",
+        "Elixir.Figler.Schema.AgendaPositionMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgendaPositionMapEntry";
@@ -86959,7 +86895,7 @@ fn decode_sparse_agenda_metadata_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaMetadataMap",
+        "Elixir.Figler.Schema.AgendaMetadataMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgendaMetadataMap";
@@ -87011,7 +86947,7 @@ fn decode_sparse_agenda_metadata_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaMetadataMapEntry",
+        "Elixir.Figler.Schema.AgendaMetadataMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgendaMetadataMapEntry";
@@ -87061,7 +86997,7 @@ fn decode_sparse_agenda_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaMetadata",
+        "Elixir.Figler.Schema.AgendaMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgendaMetadata";
@@ -87139,7 +87075,7 @@ fn decode_sparse_agenda_timer_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaTimerInfo",
+        "Elixir.Figler.Schema.AgendaTimerInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgendaTimerInfo";
@@ -87182,7 +87118,7 @@ fn decode_sparse_agenda_vote_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaVoteInfo",
+        "Elixir.Figler.Schema.AgendaVoteInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgendaVoteInfo";
@@ -87225,7 +87161,7 @@ fn decode_sparse_agenda_music_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AgendaMusicInfo",
+        "Elixir.Figler.Schema.AgendaMusicInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgendaMusicInfo";
@@ -87291,7 +87227,7 @@ fn decode_sparse_diagram_parent_index_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DiagramParentIndex",
+        "Elixir.Figler.Schema.DiagramParentIndex",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -87339,7 +87275,7 @@ fn decode_sparse_component_prop_ref_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropRef",
+        "Elixir.Figler.Schema.ComponentPropRef",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ComponentPropRef";
@@ -87445,7 +87381,7 @@ fn decode_sparse_component_prop_assignment_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropAssignment",
+        "Elixir.Figler.Schema.ComponentPropAssignment",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ComponentPropAssignment";
@@ -87516,7 +87452,7 @@ fn decode_sparse_component_prop_def_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropDef",
+        "Elixir.Figler.Schema.ComponentPropDef",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ComponentPropDef";
@@ -87652,7 +87588,7 @@ fn decode_sparse_component_prop_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropValue",
+        "Elixir.Figler.Schema.ComponentPropValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ComponentPropValue";
@@ -87772,7 +87708,7 @@ fn decode_sparse_timeline_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineData",
+        "Elixir.Figler.Schema.TimelineData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TimelineData";
@@ -87840,7 +87776,7 @@ fn decode_sparse_timeline_definitions_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineDefinitionsMap",
+        "Elixir.Figler.Schema.TimelineDefinitionsMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TimelineDefinitionsMap";
@@ -87892,7 +87828,7 @@ fn decode_sparse_timeline_definitions_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineDefinitionsMapEntry",
+        "Elixir.Figler.Schema.TimelineDefinitionsMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TimelineDefinitionsMapEntry";
@@ -87942,7 +87878,7 @@ fn decode_sparse_timeline_assignment_key_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineAssignmentKey",
+        "Elixir.Figler.Schema.TimelineAssignmentKey",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TimelineAssignmentKey";
@@ -87996,7 +87932,7 @@ fn decode_sparse_timeline_binding_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineBindingData",
+        "Elixir.Figler.Schema.TimelineBindingData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TimelineBindingData";
@@ -88046,7 +87982,7 @@ fn decode_sparse_timeline_assignments_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineAssignmentsMap",
+        "Elixir.Figler.Schema.TimelineAssignmentsMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TimelineAssignmentsMap";
@@ -88098,7 +88034,7 @@ fn decode_sparse_timeline_assignments_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TimelineAssignmentsMapEntry",
+        "Elixir.Figler.Schema.TimelineAssignmentsMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TimelineAssignmentsMapEntry";
@@ -88230,7 +88166,7 @@ fn decode_sparse_component_prop_preferred_values_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ComponentPropPreferredValues",
+        "Elixir.Figler.Schema.ComponentPropPreferredValues",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ComponentPropPreferredValues";
@@ -88295,7 +88231,7 @@ fn decode_sparse_parameter_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ParameterConfig",
+        "Elixir.Figler.Schema.ParameterConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ParameterConfig";
@@ -88452,11 +88388,7 @@ fn decode_sparse_input_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InputConfig",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.InputConfig");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InputConfig";
     let mut keys = Vec::with_capacity(4);
@@ -88512,7 +88444,7 @@ fn decode_sparse_slider_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SliderConfig",
+        "Elixir.Figler.Schema.SliderConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SliderConfig";
@@ -88593,11 +88525,7 @@ fn decode_sparse_point_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PointConfig",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.PointConfig");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PointConfig";
     let mut keys = Vec::with_capacity(3);
@@ -88643,7 +88571,7 @@ fn decode_sparse_line_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Line");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Line");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Line";
     let mut keys = Vec::with_capacity(3);
@@ -88689,7 +88617,7 @@ fn decode_sparse_line_config_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.LineConfig");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.LineConfig");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "LineConfig";
     let mut keys = Vec::with_capacity(3);
@@ -88735,7 +88663,7 @@ fn decode_sparse_circle_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Circle");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Circle");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Circle";
     let mut keys = Vec::with_capacity(3);
@@ -88784,7 +88712,7 @@ fn decode_sparse_point_radius_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PointRadiusConfig",
+        "Elixir.Figler.Schema.PointRadiusConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PointRadiusConfig";
@@ -88852,7 +88780,7 @@ fn decode_sparse_rotation3_d_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Rotation3D");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Rotation3D");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Rotation3D";
     let mut keys = Vec::with_capacity(5);
@@ -88915,7 +88843,7 @@ fn decode_sparse_rotation3_d_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.Rotation3DConfig",
+        "Elixir.Figler.Schema.Rotation3DConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Rotation3DConfig";
@@ -88955,11 +88883,7 @@ fn decode_sparse_circle_point_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CirclePoint",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.CirclePoint");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CirclePoint";
     let mut keys = Vec::with_capacity(4);
@@ -89015,7 +88939,7 @@ fn decode_sparse_circle_point_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CirclePointConfig",
+        "Elixir.Figler.Schema.CirclePointConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CirclePointConfig";
@@ -89083,7 +89007,7 @@ fn decode_sparse_color_point_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorPoint");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ColorPoint");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ColorPoint";
     let mut keys = Vec::with_capacity(3);
@@ -89132,7 +89056,7 @@ fn decode_sparse_color_point_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorPointConfig",
+        "Elixir.Figler.Schema.ColorPointConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ColorPointConfig";
@@ -89179,7 +89103,7 @@ fn decode_sparse_gradient_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Gradient");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Gradient");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Gradient";
     let mut keys = Vec::with_capacity(2);
@@ -89227,7 +89151,7 @@ fn decode_sparse_gradient_stop_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GradientStop",
+        "Elixir.Figler.Schema.GradientStop",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "GradientStop";
@@ -89277,7 +89201,7 @@ fn decode_sparse_select_option_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SelectOption",
+        "Elixir.Figler.Schema.SelectOption",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SelectOption";
@@ -89327,7 +89251,7 @@ fn decode_sparse_select_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SelectConfig",
+        "Elixir.Figler.Schema.SelectConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SelectConfig";
@@ -89376,7 +89300,7 @@ fn decode_sparse_color_array_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ColorArrayConfig",
+        "Elixir.Figler.Schema.ColorArrayConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ColorArrayConfig";
@@ -89426,7 +89350,7 @@ fn decode_sparse_slot_prop_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlotPropConfig",
+        "Elixir.Figler.Schema.SlotPropConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SlotPropConfig";
@@ -89505,7 +89429,7 @@ fn decode_sparse_number_prop_config_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NumberPropConfig",
+        "Elixir.Figler.Schema.NumberPropConfig",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NumberPropConfig";
@@ -89572,7 +89496,7 @@ fn decode_sparse_instance_swap_preferred_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InstanceSwapPreferredValue",
+        "Elixir.Figler.Schema.InstanceSwapPreferredValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InstanceSwapPreferredValue";
@@ -89689,7 +89613,7 @@ fn decode_sparse_widget_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetMetadata",
+        "Elixir.Figler.Schema.WidgetMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "WidgetMetadata";
@@ -89796,7 +89720,7 @@ fn decode_sparse_widget_property_menu_selector_option_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetPropertyMenuSelectorOption",
+        "Elixir.Figler.Schema.WidgetPropertyMenuSelectorOption",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "WidgetPropertyMenuSelectorOption";
@@ -89862,7 +89786,7 @@ fn decode_sparse_widget_property_menu_item_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.WidgetPropertyMenuItem",
+        "Elixir.Figler.Schema.WidgetPropertyMenuItem",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "WidgetPropertyMenuItem";
@@ -90189,7 +90113,7 @@ fn decode_sparse_internal_data_for_test_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InternalDataForTest",
+        "Elixir.Figler.Schema.InternalDataForTest",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InternalDataForTest";
@@ -90232,7 +90156,7 @@ fn decode_sparse_state_group_property_value_order_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StateGroupPropertyValueOrder",
+        "Elixir.Figler.Schema.StateGroupPropertyValueOrder",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StateGroupPropertyValueOrder";
@@ -90312,7 +90236,7 @@ fn decode_sparse_partial_paste_annotation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PartialPasteAnnotation",
+        "Elixir.Figler.Schema.PartialPasteAnnotation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PartialPasteAnnotation";
@@ -90369,7 +90293,7 @@ fn decode_sparse_variant_prop_spec_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariantPropSpec",
+        "Elixir.Figler.Schema.VariantPropSpec",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariantPropSpec";
@@ -90419,7 +90343,7 @@ fn decode_sparse_text_list_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextListData",
+        "Elixir.Figler.Schema.TextListData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TextListData";
@@ -90507,7 +90431,7 @@ fn decode_sparse_text_line_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextLineData",
+        "Elixir.Figler.Schema.TextLineData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TextLineData";
@@ -90631,7 +90555,7 @@ fn decode_sparse_derived_text_line_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DerivedTextLineData",
+        "Elixir.Figler.Schema.DerivedTextLineData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DerivedTextLineData";
@@ -90754,7 +90678,7 @@ fn decode_sparse_prototype_interaction_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeInteraction",
+        "Elixir.Figler.Schema.PrototypeInteraction",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PrototypeInteraction";
@@ -90838,7 +90762,7 @@ fn decode_sparse_prototype_event_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeEvent",
+        "Elixir.Figler.Schema.PrototypeEvent",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PrototypeEvent";
@@ -90927,7 +90851,7 @@ fn decode_sparse_prototype_variable_target_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeVariableTarget",
+        "Elixir.Figler.Schema.PrototypeVariableTarget",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PrototypeVariableTarget";
@@ -90977,7 +90901,7 @@ fn decode_sparse_conditional_actions_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ConditionalActions",
+        "Elixir.Figler.Schema.ConditionalActions",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ConditionalActions";
@@ -91036,7 +90960,7 @@ fn decode_sparse_prototype_action_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeAction",
+        "Elixir.Figler.Schema.PrototypeAction",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PrototypeAction";
@@ -91512,7 +91436,7 @@ fn decode_sparse_animation_state_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationState",
+        "Elixir.Figler.Schema.AnimationState",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnimationState";
@@ -91562,7 +91486,7 @@ fn decode_sparse_prototype_starting_point_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PrototypeStartingPoint",
+        "Elixir.Figler.Schema.PrototypeStartingPoint",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PrototypeStartingPoint";
@@ -91644,7 +91568,7 @@ fn decode_sparse_key_trigger_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.KeyTrigger");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.KeyTrigger");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "KeyTrigger";
     let mut keys = Vec::with_capacity(3);
@@ -91696,7 +91620,7 @@ fn decode_sparse_hyperlink_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Hyperlink");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Hyperlink");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Hyperlink";
     let mut keys = Vec::with_capacity(5);
@@ -91762,7 +91686,7 @@ fn decode_sparse_cms_item_page_target_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CMSItemPageTarget",
+        "Elixir.Figler.Schema.CMSItemPageTarget",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSItemPageTarget";
@@ -91836,7 +91760,7 @@ fn decode_sparse_mention_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Mention");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Mention");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Mention";
     let mut keys = Vec::with_capacity(9);
@@ -91936,7 +91860,7 @@ fn decode_sparse_embed_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EmbedData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.EmbedData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EmbedData";
     let mut keys = Vec::with_capacity(15);
@@ -92066,7 +91990,7 @@ fn decode_sparse_stamp_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.StampData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.StampData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StampData";
     let mut keys = Vec::with_capacity(4);
@@ -92122,7 +92046,7 @@ fn decode_sparse_link_preview_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LinkPreviewData",
+        "Elixir.Figler.Schema.LinkPreviewData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "LinkPreviewData";
@@ -92219,7 +92143,7 @@ fn decode_sparse_viewport_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Viewport");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Viewport");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Viewport";
     let mut keys = Vec::with_capacity(5);
@@ -92279,7 +92203,7 @@ fn decode_sparse_mouse_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Mouse");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Mouse");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Mouse";
     let mut keys = Vec::with_capacity(6);
@@ -92354,7 +92278,7 @@ fn decode_sparse_click_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Click");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Click");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
     let mut values = Vec::with_capacity(3);
@@ -92385,7 +92309,7 @@ fn decode_sparse_scroll_position_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScrollPosition",
+        "Elixir.Figler.Schema.ScrollPosition",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -92417,7 +92341,7 @@ fn decode_sparse_triggered_overlay_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TriggeredOverlay",
+        "Elixir.Figler.Schema.TriggeredOverlay",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(4);
@@ -92456,7 +92380,7 @@ fn decode_sparse_triggered_overlay_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TriggeredOverlayData",
+        "Elixir.Figler.Schema.TriggeredOverlayData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TriggeredOverlayData";
@@ -92531,7 +92455,7 @@ fn decode_sparse_triggered_set_variable_action_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TriggeredSetVariableActionData",
+        "Elixir.Figler.Schema.TriggeredSetVariableActionData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TriggeredSetVariableActionData";
@@ -92603,7 +92527,7 @@ fn decode_sparse_triggered_set_variable_mode_action_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TriggeredSetVariableModeActionData",
+        "Elixir.Figler.Schema.TriggeredSetVariableModeActionData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TriggeredSetVariableModeActionData";
@@ -92683,7 +92607,7 @@ fn decode_sparse_video_state_change_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VideoStateChangeData",
+        "Elixir.Figler.Schema.VideoStateChangeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VideoStateChangeData";
@@ -92764,7 +92688,7 @@ fn decode_sparse_embedded_prototype_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EmbeddedPrototypeData",
+        "Elixir.Figler.Schema.EmbeddedPrototypeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EmbeddedPrototypeData";
@@ -92814,7 +92738,7 @@ fn decode_sparse_presented_state_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PresentedState",
+        "Elixir.Figler.Schema.PresentedState",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PresentedState";
@@ -92889,7 +92813,7 @@ fn decode_sparse_top_level_playback_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TopLevelPlaybackChange",
+        "Elixir.Figler.Schema.TopLevelPlaybackChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TopLevelPlaybackChange";
@@ -92981,7 +92905,7 @@ fn decode_sparse_instance_state_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InstanceStateChange",
+        "Elixir.Figler.Schema.InstanceStateChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InstanceStateChange";
@@ -93052,7 +92976,7 @@ fn decode_sparse_text_cursor_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TextCursor");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.TextCursor");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TextCursor";
     let mut keys = Vec::with_capacity(4);
@@ -93108,7 +93032,7 @@ fn decode_sparse_text_selection_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TextSelection",
+        "Elixir.Figler.Schema.TextSelection",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TextSelection";
@@ -93223,7 +93147,7 @@ fn decode_sparse_playback_change_keyframe_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PlaybackChangeKeyframe",
+        "Elixir.Figler.Schema.PlaybackChangeKeyframe",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PlaybackChangeKeyframe";
@@ -93283,7 +93207,7 @@ fn decode_sparse_state_mapping_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StateMapping",
+        "Elixir.Figler.Schema.StateMapping",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StateMapping";
@@ -93361,7 +93285,7 @@ fn decode_sparse_scroll_mapping_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScrollMapping",
+        "Elixir.Figler.Schema.ScrollMapping",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ScrollMapping";
@@ -93418,7 +93342,7 @@ fn decode_sparse_playback_update_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PlaybackUpdate",
+        "Elixir.Figler.Schema.PlaybackUpdate",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PlaybackUpdate";
@@ -93530,11 +93454,7 @@ fn decode_sparse_chat_message_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ChatMessage",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ChatMessage");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ChatMessage";
     let mut keys = Vec::with_capacity(3);
@@ -93583,7 +93503,7 @@ fn decode_sparse_voice_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VoiceMetadata",
+        "Elixir.Figler.Schema.VoiceMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VoiceMetadata";
@@ -93626,7 +93546,7 @@ fn decode_sparse_april_fun_cursor_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AprilFunCursor",
+        "Elixir.Figler.Schema.AprilFunCursor",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AprilFunCursor";
@@ -93676,7 +93596,7 @@ fn decode_sparse_april_fun_fig_pal_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AprilFunFigPal",
+        "Elixir.Figler.Schema.AprilFunFigPal",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AprilFunFigPal";
@@ -93791,7 +93711,7 @@ fn decode_sparse_agent_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.AgentInfo");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.AgentInfo");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AgentInfo";
     let mut keys = Vec::with_capacity(4);
@@ -93844,7 +93764,7 @@ fn decode_sparse_user_change_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.UserChange");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.UserChange");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "UserChange";
     let mut keys = Vec::with_capacity(47);
@@ -94375,7 +94295,7 @@ fn decode_sparse_interactive_slide_element_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.InteractiveSlideElementChange",
+        "Elixir.Figler.Schema.InteractiveSlideElementChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "InteractiveSlideElementChange";
@@ -94439,7 +94359,7 @@ fn decode_sparse_node_status_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeStatusChange",
+        "Elixir.Figler.Schema.NodeStatusChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeStatusChange";
@@ -94498,7 +94418,7 @@ fn decode_sparse_buzz_approval_asset_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalAssetEntry",
+        "Elixir.Figler.Schema.BuzzApprovalAssetEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "BuzzApprovalAssetEntry";
@@ -94548,7 +94468,7 @@ fn decode_sparse_buzz_approval_change_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BuzzApprovalChange",
+        "Elixir.Figler.Schema.BuzzApprovalChange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "BuzzApprovalChange";
@@ -94650,7 +94570,7 @@ fn decode_sparse_scene_graph_query_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SceneGraphQuery",
+        "Elixir.Figler.Schema.SceneGraphQuery",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SceneGraphQuery";
@@ -94710,7 +94630,7 @@ fn decode_sparse_node_changes_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChangesMetadata",
+        "Elixir.Figler.Schema.NodeChangesMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeChangesMetadata";
@@ -94753,7 +94673,7 @@ fn decode_sparse_cursor_reaction_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CursorReaction",
+        "Elixir.Figler.Schema.CursorReaction",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CursorReaction";
@@ -94793,7 +94713,7 @@ fn decode_sparse_timer_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.TimerInfo");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.TimerInfo");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TimerInfo";
     let mut keys = Vec::with_capacity(9);
@@ -94885,7 +94805,7 @@ fn decode_sparse_music_info_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.MusicInfo");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.MusicInfo");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "MusicInfo";
     let mut keys = Vec::with_capacity(6);
@@ -94959,7 +94879,7 @@ fn decode_sparse_presenter_nomination_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PresenterNomination",
+        "Elixir.Figler.Schema.PresenterNomination",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PresenterNomination";
@@ -95009,7 +94929,7 @@ fn decode_sparse_presenter_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PresenterInfo",
+        "Elixir.Figler.Schema.PresenterInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PresenterInfo";
@@ -95069,7 +94989,7 @@ fn decode_sparse_client_broadcast_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ClientBroadcast",
+        "Elixir.Figler.Schema.ClientBroadcast",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ClientBroadcast";
@@ -95160,7 +95080,7 @@ fn decode_sparse_message_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Message");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Message");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Message";
     let mut keys = Vec::with_capacity(46);
@@ -95666,7 +95586,7 @@ fn decode_sparse_encoded_offsets_index_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EncodedOffsetsIndex",
+        "Elixir.Figler.Schema.EncodedOffsetsIndex",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EncodedOffsetsIndex";
@@ -95747,7 +95667,7 @@ fn decode_sparse_guid_and_encoded_offset_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.GUIDAndEncodedOffset",
+        "Elixir.Figler.Schema.GUIDAndEncodedOffset",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -95776,7 +95696,7 @@ fn decode_sparse_diff_chunk_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.DiffChunk");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.DiffChunk");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DiffChunk";
     let mut keys = Vec::with_capacity(12);
@@ -95953,11 +95873,7 @@ fn decode_sparse_diff_payload_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.DiffPayload",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.DiffPayload");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "DiffPayload";
     let mut keys = Vec::with_capacity(8);
@@ -96097,7 +96013,7 @@ fn decode_sparse_rich_media_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.RichMediaData",
+        "Elixir.Figler.Schema.RichMediaData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "RichMediaData";
@@ -96387,7 +96303,7 @@ fn decode_sparse_variable_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableAnyValue",
+        "Elixir.Figler.Schema.VariableAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableAnyValue";
@@ -96747,7 +96663,7 @@ fn decode_sparse_expression_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Expression");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Expression");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Expression";
     let mut keys = Vec::with_capacity(3);
@@ -96805,7 +96721,7 @@ fn decode_sparse_variable_map_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableMapValue",
+        "Elixir.Figler.Schema.VariableMapValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableMapValue";
@@ -96859,11 +96775,7 @@ fn decode_sparse_variable_map_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableMap",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.VariableMap");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableMap";
     let mut keys = Vec::with_capacity(2);
@@ -96911,7 +96823,7 @@ fn decode_sparse_color_array_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ColorArray");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ColorArray");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ColorArray";
     let mut keys = Vec::with_capacity(2);
@@ -96959,7 +96871,7 @@ fn decode_sparse_variable_font_style_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableFontStyle",
+        "Elixir.Figler.Schema.VariableFontStyle",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableFontStyle";
@@ -97016,7 +96928,7 @@ fn decode_sparse_image_parameter_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImageParameterValue",
+        "Elixir.Figler.Schema.ImageParameterValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ImageParameterValue";
@@ -97105,7 +97017,7 @@ fn decode_sparse_thumbnail_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ThumbnailInfo",
+        "Elixir.Figler.Schema.ThumbnailInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ThumbnailInfo";
@@ -97155,7 +97067,7 @@ fn decode_sparse_ai_canvas_prompt_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AiCanvasPrompt",
+        "Elixir.Figler.Schema.AiCanvasPrompt",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AiCanvasPrompt";
@@ -97218,7 +97130,7 @@ fn decode_sparse_node_field_alias_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeFieldAlias",
+        "Elixir.Figler.Schema.NodeFieldAlias",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeFieldAlias";
@@ -97291,7 +97203,7 @@ fn decode_sparse_cms_alias_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.CMSAlias");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.CMSAlias");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CMSAlias";
     let mut keys = Vec::with_capacity(5);
@@ -97354,7 +97266,7 @@ fn decode_sparse_js_runtime_alias_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.JsRuntimeAlias",
+        "Elixir.Figler.Schema.JsRuntimeAlias",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "JsRuntimeAlias";
@@ -97397,7 +97309,7 @@ fn decode_sparse_prop_ref_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PropRefValue",
+        "Elixir.Figler.Schema.PropRefValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PropRefValue";
@@ -97440,7 +97352,7 @@ fn decode_sparse_managed_string_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringId",
+        "Elixir.Figler.Schema.ManagedStringId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringId";
@@ -97490,7 +97402,7 @@ fn decode_sparse_managed_string_placeholder_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringPlaceholderMapEntry",
+        "Elixir.Figler.Schema.ManagedStringPlaceholderMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringPlaceholderMapEntry";
@@ -97540,7 +97452,7 @@ fn decode_sparse_slot_content_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlotContentId",
+        "Elixir.Figler.Schema.SlotContentId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SlotContentId";
@@ -97583,7 +97495,7 @@ fn decode_sparse_managed_string_alias_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManagedStringAlias",
+        "Elixir.Figler.Schema.ManagedStringAlias",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManagedStringAlias";
@@ -97642,7 +97554,7 @@ fn decode_sparse_keyframe_track_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeTrackId",
+        "Elixir.Figler.Schema.KeyframeTrackId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "KeyframeTrackId";
@@ -97692,7 +97604,7 @@ fn decode_sparse_animation_preset_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationPresetId",
+        "Elixir.Figler.Schema.AnimationPresetId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnimationPresetId";
@@ -97739,7 +97651,7 @@ fn decode_sparse_tool_id_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ToolId");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ToolId");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ToolId";
     let mut keys = Vec::with_capacity(3);
@@ -97788,7 +97700,7 @@ fn decode_sparse_custom_effect_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CustomEffectId",
+        "Elixir.Figler.Schema.CustomEffectId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CustomEffectId";
@@ -97838,7 +97750,7 @@ fn decode_sparse_trss_transform2_d_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TRSSTransform2D",
+        "Elixir.Figler.Schema.TRSSTransform2D",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TRSSTransform2D";
@@ -97902,7 +97814,7 @@ fn decode_sparse_variable_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableData",
+        "Elixir.Figler.Schema.VariableData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableData";
@@ -97962,7 +97874,7 @@ fn decode_sparse_variable_set_mode_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableSetMode",
+        "Elixir.Figler.Schema.VariableSetMode",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableSetMode";
@@ -98037,7 +97949,7 @@ fn decode_sparse_variable_data_values_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableDataValues",
+        "Elixir.Figler.Schema.VariableDataValues",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableDataValues";
@@ -98089,7 +98001,7 @@ fn decode_sparse_variable_data_values_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableDataValuesEntry",
+        "Elixir.Figler.Schema.VariableDataValuesEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableDataValuesEntry";
@@ -98239,7 +98151,7 @@ fn decode_sparse_keyframe_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeAnyValue",
+        "Elixir.Figler.Schema.KeyframeAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "KeyframeAnyValue";
@@ -98331,7 +98243,7 @@ fn decode_sparse_keyframe_value_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeValueData",
+        "Elixir.Figler.Schema.KeyframeValueData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "KeyframeValueData";
@@ -98404,7 +98316,7 @@ fn decode_sparse_manual_keyframe_track_parameter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ManualKeyframeTrackParameter",
+        "Elixir.Figler.Schema.ManualKeyframeTrackParameter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ManualKeyframeTrackParameter";
@@ -98454,7 +98366,7 @@ fn decode_sparse_animation_preset_keyframe_track_parameter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationPresetKeyframeTrackParameter",
+        "Elixir.Figler.Schema.AnimationPresetKeyframeTrackParameter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnimationPresetKeyframeTrackParameter";
@@ -98514,7 +98426,7 @@ fn decode_sparse_keyframe_track_any_parameter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeTrackAnyParameter",
+        "Elixir.Figler.Schema.KeyframeTrackAnyParameter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "KeyframeTrackAnyParameter";
@@ -98581,7 +98493,7 @@ fn decode_sparse_keyframe_track_parameter_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeTrackParameter",
+        "Elixir.Figler.Schema.KeyframeTrackParameter",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "KeyframeTrackParameter";
@@ -98637,7 +98549,7 @@ fn decode_sparse_keyframe_track_parameter_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.KeyframeTrackParameterValue",
+        "Elixir.Figler.Schema.KeyframeTrackParameterValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "KeyframeTrackParameterValue";
@@ -98689,7 +98601,7 @@ fn decode_sparse_animation_presets_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationPresets",
+        "Elixir.Figler.Schema.AnimationPresets",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnimationPresets";
@@ -98741,7 +98653,7 @@ fn decode_sparse_animation_preset_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AnimationPresetData",
+        "Elixir.Figler.Schema.AnimationPresetData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AnimationPresetData";
@@ -98794,7 +98706,7 @@ fn decode_sparse_style_animation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StyleAnimation",
+        "Elixir.Figler.Schema.StyleAnimation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StyleAnimation";
@@ -98840,7 +98752,7 @@ fn decode_sparse_style_id_for_animation_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.StyleIdForAnimation",
+        "Elixir.Figler.Schema.StyleIdForAnimation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "StyleIdForAnimation";
@@ -98901,7 +98813,7 @@ fn decode_sparse_tools_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.Tools");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.Tools");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "Tools";
     let mut keys = Vec::with_capacity(2);
@@ -98946,7 +98858,7 @@ fn decode_sparse_tool_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.ToolData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ToolData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ToolData";
     let mut keys = Vec::with_capacity(4);
@@ -99019,7 +98931,7 @@ fn decode_sparse_custom_effects_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CustomEffects",
+        "Elixir.Figler.Schema.CustomEffects",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CustomEffects";
@@ -99071,7 +98983,7 @@ fn decode_sparse_custom_effect_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CustomEffectData",
+        "Elixir.Figler.Schema.CustomEffectData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CustomEffectData";
@@ -99114,7 +99026,7 @@ fn decode_sparse_spring_params_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SpringParams",
+        "Elixir.Figler.Schema.SpringParams",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SpringParams";
@@ -99171,7 +99083,7 @@ fn decode_sparse_transition_easing_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionEasingAnyValue",
+        "Elixir.Figler.Schema.TransitionEasingAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransitionEasingAnyValue";
@@ -99218,7 +99130,7 @@ fn decode_sparse_easing_data_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EasingData");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.EasingData");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EasingData";
     let mut keys = Vec::with_capacity(3);
@@ -99270,7 +99182,7 @@ fn decode_sparse_transition_override_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverride",
+        "Elixir.Figler.Schema.TransitionOverride",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransitionOverride";
@@ -99382,7 +99294,7 @@ fn decode_sparse_transition_override_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverrideData",
+        "Elixir.Figler.Schema.TransitionOverrideData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransitionOverrideData";
@@ -99500,7 +99412,7 @@ fn decode_sparse_transition_override_binding_location_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverrideBindingLocation",
+        "Elixir.Figler.Schema.TransitionOverrideBindingLocation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransitionOverrideBindingLocation";
@@ -99671,7 +99583,7 @@ fn decode_sparse_node_contents_keyframe_binding_location_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeContentsKeyframeBindingLocation",
+        "Elixir.Figler.Schema.NodeContentsKeyframeBindingLocation",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeContentsKeyframeBindingLocation";
@@ -99749,7 +99661,7 @@ fn decode_sparse_transition_override_prop_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverridePropMap",
+        "Elixir.Figler.Schema.TransitionOverridePropMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransitionOverridePropMap";
@@ -99801,7 +99713,7 @@ fn decode_sparse_transition_override_prop_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.TransitionOverridePropMapEntry",
+        "Elixir.Figler.Schema.TransitionOverridePropMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "TransitionOverridePropMapEntry";
@@ -99907,7 +99819,7 @@ fn decode_sparse_optional_vector_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.OptionalVector",
+        "Elixir.Figler.Schema.OptionalVector",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "OptionalVector";
@@ -100658,7 +100570,7 @@ fn decode_sparse_migration_status_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MigrationStatus",
+        "Elixir.Figler.Schema.MigrationStatus",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "MigrationStatus";
@@ -100701,7 +100613,7 @@ fn decode_sparse_node_field_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeFieldMap",
+        "Elixir.Figler.Schema.NodeFieldMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeFieldMap";
@@ -100753,7 +100665,7 @@ fn decode_sparse_node_field_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeFieldMapEntry",
+        "Elixir.Figler.Schema.NodeFieldMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeFieldMapEntry";
@@ -100870,7 +100782,7 @@ fn decode_sparse_aria_attribute_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ARIAAttributeAnyValue",
+        "Elixir.Figler.Schema.ARIAAttributeAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ARIAAttributeAnyValue";
@@ -100975,7 +100887,7 @@ fn decode_sparse_aria_attribute_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ARIAAttributeData",
+        "Elixir.Figler.Schema.ARIAAttributeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ARIAAttributeData";
@@ -101031,7 +100943,7 @@ fn decode_sparse_aria_attributes_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ARIAAttributesMap",
+        "Elixir.Figler.Schema.ARIAAttributesMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ARIAAttributesMap";
@@ -101083,7 +100995,7 @@ fn decode_sparse_aria_attributes_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ARIAAttributesMapEntry",
+        "Elixir.Figler.Schema.ARIAAttributesMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ARIAAttributesMapEntry";
@@ -101136,7 +101048,7 @@ fn decode_sparse_handoff_status_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HandoffStatusMapEntry",
+        "Elixir.Figler.Schema.HandoffStatusMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "HandoffStatusMapEntry";
@@ -101189,7 +101101,7 @@ fn decode_sparse_handoff_status_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HandoffStatusMap",
+        "Elixir.Figler.Schema.HandoffStatusMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "HandoffStatusMap";
@@ -101241,7 +101153,7 @@ fn decode_sparse_edit_scope_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EditScopeInfo",
+        "Elixir.Figler.Schema.EditScopeInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EditScopeInfo";
@@ -101309,7 +101221,7 @@ fn decode_sparse_edit_scope_snapshot_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EditScopeSnapshot",
+        "Elixir.Figler.Schema.EditScopeSnapshot",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EditScopeSnapshot";
@@ -101378,7 +101290,7 @@ fn decode_sparse_edit_scope_stack_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.EditScopeStack",
+        "Elixir.Figler.Schema.EditScopeStack",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EditScopeStack";
@@ -101424,7 +101336,7 @@ fn decode_sparse_edit_scope_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.EditScope");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.EditScope");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "EditScope";
     let mut keys = Vec::with_capacity(4);
@@ -101576,7 +101488,7 @@ fn decode_sparse_section_preset_info_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SectionPresetInfo",
+        "Elixir.Figler.Schema.SectionPresetInfo",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SectionPresetInfo";
@@ -101643,7 +101555,7 @@ fn decode_sparse_clipboard_selection_region_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ClipboardSelectionRegion",
+        "Elixir.Figler.Schema.ClipboardSelectionRegion",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ClipboardSelectionRegion";
@@ -101751,7 +101663,7 @@ fn decode_sparse_first_draft_kit_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FirstDraftKit",
+        "Elixir.Figler.Schema.FirstDraftKit",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FirstDraftKit";
@@ -101804,7 +101716,7 @@ fn decode_sparse_first_draft_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FirstDraftData",
+        "Elixir.Figler.Schema.FirstDraftData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FirstDraftData";
@@ -101874,7 +101786,7 @@ fn decode_sparse_first_draft_kit_element_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FirstDraftKitElementData",
+        "Elixir.Figler.Schema.FirstDraftKitElementData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FirstDraftKitElementData";
@@ -101964,7 +101876,7 @@ fn decode_sparse_platform_shape_property_map_entry_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PlatformShapePropertyMapEntry",
+        "Elixir.Figler.Schema.PlatformShapePropertyMapEntry",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PlatformShapePropertyMapEntry";
@@ -102023,7 +101935,7 @@ fn decode_sparse_platform_shape_definition_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PlatformShapeDefinition",
+        "Elixir.Figler.Schema.PlatformShapeDefinition",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PlatformShapeDefinition";
@@ -102092,7 +102004,7 @@ fn decode_sparse_node_behaviors_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeBehaviors",
+        "Elixir.Figler.Schema.NodeBehaviors",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeBehaviors";
@@ -102210,7 +102122,7 @@ fn decode_sparse_behavior_transition_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BehaviorTransition",
+        "Elixir.Figler.Schema.BehaviorTransition",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "BehaviorTransition";
@@ -102346,7 +102258,7 @@ fn decode_sparse_appear_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AppearBehavior",
+        "Elixir.Figler.Schema.AppearBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AppearBehavior";
@@ -102461,7 +102373,7 @@ fn decode_sparse_hover_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.HoverBehavior",
+        "Elixir.Figler.Schema.HoverBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "HoverBehavior";
@@ -102521,7 +102433,7 @@ fn decode_sparse_press_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.PressBehavior",
+        "Elixir.Figler.Schema.PressBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "PressBehavior";
@@ -102581,7 +102493,7 @@ fn decode_sparse_focus_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.FocusBehavior",
+        "Elixir.Figler.Schema.FocusBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FocusBehavior";
@@ -102641,7 +102553,7 @@ fn decode_sparse_scroll_parallax_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScrollParallaxBehavior",
+        "Elixir.Figler.Schema.ScrollParallaxBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ScrollParallaxBehavior";
@@ -102732,7 +102644,7 @@ fn decode_sparse_scroll_transform_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ScrollTransformBehavior",
+        "Elixir.Figler.Schema.ScrollTransformBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ScrollTransformBehavior";
@@ -102837,7 +102749,7 @@ fn decode_sparse_cursor_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CursorBehavior",
+        "Elixir.Figler.Schema.CursorBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CursorBehavior";
@@ -102901,7 +102813,7 @@ fn decode_sparse_marquee_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.MarqueeBehavior",
+        "Elixir.Figler.Schema.MarqueeBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "MarqueeBehavior";
@@ -102994,7 +102906,7 @@ fn decode_sparse_code_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CodeBehavior",
+        "Elixir.Figler.Schema.CodeBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CodeBehavior";
@@ -103064,7 +102976,7 @@ fn decode_sparse_client_rendered_metadata_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ClientRenderedMetadata",
+        "Elixir.Figler.Schema.ClientRenderedMetadata",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ClientRenderedMetadata";
@@ -103148,7 +103060,7 @@ fn decode_sparse_link_behavior_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.LinkBehavior",
+        "Elixir.Figler.Schema.LinkBehavior",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "LinkBehavior";
@@ -103212,7 +103124,7 @@ fn decode_sparse_variable_id_or_variable_override_id_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.VariableIdOrVariableOverrideId",
+        "Elixir.Figler.Schema.VariableIdOrVariableOverrideId",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "VariableIdOrVariableOverrideId";
@@ -103265,7 +103177,7 @@ fn decode_sparse_index_font_variation_axis_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexFontVariationAxis",
+        "Elixir.Figler.Schema.IndexFontVariationAxis",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(6);
@@ -103318,7 +103230,7 @@ fn decode_sparse_index_font_variation_axis_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexFontVariationAxisValue",
+        "Elixir.Figler.Schema.IndexFontVariationAxisValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -103350,7 +103262,7 @@ fn decode_sparse_index_font_style_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexFontStyle",
+        "Elixir.Figler.Schema.IndexFontStyle",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "IndexFontStyle";
@@ -103441,7 +103353,7 @@ fn decode_sparse_index_font_file_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexFontFile",
+        "Elixir.Figler.Schema.IndexFontFile",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "IndexFontFile";
@@ -103541,7 +103453,7 @@ fn decode_sparse_index_family_rename_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexFamilyRename",
+        "Elixir.Figler.Schema.IndexFamilyRename",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -103573,7 +103485,7 @@ fn decode_sparse_index_style_rename_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexStyleRename",
+        "Elixir.Figler.Schema.IndexStyleRename",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -103605,7 +103517,7 @@ fn decode_sparse_index_family_styles_rename_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexFamilyStylesRename",
+        "Elixir.Figler.Schema.IndexFamilyStylesRename",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -103643,7 +103555,7 @@ fn decode_sparse_index_renames_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexRenames",
+        "Elixir.Figler.Schema.IndexRenames",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(3);
@@ -103690,7 +103602,7 @@ fn decode_sparse_index_emoji_sequence_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexEmojiSequence",
+        "Elixir.Figler.Schema.IndexEmojiSequence",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(2);
@@ -103718,11 +103630,7 @@ fn decode_sparse_index_emojis_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.IndexEmojis",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.IndexEmojis");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let mut keys = Vec::with_capacity(4);
     let mut values = Vec::with_capacity(4);
@@ -103769,7 +103677,7 @@ fn decode_sparse_font_index_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FontIndex");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.FontIndex");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FontIndex";
     let mut keys = Vec::with_capacity(5);
@@ -103838,7 +103746,7 @@ fn decode_sparse_slide_theme_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.SlideThemeData",
+        "Elixir.Figler.Schema.SlideThemeData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "SlideThemeData";
@@ -103944,7 +103852,7 @@ fn decode_sparse_node_chat_message_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatMessage",
+        "Elixir.Figler.Schema.NodeChatMessage",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeChatMessage";
@@ -104057,7 +103965,7 @@ fn decode_sparse_node_chat_tool_call_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatToolCall",
+        "Elixir.Figler.Schema.NodeChatToolCall",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeChatToolCall";
@@ -104114,7 +104022,7 @@ fn decode_sparse_node_chat_tool_result_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatToolResult",
+        "Elixir.Figler.Schema.NodeChatToolResult",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeChatToolResult";
@@ -104171,7 +104079,7 @@ fn decode_sparse_node_chat_exchange_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatExchange",
+        "Elixir.Figler.Schema.NodeChatExchange",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeChatExchange";
@@ -104250,7 +104158,7 @@ fn decode_sparse_node_chat_compression_state_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.NodeChatCompressionState",
+        "Elixir.Figler.Schema.NodeChatCompressionState",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "NodeChatCompressionState";
@@ -104297,7 +104205,7 @@ fn decode_sparse_file_update_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.FigKiwi.Schema.FileUpdate");
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.FileUpdate");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "FileUpdate";
     let mut keys = Vec::with_capacity(4);
@@ -104353,7 +104261,7 @@ fn decode_sparse_ai_chat_content_part_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AIChatContentPart",
+        "Elixir.Figler.Schema.AIChatContentPart",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AIChatContentPart";
@@ -104429,7 +104337,7 @@ fn decode_sparse_ai_chat_content_part_any_value_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AIChatContentPartAnyValue",
+        "Elixir.Figler.Schema.AIChatContentPartAnyValue",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AIChatContentPartAnyValue";
@@ -104509,7 +104417,7 @@ fn decode_sparse_ai_chat_message_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AIChatMessage",
+        "Elixir.Figler.Schema.AIChatMessage",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AIChatMessage";
@@ -104592,7 +104500,7 @@ fn decode_sparse_ai_chat_thread_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.AIChatThread",
+        "Elixir.Figler.Schema.AIChatThread",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "AIChatThread";
@@ -104912,7 +104820,7 @@ fn decode_sparse_cooper_template_data_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.CooperTemplateData",
+        "Elixir.Figler.Schema.CooperTemplateData",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "CooperTemplateData";
@@ -104958,7 +104866,7 @@ fn decode_sparse_image_import_map_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImageImportMap",
+        "Elixir.Figler.Schema.ImageImportMap",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ImageImportMap";
@@ -105004,11 +104912,7 @@ fn decode_sparse_image_import_from_decoder<'a>(
 ) -> NifResult<Term<'a>> {
     static MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
     static MODULE_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-    let module_atom = cached_atom(
-        env,
-        &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.ImageImport",
-    );
+    let module_atom = cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.ImageImport");
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "ImageImport";
     let mut keys = Vec::with_capacity(3);
@@ -105077,7 +104981,7 @@ fn decode_sparse_bezier_handles_from_decoder<'a>(
     let module_atom = cached_atom(
         env,
         &MODULE_ATOM,
-        "Elixir.FigKiwi.Schema.BezierHandles",
+        "Elixir.Figler.Schema.BezierHandles",
     );
     let module_key_atom = cached_atom(env, &MODULE_KEY_ATOM, "__kiwi_module__");
     let definition_name = "BezierHandles";

@@ -1,0 +1,25 @@
+defmodule Figler.Schema.SpecBlockType do
+  @moduledoc "Generated Kiwi enum module for `SpecBlockType`."
+  use KiwiCodec, kind: :enum
+  enum_value(:default, 0)
+  enum_value(:paragraph, 1)
+  enum_value(:heading_1, 2)
+  enum_value(:heading_2, 3)
+  enum_value(:heading_3, 4)
+  enum_value(:heading_4, 5)
+  enum_value(:heading_5, 6)
+  enum_value(:heading_6, 7)
+  enum_value(:code_block, 8)
+  enum_value(:block_quote, 9)
+  enum_value(:horizontal_rule, 10)
+  enum_value(:ordered_list_item, 11)
+  enum_value(:unordered_list_item, 12)
+  enum_value(:document, 13)
+  enum_value(:table, 14)
+  enum_value(:table_row, 15)
+  enum_value(:table_cell, 16)
+  enum_value(:todo_list_item_unchecked, 17)
+  enum_value(:todo_list_item_checked, 18)
+  enum_value(:image, 19)
+  enum_value(:embed, 20)
+end

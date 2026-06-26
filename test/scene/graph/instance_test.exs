@@ -1,10 +1,10 @@
-defmodule FigKiwi.Scene.Graph.InstanceTest do
+defmodule Figler.Scene.Graph.InstanceTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene.Graph
-  alias FigKiwi.Scene.Node
+  alias Figler.Scene.Graph
+  alias Figler.Scene.Node
 
-  import FigKiwi.Test.GraphBuilder
+  import Figler.Test.GraphBuilder
 
   test "returns instance metadata and provenance for source instances" do
     graph =

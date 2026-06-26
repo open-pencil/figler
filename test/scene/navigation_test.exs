@@ -1,10 +1,10 @@
-defmodule FigKiwi.Scene.NavigationTest do
+defmodule Figler.Scene.NavigationTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
-  alias FigKiwi.Scene.Node
+  alias Figler.Scene
+  alias Figler.Scene.Node
 
-  import FigKiwi.Test.SceneFixture
+  import Figler.Test.SceneFixture
 
   test "navigates projected scene indexes" do
     index = Scene.index(message_payload())
@@ -17,7 +17,7 @@ defmodule FigKiwi.Scene.NavigationTest do
     assert Scene.siblings(index, "0:1") == []
     assert Scene.ancestors(index, "0:1") == [scene_document()]
     assert Scene.descendants(index, "0:0") == [scene_canvas()]
-    assert %FigKiwi.Scene.Index{} = index
+    assert %Figler.Scene.Index{} = index
     assert Scene.by_type(index, :canvas) == [scene_canvas()]
     assert Scene.named(index, "Page 1") == [scene_canvas()]
     assert Scene.name_contains(index, "Page") == [scene_canvas()]

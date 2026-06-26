@@ -1,10 +1,10 @@
-defmodule FigKiwi.Scene.ProjectionTest do
+defmodule Figler.Scene.ProjectionTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene.Graph.SeedNode
-  alias FigKiwi.Scene.Graph.SeedProjection
-  alias FigKiwi.Scene.Node
-  alias FigKiwi.Scene.Projection
+  alias Figler.Scene.Graph.SeedNode
+  alias Figler.Scene.Graph.SeedProjection
+  alias Figler.Scene.Node
+  alias Figler.Scene.Projection
 
   test "projection specs stay aligned with node and seed structs" do
     node_fields = Map.keys(Node.__struct__()) -- [:__struct__]
@@ -29,7 +29,7 @@ defmodule FigKiwi.Scene.ProjectionTest do
   end
 
   test "scene node projection is backed by generated Kiwi schema metadata" do
-    assert Node.source_module() == FigKiwi.Schema.NodeChange
+    assert Node.source_module() == Figler.Schema.NodeChange
 
     assert Node.source_fields() == [
              :guid,

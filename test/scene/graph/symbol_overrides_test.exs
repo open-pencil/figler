@@ -1,11 +1,11 @@
-defmodule FigKiwi.Scene.Graph.SymbolOverridesTest do
+defmodule Figler.Scene.Graph.SymbolOverridesTest do
   use ExUnit.Case, async: true
 
-  alias FigKiwi.Scene
-  alias FigKiwi.Scene.Graph
-  alias FigKiwi.Scene.Node
+  alias Figler.Scene
+  alias Figler.Scene.Graph
+  alias Figler.Scene.Node
 
-  import FigKiwi.Test.GraphBuilder
+  import Figler.Test.GraphBuilder
 
   test "applies basic symbol override patches in Elixir graph resolver" do
     graph =
