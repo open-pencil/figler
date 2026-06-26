@@ -6,6 +6,7 @@ defmodule Figler.NativeSceneGenerator.Sparse do
   focused scene extraction from allocating complete generated struct trees.
   """
 
+  alias Figler.NativeSceneGenerator.Rusty
   alias KiwiCodec.Schema.Enum, as: SchemaEnum
   alias KiwiCodec.Schema.{Message, Struct}
   alias RustQ.Rust
@@ -40,7 +41,7 @@ defmodule Figler.NativeSceneGenerator.Sparse do
   defp enum_arm(field) do
     Rust.arm(
       Integer.to_string(field.value),
-      "{ static ATOM_#{field.value}: OnceLock<Atom> = OnceLock::new(); Ok(cached_atom(env, &ATOM_#{field.value}, \"#{Macro.underscore(field.name)}\").encode(env)) }"
+      Rusty.enum_atom_result(field.value, Macro.underscore(field.name))
     )
   end
 
@@ -74,31 +75,26 @@ defmodule Figler.NativeSceneGenerator.Sparse do
 
   defp field_block(field, definition_map) do
     Rust.block([
-      "static FIELD_ATOM_#{field.id}: OnceLock<Atom> = OnceLock::new();",
-      ~s|let field_atom = cached_atom(env, &FIELD_ATOM_#{field.id}, "#{Macro.underscore(field.name)}");|,
+      Rusty.cached_atom_static("FIELD_ATOM_#{field.id}"),
+      Rusty.cached_atom("field_atom", "FIELD_ATOM_#{field.id}", Macro.underscore(field.name)),
       decode_field(field, definition_map),
-      "keys.push(field_atom.encode(env));",
-      "values.push(value);"
+      Rust.call_stmt("keys", :push, ["field_atom.encode(env)"]),
+      Rust.call_stmt("values", :push, ["value"])
     ])
   end
 
   defp decode_field(%{array?: true, type: "byte"}, _definition_map) do
-    "let value = decoder.read_byte_array(env)?;"
+    Rusty.value("decoder.read_byte_array(env)?")
   end
 
   defp decode_field(%{array?: true} = field, definition_map) do
     inner = decode_scalar(%{field | array?: false}, definition_map)
 
-    rust_statements([
-      Rust.let_("len", "decoder.read_var_uint()? as usize"),
-      Rust.let_mut("items", "Vec::with_capacity(len)"),
-      Rust.stmt("for _ in 0..len { let item = #{inner}; items.push(item); }"),
-      Rust.let_("value", "items.encode(env)")
-    ])
+    Rusty.array_value(inner)
   end
 
   defp decode_field(field, definition_map) do
-    "let value = #{decode_scalar(field, definition_map)};"
+    field |> decode_scalar(definition_map) |> Rusty.value()
   end
 
   defp decode_scalar(%{type: type}, definition_map) do
@@ -128,8 +124,6 @@ defmodule Figler.NativeSceneGenerator.Sparse do
   defp primitive_decode("uint"), do: "decoder.read_var_uint()?.encode(env)"
   defp primitive_decode("uint64"), do: "decoder.read_var_uint64()?.encode(env)"
   defp primitive_decode(_type), do: nil
-
-  defp rust_statements(statements), do: Enum.map_join(statements, "\n", &Rust.to_fragment/1)
 
   defp rust_ident(name) do
     name

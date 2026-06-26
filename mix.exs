@@ -11,6 +11,7 @@ defmodule Figler.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       description: "Read and query Figma files from Elixir",
+      elixirc_paths: elixirc_paths(Mix.env()),
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix], flags: [:no_opaque]],
       package: package(),
@@ -27,10 +28,14 @@ defmodule Figler.MixProject do
     [extra_applications: [:logger]]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "codegen"]
+  defp elixirc_paths(_env), do: ["lib"]
+
   defp aliases do
     [
       ci: [
         "compile --warnings-as-errors",
+        "kiwi.gen.check",
         "rustq.gen --check native",
         "format --check-formatted",
         "rust.fmt --check",
@@ -43,12 +48,87 @@ defmodule Figler.MixProject do
         "ex_dna --max-clones 0",
         "reach.check --arch --smells"
       ],
+      "kiwi.gen.check": &kiwi_gen_check/1,
       "native.gen": "rustq.gen native",
       "native.gen.check": "rustq.gen --check native",
       "rust.fmt": &rust_fmt/1,
       "rust.check": &rust_check/1,
       "rust.clippy": &rust_clippy/1
     ]
+  end
+
+  defp kiwi_gen_check(_args) do
+    Mix.Task.run("loadpaths")
+
+    schema_path = "priv/schema/fig.kiwi"
+    generated_dir = "lib/generated"
+
+    tmp_dir =
+      Path.join(System.tmp_dir!(), "figler-kiwi-gen-check-#{System.unique_integer([:positive])}")
+
+    try do
+      schema_path
+      |> File.read!()
+      |> KiwiCodec.FileGenerator.generate_files!(module_prefix: Figler.Schema, out: tmp_dir)
+
+      compare_generated_files!(tmp_dir, generated_dir)
+    after
+      File.rm_rf!(tmp_dir)
+    end
+  end
+
+  defp compare_generated_files!(expected_dir, actual_dir) do
+    expected_files = relative_files(expected_dir)
+    actual_files = relative_files(actual_dir)
+
+    missing = expected_files -- actual_files
+    extra = actual_files -- expected_files
+
+    changed =
+      Enum.filter(
+        expected_files -- missing,
+        &generated_file_changed?(expected_dir, actual_dir, &1)
+      )
+
+    case {missing, extra, changed} do
+      {[], [], []} ->
+        Mix.shell().info("Fresh Kiwi schema modules: #{actual_dir}")
+
+      _stale ->
+        Mix.raise("""
+        Stale Kiwi schema modules in #{actual_dir}.
+
+        Missing files: #{inspect(missing)}
+        Extra files: #{inspect(extra)}
+        Changed files: #{inspect(changed)}
+
+        Run:
+          mix kiwi.gen priv/schema/fig.kiwi --module-prefix Figler.Schema --out #{actual_dir}
+        """)
+    end
+  end
+
+  defp generated_file_changed?(expected_dir, actual_dir, relative_path) do
+    expected_path = Path.join(expected_dir, relative_path)
+    actual_path = Path.join(actual_dir, relative_path)
+
+    formatted_file!(expected_path) != formatted_file!(actual_path)
+  end
+
+  defp formatted_file!(path) do
+    path
+    |> File.read!()
+    |> Code.format_string!(file: path)
+    |> IO.iodata_to_binary()
+  end
+
+  defp relative_files(dir) do
+    dir
+    |> Path.join("**/*")
+    |> Path.wildcard()
+    |> Enum.reject(&File.dir?/1)
+    |> Enum.map(&Path.relative_to(&1, dir))
+    |> Enum.sort()
   end
 
   defp rust_fmt(args) do
@@ -111,12 +191,14 @@ defmodule Figler.MixProject do
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
       files: [
+        "codegen",
         "lib",
         "native/Cargo.toml",
         "native/Cargo.lock",
         "native/src",
         "priv/schema",
         "mix.exs",
+        "rustq.exs",
         "README.md",
         "CHANGELOG.md",
         "LICENSE*"

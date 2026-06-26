@@ -6,6 +6,7 @@ defmodule Figler.NativeSceneGenerator.Scene do
   into the Rust fragments inserted into the scene NIF templates.
   """
 
+  alias Figler.NativeSceneGenerator.Rusty
   alias Figler.NativeSceneGenerator.Skip
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
@@ -194,12 +195,7 @@ defmodule Figler.NativeSceneGenerator.Scene do
 
   defp scene_decode_expr(name, _field), do: "#{name} = Some(decoder.read_string_value()?)"
 
-  defp scene_decode_arm(id, lines) do
-    Rust.arm(
-      Integer.to_string(id),
-      lines |> List.wrap() |> Rust.block() |> Rust.to_fragment()
-    )
-  end
+  defp scene_decode_arm(id, lines), do: Rusty.arm(id, lines)
 
   defp scene_attr_lookup do
     entries =

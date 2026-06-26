@@ -22,6 +22,7 @@ defmodule Figler.Scene.Graph do
   alias Figler.Scene.Index
   alias Figler.Scene.Node
   alias Figler.Scene.Summary
+  alias Figler.Scene.Tree
 
   @enforce_keys [:resource]
   defstruct [
@@ -271,23 +272,7 @@ defmodule Figler.Scene.Graph do
       Figler.Scene.Graph.tree(graph, root: "3740:112537", depth: 3)
   """
   @spec tree(t(), keyword()) :: [Node.t()] | Node.t() | nil
-  def tree(%__MODULE__{} = graph, opts \\ []) when is_list(opts) do
-    depth = Keyword.get(opts, :depth, 3)
-
-    case Keyword.fetch(opts, :root) do
-      {:ok, guid} ->
-        graph_guid = GUID.parse!(guid)
-
-        if node = Map.get(graph.nodes, graph_guid) do
-          tree_node(graph, node, depth)
-        end
-
-      :error ->
-        graph
-        |> nodes_by_guids(graph.roots)
-        |> Enum.map(&tree_node(graph, &1, depth))
-    end
-  end
+  def tree(%__MODULE__{} = graph, opts \\ []) when is_list(opts), do: Tree.graph_tree(graph, opts)
 
   @doc """
   Returns instance-specific effective graph metadata for a node.
@@ -444,21 +429,6 @@ defmodule Figler.Scene.Graph do
       count + length(Map.get(provenance, :applied, []))
     end)
   end
-
-  defp nodes_by_guids(%__MODULE__{} = graph, guids) do
-    guids
-    |> Enum.map(&Map.get(graph.nodes, &1))
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp tree_node(_graph, %Node{} = node, 0), do: %Node{node | children: []}
-
-  defp tree_node(graph, %Node{} = node, depth) do
-    child_nodes = nodes_by_guids(graph, child_guids(graph, node.guid))
-    %Node{node | children: Enum.map(child_nodes, &tree_node(graph, &1, depth - 1))}
-  end
-
-  defp child_guids(graph, guid), do: Map.get(graph.children, GUID.parse!(guid), [])
 
   defp instance_component_guid(%SeedNode{component_guid: guid}) when is_tuple(guid), do: guid
   defp instance_component_guid(%SeedNode{symbol_id: guid}) when is_tuple(guid), do: guid

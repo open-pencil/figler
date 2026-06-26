@@ -7,8 +7,8 @@ defmodule Figler.NativeSceneGenerator.Skip do
   """
 
   alias KiwiCodec.Schema.Enum, as: SchemaEnum
+  alias Figler.NativeSceneGenerator.Rusty
   alias KiwiCodec.Schema.{Message, Struct}
-  alias RustQ.Rust
 
   @primitive %{
     "bool" => "decoder.read_bool()?;",
@@ -26,7 +26,7 @@ defmodule Figler.NativeSceneGenerator.Skip do
   end
 
   def message_arm(field, definition_map) do
-    Rust.arm(Integer.to_string(field.id), "{ #{field(field, definition_map)} }")
+    Rusty.arm(field.id, field(field, definition_map))
   end
 
   def field(%{array?: true, type: "byte"}, _definition_map) do
@@ -36,12 +36,7 @@ defmodule Figler.NativeSceneGenerator.Skip do
   def field(%{array?: true} = schema_field, definition_map) do
     inner = field(%{schema_field | array?: false}, definition_map)
 
-    Rust.to_fragment(
-      Rust.block([
-        Rust.let_("len", "decoder.read_var_uint()? as usize"),
-        Rust.stmt("for _ in 0..len { #{inner} }")
-      ])
-    )
+    Rusty.skip_array(inner)
   end
 
   def field(%{type: type}, definition_map) do

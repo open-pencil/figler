@@ -9,13 +9,15 @@ defmodule Figler.Scene do
   of materializing the full generated schema tree.
   """
 
-  alias Figler.Container
   alias Figler.Native.Scene, as: NativeScene
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Index
+  alias Figler.Scene.Input
   alias Figler.Scene.Node
+  alias Figler.Scene.Query
   alias Figler.Scene.Summary
+  alias Figler.Scene.Tree
 
   @type summary :: Summary.t()
   @type scene_node :: Node.t()
@@ -40,11 +42,7 @@ defmodule Figler.Scene do
   """
   @spec index(binary()) :: Index.t()
   def index(binary) when is_binary(binary) do
-    resource =
-      binary
-      |> payload!()
-      |> NativeScene.build_index()
-
+    resource = binary |> payload!() |> NativeScene.build_index()
     %Index{resource: resource}
   end
 
@@ -54,8 +52,7 @@ defmodule Figler.Scene do
   `Scene.index/1` is the fast raw projection. `Scene.graph/2` is the separate
   surface for resolved Figma semantics such as populated instances, symbol
   overrides, component props, derived symbol data, and variable/style
-  resolution. The first graph implementation is backed by the projected native
-  index while resolver stages are added incrementally.
+  resolution.
   """
   @spec graph(binary() | Index.t() | Graph.t() | reference(), keyword()) :: Graph.t()
   def graph(scene, opts \\ []) when is_list(opts), do: Graph.build(scene, opts)
@@ -69,23 +66,7 @@ defmodule Figler.Scene do
       and `:node_type` are always kept. Defaults to all fields.
 
   Scene nodes are exposed as elements named by their Figma node type, for
-  example `//canvas` or `//text`. Supported projected attributes are:
-
-    * `@guid`
-    * `@type`
-    * `@name`
-    * `@parent_guid`
-    * `@position`
-    * `@x` / `@width`
-    * `@y` / `@height`
-    * `@transform`
-    * `@visible`
-    * `@locked`
-    * `@text`
-    * `@font_family`
-    * `@font_style`
-    * `@font_postscript`
-    * `@text_style_guid`
+  example `//canvas` or `//text`.
   """
   @spec query(binary() | Index.t() | Graph.t() | reference(), String.t(), keyword()) :: [
           scene_node()
@@ -93,29 +74,25 @@ defmodule Figler.Scene do
   def query(scene, xpath, opts \\ [])
 
   def query(binary, xpath, opts) when is_binary(binary) and is_binary(xpath) and is_list(opts) do
-    fields = query_fields(opts)
+    fields = Query.query_fields(opts)
     payload = payload!(binary)
 
-    nodes =
-      case fields do
-        :all -> NativeScene.query_xpath(payload, xpath)
-        fields -> NativeScene.query_xpath_fields(payload, xpath, fields)
-      end
-
-    nodes_from_maps(nodes)
+    case fields do
+      :all -> NativeScene.query_xpath(payload, xpath)
+      fields -> NativeScene.query_xpath_fields(payload, xpath, fields)
+    end
+    |> Query.nodes_from_maps()
   end
 
-  def query(index, xpath, opts) when is_binary(xpath) and is_list(opts) do
-    fields = query_fields(opts)
-    resource = reusable_index(index)
+  def query(scene, xpath, opts) when is_binary(xpath) and is_list(opts) do
+    fields = Query.query_fields(opts)
+    resource = Input.resource(scene)
 
-    nodes =
-      case fields do
-        :all -> NativeScene.query_index(resource, xpath)
-        fields -> NativeScene.query_index_fields(resource, xpath, fields)
-      end
-
-    nodes_from_maps(nodes)
+    case fields do
+      :all -> NativeScene.query_index(resource, xpath)
+      fields -> NativeScene.query_index_fields(resource, xpath, fields)
+    end
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -133,22 +110,22 @@ defmodule Figler.Scene do
 
   def node(scene, guid) when is_binary(guid) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_node(guid)
-    |> maybe_node_from_map()
+    |> Query.maybe_node_from_map()
   end
 
   @doc """
   Returns root nodes in scene order.
   """
   @spec roots(binary() | Index.t() | Graph.t() | reference()) :: [scene_node()]
-  def roots(%Graph{} = graph), do: nodes_by_guids(graph, graph.roots)
+  def roots(%Graph{} = graph), do: Query.nodes_by_guids(graph, graph.roots)
 
   def roots(scene) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_roots()
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -164,9 +141,9 @@ defmodule Figler.Scene do
 
   def parent(scene, guid) when is_binary(guid) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_parent(guid)
-    |> maybe_node_from_map()
+    |> Query.maybe_node_from_map()
   end
 
   @doc """
@@ -174,14 +151,14 @@ defmodule Figler.Scene do
   """
   @spec children(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
   def children(%Graph{} = graph, parent_guid) when is_binary(parent_guid) do
-    nodes_by_guids(graph, Map.get(graph.children, GUID.parse!(parent_guid), []))
+    Query.nodes_by_guids(graph, Map.get(graph.children, GUID.parse!(parent_guid), []))
   end
 
   def children(scene, parent_guid) when is_binary(parent_guid) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_children(parent_guid)
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -203,39 +180,37 @@ defmodule Figler.Scene do
 
   def siblings(scene, guid) when is_binary(guid) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_siblings(guid)
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
   Returns ancestors for a node GUID, ordered from root to parent.
   """
   @spec ancestors(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
-  def ancestors(%Graph{} = graph, guid) when is_binary(guid) do
-    graph_ancestors(graph, guid, [])
-  end
+  def ancestors(%Graph{} = graph, guid) when is_binary(guid),
+    do: Tree.graph_ancestors(graph, guid)
 
   def ancestors(scene, guid) when is_binary(guid) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_ancestors(guid)
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
   Returns all descendants for a node GUID in scene order.
   """
   @spec descendants(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
-  def descendants(%Graph{} = graph, guid) when is_binary(guid) do
-    graph_descendants(graph, guid)
-  end
+  def descendants(%Graph{} = graph, guid) when is_binary(guid),
+    do: Tree.graph_descendants(graph, guid)
 
   def descendants(scene, guid) when is_binary(guid) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_descendants(guid)
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -248,29 +223,26 @@ defmodule Figler.Scene do
         ) :: [scene_node()]
   def by_type(scene_or_nodes, type, opts \\ [])
 
-  def by_type(nodes, type, _opts) when is_list(nodes) and (is_atom(type) or is_binary(type)) do
-    node_type = type |> to_string() |> Macro.underscore()
-    Enum.filter(nodes, &(&1.node_type == node_type))
-  end
+  def by_type(nodes, type, _opts) when is_list(nodes), do: Query.by_type(nodes, type)
 
   def by_type(%Graph{} = graph, type, opts) when is_atom(type) or is_binary(type) do
     node_type = type |> to_string() |> Macro.underscore()
 
     graph
-    |> nodes_by_guids(Map.get(graph.by_type, node_type, []))
-    |> apply_field_filter(opts)
+    |> Query.nodes_by_guids(Map.get(graph.by_type, node_type, []))
+    |> Query.apply_field_filter(opts)
   end
 
   def by_type(scene, type, opts) when is_atom(type) or is_binary(type) do
-    fields = query_fields(opts)
-    index = reusable_index(scene)
+    fields = Query.query_fields(opts)
+    resource = Input.resource(scene)
     node_type = type |> to_string() |> Macro.underscore()
 
     case fields do
-      :all -> NativeScene.index_by_type(index, node_type)
-      fields -> NativeScene.index_by_type_fields(index, node_type, fields)
+      :all -> NativeScene.index_by_type(resource, node_type)
+      fields -> NativeScene.index_by_type_fields(resource, node_type, fields)
     end
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -279,19 +251,16 @@ defmodule Figler.Scene do
   @spec named(binary() | Index.t() | Graph.t() | reference() | [scene_node()], String.t()) :: [
           scene_node()
         ]
-  def named(nodes, name) when is_list(nodes) and is_binary(name) do
-    Enum.filter(nodes, &(&1.name == name))
-  end
+  def named(nodes, name) when is_list(nodes), do: Query.named(nodes, name)
 
-  def named(%Graph{} = graph, name) when is_binary(name) do
-    nodes_by_guids(graph, Map.get(graph.by_name, name, []))
-  end
+  def named(%Graph{} = graph, name) when is_binary(name),
+    do: Query.nodes_by_guids(graph, Map.get(graph.by_name, name, []))
 
   def named(scene, name) when is_binary(name) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_named(name)
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -301,30 +270,28 @@ defmodule Figler.Scene do
           binary() | Index.t() | Graph.t() | reference() | [scene_node()],
           String.t(),
           keyword()
-        ) ::
-          [scene_node()]
+        ) :: [scene_node()]
   def name_contains(scene_or_nodes, needle, opts \\ [])
 
-  def name_contains(nodes, needle, _opts) when is_list(nodes) and is_binary(needle) do
-    Enum.filter(nodes, &(is_binary(&1.name) and String.contains?(&1.name, needle)))
-  end
+  def name_contains(nodes, needle, _opts) when is_list(nodes),
+    do: Query.name_contains(nodes, needle)
 
   def name_contains(%Graph{} = graph, needle, opts) when is_binary(needle) do
     graph.nodes
     |> Map.values()
-    |> name_contains(needle)
-    |> apply_field_filter(opts)
+    |> Query.name_contains(needle)
+    |> Query.apply_field_filter(opts)
   end
 
   def name_contains(scene, needle, opts) when is_binary(needle) do
-    fields = query_fields(opts)
-    index = reusable_index(scene)
+    fields = Query.query_fields(opts)
+    resource = Input.resource(scene)
 
     case fields do
-      :all -> NativeScene.index_name_contains(index, needle)
-      fields -> NativeScene.index_name_contains_fields(index, needle, fields)
+      :all -> NativeScene.index_name_contains(resource, needle)
+      fields -> NativeScene.index_name_contains_fields(resource, needle, fields)
     end
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -341,15 +308,14 @@ defmodule Figler.Scene do
   @spec components(binary() | Index.t() | Graph.t() | reference() | [scene_node()]) :: [
           scene_node()
         ]
-  def components(nodes) when is_list(nodes), do: Enum.filter(nodes, &present?(&1.component_key))
-
-  def components(%Graph{} = graph), do: graph.nodes |> Map.values() |> components()
+  def components(nodes) when is_list(nodes), do: Query.components(nodes)
+  def components(%Graph{} = graph), do: graph.nodes |> Map.values() |> Query.components()
 
   def components(scene) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_components()
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -358,15 +324,14 @@ defmodule Figler.Scene do
   @spec with_fills(binary() | Index.t() | Graph.t() | reference() | [scene_node()]) :: [
           scene_node()
         ]
-  def with_fills(nodes) when is_list(nodes), do: Enum.filter(nodes, &positive?(&1.fill_count))
-
-  def with_fills(%Graph{} = graph), do: graph.nodes |> Map.values() |> with_fills()
+  def with_fills(nodes) when is_list(nodes), do: Query.with_fills(nodes)
+  def with_fills(%Graph{} = graph), do: graph.nodes |> Map.values() |> Query.with_fills()
 
   def with_fills(scene) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_with_fills()
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -375,15 +340,14 @@ defmodule Figler.Scene do
   @spec with_strokes(binary() | Index.t() | Graph.t() | reference() | [scene_node()]) :: [
           scene_node()
         ]
-  def with_strokes(nodes) when is_list(nodes), do: Enum.filter(nodes, &positive?(&1.stroke_count))
-
-  def with_strokes(%Graph{} = graph), do: graph.nodes |> Map.values() |> with_strokes()
+  def with_strokes(nodes) when is_list(nodes), do: Query.with_strokes(nodes)
+  def with_strokes(%Graph{} = graph), do: graph.nodes |> Map.values() |> Query.with_strokes()
 
   def with_strokes(scene) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> NativeScene.index_with_strokes()
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
@@ -393,135 +357,67 @@ defmodule Figler.Scene do
           binary() | Index.t() | Graph.t() | reference() | [scene_node()],
           String.t(),
           keyword()
-        ) ::
-          [scene_node()]
+        ) :: [scene_node()]
   def text_contains(scene_or_nodes, needle, opts \\ [])
 
-  def text_contains(nodes, needle, _opts) when is_list(nodes) and is_binary(needle) do
-    Enum.filter(nodes, &(is_binary(&1.text) and String.contains?(&1.text, needle)))
-  end
+  def text_contains(nodes, needle, _opts) when is_list(nodes),
+    do: Query.text_contains(nodes, needle)
 
   def text_contains(%Graph{} = graph, needle, opts) when is_binary(needle) do
     graph.nodes
     |> Map.values()
-    |> text_contains(needle)
-    |> apply_field_filter(opts)
+    |> Query.text_contains(needle)
+    |> Query.apply_field_filter(opts)
   end
 
   def text_contains(scene, needle, opts) when is_binary(needle) do
-    fields = query_fields(opts)
-    index = reusable_index(scene)
+    fields = Query.query_fields(opts)
+    resource = Input.resource(scene)
 
     case fields do
-      :all -> NativeScene.index_text_contains(index, needle)
-      fields -> NativeScene.index_text_contains_fields(index, needle, fields)
+      :all -> NativeScene.index_text_contains(resource, needle)
+      fields -> NativeScene.index_text_contains_fields(resource, needle, fields)
     end
-    |> nodes_from_maps()
+    |> Query.nodes_from_maps()
   end
 
   @doc """
   Returns projected field values from nodes, similar to `Floki.attribute/2`.
   """
   @spec attribute([scene_node()], atom() | String.t()) :: [term()]
-  def attribute(nodes, field) when is_list(nodes) and (is_atom(field) or is_binary(field)) do
-    field = node_field(field)
-
-    nodes
-    |> Enum.map(&Map.get(&1, field))
-    |> Enum.reject(&is_nil/1)
-  end
+  defdelegate attribute(nodes, field), to: Query
 
   @doc """
   Returns projected text from nodes, similar to `Floki.text/2`.
-
-  Options:
-
-    * `:sep` - separator between text values. Defaults to `""`.
   """
   @spec text([scene_node()], keyword()) :: String.t()
-  def text(nodes, opts \\ []) when is_list(nodes) and is_list(opts) do
-    nodes
-    |> attribute(:text)
-    |> Enum.join(Keyword.get(opts, :sep, ""))
-  end
+  defdelegate text(nodes, opts \\ []), to: Query
 
   @doc """
   Finds nodes by common projected fields without interpolating XPath.
-
-  Supported options:
-
-    * `:type` - atom or string node type, for example `:text` or `"text"`
-    * `:name` - exact node name
-    * `:name_contains` - substring match on node name
-    * `:text_contains` - substring match on projected text
   """
   @spec find(binary() | Index.t() | Graph.t() | reference(), keyword()) :: [scene_node()]
   def find(scene, opts) when is_list(opts) do
     scene
-    |> reusable_index()
+    |> Input.resource()
     |> find_candidates(opts)
-    |> filter_find_results(opts)
+    |> Query.filter_find_results(opts)
   end
 
   @doc """
   Builds a lightweight nested scene tree.
-
-  Options:
-
-    * `:root` - GUID to use as the root. Defaults to all root nodes.
-    * `:depth` - maximum child depth. Defaults to `3`.
   """
   @spec tree(binary() | Index.t() | Graph.t() | reference(), keyword()) ::
           [Node.t()] | Node.t() | nil
   def tree(scene, opts \\ []) when is_list(opts) do
-    index = reusable_index(scene)
-    depth = Keyword.get(opts, :depth, 3)
-
-    case Keyword.fetch(opts, :root) do
-      {:ok, guid} ->
-        if root = node(index, guid) do
-          tree_node(index, root, depth)
-        end
-
-      :error ->
-        index
-        |> query("//*[not(@parent_guid)]")
-        |> Enum.map(&tree_node(index, &1, depth))
-    end
+    scene |> Input.resource() |> Tree.projected(opts)
   end
 
   @doc """
   Extracts the raw Figma Kiwi `Message` binary from any supported scene input.
   """
   @spec payload!(binary()) :: binary()
-  def payload!(<<"PK", _rest::binary>> = zip_binary) do
-    zip_binary
-    |> unzip_canvas!()
-    |> payload!()
-  end
-
-  def payload!(binary) when is_binary(binary) do
-    Container.data(binary)
-  rescue
-    KiwiCodec.DecodeError -> binary
-    MatchError -> binary
-  end
-
-  defp reusable_index(scene) when is_binary(scene), do: scene |> index() |> reusable_index()
-
-  defp reusable_index(%Graph{resource: nil, source: source}) when is_binary(source),
-    do: source |> index() |> reusable_index()
-
-  defp reusable_index(%Graph{resource: resource}), do: resource
-  defp reusable_index(%Index{resource: resource}), do: resource
-  defp reusable_index(index), do: index
-
-  defp tree_node(_index, %Node{} = node, 0), do: %Node{node | children: []}
-
-  defp tree_node(index, %Node{} = node, depth) do
-    children = Enum.map(children(index, node.guid), &tree_node(index, &1, depth - 1))
-    %Node{node | children: children}
-  end
+  defdelegate payload!(binary), to: Input
 
   defp find_candidates(index, opts) do
     cond do
@@ -530,103 +426,6 @@ defmodule Figler.Scene do
       name = opts[:name_contains] -> name_contains(index, name)
       text = opts[:text_contains] -> text_contains(index, text)
       true -> query(index, "//*")
-    end
-  end
-
-  defp filter_find_results(nodes, opts) do
-    Enum.filter(nodes, fn node ->
-      Enum.all?(opts, fn
-        {:type, type} -> node.node_type == type |> to_string() |> Macro.underscore()
-        {:name, name} -> node.name == name
-        {:name_contains, needle} -> is_binary(node.name) and String.contains?(node.name, needle)
-        {:text_contains, needle} -> is_binary(node.text) and String.contains?(node.text, needle)
-        {_key, _value} -> true
-      end)
-    end)
-  end
-
-  defp nodes_from_maps(nodes), do: Enum.map(nodes, &Node.from_map/1)
-
-  defp nodes_by_guids(%Graph{} = graph, guids) do
-    guids
-    |> Enum.map(&Map.get(graph.nodes, &1))
-    |> Enum.reject(&is_nil/1)
-  end
-
-  defp apply_field_filter(nodes, opts) do
-    case query_fields(opts) do
-      :all -> nodes
-      fields -> Enum.map(nodes, &filter_node_fields(&1, fields))
-    end
-  end
-
-  defp filter_node_fields(%Node{} = node, fields) do
-    fields = Enum.uniq(["guid", "node_type" | fields])
-
-    node
-    |> Map.from_struct()
-    |> Map.take(Enum.map(fields, &node_field/1))
-    |> Node.from_map()
-  end
-
-  defp graph_ancestors(%Graph{} = graph, guid, acc) do
-    case parent(graph, guid) do
-      nil -> acc
-      %Node{guid: parent_guid} = parent -> graph_ancestors(graph, parent_guid, [parent | acc])
-    end
-  end
-
-  defp graph_descendants(%Graph{} = graph, guid) do
-    graph
-    |> children(guid)
-    |> Enum.flat_map(fn child -> [child | graph_descendants(graph, child.guid)] end)
-  end
-
-  defp present?(value), do: is_binary(value) and value != ""
-  defp positive?(value), do: is_integer(value) and value > 0
-
-  defp maybe_node_from_map(nil), do: nil
-  defp maybe_node_from_map(map), do: Node.from_map(map)
-
-  defp query_fields(opts) do
-    case Keyword.get(opts, :fields, :all) do
-      :all -> :all
-      fields when is_list(fields) -> fields |> Enum.map(&field_name/1) |> Enum.uniq()
-    end
-  end
-
-  defp field_name(field) when is_atom(field), do: Atom.to_string(field)
-  defp field_name(field) when is_binary(field), do: field
-
-  defp node_field(:type), do: :node_type
-  defp node_field("type"), do: :node_type
-  defp node_field(field) when is_atom(field), do: field
-
-  defp node_field(field) when is_binary(field) do
-    String.to_existing_atom(field)
-  rescue
-    ArgumentError -> :__unknown_field__
-  end
-
-  defp unzip_canvas!(zip_binary) do
-    case :zip.extract(zip_binary, [:memory, {:file_list, [~c"canvas.fig"]}]) do
-      {:ok, entries} -> canvas_entry!(entries)
-      {:error, reason} -> raise ArgumentError, "cannot read FIG ZIP: #{inspect(reason)}"
-    end
-  end
-
-  defp canvas_entry!(entries) do
-    case Enum.find_value(entries, &canvas_entry/1) do
-      nil -> raise ArgumentError, "ZIP does not contain canvas.fig"
-      canvas -> canvas
-    end
-  end
-
-  defp canvas_entry({~c"canvas.fig", canvas}), do: IO.iodata_to_binary(canvas)
-
-  defp canvas_entry({path, canvas}) do
-    if Path.basename(to_string(path)) == "canvas.fig" do
-      IO.iodata_to_binary(canvas)
     end
   end
 end

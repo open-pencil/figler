@@ -7,7 +7,7 @@ defmodule Figler.NativeSceneGenerator.Focus do
   effective graph.
   """
 
-  alias RustQ.Rust
+  alias Figler.NativeSceneGenerator.Rusty
 
   def render(definition_map, skip_arm, render_template) do
     message_fields = definition_map |> Map.fetch!("Message") |> then(& &1.fields)
@@ -101,10 +101,5 @@ defmodule Figler.NativeSceneGenerator.Focus do
     end)
   end
 
-  defp arm(field, lines) do
-    Rust.arm(
-      Integer.to_string(field.id),
-      lines |> List.wrap() |> Rust.block() |> Rust.to_fragment()
-    )
-  end
+  defp arm(field, lines), do: Rusty.arm(field.id, lines)
 end
