@@ -1,6 +1,7 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 - 2026-06-26
 
 - Initial Figma Kiwi schema package with generated schema modules and message helpers.
-- Update generated schema and native decoder generation for `kiwi_codec` 0.2.0.
+- Add native scene indexing, XPath-style querying, sparse decoding, and graph helpers for Figma files.
+- Generate native decoder code with `rustq` and `kiwi_codec` 0.2.0.
