@@ -20,14 +20,6 @@ unless Code.ensure_loaded?(Figler.NativeSceneGenerator.Focus) do
   Code.require_file("codegen/figler/native_scene_generator/focus.ex")
 end
 
-unless Code.ensure_loaded?(Figler.NativeSceneGenerator.Skip) do
-  Code.require_file("codegen/figler/native_scene_generator/skip.ex")
-end
-
-unless Code.ensure_loaded?(Figler.NativeSceneGenerator.Sparse) do
-  Code.require_file("codegen/figler/native_scene_generator/sparse.ex")
-end
-
 unless Code.ensure_loaded?(Figler.NativeSceneGenerator.Scene) do
   Code.require_file("codegen/figler/native_scene_generator/scene.ex")
 end
@@ -45,6 +37,7 @@ generate "native", "native/src/generated.rs" do
   content([
     KiwiCodec.RustlerGenerator.source(schema,
       entrypoints: {:nif_stubs, Figler.Native.Nifs},
+      features: [:full, :sparse, :skip],
       module_prefix: "Figler.Schema"
     ),
     Figler.NativeSceneGenerator.source(schema)

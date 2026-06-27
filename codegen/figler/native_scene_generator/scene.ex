@@ -7,7 +7,7 @@ defmodule Figler.NativeSceneGenerator.Scene do
   """
 
   alias Figler.NativeSceneGenerator.Rusty
-  alias Figler.NativeSceneGenerator.Skip
+  alias KiwiCodec.RustlerGenerator.Skip
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
 

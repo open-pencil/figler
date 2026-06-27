@@ -5,14 +5,13 @@ defmodule Figler.NativeSceneGeneratorTest do
   alias Figler.NativeSceneGenerator.Focus
   alias Figler.NativeSceneGenerator.Rusty
   alias Figler.NativeSceneGenerator.Scene
-  alias Figler.NativeSceneGenerator.Skip
-  alias Figler.NativeSceneGenerator.Sparse
+  alias KiwiCodec.RustlerGenerator.{Skip, Sparse}
 
   test "root generator exposes expected splice groups" do
     splices = NativeSceneGenerator.render_splices(Figler.schema())
 
-    assert Keyword.has_key?(splices, :sparse_decoders)
-    assert Keyword.has_key?(splices, :skip_decoders)
+    refute Keyword.has_key?(splices, :sparse_decoders)
+    refute Keyword.has_key?(splices, :skip_decoders)
     assert Keyword.has_key?(splices, :graph_focus_decoders)
     assert Keyword.has_key?(splices, :scene_record_fields)
   end
@@ -21,46 +20,29 @@ defmodule Figler.NativeSceneGeneratorTest do
     schema = Figler.schema()
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
-    assert Sparse.render(schema.definitions, definition_map) |> List.flatten() |> Enum.join("\n") =~
-             "decode_sparse_message_from_decoder"
-
-    assert Skip.render(schema.definitions, definition_map) |> List.flatten() |> Enum.join("\n") =~
-             "skip_message_from_decoder"
-
     assert Scene.render(definition_map)[:scene_record_fields]
   end
 
-  test "sparse decoder generation caches field atoms and preserves present fields" do
+  test "generic sparse and skip generation are provided by KiwiCodec" do
     schema = Figler.schema()
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
-    guid_decoder =
-      schema.definitions
-      |> Sparse.render(definition_map)
-      |> List.flatten()
-      |> Enum.find(&String.contains?(&1, "decode_sparse_guid_from_decoder"))
+    sparse_source =
+      Sparse.fragments(
+        schema.definitions,
+        "Figler.Schema",
+        definition_map
+      )
+      |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
 
-    assert guid_decoder =~ ~s|cached_atom(env, &MODULE_ATOM, "Elixir.Figler.Schema.GUID")|
-    assert guid_decoder =~ "static FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();"
-    assert guid_decoder =~ ~s|let field_atom = cached_atom(env, &FIELD_ATOM_1, "session_id");|
-    assert guid_decoder =~ "let value = decoder.read_var_uint()?.encode(env);"
-    assert guid_decoder =~ "keys.push(field_atom.encode(env));"
-    assert guid_decoder =~ "values.push(value);"
-  end
+    skip_source =
+      Skip.fragments(schema.definitions, definition_map)
+      |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
 
-  test "skip decoder generation consumes nested arrays without allocating values" do
-    schema = Figler.schema()
-    definition_map = Map.new(schema.definitions, &{&1.name, &1})
-
-    text_data_skipper =
-      schema.definitions
-      |> Skip.render(definition_map)
-      |> List.flatten()
-      |> Enum.find(&String.contains?(&1, "skip_text_data_from_decoder"))
-
-    assert text_data_skipper =~ "fn skip_text_data_from_decoder"
-    assert text_data_skipper =~ "decoder.skip_string()?;"
-    refute text_data_skipper =~ "Vec::with_capacity"
+    assert sparse_source =~ "kiwi_sparse_message_decoder!"
+    assert sparse_source =~ "fn decode_sparse_message_from_decoder"
+    assert skip_source =~ "kiwi_skip_message_decoder!"
+    assert skip_source =~ "fn skip_message_from_decoder"
   end
 
   test "focused graph decoder generation follows component references" do

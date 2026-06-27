@@ -7,8 +7,7 @@ defmodule Figler.NativeSceneGenerator do
   alias Figler.NativeSceneGenerator.Focus
   alias Figler.NativeSceneGenerator.Rusty
   alias Figler.NativeSceneGenerator.Scene
-  alias Figler.NativeSceneGenerator.Skip
-  alias Figler.NativeSceneGenerator.Sparse
+  alias KiwiCodec.RustlerGenerator.Skip
   alias KiwiCodec.Schema
   alias RustQ.Rust
 
@@ -18,8 +17,6 @@ defmodule Figler.NativeSceneGenerator do
     [
       graph_focus_helpers: Rusty.helper_items(),
       node_type_name_arms: node_type_name_arms(definition_map),
-      sparse_decoders: Sparse.render(schema.definitions, definition_map),
-      skip_decoders: Skip.render(schema.definitions, definition_map),
       graph_focus_decoders:
         Focus.render(definition_map, &Skip.message_arm/2, &Scene.render_template/2)
     ] ++ Scene.render(definition_map)
@@ -29,8 +26,6 @@ defmodule Figler.NativeSceneGenerator do
     RustQ.render!(
       """
       __rq_include!("templates/scene_types.rs");
-      __rq_sparse_decoders!();
-      __rq_skip_decoders!();
       __rq_graph_focus_helpers!();
       __rq_graph_focus_decoders!();
       __rq_include!("templates/scene_xpath_runtime.rs");

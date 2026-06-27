@@ -38,8 +38,8 @@ Module-specific behavior belongs under matching paths, for example:
 
 Native generator modules mirror generated Rust concerns:
 
-- `Figler.NativeSceneGenerator.Sparse` renders generic sparse schema decoders.
-- `Figler.NativeSceneGenerator.Skip` renders generic skip decoders and skip arms.
+- `KiwiCodec.RustlerGenerator.Sparse` renders generic sparse schema decoders.
+- `KiwiCodec.RustlerGenerator.Skip` renders generic skip decoders and reusable skip arms.
 - `Figler.NativeSceneGenerator.Focus` renders focused effective-graph seed traversal.
 - `Figler.NativeSceneGenerator.Scene` renders projected scene records, queries, XPath attrs, summaries, and navigation NIFs.
 - `Figler.NativeSceneGenerator` should stay a small facade/orchestrator.
