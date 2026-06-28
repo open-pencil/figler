@@ -1,3 +1,29 @@
+fn skip_fig_message_field(decoder: &mut Decoder<'_>, field: u32) -> NifResult<()> {
+    match field {
+        __rq_scene_message_skip_field_arms => unreachable!(),
+        field => {
+            return Err(Error::Term(Box::new(format!(
+                "unknown field {} while decoding scene summary",
+                field
+            ))));
+        }
+    }
+    Ok(())
+}
+
+fn skip_fig_node_change_field(decoder: &mut Decoder<'_>, field: u32) -> NifResult<()> {
+    match field {
+        __rq_scene_node_skip_field_arms => unreachable!(),
+        field => {
+            return Err(Error::Term(Box::new(format!(
+                "unknown field {} while decoding scene node",
+                field
+            ))));
+        }
+    }
+    Ok(())
+}
+
 fn decode_scene_message_from_decoder(
     decoder: &mut Decoder<'_>,
     node_count: &mut usize,
@@ -7,7 +33,6 @@ fn decode_scene_message_from_decoder(
     loop {
         match decoder.read_var_uint()? {
             0 => break,
-            __rq_scene_message_skip_arms => unreachable!(),
             4 => {
                 let len = decoder.read_var_uint()? as usize;
                 for _ in 0..len {
@@ -19,17 +44,7 @@ fn decode_scene_message_from_decoder(
                     )?;
                 }
             }
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!(
-                                "unknown field {} while decoding scene summary", field
-                            ),
-                        ),
-                    ),
-                );
-            }
+            field => skip_fig_message_field(decoder, field)?,
         }
     }
     Ok(())
@@ -54,17 +69,7 @@ fn decode_scene_node_change_from_decoder(
                 let name = scene_node_type_name(value).to_string();
                 *type_counts.entry(name).or_insert(0) += 1;
             }
-            __rq_scene_summary_node_arms => unreachable!(),
-            __rq_scene_node_skip_arms => unreachable!(),
-            field => {
-                return Err(
-                    Error::Term(
-                        Box::new(
-                            format!("unknown field {} while decoding scene node", field),
-                        ),
-                    ),
-                );
-            }
+            field => skip_fig_node_change_field(decoder, field)?,
         }
     }
     Ok(())

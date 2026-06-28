@@ -18,6 +18,51 @@ struct GraphFocusSymbolData {
     refs: Option<Vec<GraphFocusGuid>>,
 }
 
+fn graph_focus_skip_symbol_data_field(decoder: &mut Decoder<'_>, field: u32) -> NifResult<()> {
+    match field {
+        __rq_symbol_skip_field_arms => unreachable!(),
+        field => {
+            return Err(Error::Term(Box::new(format!(
+                "unknown field {} while indexing SymbolData",
+                field
+            ))));
+        }
+    }
+    Ok(())
+}
+
+fn graph_focus_skip_component_prop_assignment_field(
+    decoder: &mut Decoder<'_>,
+    field: u32,
+) -> NifResult<()> {
+    match field {
+        __rq_prop_assignment_skip_field_arms => unreachable!(),
+        field => {
+            return Err(Error::Term(Box::new(format!(
+                "unknown field {} while indexing ComponentPropAssignment",
+                field
+            ))));
+        }
+    }
+    Ok(())
+}
+
+fn graph_focus_skip_component_prop_value_field(
+    decoder: &mut Decoder<'_>,
+    field: u32,
+) -> NifResult<()> {
+    match field {
+        __rq_prop_value_skip_field_arms => unreachable!(),
+        field => {
+            return Err(Error::Term(Box::new(format!(
+                "unknown field {} while indexing ComponentPropValue",
+                field
+            ))));
+        }
+    }
+    Ok(())
+}
+
 fn graph_focus_parse_guid(value: &str) -> Option<GraphFocusGuid> {
     let (session_id, local_id) = value.split_once(':')?;
     Some(GraphFocusGuid {
@@ -66,13 +111,7 @@ fn graph_focus_read_symbol_data(decoder: &mut Decoder<'_>) -> NifResult<GraphFoc
                     graph_focus_extend_refs(&mut refs, meta.refs);
                 }
             }
-            __rq_symbol_focus_arms => unreachable!(),
-            field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while indexing SymbolData",
-                    field
-                ))));
-            }
+            field => graph_focus_skip_symbol_data_field(decoder, field)?,
         }
     }
 
@@ -88,12 +127,7 @@ fn graph_focus_read_component_prop_value(
         match decoder.read_var_uint()? {
             0 => break,
             __rq_prop_value_arms => unreachable!(),
-            field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while indexing ComponentPropValue",
-                    field
-                ))));
-            }
+            field => graph_focus_skip_component_prop_value_field(decoder, field)?,
         }
     }
 
@@ -109,12 +143,7 @@ fn graph_focus_read_component_prop_assignment(
         match decoder.read_var_uint()? {
             0 => break,
             __rq_prop_assignment_arms => unreachable!(),
-            field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while indexing ComponentPropAssignment",
-                    field
-                ))));
-            }
+            field => graph_focus_skip_component_prop_assignment_field(decoder, field)?,
         }
     }
 
@@ -131,12 +160,7 @@ fn graph_focus_index_node_change(decoder: &mut Decoder<'_>) -> NifResult<GraphFo
         match decoder.read_var_uint()? {
             0 => break,
             __rq_node_focus_arms => unreachable!(),
-            field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while indexing NodeChange",
-                    field
-                ))));
-            }
+            field => skip_fig_node_change_field(decoder, field)?,
         }
     }
 
@@ -167,13 +191,7 @@ fn graph_focus_index_message(decoder: &mut Decoder<'_>) -> NifResult<Vec<GraphFo
                     nodes.push(meta);
                 }
             }
-            __rq_message_skip_arms => unreachable!(),
-            field => {
-                return Err(Error::Term(Box::new(format!(
-                    "unknown field {} while indexing Message",
-                    field
-                ))));
-            }
+            field => skip_fig_message_field(decoder, field)?,
         }
     }
 

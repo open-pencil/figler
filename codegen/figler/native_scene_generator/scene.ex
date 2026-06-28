@@ -13,14 +13,16 @@ defmodule Figler.NativeSceneGenerator.Scene do
 
   def render(definition_map) do
     [
-      scene_message_skip_arms:
+      scene_message_skip_field_arms:
         definition_map
         |> Map.fetch!("Message")
         |> then(& &1.fields)
-        |> Enum.reject(&(&1.id == 4))
         |> Enum.map(&Skip.message_arm(&1, definition_map)),
-      scene_node_skip_arms: scene_node_skip_arms(definition_map),
-      scene_summary_node_arms: scene_summary_node_arms(definition_map),
+      scene_node_skip_field_arms:
+        definition_map
+        |> Map.fetch!("NodeChange")
+        |> then(& &1.fields)
+        |> Enum.map(&Skip.message_arm(&1, definition_map)),
       scene_text_data_skip_arms:
         definition_map
         |> Map.fetch!("TextData")
@@ -52,30 +54,6 @@ defmodule Figler.NativeSceneGenerator.Scene do
     {splices, bindings} = Keyword.pop(bindings, :splice, [])
 
     RustQ.render!(File.read!(path), path, bind: bindings, splice: splices)
-  end
-
-  defp scene_node_skip_arms(definition_map) do
-    keep_names = Projection.source_fields() |> Enum.map(&Projection.source_name/1) |> MapSet.new()
-
-    definition_map
-    |> Map.fetch!("NodeChange")
-    |> then(& &1.fields)
-    |> Enum.reject(&MapSet.member?(keep_names, &1.name))
-    |> Enum.map(&Skip.message_arm(&1, definition_map))
-  end
-
-  defp scene_summary_node_arms(definition_map) do
-    skip_names =
-      [:guid, :parent_index, :type] |> Enum.map(&Projection.source_name/1) |> MapSet.new()
-
-    keep_names = Projection.source_fields() |> Enum.map(&Projection.source_name/1) |> MapSet.new()
-
-    definition_map
-    |> Map.fetch!("NodeChange")
-    |> then(& &1.fields)
-    |> Enum.filter(&MapSet.member?(keep_names, &1.name))
-    |> Enum.reject(&MapSet.member?(skip_names, &1.name))
-    |> Enum.map(&Skip.message_arm(&1, definition_map))
   end
 
   defp scene_optional_fields do

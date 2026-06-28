@@ -991,7 +991,6 @@ mod scene_xpath_runtime {
         loop {
             match decoder.read_var_uint()? {
                 0 => break,
-                __rq_scene_message_skip_arms => unreachable!(),
                 4 => {
                     let len = decoder.read_var_uint()? as usize;
                     nodes.reserve(len);
@@ -1000,17 +999,7 @@ mod scene_xpath_runtime {
                             .push(decode_scene_index_node_change_from_decoder(decoder)?);
                     }
                 }
-                field => {
-                    return Err(
-                        Error::Term(
-                            Box::new(
-                                format!(
-                                    "unknown field {} while decoding scene index", field
-                                ),
-                            ),
-                        ),
-                    );
-                }
+                field => super::skip_fig_message_field(decoder, field)?,
             }
         }
         Ok(())
@@ -1034,18 +1023,7 @@ mod scene_xpath_runtime {
                     node_type = Some(scene_node_type_name(decoder.read_var_uint()?));
                 }
                 __rq_scene_decode_arms => unreachable!(),
-                __rq_scene_node_skip_arms => unreachable!(),
-                field => {
-                    return Err(
-                        Error::Term(
-                            Box::new(
-                                format!(
-                                    "unknown field {} while decoding scene index node", field
-                                ),
-                            ),
-                        ),
-                    );
-                }
+                field => super::skip_fig_node_change_field(decoder, field)?,
             }
         }
         Ok(SceneNodeRecord {
