@@ -9,7 +9,14 @@ defmodule Figler.Scene.Graph.Build.Focus do
 
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
 
-  @doc false
+  @doc """
+  Returns the seed nodes required for the requested graph focus options.
+
+  Pre-focused input is returned unchanged. Otherwise the focused set includes
+  requested subtrees, ancestors, and component trees referenced by instances in
+  the focused closure.
+  """
+  @spec materialize([SeedNode.t()], keyword()) :: [SeedNode.t()]
   def materialize(seed_nodes, options) do
     if Keyword.get(options, :pre_focused, false) do
       seed_nodes

@@ -11,7 +11,12 @@ defmodule Figler.Scene.Graph.Diff do
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Node
 
-  @doc false
+  @doc """
+  Returns field-level changes between source seed nodes and resolved graph nodes.
+
+  Pass `:root` to limit the diff to one graph subtree.
+  """
+  @spec run(Graph.t(), keyword()) :: [map()]
   def run(%Graph{} = graph, opts) when is_list(opts) do
     graph
     |> diff_guids(opts)

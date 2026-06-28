@@ -15,7 +15,12 @@ defmodule Figler.Scene.Graph.Build.Variables do
     :grid_style_guid
   ]
 
-  @doc false
+  @doc """
+  Applies variable/style resolution policy to graph provenance.
+
+  Known variable data is recorded as applied provenance. Preserved or unknown
+  references are recorded as unresolved diagnostics according to graph options.
+  """
   @spec apply(Graph.t()) :: Graph.t()
   def apply(%Graph{} = graph) do
     Enum.reduce(graph.seed_nodes, graph, fn {_guid, seed}, acc ->

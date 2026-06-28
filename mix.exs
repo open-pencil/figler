@@ -219,7 +219,11 @@ defmodule Figler.MixProject do
   defp docs_groups_for_modules do
     [
       "Generated schema": [~r/^Figler\.Schema/],
-      "Scene graph": [~r/^Figler\.Scene\.Graph/],
+      "Scene graph": [~r/^Figler\.Scene\.Graph$/],
+      "Scene graph diagnostics": [~r/^Figler\.Scene\.Graph\.(Oracle|Profile)(\.|$)/],
+      "Scene graph internals": [
+        ~r/^Figler\.Scene\.Graph\.(Build|Component|Diff|GUID|Nodes|Patch|Provenance|Seed|Symbol)(\.|$)/
+      ],
       "Scene projection": [~r/^Figler\.Scene(\.|$)/],
       "Native bridge": [~r/^Figler\.Native(\.|$)/],
       "Code generation": [~r/^Figler\.Codegen/]

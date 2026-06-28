@@ -9,7 +9,10 @@ defmodule Figler.Scene.Graph.Provenance do
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
 
-  @doc false
+  @doc """
+  Builds initial provenance for projected seed nodes.
+  """
+  @spec initial([SeedNode.t()]) :: %{optional(term()) => map()}
   def initial(seed_nodes) do
     Map.new(seed_nodes, fn %SeedNode{} = seed ->
       {seed.guid,
@@ -22,7 +25,10 @@ defmodule Figler.Scene.Graph.Provenance do
     end)
   end
 
-  @doc false
+  @doc """
+  Records provenance for a node cloned while resolving an instance.
+  """
+  @spec put_clone(Graph.t(), term(), term(), term(), term()) :: Graph.t()
   def put_clone(%Graph{} = graph, clone_guid, source_guid, instance_guid, component_guid) do
     provenance = %{
       source: :instance_clone,

@@ -10,7 +10,10 @@ defmodule Figler.Scene.Graph.Component.Properties do
   alias Figler.Scene.Graph.Patch
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
 
-  @doc false
+  @doc """
+  Indexes component property definitions to their source graph node fields.
+  """
+  @spec index([SeedNode.t()]) :: %{optional(GUID.figma_guid()) => [{GUID.graph_guid(), atom()}]}
   def index(seed_nodes) do
     Enum.reduce(seed_nodes, %{}, &add_refs/2)
   end
@@ -35,7 +38,13 @@ defmodule Figler.Scene.Graph.Component.Properties do
     apply_assignments(graph, instance.guid, instance.component_prop_assignments)
   end
 
-  @doc false
+  @doc """
+  Applies one instance's component property assignments to the graph.
+
+  Component swaps run before simple field assignments so later assignment
+  patches target the current effective component tree.
+  """
+  @spec apply_assignments(Graph.t(), GUID.graph_guid(), [term()]) :: Graph.t()
   def apply_assignments(%Graph{} = graph, instance_guid, assignments) do
     graph
     |> reduce(instance_guid, assignments, &swap?/1)
@@ -173,7 +182,10 @@ defmodule Figler.Scene.Graph.Component.Properties do
     |> Enum.flat_map(fn child_guid -> [child_guid | descendants(graph, child_guid)] end)
   end
 
-  @doc false
+  @doc """
+  Maps Figma component property field identifiers to scene node fields.
+  """
+  @spec field(atom() | String.t()) :: atom() | nil
   def field(:visible), do: :visible
   def field(:text_data), do: :text
   def field(:overridden_symbol_id), do: :component_guid

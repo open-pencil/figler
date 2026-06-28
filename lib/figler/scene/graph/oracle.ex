@@ -25,7 +25,14 @@ defmodule Figler.Scene.Graph.Oracle do
     :child_count
   ]
 
-  @doc false
+  @doc """
+  Runs one oracle comparison against either a fixture binary or an already-built graph.
+
+  Binary input is decoded into a focused graph rooted at the oracle entry node.
+  Graph input is used as-is, which lets batch runners build the graph once and
+  compare multiple oracle entries against it.
+  """
+  @spec run(binary() | Graph.t(), Path.t(), Entry.t()) :: map()
   def run(fixture_binary, base_dir, %Entry{} = entry) when is_binary(fixture_binary) do
     {build_us, graph} =
       :timer.tc(fn ->
@@ -61,14 +68,21 @@ defmodule Figler.Scene.Graph.Oracle do
     }
   end
 
-  @doc false
+  @doc """
+  Reads an oracle manifest file and returns its comparison entries.
+  """
+  @spec entries!(Path.t()) :: [Entry.t()]
   def entries!(manifest_path) do
     manifest_path
     |> File.read!()
     |> Manifest.decode_entries!()
   end
 
-  @doc false
+  @doc """
+  Serializes a scene node and its descendants into the stable oracle JSON shape.
+  """
+  @spec serialize(Figler.Scene.Node.t() | nil, Graph.t(), non_neg_integer()) ::
+          OracleNode.t() | nil
   def serialize(nil, _graph, _remaining_depth), do: nil
 
   def serialize(node, graph, remaining_depth) do
@@ -98,7 +112,12 @@ defmodule Figler.Scene.Graph.Oracle do
     }
   end
 
-  @doc false
+  @doc """
+  Compares expected and actual oracle nodes and returns field-level diffs.
+  """
+  @spec compare(OracleNode.t() | nil, OracleNode.t() | nil, String.t(), float(), boolean()) :: [
+          Diff.t()
+        ]
   def compare(expected_node, actual_node, path, epsilon \\ 0.0001, ignore_null_size? \\ true)
 
   def compare(expected_node, nil, path, _epsilon, _ignore_null_size?) do
