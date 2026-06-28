@@ -13,12 +13,12 @@ use crate::runtime::Decoder;
 macro_rules! kiwi_enum_decoder {
     (
         fn $name:ident;
-        variants [$($value:literal => $static_name:ident, $atom_name:literal;)*]
+        variants [$($value:literal => $atom_name:literal;)*]
     ) => {
         fn $name<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
             match decoder.read_var_uint()? as i64 {
                 $(
-                    $value => Ok(cached_atom(env, &$static_name, $atom_name).encode(env)),
+                    $value => Ok(Atom::from_str(env, $atom_name).unwrap().encode(env)),
                 )*
                 value => Ok(value.encode(env)),
             }
@@ -89,20 +89,125 @@ macro_rules! kiwi_message_decoder {
     };
 }
 
+type KiwiSkipFn = fn(&mut Decoder<'_>) -> NifResult<()>;
+
+enum KiwiSkipKind {
+    One(KiwiSkipFn),
+    Repeated(KiwiSkipFn),
+    Bytes,
+}
+
+struct KiwiSkipField {
+    id: u32,
+    kind: KiwiSkipKind,
+}
+
+fn kiwi_skip_bool_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_bool()?;
+    Ok(())
+}
+
+fn kiwi_skip_byte_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_byte()?;
+    Ok(())
+}
+
+fn kiwi_skip_float_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_float_value()?;
+    Ok(())
+}
+
+fn kiwi_skip_int_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_int()?;
+    Ok(())
+}
+
+fn kiwi_skip_int64_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_int64()?;
+    Ok(())
+}
+
+fn kiwi_skip_string_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.skip_string()?;
+    Ok(())
+}
+
+fn kiwi_skip_uint_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint()?;
+    Ok(())
+}
+
+fn kiwi_skip_uint64_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.read_var_uint64()?;
+    Ok(())
+}
+
+fn kiwi_skip_bytes_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
+    decoder.skip_byte_array()?;
+    Ok(())
+}
+
+fn kiwi_skip_repeated(decoder: &mut Decoder<'_>, item: KiwiSkipFn) -> NifResult<()> {
+    decoder.read_repeated(|decoder| item(decoder))?;
+    Ok(())
+}
+
+fn kiwi_skip_kind(decoder: &mut Decoder<'_>, kind: &KiwiSkipKind) -> NifResult<()> {
+    match kind {
+        KiwiSkipKind::One(skip) => skip(decoder),
+        KiwiSkipKind::Repeated(skip) => kiwi_skip_repeated(decoder, *skip),
+        KiwiSkipKind::Bytes => kiwi_skip_bytes_value(decoder),
+    }
+}
+
+fn kiwi_skip_struct_fields(decoder: &mut Decoder<'_>, fields: &[KiwiSkipKind]) -> NifResult<()> {
+    for kind in fields {
+        kiwi_skip_kind(decoder, kind)?;
+    }
+    Ok(())
+}
+
+fn kiwi_skip_message_fields(
+    decoder: &mut Decoder<'_>,
+    definition_name: &str,
+    fields: &[KiwiSkipField],
+) -> NifResult<()> {
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            field_id => match fields.iter().find(|field| field.id == field_id) {
+                Some(field) => kiwi_skip_kind(decoder, &field.kind)?,
+                None => {
+                    return Err(Error::Term(Box::new(format!(
+                        "unknown field {} while skipping {}",
+                        field_id,
+                        definition_name
+                    ))));
+                }
+            },
+        }
+    }
+    Ok(())
+}
+
 macro_rules! kiwi_skip_enum_decoder {
     (fn $name:ident; decoder $decoder:ident;) => {
         fn $name($decoder: &mut Decoder<'_>) -> NifResult<()> {
-            $decoder.read_var_uint()?;
-            Ok(())
+            kiwi_skip_uint_value($decoder)
         }
     };
 }
 
+macro_rules! kiwi_skip_kind {
+    (one $skip:ident) => { KiwiSkipKind::One($skip) };
+    (repeated $skip:ident) => { KiwiSkipKind::Repeated($skip) };
+    (bytes $skip:ident) => { KiwiSkipKind::Bytes };
+}
+
 macro_rules! kiwi_skip_struct_decoder {
-    (fn $name:ident; decoder $decoder:ident; fields [$($field_expr:expr;)*]) => {
+    (fn $name:ident; decoder $decoder:ident; fields [$($field_mode:ident $field_skip:ident;)*]) => {
         fn $name($decoder: &mut Decoder<'_>) -> NifResult<()> {
-            $($field_expr;)*
-            Ok(())
+            kiwi_skip_struct_fields($decoder, &[$(kiwi_skip_kind!($field_mode $field_skip),)*])
         }
     };
 }
@@ -112,40 +217,30 @@ macro_rules! kiwi_skip_message_decoder {
         fn $name:ident;
         decoder $decoder:ident;
         definition $definition_name:literal;
-        fields [$($field_id:literal => $field_expr:expr;)*]
+        fields [$($field_id:literal => $field_mode:ident $field_skip:ident;)*]
     ) => {
         fn $name($decoder: &mut Decoder<'_>) -> NifResult<()> {
-            loop {
-                match $decoder.read_var_uint()? {
-                    0 => break,
-                    $(
-                        $field_id => { $field_expr; }
-                    )*
-                    field => {
-                        return Err(Error::Term(Box::new(format!(
-                            "unknown field {} while skipping {}",
-                            field,
-                            $definition_name
-                        ))));
-                    }
-                }
-            }
-            Ok(())
+            kiwi_skip_message_fields(
+                $decoder,
+                $definition_name,
+                &[$(KiwiSkipField { id: $field_id, kind: kiwi_skip_kind!($field_mode $field_skip) },)*],
+            )
         }
     };
 }
 
+#[allow(unused_macros)]
 macro_rules! kiwi_sparse_enum_decoder {
     (
         fn $name:ident;
         env $env:ident;
         decoder $decoder:ident;
-        variants [$($value:literal => $static_name:ident, $atom_name:literal;)*]
+        variants [$($value:literal => $atom_name:literal;)*]
     ) => {
         fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
             match $decoder.read_var_uint()? as i64 {
                 $(
-                    $value => Ok(cached_atom($env, &$static_name, $atom_name).encode($env)),
+                    $value => Ok(Atom::from_str($env, $atom_name).unwrap().encode($env)),
                 )*
                 value => Ok(value.encode($env)),
             }
@@ -270,1837 +365,682 @@ fn make_struct_from_nif_term_arrays<'a>(
 }
 
 
-static MESSAGE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_message_type_from_decoder;
     variants [
-        0 => MESSAGE_TYPE_ATOM_0, "join_start";
-        1 => MESSAGE_TYPE_ATOM_1, "node_changes";
-        2 => MESSAGE_TYPE_ATOM_2, "user_changes";
-        3 => MESSAGE_TYPE_ATOM_3, "join_end";
-        4 => MESSAGE_TYPE_ATOM_4, "signal";
-        5 => MESSAGE_TYPE_ATOM_5, "style";
-        6 => MESSAGE_TYPE_ATOM_6, "style_set";
-        7 => MESSAGE_TYPE_ATOM_7, "join_start_skip_reload";
-        8 => MESSAGE_TYPE_ATOM_8, "notify_should_upgrade";
-        9 => MESSAGE_TYPE_ATOM_9, "upgrade_done";
-        10 => MESSAGE_TYPE_ATOM_10, "upgrade_refresh";
-        11 => MESSAGE_TYPE_ATOM_11, "scene_graph_query";
-        12 => MESSAGE_TYPE_ATOM_12, "scene_graph_reply";
-        13 => MESSAGE_TYPE_ATOM_13, "diff";
-        14 => MESSAGE_TYPE_ATOM_14, "client_broadcast";
-        15 => MESSAGE_TYPE_ATOM_15, "join_start_journaled";
-        16 => MESSAGE_TYPE_ATOM_16, "stream_start";
-        17 => MESSAGE_TYPE_ATOM_17, "stream_end";
-        18 => MESSAGE_TYPE_ATOM_18, "interactive_slide_change";
-        19 => MESSAGE_TYPE_ATOM_19, "reconnect_scene_graph_query";
-        20 => MESSAGE_TYPE_ATOM_20, "reconnect_scene_graph_reply";
-        21 => MESSAGE_TYPE_ATOM_21, "join_end_incremental_reconnect";
-        22 => MESSAGE_TYPE_ATOM_22, "node_status_change";
-        23 => MESSAGE_TYPE_ATOM_23, "client_rendered";
-        24 => MESSAGE_TYPE_ATOM_24, "buzz_approval_change";
+        0 => "join_start";
+        1 => "node_changes";
+        2 => "user_changes";
+        3 => "join_end";
+        4 => "signal";
+        5 => "style";
+        6 => "style_set";
+        7 => "join_start_skip_reload";
+        8 => "notify_should_upgrade";
+        9 => "upgrade_done";
+        10 => "upgrade_refresh";
+        11 => "scene_graph_query";
+        12 => "scene_graph_reply";
+        13 => "diff";
+        14 => "client_broadcast";
+        15 => "join_start_journaled";
+        16 => "stream_start";
+        17 => "stream_end";
+        18 => "interactive_slide_change";
+        19 => "reconnect_scene_graph_query";
+        20 => "reconnect_scene_graph_reply";
+        21 => "join_end_incremental_reconnect";
+        22 => "node_status_change";
+        23 => "client_rendered";
+        24 => "buzz_approval_change";
     ]
 }
-
-static AXIS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static AXIS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_axis_from_decoder;
     variants [
-        0 => AXIS_ATOM_0, "x";
-        1 => AXIS_ATOM_1, "y";
+        0 => "x";
+        1 => "y";
     ]
 }
-
-static ACCESS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ACCESS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_access_from_decoder;
     variants [
-        0 => ACCESS_ATOM_0, "read_only";
-        1 => ACCESS_ATOM_1, "read_write";
+        0 => "read_only";
+        1 => "read_write";
     ]
 }
-
-static NODE_PHASE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_PHASE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_node_phase_from_decoder;
     variants [
-        0 => NODE_PHASE_ATOM_0, "created";
-        1 => NODE_PHASE_ATOM_1, "removed";
+        0 => "created";
+        1 => "removed";
     ]
 }
-
-static WINDING_RULE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static WINDING_RULE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_winding_rule_from_decoder;
     variants [
-        0 => WINDING_RULE_ATOM_0, "nonzero";
-        1 => WINDING_RULE_ATOM_1, "odd";
+        0 => "nonzero";
+        1 => "odd";
     ]
 }
-
-static NODE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_30: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_31: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_32: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_33: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_34: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_35: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_36: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_37: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_38: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_39: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_40: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_41: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_42: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_43: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_44: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_45: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_46: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_47: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_48: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_49: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_50: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_51: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_52: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_53: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_54: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_55: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_56: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_57: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_58: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_59: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_60: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_61: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_62: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_63: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_TYPE_ATOM_64: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_node_type_from_decoder;
     variants [
-        0 => NODE_TYPE_ATOM_0, "none";
-        1 => NODE_TYPE_ATOM_1, "document";
-        2 => NODE_TYPE_ATOM_2, "canvas";
-        3 => NODE_TYPE_ATOM_3, "group";
-        4 => NODE_TYPE_ATOM_4, "frame";
-        5 => NODE_TYPE_ATOM_5, "boolean_operation";
-        6 => NODE_TYPE_ATOM_6, "vector";
-        7 => NODE_TYPE_ATOM_7, "star";
-        8 => NODE_TYPE_ATOM_8, "line";
-        9 => NODE_TYPE_ATOM_9, "ellipse";
-        10 => NODE_TYPE_ATOM_10, "rectangle";
-        11 => NODE_TYPE_ATOM_11, "regular_polygon";
-        12 => NODE_TYPE_ATOM_12, "rounded_rectangle";
-        13 => NODE_TYPE_ATOM_13, "text";
-        14 => NODE_TYPE_ATOM_14, "slice";
-        15 => NODE_TYPE_ATOM_15, "symbol";
-        16 => NODE_TYPE_ATOM_16, "instance";
-        17 => NODE_TYPE_ATOM_17, "sticky";
-        18 => NODE_TYPE_ATOM_18, "shape_with_text";
-        19 => NODE_TYPE_ATOM_19, "connector";
-        20 => NODE_TYPE_ATOM_20, "code_block";
-        21 => NODE_TYPE_ATOM_21, "widget";
-        22 => NODE_TYPE_ATOM_22, "stamp";
-        23 => NODE_TYPE_ATOM_23, "media";
-        24 => NODE_TYPE_ATOM_24, "highlight";
-        25 => NODE_TYPE_ATOM_25, "section";
-        26 => NODE_TYPE_ATOM_26, "section_overlay";
-        27 => NODE_TYPE_ATOM_27, "washi_tape";
-        28 => NODE_TYPE_ATOM_28, "variable";
-        29 => NODE_TYPE_ATOM_29, "table";
-        30 => NODE_TYPE_ATOM_30, "table_cell";
-        31 => NODE_TYPE_ATOM_31, "variable_set";
-        32 => NODE_TYPE_ATOM_32, "slide";
-        33 => NODE_TYPE_ATOM_33, "assisted_layout";
-        34 => NODE_TYPE_ATOM_34, "interactive_slide_element";
-        35 => NODE_TYPE_ATOM_35, "variable_override";
-        36 => NODE_TYPE_ATOM_36, "module";
-        37 => NODE_TYPE_ATOM_37, "slide_grid";
-        38 => NODE_TYPE_ATOM_38, "slide_row";
-        39 => NODE_TYPE_ATOM_39, "responsive_set";
-        40 => NODE_TYPE_ATOM_40, "code_component";
-        41 => NODE_TYPE_ATOM_41, "text_path";
-        42 => NODE_TYPE_ATOM_42, "code_instance";
-        43 => NODE_TYPE_ATOM_43, "code_library";
-        44 => NODE_TYPE_ATOM_44, "code_file";
-        45 => NODE_TYPE_ATOM_45, "code_layer";
-        46 => NODE_TYPE_ATOM_46, "brush";
-        47 => NODE_TYPE_ATOM_47, "managed_string";
-        48 => NODE_TYPE_ATOM_48, "transform";
-        49 => NODE_TYPE_ATOM_49, "cms_rich_text";
-        50 => NODE_TYPE_ATOM_50, "repeater";
-        51 => NODE_TYPE_ATOM_51, "jsx";
-        52 => NODE_TYPE_ATOM_52, "embedded_prototype";
-        53 => NODE_TYPE_ATOM_53, "react_fiber";
-        54 => NODE_TYPE_ATOM_54, "responsive_node_set";
-        55 => NODE_TYPE_ATOM_55, "webpage";
-        56 => NODE_TYPE_ATOM_56, "keyframe";
-        57 => NODE_TYPE_ATOM_57, "keyframe_track";
-        58 => NODE_TYPE_ATOM_58, "animation_preset_instance";
-        59 => NODE_TYPE_ATOM_59, "code_embed";
-        60 => NODE_TYPE_ATOM_60, "binary_file";
-        61 => NODE_TYPE_ATOM_61, "spec_block";
-        62 => NODE_TYPE_ATOM_62, "tool_instance";
-        63 => NODE_TYPE_ATOM_63, "custom_effect_instance";
-        64 => NODE_TYPE_ATOM_64, "native_code_layer_instance";
+        0 => "none";
+        1 => "document";
+        2 => "canvas";
+        3 => "group";
+        4 => "frame";
+        5 => "boolean_operation";
+        6 => "vector";
+        7 => "star";
+        8 => "line";
+        9 => "ellipse";
+        10 => "rectangle";
+        11 => "regular_polygon";
+        12 => "rounded_rectangle";
+        13 => "text";
+        14 => "slice";
+        15 => "symbol";
+        16 => "instance";
+        17 => "sticky";
+        18 => "shape_with_text";
+        19 => "connector";
+        20 => "code_block";
+        21 => "widget";
+        22 => "stamp";
+        23 => "media";
+        24 => "highlight";
+        25 => "section";
+        26 => "section_overlay";
+        27 => "washi_tape";
+        28 => "variable";
+        29 => "table";
+        30 => "table_cell";
+        31 => "variable_set";
+        32 => "slide";
+        33 => "assisted_layout";
+        34 => "interactive_slide_element";
+        35 => "variable_override";
+        36 => "module";
+        37 => "slide_grid";
+        38 => "slide_row";
+        39 => "responsive_set";
+        40 => "code_component";
+        41 => "text_path";
+        42 => "code_instance";
+        43 => "code_library";
+        44 => "code_file";
+        45 => "code_layer";
+        46 => "brush";
+        47 => "managed_string";
+        48 => "transform";
+        49 => "cms_rich_text";
+        50 => "repeater";
+        51 => "jsx";
+        52 => "embedded_prototype";
+        53 => "react_fiber";
+        54 => "responsive_node_set";
+        55 => "webpage";
+        56 => "keyframe";
+        57 => "keyframe_track";
+        58 => "animation_preset_instance";
+        59 => "code_embed";
+        60 => "binary_file";
+        61 => "spec_block";
+        62 => "tool_instance";
+        63 => "custom_effect_instance";
+        64 => "native_code_layer_instance";
     ]
 }
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static SHAPE_WITH_TEXT_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_shape_with_text_type_from_decoder;
     variants [
-        0 => SHAPE_WITH_TEXT_TYPE_ATOM_0, "square";
-        1 => SHAPE_WITH_TEXT_TYPE_ATOM_1, "ellipse";
-        2 => SHAPE_WITH_TEXT_TYPE_ATOM_2, "diamond";
-        3 => SHAPE_WITH_TEXT_TYPE_ATOM_3, "triangle_up";
-        4 => SHAPE_WITH_TEXT_TYPE_ATOM_4, "triangle_down";
-        5 => SHAPE_WITH_TEXT_TYPE_ATOM_5, "rounded_rectangle";
-        6 => SHAPE_WITH_TEXT_TYPE_ATOM_6, "parallelogram_right";
-        7 => SHAPE_WITH_TEXT_TYPE_ATOM_7, "parallelogram_left";
-        8 => SHAPE_WITH_TEXT_TYPE_ATOM_8, "eng_database";
-        9 => SHAPE_WITH_TEXT_TYPE_ATOM_9, "eng_queue";
-        10 => SHAPE_WITH_TEXT_TYPE_ATOM_10, "eng_file";
-        11 => SHAPE_WITH_TEXT_TYPE_ATOM_11, "eng_folder";
-        12 => SHAPE_WITH_TEXT_TYPE_ATOM_12, "trapezoid";
-        13 => SHAPE_WITH_TEXT_TYPE_ATOM_13, "predefined_process";
-        14 => SHAPE_WITH_TEXT_TYPE_ATOM_14, "shield";
-        15 => SHAPE_WITH_TEXT_TYPE_ATOM_15, "document_single";
-        16 => SHAPE_WITH_TEXT_TYPE_ATOM_16, "document_multiple";
-        17 => SHAPE_WITH_TEXT_TYPE_ATOM_17, "manual_input";
-        18 => SHAPE_WITH_TEXT_TYPE_ATOM_18, "hexagon";
-        19 => SHAPE_WITH_TEXT_TYPE_ATOM_19, "chevron";
-        20 => SHAPE_WITH_TEXT_TYPE_ATOM_20, "pentagon";
-        21 => SHAPE_WITH_TEXT_TYPE_ATOM_21, "octagon";
-        22 => SHAPE_WITH_TEXT_TYPE_ATOM_22, "star";
-        23 => SHAPE_WITH_TEXT_TYPE_ATOM_23, "plus";
-        24 => SHAPE_WITH_TEXT_TYPE_ATOM_24, "arrow_left";
-        25 => SHAPE_WITH_TEXT_TYPE_ATOM_25, "arrow_right";
-        26 => SHAPE_WITH_TEXT_TYPE_ATOM_26, "summing_junction";
-        27 => SHAPE_WITH_TEXT_TYPE_ATOM_27, "or";
-        28 => SHAPE_WITH_TEXT_TYPE_ATOM_28, "speech_bubble";
-        29 => SHAPE_WITH_TEXT_TYPE_ATOM_29, "internal_storage";
+        0 => "square";
+        1 => "ellipse";
+        2 => "diamond";
+        3 => "triangle_up";
+        4 => "triangle_down";
+        5 => "rounded_rectangle";
+        6 => "parallelogram_right";
+        7 => "parallelogram_left";
+        8 => "eng_database";
+        9 => "eng_queue";
+        10 => "eng_file";
+        11 => "eng_folder";
+        12 => "trapezoid";
+        13 => "predefined_process";
+        14 => "shield";
+        15 => "document_single";
+        16 => "document_multiple";
+        17 => "manual_input";
+        18 => "hexagon";
+        19 => "chevron";
+        20 => "pentagon";
+        21 => "octagon";
+        22 => "star";
+        23 => "plus";
+        24 => "arrow_left";
+        25 => "arrow_right";
+        26 => "summing_junction";
+        27 => "or";
+        28 => "speech_bubble";
+        29 => "internal_storage";
     ]
 }
-
-static BLEND_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static BLEND_MODE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_blend_mode_from_decoder;
     variants [
-        0 => BLEND_MODE_ATOM_0, "pass_through";
-        1 => BLEND_MODE_ATOM_1, "normal";
-        2 => BLEND_MODE_ATOM_2, "darken";
-        3 => BLEND_MODE_ATOM_3, "multiply";
-        4 => BLEND_MODE_ATOM_4, "linear_burn";
-        5 => BLEND_MODE_ATOM_5, "color_burn";
-        6 => BLEND_MODE_ATOM_6, "lighten";
-        7 => BLEND_MODE_ATOM_7, "screen";
-        8 => BLEND_MODE_ATOM_8, "linear_dodge";
-        9 => BLEND_MODE_ATOM_9, "color_dodge";
-        10 => BLEND_MODE_ATOM_10, "overlay";
-        11 => BLEND_MODE_ATOM_11, "soft_light";
-        12 => BLEND_MODE_ATOM_12, "hard_light";
-        13 => BLEND_MODE_ATOM_13, "difference";
-        14 => BLEND_MODE_ATOM_14, "exclusion";
-        15 => BLEND_MODE_ATOM_15, "hue";
-        16 => BLEND_MODE_ATOM_16, "saturation";
-        17 => BLEND_MODE_ATOM_17, "color";
-        18 => BLEND_MODE_ATOM_18, "luminosity";
+        0 => "pass_through";
+        1 => "normal";
+        2 => "darken";
+        3 => "multiply";
+        4 => "linear_burn";
+        5 => "color_burn";
+        6 => "lighten";
+        7 => "screen";
+        8 => "linear_dodge";
+        9 => "color_dodge";
+        10 => "overlay";
+        11 => "soft_light";
+        12 => "hard_light";
+        13 => "difference";
+        14 => "exclusion";
+        15 => "hue";
+        16 => "saturation";
+        17 => "color";
+        18 => "luminosity";
     ]
 }
-
-static PAINT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_paint_type_from_decoder;
     variants [
-        0 => PAINT_TYPE_ATOM_0, "solid";
-        1 => PAINT_TYPE_ATOM_1, "gradient_linear";
-        2 => PAINT_TYPE_ATOM_2, "gradient_radial";
-        3 => PAINT_TYPE_ATOM_3, "gradient_angular";
-        4 => PAINT_TYPE_ATOM_4, "gradient_diamond";
-        5 => PAINT_TYPE_ATOM_5, "image";
-        6 => PAINT_TYPE_ATOM_6, "emoji";
-        7 => PAINT_TYPE_ATOM_7, "video";
-        8 => PAINT_TYPE_ATOM_8, "pattern";
-        9 => PAINT_TYPE_ATOM_9, "noise";
-        10 => PAINT_TYPE_ATOM_10, "custom";
+        0 => "solid";
+        1 => "gradient_linear";
+        2 => "gradient_radial";
+        3 => "gradient_angular";
+        4 => "gradient_diamond";
+        5 => "image";
+        6 => "emoji";
+        7 => "video";
+        8 => "pattern";
+        9 => "noise";
+        10 => "custom";
     ]
 }
-
-static IMAGE_SCALE_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_SCALE_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_SCALE_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_SCALE_MODE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_image_scale_mode_from_decoder;
     variants [
-        0 => IMAGE_SCALE_MODE_ATOM_0, "stretch";
-        1 => IMAGE_SCALE_MODE_ATOM_1, "fit";
-        2 => IMAGE_SCALE_MODE_ATOM_2, "fill";
-        3 => IMAGE_SCALE_MODE_ATOM_3, "tile";
+        0 => "stretch";
+        1 => "fit";
+        2 => "fill";
+        3 => "tile";
     ]
 }
-
-static EFFECT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_effect_type_from_decoder;
     variants [
-        0 => EFFECT_TYPE_ATOM_0, "inner_shadow";
-        1 => EFFECT_TYPE_ATOM_1, "drop_shadow";
-        2 => EFFECT_TYPE_ATOM_2, "foreground_blur";
-        3 => EFFECT_TYPE_ATOM_3, "background_blur";
-        4 => EFFECT_TYPE_ATOM_4, "repeat";
-        5 => EFFECT_TYPE_ATOM_5, "symmetry";
-        6 => EFFECT_TYPE_ATOM_6, "grain";
-        7 => EFFECT_TYPE_ATOM_7, "noise";
-        8 => EFFECT_TYPE_ATOM_8, "glass";
-        9 => EFFECT_TYPE_ATOM_9, "custom";
+        0 => "inner_shadow";
+        1 => "drop_shadow";
+        2 => "foreground_blur";
+        3 => "background_blur";
+        4 => "repeat";
+        5 => "symmetry";
+        6 => "grain";
+        7 => "noise";
+        8 => "glass";
+        9 => "custom";
     ]
 }
-
-static TEXT_CASE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_CASE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_CASE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_CASE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_CASE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_CASE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_text_case_from_decoder;
     variants [
-        0 => TEXT_CASE_ATOM_0, "original";
-        1 => TEXT_CASE_ATOM_1, "upper";
-        2 => TEXT_CASE_ATOM_2, "lower";
-        3 => TEXT_CASE_ATOM_3, "title";
-        4 => TEXT_CASE_ATOM_4, "small_caps";
-        5 => TEXT_CASE_ATOM_5, "small_caps_forced";
+        0 => "original";
+        1 => "upper";
+        2 => "lower";
+        3 => "title";
+        4 => "small_caps";
+        5 => "small_caps_forced";
     ]
 }
-
-static TEXT_DECORATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_DECORATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_DECORATION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_text_decoration_from_decoder;
     variants [
-        0 => TEXT_DECORATION_ATOM_0, "none";
-        1 => TEXT_DECORATION_ATOM_1, "underline";
-        2 => TEXT_DECORATION_ATOM_2, "strikethrough";
+        0 => "none";
+        1 => "underline";
+        2 => "strikethrough";
     ]
 }
-
-static TEXT_DECORATION_STYLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_DECORATION_STYLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_DECORATION_STYLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_text_decoration_style_from_decoder;
     variants [
-        0 => TEXT_DECORATION_STYLE_ATOM_0, "solid";
-        1 => TEXT_DECORATION_STYLE_ATOM_1, "dotted";
-        2 => TEXT_DECORATION_STYLE_ATOM_2, "wavy";
+        0 => "solid";
+        1 => "dotted";
+        2 => "wavy";
     ]
 }
-
-static LEADING_TRIM_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static LEADING_TRIM_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_leading_trim_from_decoder;
     variants [
-        0 => LEADING_TRIM_ATOM_0, "none";
-        1 => LEADING_TRIM_ATOM_1, "cap_height";
+        0 => "none";
+        1 => "cap_height";
     ]
 }
-
-static NUMBER_UNITS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static NUMBER_UNITS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static NUMBER_UNITS_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_number_units_from_decoder;
     variants [
-        0 => NUMBER_UNITS_ATOM_0, "raw";
-        1 => NUMBER_UNITS_ATOM_1, "pixels";
-        2 => NUMBER_UNITS_ATOM_2, "percent";
+        0 => "raw";
+        1 => "pixels";
+        2 => "percent";
     ]
 }
-
-static CONSTRAINT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CONSTRAINT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CONSTRAINT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static CONSTRAINT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static CONSTRAINT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static CONSTRAINT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static CONSTRAINT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_constraint_type_from_decoder;
     variants [
-        0 => CONSTRAINT_TYPE_ATOM_0, "min";
-        1 => CONSTRAINT_TYPE_ATOM_1, "center";
-        2 => CONSTRAINT_TYPE_ATOM_2, "max";
-        3 => CONSTRAINT_TYPE_ATOM_3, "stretch";
-        4 => CONSTRAINT_TYPE_ATOM_4, "scale";
-        5 => CONSTRAINT_TYPE_ATOM_5, "fixed_min";
-        6 => CONSTRAINT_TYPE_ATOM_6, "fixed_max";
+        0 => "min";
+        1 => "center";
+        2 => "max";
+        3 => "stretch";
+        4 => "scale";
+        5 => "fixed_min";
+        6 => "fixed_max";
     ]
 }
-
-static STROKE_ALIGN_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_ALIGN_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_ALIGN_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_ALIGN_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stroke_align_from_decoder;
     variants [
-        0 => STROKE_ALIGN_ATOM_0, "center";
-        1 => STROKE_ALIGN_ATOM_1, "inside";
-        2 => STROKE_ALIGN_ATOM_2, "outside";
-        3 => STROKE_ALIGN_ATOM_3, "offset";
+        0 => "center";
+        1 => "inside";
+        2 => "outside";
+        3 => "offset";
     ]
 }
-
-static STROKE_CAP_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_CAP_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stroke_cap_from_decoder;
     variants [
-        0 => STROKE_CAP_ATOM_0, "none";
-        1 => STROKE_CAP_ATOM_1, "round";
-        2 => STROKE_CAP_ATOM_2, "square";
-        3 => STROKE_CAP_ATOM_3, "arrow_lines";
-        4 => STROKE_CAP_ATOM_4, "arrow_equilateral";
-        5 => STROKE_CAP_ATOM_5, "diamond_filled";
-        6 => STROKE_CAP_ATOM_6, "triangle_filled";
-        7 => STROKE_CAP_ATOM_7, "highlight";
-        8 => STROKE_CAP_ATOM_8, "washi_tape_1";
-        9 => STROKE_CAP_ATOM_9, "washi_tape_2";
-        10 => STROKE_CAP_ATOM_10, "washi_tape_3";
-        11 => STROKE_CAP_ATOM_11, "washi_tape_4";
-        12 => STROKE_CAP_ATOM_12, "washi_tape_5";
-        13 => STROKE_CAP_ATOM_13, "washi_tape_6";
-        14 => STROKE_CAP_ATOM_14, "circle_filled";
-        15 => STROKE_CAP_ATOM_15, "erd_zero_or_one";
-        16 => STROKE_CAP_ATOM_16, "erd_exactly_one";
-        17 => STROKE_CAP_ATOM_17, "erd_zero_or_more";
-        18 => STROKE_CAP_ATOM_18, "erd_one_or_more";
-        19 => STROKE_CAP_ATOM_19, "erd_one";
-        20 => STROKE_CAP_ATOM_20, "erd_many";
+        0 => "none";
+        1 => "round";
+        2 => "square";
+        3 => "arrow_lines";
+        4 => "arrow_equilateral";
+        5 => "diamond_filled";
+        6 => "triangle_filled";
+        7 => "highlight";
+        8 => "washi_tape_1";
+        9 => "washi_tape_2";
+        10 => "washi_tape_3";
+        11 => "washi_tape_4";
+        12 => "washi_tape_5";
+        13 => "washi_tape_6";
+        14 => "circle_filled";
+        15 => "erd_zero_or_one";
+        16 => "erd_exactly_one";
+        17 => "erd_zero_or_more";
+        18 => "erd_one_or_more";
+        19 => "erd_one";
+        20 => "erd_many";
     ]
 }
-
-static STROKE_JOIN_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_JOIN_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_JOIN_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stroke_join_from_decoder;
     variants [
-        0 => STROKE_JOIN_ATOM_0, "miter";
-        1 => STROKE_JOIN_ATOM_1, "bevel";
-        2 => STROKE_JOIN_ATOM_2, "round";
+        0 => "miter";
+        1 => "bevel";
+        2 => "round";
     ]
 }
-
-static BOOLEAN_OPERATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static BOOLEAN_OPERATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static BOOLEAN_OPERATION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static BOOLEAN_OPERATION_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_boolean_operation_from_decoder;
     variants [
-        0 => BOOLEAN_OPERATION_ATOM_0, "union";
-        1 => BOOLEAN_OPERATION_ATOM_1, "intersect";
-        2 => BOOLEAN_OPERATION_ATOM_2, "subtract";
-        3 => BOOLEAN_OPERATION_ATOM_3, "xor";
+        0 => "union";
+        1 => "intersect";
+        2 => "subtract";
+        3 => "xor";
     ]
 }
-
-static TEXT_ALIGN_HORIZONTAL_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_ALIGN_HORIZONTAL_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_ALIGN_HORIZONTAL_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_ALIGN_HORIZONTAL_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_text_align_horizontal_from_decoder;
     variants [
-        0 => TEXT_ALIGN_HORIZONTAL_ATOM_0, "left";
-        1 => TEXT_ALIGN_HORIZONTAL_ATOM_1, "center";
-        2 => TEXT_ALIGN_HORIZONTAL_ATOM_2, "right";
-        3 => TEXT_ALIGN_HORIZONTAL_ATOM_3, "justified";
+        0 => "left";
+        1 => "center";
+        2 => "right";
+        3 => "justified";
     ]
 }
-
-static TEXT_ALIGN_VERTICAL_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_ALIGN_VERTICAL_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_ALIGN_VERTICAL_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_text_align_vertical_from_decoder;
     variants [
-        0 => TEXT_ALIGN_VERTICAL_ATOM_0, "top";
-        1 => TEXT_ALIGN_VERTICAL_ATOM_1, "center";
-        2 => TEXT_ALIGN_VERTICAL_ATOM_2, "bottom";
+        0 => "top";
+        1 => "center";
+        2 => "bottom";
     ]
 }
-
-static MOUSE_CURSOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_CURSOR_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_mouse_cursor_from_decoder;
     variants [
-        0 => MOUSE_CURSOR_ATOM_0, "default";
-        1 => MOUSE_CURSOR_ATOM_1, "crosshair";
-        2 => MOUSE_CURSOR_ATOM_2, "eyedropper";
-        3 => MOUSE_CURSOR_ATOM_3, "hand";
-        4 => MOUSE_CURSOR_ATOM_4, "paint_bucket";
-        5 => MOUSE_CURSOR_ATOM_5, "pen";
-        6 => MOUSE_CURSOR_ATOM_6, "pencil";
-        7 => MOUSE_CURSOR_ATOM_7, "marker";
-        8 => MOUSE_CURSOR_ATOM_8, "eraser";
-        9 => MOUSE_CURSOR_ATOM_9, "highlighter";
-        10 => MOUSE_CURSOR_ATOM_10, "lasso";
+        0 => "default";
+        1 => "crosshair";
+        2 => "eyedropper";
+        3 => "hand";
+        4 => "paint_bucket";
+        5 => "pen";
+        6 => "pencil";
+        7 => "marker";
+        8 => "eraser";
+        9 => "highlighter";
+        10 => "lasso";
     ]
 }
-
-static VECTOR_MIRROR_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static VECTOR_MIRROR_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static VECTOR_MIRROR_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_vector_mirror_from_decoder;
     variants [
-        0 => VECTOR_MIRROR_ATOM_0, "none";
-        1 => VECTOR_MIRROR_ATOM_1, "angle";
-        2 => VECTOR_MIRROR_ATOM_2, "angle_and_length";
+        0 => "none";
+        1 => "angle";
+        2 => "angle_and_length";
     ]
 }
-
-static IMAGE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_image_type_from_decoder;
     variants [
-        0 => IMAGE_TYPE_ATOM_0, "png";
-        1 => IMAGE_TYPE_ATOM_1, "jpeg";
-        2 => IMAGE_TYPE_ATOM_2, "svg";
-        3 => IMAGE_TYPE_ATOM_3, "pdf";
-        4 => IMAGE_TYPE_ATOM_4, "mp4";
-        5 => IMAGE_TYPE_ATOM_5, "gif";
+        0 => "png";
+        1 => "jpeg";
+        2 => "svg";
+        3 => "pdf";
+        4 => "mp4";
+        5 => "gif";
     ]
 }
-
-static EXPORT_CONSTRAINT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_CONSTRAINT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_CONSTRAINT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_export_constraint_type_from_decoder;
     variants [
-        0 => EXPORT_CONSTRAINT_TYPE_ATOM_0, "content_scale";
-        1 => EXPORT_CONSTRAINT_TYPE_ATOM_1, "content_width";
-        2 => EXPORT_CONSTRAINT_TYPE_ATOM_2, "content_height";
+        0 => "content_scale";
+        1 => "content_width";
+        2 => "content_height";
     ]
 }
-
-static LAYOUT_GRID_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static LAYOUT_GRID_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static LAYOUT_GRID_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static LAYOUT_GRID_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_layout_grid_type_from_decoder;
     variants [
-        0 => LAYOUT_GRID_TYPE_ATOM_0, "min";
-        1 => LAYOUT_GRID_TYPE_ATOM_1, "center";
-        2 => LAYOUT_GRID_TYPE_ATOM_2, "stretch";
-        3 => LAYOUT_GRID_TYPE_ATOM_3, "max";
+        0 => "min";
+        1 => "center";
+        2 => "stretch";
+        3 => "max";
     ]
 }
-
-static LAYOUT_GRID_PATTERN_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static LAYOUT_GRID_PATTERN_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_layout_grid_pattern_from_decoder;
     variants [
-        0 => LAYOUT_GRID_PATTERN_ATOM_0, "stripes";
-        1 => LAYOUT_GRID_PATTERN_ATOM_1, "grid";
+        0 => "stripes";
+        1 => "grid";
     ]
 }
-
-static TEXT_AUTO_RESIZE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_AUTO_RESIZE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_AUTO_RESIZE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_text_auto_resize_from_decoder;
     variants [
-        0 => TEXT_AUTO_RESIZE_ATOM_0, "none";
-        1 => TEXT_AUTO_RESIZE_ATOM_1, "width_and_height";
-        2 => TEXT_AUTO_RESIZE_ATOM_2, "height";
+        0 => "none";
+        1 => "width_and_height";
+        2 => "height";
     ]
 }
-
-static TEXT_TRUNCATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_TRUNCATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_text_truncation_from_decoder;
     variants [
-        0 => TEXT_TRUNCATION_ATOM_0, "disabled";
-        1 => TEXT_TRUNCATION_ATOM_1, "ending";
+        0 => "disabled";
+        1 => "ending";
     ]
 }
-
-static STYLE_SET_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_SET_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_SET_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_SET_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_SET_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_style_set_type_from_decoder;
     variants [
-        0 => STYLE_SET_TYPE_ATOM_0, "personal";
-        1 => STYLE_SET_TYPE_ATOM_1, "team";
-        2 => STYLE_SET_TYPE_ATOM_2, "custom";
-        3 => STYLE_SET_TYPE_ATOM_3, "frequency";
-        4 => STYLE_SET_TYPE_ATOM_4, "temporary";
+        0 => "personal";
+        1 => "team";
+        2 => "custom";
+        3 => "frequency";
+        4 => "temporary";
     ]
 }
-
-static STYLE_SET_CONTENT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_SET_CONTENT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_SET_CONTENT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_style_set_content_type_from_decoder;
     variants [
-        0 => STYLE_SET_CONTENT_TYPE_ATOM_0, "solid";
-        1 => STYLE_SET_CONTENT_TYPE_ATOM_1, "gradient";
-        2 => STYLE_SET_CONTENT_TYPE_ATOM_2, "image";
+        0 => "solid";
+        1 => "gradient";
+        2 => "image";
     ]
 }
-
-static STACK_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_MODE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stack_mode_from_decoder;
     variants [
-        0 => STACK_MODE_ATOM_0, "none";
-        1 => STACK_MODE_ATOM_1, "horizontal";
-        2 => STACK_MODE_ATOM_2, "vertical";
-        3 => STACK_MODE_ATOM_3, "grid";
+        0 => "none";
+        1 => "horizontal";
+        2 => "vertical";
+        3 => "grid";
     ]
 }
-
-static STACK_ALIGN_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_ALIGN_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_ALIGN_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_ALIGN_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stack_align_from_decoder;
     variants [
-        0 => STACK_ALIGN_ATOM_0, "min";
-        1 => STACK_ALIGN_ATOM_1, "center";
-        2 => STACK_ALIGN_ATOM_2, "max";
-        3 => STACK_ALIGN_ATOM_3, "baseline";
+        0 => "min";
+        1 => "center";
+        2 => "max";
+        3 => "baseline";
     ]
 }
-
-static STACK_COUNTER_ALIGN_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_COUNTER_ALIGN_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_COUNTER_ALIGN_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_COUNTER_ALIGN_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_COUNTER_ALIGN_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_COUNTER_ALIGN_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stack_counter_align_from_decoder;
     variants [
-        0 => STACK_COUNTER_ALIGN_ATOM_0, "min";
-        1 => STACK_COUNTER_ALIGN_ATOM_1, "center";
-        2 => STACK_COUNTER_ALIGN_ATOM_2, "max";
-        3 => STACK_COUNTER_ALIGN_ATOM_3, "stretch";
-        4 => STACK_COUNTER_ALIGN_ATOM_4, "auto";
-        5 => STACK_COUNTER_ALIGN_ATOM_5, "baseline";
+        0 => "min";
+        1 => "center";
+        2 => "max";
+        3 => "stretch";
+        4 => "auto";
+        5 => "baseline";
     ]
 }
-
-static STACK_JUSTIFY_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_JUSTIFY_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_JUSTIFY_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_JUSTIFY_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_JUSTIFY_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stack_justify_from_decoder;
     variants [
-        0 => STACK_JUSTIFY_ATOM_0, "min";
-        1 => STACK_JUSTIFY_ATOM_1, "center";
-        2 => STACK_JUSTIFY_ATOM_2, "max";
-        3 => STACK_JUSTIFY_ATOM_3, "space_evenly";
-        4 => STACK_JUSTIFY_ATOM_4, "space_between";
+        0 => "min";
+        1 => "center";
+        2 => "max";
+        3 => "space_evenly";
+        4 => "space_between";
     ]
 }
-
-static GRID_CHILD_ALIGN_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static GRID_CHILD_ALIGN_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static GRID_CHILD_ALIGN_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static GRID_CHILD_ALIGN_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_grid_child_align_from_decoder;
     variants [
-        0 => GRID_CHILD_ALIGN_ATOM_0, "auto";
-        1 => GRID_CHILD_ALIGN_ATOM_1, "min";
-        2 => GRID_CHILD_ALIGN_ATOM_2, "center";
-        3 => GRID_CHILD_ALIGN_ATOM_3, "max";
+        0 => "auto";
+        1 => "min";
+        2 => "center";
+        3 => "max";
     ]
 }
-
-static GRID_AUTO_TRACKS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static GRID_AUTO_TRACKS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_grid_auto_tracks_from_decoder;
     variants [
-        0 => GRID_AUTO_TRACKS_ATOM_0, "none";
-        1 => GRID_AUTO_TRACKS_ATOM_1, "rows";
+        0 => "none";
+        1 => "rows";
     ]
 }
-
-static STACK_SIZE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_SIZE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_SIZE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stack_size_from_decoder;
     variants [
-        0 => STACK_SIZE_ATOM_0, "fixed";
-        1 => STACK_SIZE_ATOM_1, "resize_to_fit";
-        2 => STACK_SIZE_ATOM_2, "resize_to_fit_with_implicit_size";
+        0 => "fixed";
+        1 => "resize_to_fit";
+        2 => "resize_to_fit_with_implicit_size";
     ]
 }
-
-static STACK_POSITIONING_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_POSITIONING_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stack_positioning_from_decoder;
     variants [
-        0 => STACK_POSITIONING_ATOM_0, "auto";
-        1 => STACK_POSITIONING_ATOM_1, "absolute";
+        0 => "auto";
+        1 => "absolute";
     ]
 }
-
-static STACK_WRAP_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_WRAP_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stack_wrap_from_decoder;
     variants [
-        0 => STACK_WRAP_ATOM_0, "no_wrap";
-        1 => STACK_WRAP_ATOM_1, "wrap";
+        0 => "no_wrap";
+        1 => "wrap";
     ]
 }
-
-static STACK_COUNTER_ALIGN_CONTENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STACK_COUNTER_ALIGN_CONTENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_stack_counter_align_content_from_decoder;
     variants [
-        0 => STACK_COUNTER_ALIGN_CONTENT_ATOM_0, "auto";
-        1 => STACK_COUNTER_ALIGN_CONTENT_ATOM_1, "space_between";
+        0 => "auto";
+        1 => "space_between";
     ]
 }
-
-static CONNECTION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTION_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_connection_type_from_decoder;
     variants [
-        0 => CONNECTION_TYPE_ATOM_0, "none";
-        1 => CONNECTION_TYPE_ATOM_1, "internal_node";
-        2 => CONNECTION_TYPE_ATOM_2, "url";
-        3 => CONNECTION_TYPE_ATOM_3, "back";
-        4 => CONNECTION_TYPE_ATOM_4, "close";
-        5 => CONNECTION_TYPE_ATOM_5, "set_variable";
-        6 => CONNECTION_TYPE_ATOM_6, "update_media_runtime";
-        7 => CONNECTION_TYPE_ATOM_7, "conditional";
-        8 => CONNECTION_TYPE_ATOM_8, "set_variable_mode";
-        9 => CONNECTION_TYPE_ATOM_9, "object_animation";
-        10 => CONNECTION_TYPE_ATOM_10, "update_animation_timeline_state";
+        0 => "none";
+        1 => "internal_node";
+        2 => "url";
+        3 => "back";
+        4 => "close";
+        5 => "set_variable";
+        6 => "update_media_runtime";
+        7 => "conditional";
+        8 => "set_variable_mode";
+        9 => "object_animation";
+        10 => "update_animation_timeline_state";
     ]
 }
-
-static INTERACTION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTION_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_interaction_type_from_decoder;
     variants [
-        0 => INTERACTION_TYPE_ATOM_0, "on_click";
-        1 => INTERACTION_TYPE_ATOM_1, "after_timeout";
-        2 => INTERACTION_TYPE_ATOM_2, "mouse_in";
-        3 => INTERACTION_TYPE_ATOM_3, "mouse_out";
-        4 => INTERACTION_TYPE_ATOM_4, "on_hover";
-        5 => INTERACTION_TYPE_ATOM_5, "mouse_down";
-        6 => INTERACTION_TYPE_ATOM_6, "mouse_up";
-        7 => INTERACTION_TYPE_ATOM_7, "on_press";
-        8 => INTERACTION_TYPE_ATOM_8, "none";
-        9 => INTERACTION_TYPE_ATOM_9, "drag";
-        10 => INTERACTION_TYPE_ATOM_10, "on_key_down";
-        11 => INTERACTION_TYPE_ATOM_11, "on_voice";
-        12 => INTERACTION_TYPE_ATOM_12, "on_media_hit";
-        13 => INTERACTION_TYPE_ATOM_13, "on_media_end";
-        14 => INTERACTION_TYPE_ATOM_14, "mouse_enter";
-        15 => INTERACTION_TYPE_ATOM_15, "mouse_leave";
+        0 => "on_click";
+        1 => "after_timeout";
+        2 => "mouse_in";
+        3 => "mouse_out";
+        4 => "on_hover";
+        5 => "mouse_down";
+        6 => "mouse_up";
+        7 => "on_press";
+        8 => "none";
+        9 => "drag";
+        10 => "on_key_down";
+        11 => "on_voice";
+        12 => "on_media_hit";
+        13 => "on_media_end";
+        14 => "mouse_enter";
+        15 => "mouse_leave";
     ]
 }
-
-static TRANSITION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_transition_type_from_decoder;
     variants [
-        0 => TRANSITION_TYPE_ATOM_0, "instant_transition";
-        1 => TRANSITION_TYPE_ATOM_1, "dissolve";
-        2 => TRANSITION_TYPE_ATOM_2, "fade";
-        3 => TRANSITION_TYPE_ATOM_3, "slide_from_left";
-        4 => TRANSITION_TYPE_ATOM_4, "slide_from_right";
-        5 => TRANSITION_TYPE_ATOM_5, "slide_from_top";
-        6 => TRANSITION_TYPE_ATOM_6, "slide_from_bottom";
-        7 => TRANSITION_TYPE_ATOM_7, "push_from_left";
-        8 => TRANSITION_TYPE_ATOM_8, "push_from_right";
-        9 => TRANSITION_TYPE_ATOM_9, "push_from_top";
-        10 => TRANSITION_TYPE_ATOM_10, "push_from_bottom";
-        11 => TRANSITION_TYPE_ATOM_11, "move_from_left";
-        12 => TRANSITION_TYPE_ATOM_12, "move_from_right";
-        13 => TRANSITION_TYPE_ATOM_13, "move_from_top";
-        14 => TRANSITION_TYPE_ATOM_14, "move_from_bottom";
-        15 => TRANSITION_TYPE_ATOM_15, "slide_out_to_left";
-        16 => TRANSITION_TYPE_ATOM_16, "slide_out_to_right";
-        17 => TRANSITION_TYPE_ATOM_17, "slide_out_to_top";
-        18 => TRANSITION_TYPE_ATOM_18, "slide_out_to_bottom";
-        19 => TRANSITION_TYPE_ATOM_19, "move_out_to_left";
-        20 => TRANSITION_TYPE_ATOM_20, "move_out_to_right";
-        21 => TRANSITION_TYPE_ATOM_21, "move_out_to_top";
-        22 => TRANSITION_TYPE_ATOM_22, "move_out_to_bottom";
-        23 => TRANSITION_TYPE_ATOM_23, "magic_move";
-        24 => TRANSITION_TYPE_ATOM_24, "smart_animate";
-        25 => TRANSITION_TYPE_ATOM_25, "scroll_animate";
+        0 => "instant_transition";
+        1 => "dissolve";
+        2 => "fade";
+        3 => "slide_from_left";
+        4 => "slide_from_right";
+        5 => "slide_from_top";
+        6 => "slide_from_bottom";
+        7 => "push_from_left";
+        8 => "push_from_right";
+        9 => "push_from_top";
+        10 => "push_from_bottom";
+        11 => "move_from_left";
+        12 => "move_from_right";
+        13 => "move_from_top";
+        14 => "move_from_bottom";
+        15 => "slide_out_to_left";
+        16 => "slide_out_to_right";
+        17 => "slide_out_to_top";
+        18 => "slide_out_to_bottom";
+        19 => "move_out_to_left";
+        20 => "move_out_to_right";
+        21 => "move_out_to_top";
+        22 => "move_out_to_bottom";
+        23 => "magic_move";
+        24 => "smart_animate";
+        25 => "scroll_animate";
     ]
 }
-
-static EASING_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_easing_type_from_decoder;
     variants [
-        0 => EASING_TYPE_ATOM_0, "in_cubic";
-        1 => EASING_TYPE_ATOM_1, "out_cubic";
-        2 => EASING_TYPE_ATOM_2, "inout_cubic";
-        3 => EASING_TYPE_ATOM_3, "linear";
-        4 => EASING_TYPE_ATOM_4, "in_back_cubic";
-        5 => EASING_TYPE_ATOM_5, "out_back_cubic";
-        6 => EASING_TYPE_ATOM_6, "inout_back_cubic";
-        7 => EASING_TYPE_ATOM_7, "custom_cubic";
-        8 => EASING_TYPE_ATOM_8, "spring";
-        9 => EASING_TYPE_ATOM_9, "gentle_spring";
-        10 => EASING_TYPE_ATOM_10, "custom_spring";
-        11 => EASING_TYPE_ATOM_11, "spring_preset_one";
-        12 => EASING_TYPE_ATOM_12, "spring_preset_two";
-        13 => EASING_TYPE_ATOM_13, "spring_preset_three";
-        14 => EASING_TYPE_ATOM_14, "hold";
+        0 => "in_cubic";
+        1 => "out_cubic";
+        2 => "inout_cubic";
+        3 => "linear";
+        4 => "in_back_cubic";
+        5 => "out_back_cubic";
+        6 => "inout_back_cubic";
+        7 => "custom_cubic";
+        8 => "spring";
+        9 => "gentle_spring";
+        10 => "custom_spring";
+        11 => "spring_preset_one";
+        12 => "spring_preset_two";
+        13 => "spring_preset_three";
+        14 => "hold";
     ]
 }
-
-static SCROLL_DIRECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_DIRECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_DIRECTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_DIRECTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_scroll_direction_from_decoder;
     variants [
-        0 => SCROLL_DIRECTION_ATOM_0, "none";
-        1 => SCROLL_DIRECTION_ATOM_1, "horizontal";
-        2 => SCROLL_DIRECTION_ATOM_2, "vertical";
-        3 => SCROLL_DIRECTION_ATOM_3, "both";
+        0 => "none";
+        1 => "horizontal";
+        2 => "vertical";
+        3 => "both";
     ]
 }
-
-static SCROLL_CONTRACTED_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_CONTRACTED_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_scroll_contracted_state_from_decoder;
     variants [
-        0 => SCROLL_CONTRACTED_STATE_ATOM_0, "expanded";
-        1 => SCROLL_CONTRACTED_STATE_ATOM_1, "contracted";
+        0 => "expanded";
+        1 => "contracted";
     ]
 }
 
@@ -2315,191 +1255,95 @@ kiwi_struct_decoder! {
     ]
 }
 
-static FONT_VARIANT_NUMERIC_FIGURE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_NUMERIC_FIGURE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_NUMERIC_FIGURE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_font_variant_numeric_figure_from_decoder;
     variants [
-        0 => FONT_VARIANT_NUMERIC_FIGURE_ATOM_0, "normal";
-        1 => FONT_VARIANT_NUMERIC_FIGURE_ATOM_1, "lining";
-        2 => FONT_VARIANT_NUMERIC_FIGURE_ATOM_2, "oldstyle";
+        0 => "normal";
+        1 => "lining";
+        2 => "oldstyle";
     ]
 }
-
-static FONT_VARIANT_NUMERIC_SPACING_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_NUMERIC_SPACING_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_NUMERIC_SPACING_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_font_variant_numeric_spacing_from_decoder;
     variants [
-        0 => FONT_VARIANT_NUMERIC_SPACING_ATOM_0, "normal";
-        1 => FONT_VARIANT_NUMERIC_SPACING_ATOM_1, "proportional";
-        2 => FONT_VARIANT_NUMERIC_SPACING_ATOM_2, "tabular";
+        0 => "normal";
+        1 => "proportional";
+        2 => "tabular";
     ]
 }
-
-static FONT_VARIANT_NUMERIC_FRACTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_NUMERIC_FRACTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_NUMERIC_FRACTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_font_variant_numeric_fraction_from_decoder;
     variants [
-        0 => FONT_VARIANT_NUMERIC_FRACTION_ATOM_0, "normal";
-        1 => FONT_VARIANT_NUMERIC_FRACTION_ATOM_1, "diagonal";
-        2 => FONT_VARIANT_NUMERIC_FRACTION_ATOM_2, "stacked";
+        0 => "normal";
+        1 => "diagonal";
+        2 => "stacked";
     ]
 }
-
-static FONT_VARIANT_CAPS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_CAPS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_CAPS_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_CAPS_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_CAPS_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_CAPS_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_CAPS_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_font_variant_caps_from_decoder;
     variants [
-        0 => FONT_VARIANT_CAPS_ATOM_0, "normal";
-        1 => FONT_VARIANT_CAPS_ATOM_1, "small";
-        2 => FONT_VARIANT_CAPS_ATOM_2, "all_small";
-        3 => FONT_VARIANT_CAPS_ATOM_3, "petite";
-        4 => FONT_VARIANT_CAPS_ATOM_4, "all_petite";
-        5 => FONT_VARIANT_CAPS_ATOM_5, "unicase";
-        6 => FONT_VARIANT_CAPS_ATOM_6, "titling";
+        0 => "normal";
+        1 => "small";
+        2 => "all_small";
+        3 => "petite";
+        4 => "all_petite";
+        5 => "unicase";
+        6 => "titling";
     ]
 }
-
-static FONT_VARIANT_POSITION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_POSITION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIANT_POSITION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_font_variant_position_from_decoder;
     variants [
-        0 => FONT_VARIANT_POSITION_ATOM_0, "normal";
-        1 => FONT_VARIANT_POSITION_ATOM_1, "sub";
-        2 => FONT_VARIANT_POSITION_ATOM_2, "super";
+        0 => "normal";
+        1 => "sub";
+        2 => "super";
     ]
 }
-
-static FONT_STYLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_STYLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_font_style_from_decoder;
     variants [
-        0 => FONT_STYLE_ATOM_0, "normal";
-        1 => FONT_STYLE_ATOM_1, "italic";
+        0 => "normal";
+        1 => "italic";
     ]
 }
-
-static SEMANTIC_WEIGHT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SEMANTIC_WEIGHT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_semantic_weight_from_decoder;
     variants [
-        0 => SEMANTIC_WEIGHT_ATOM_0, "normal";
-        1 => SEMANTIC_WEIGHT_ATOM_1, "bold";
+        0 => "normal";
+        1 => "bold";
     ]
 }
-
-static SEMANTIC_ITALIC_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SEMANTIC_ITALIC_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_semantic_italic_from_decoder;
     variants [
-        0 => SEMANTIC_ITALIC_ATOM_0, "normal";
-        1 => SEMANTIC_ITALIC_ATOM_1, "italic";
+        0 => "normal";
+        1 => "italic";
     ]
 }
-
-static CODE_SNAPSHOT_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SNAPSHOT_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SNAPSHOT_STATE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SNAPSHOT_STATE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SNAPSHOT_STATE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_code_snapshot_state_from_decoder;
     variants [
-        0 => CODE_SNAPSHOT_STATE_ATOM_0, "initial";
-        1 => CODE_SNAPSHOT_STATE_ATOM_1, "snapshotting";
-        2 => CODE_SNAPSHOT_STATE_ATOM_2, "ok";
-        3 => CODE_SNAPSHOT_STATE_ATOM_3, "snapshot_error";
-        4 => CODE_SNAPSHOT_STATE_ATOM_4, "llm_in_progress";
+        0 => "initial";
+        1 => "snapshotting";
+        2 => "ok";
+        3 => "snapshot_error";
+        4 => "llm_in_progress";
     ]
 }
-
-static SNAPSHOT_CAPTURE_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SNAPSHOT_CAPTURE_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_snapshot_capture_mode_from_decoder;
     variants [
-        0 => SNAPSHOT_CAPTURE_MODE_ATOM_0, "full";
-        1 => SNAPSHOT_CAPTURE_MODE_ATOM_1, "partial";
+        0 => "full";
+        1 => "partial";
     ]
 }
 
@@ -2528,45 +1372,18 @@ kiwi_message_decoder! {
     ]
 }
 
-static CODE_OBJECT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OBJECT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OBJECT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OBJECT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OBJECT_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OBJECT_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OBJECT_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OBJECT_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OBJECT_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_code_object_type_from_decoder;
     variants [
-        0 => CODE_OBJECT_TYPE_ATOM_0, "web_layer";
-        1 => CODE_OBJECT_TYPE_ATOM_1, "web_interaction";
-        2 => CODE_OBJECT_TYPE_ATOM_2, "native_layer";
-        3 => CODE_OBJECT_TYPE_ATOM_3, "animation_preset";
-        4 => CODE_OBJECT_TYPE_ATOM_4, "tool";
-        5 => CODE_OBJECT_TYPE_ATOM_5, "custom_effect";
-        6 => CODE_OBJECT_TYPE_ATOM_6, "plugin";
-        7 => CODE_OBJECT_TYPE_ATOM_7, "web_layer_generic";
-        8 => CODE_OBJECT_TYPE_ATOM_8, "custom_fill";
+        0 => "web_layer";
+        1 => "web_interaction";
+        2 => "native_layer";
+        3 => "animation_preset";
+        4 => "tool";
+        5 => "custom_effect";
+        6 => "plugin";
+        7 => "web_layer_generic";
+        8 => "custom_fill";
     ]
 }
 
@@ -2593,943 +1410,247 @@ kiwi_message_decoder! {
     ]
 }
 
-static LOCK_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static LOCK_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static LOCK_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_lock_mode_from_decoder;
     variants [
-        0 => LOCK_MODE_ATOM_0, "none";
-        1 => LOCK_MODE_ATOM_1, "all";
-        2 => LOCK_MODE_ATOM_2, "background_only";
+        0 => "none";
+        1 => "all";
+        2 => "background_only";
     ]
 }
-
-static OPEN_TYPE_FEATURE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_30: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_31: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_32: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_33: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_34: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_35: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_36: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_37: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_38: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_39: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_40: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_41: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_42: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_43: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_44: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_45: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_46: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_47: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_48: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_49: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_50: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_51: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_52: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_53: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_54: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_55: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_56: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_57: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_58: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_59: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_60: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_61: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_62: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_63: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_64: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_65: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_66: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_67: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_68: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_69: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_70: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_71: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_72: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_73: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_74: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_75: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_76: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_77: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_78: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_79: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_80: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_81: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_82: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_83: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_84: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_85: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_86: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_87: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_88: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_89: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_90: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_91: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_92: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_93: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_94: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_95: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_96: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_97: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_98: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_99: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_100: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_101: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_102: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_103: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_104: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_105: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_106: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_107: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_108: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_109: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_110: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_111: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_112: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_113: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_114: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_115: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_116: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_117: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_118: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_119: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_120: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_121: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_122: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_123: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_124: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_125: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_126: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_127: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_128: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_129: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_130: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_131: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_132: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_133: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_134: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_135: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_136: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_137: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_138: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_139: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_140: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_141: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_142: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_143: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_144: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_145: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_146: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_147: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_148: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_149: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_150: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_151: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_152: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_153: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_154: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_155: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_156: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_157: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_158: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_159: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_160: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_161: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_162: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_163: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_164: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_165: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_166: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_167: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_168: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_169: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_170: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_171: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_172: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_173: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_174: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_175: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_176: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_177: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_178: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_179: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_180: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_181: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_182: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_183: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_184: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_185: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_186: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_187: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_188: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_189: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_190: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_191: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_192: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_193: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_194: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_195: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_196: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_197: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_198: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_199: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_200: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_201: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_202: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_203: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_204: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_205: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_206: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_207: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_208: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_209: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_210: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_211: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_212: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_213: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_214: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_215: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_216: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_217: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_218: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_219: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_220: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_221: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_222: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_223: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_224: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_225: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_226: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_227: OnceLock<Atom> = OnceLock::new();
-
-
-static OPEN_TYPE_FEATURE_ATOM_228: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_open_type_feature_from_decoder;
     variants [
-        0 => OPEN_TYPE_FEATURE_ATOM_0, "pcap";
-        1 => OPEN_TYPE_FEATURE_ATOM_1, "c2_pc";
-        2 => OPEN_TYPE_FEATURE_ATOM_2, "case";
-        3 => OPEN_TYPE_FEATURE_ATOM_3, "cpsp";
-        4 => OPEN_TYPE_FEATURE_ATOM_4, "titl";
-        5 => OPEN_TYPE_FEATURE_ATOM_5, "unic";
-        6 => OPEN_TYPE_FEATURE_ATOM_6, "zero";
-        7 => OPEN_TYPE_FEATURE_ATOM_7, "sinf";
-        8 => OPEN_TYPE_FEATURE_ATOM_8, "ordn";
-        9 => OPEN_TYPE_FEATURE_ATOM_9, "afrc";
-        10 => OPEN_TYPE_FEATURE_ATOM_10, "dnom";
-        11 => OPEN_TYPE_FEATURE_ATOM_11, "numr";
-        12 => OPEN_TYPE_FEATURE_ATOM_12, "liga";
-        13 => OPEN_TYPE_FEATURE_ATOM_13, "clig";
-        14 => OPEN_TYPE_FEATURE_ATOM_14, "dlig";
-        15 => OPEN_TYPE_FEATURE_ATOM_15, "hlig";
-        16 => OPEN_TYPE_FEATURE_ATOM_16, "rlig";
-        17 => OPEN_TYPE_FEATURE_ATOM_17, "aalt";
-        18 => OPEN_TYPE_FEATURE_ATOM_18, "calt";
-        19 => OPEN_TYPE_FEATURE_ATOM_19, "rclt";
-        20 => OPEN_TYPE_FEATURE_ATOM_20, "salt";
-        21 => OPEN_TYPE_FEATURE_ATOM_21, "rvrn";
-        22 => OPEN_TYPE_FEATURE_ATOM_22, "vert";
-        23 => OPEN_TYPE_FEATURE_ATOM_23, "swsh";
-        24 => OPEN_TYPE_FEATURE_ATOM_24, "cswh";
-        25 => OPEN_TYPE_FEATURE_ATOM_25, "nalt";
-        26 => OPEN_TYPE_FEATURE_ATOM_26, "ccmp";
-        27 => OPEN_TYPE_FEATURE_ATOM_27, "stch";
-        28 => OPEN_TYPE_FEATURE_ATOM_28, "hist";
-        29 => OPEN_TYPE_FEATURE_ATOM_29, "size";
-        30 => OPEN_TYPE_FEATURE_ATOM_30, "ornm";
-        31 => OPEN_TYPE_FEATURE_ATOM_31, "ital";
-        32 => OPEN_TYPE_FEATURE_ATOM_32, "rand";
-        33 => OPEN_TYPE_FEATURE_ATOM_33, "dtls";
-        34 => OPEN_TYPE_FEATURE_ATOM_34, "flac";
-        35 => OPEN_TYPE_FEATURE_ATOM_35, "mgrk";
-        36 => OPEN_TYPE_FEATURE_ATOM_36, "ssty";
-        37 => OPEN_TYPE_FEATURE_ATOM_37, "kern";
-        38 => OPEN_TYPE_FEATURE_ATOM_38, "fwid";
-        39 => OPEN_TYPE_FEATURE_ATOM_39, "hwid";
-        40 => OPEN_TYPE_FEATURE_ATOM_40, "halt";
-        41 => OPEN_TYPE_FEATURE_ATOM_41, "twid";
-        42 => OPEN_TYPE_FEATURE_ATOM_42, "qwid";
-        43 => OPEN_TYPE_FEATURE_ATOM_43, "pwid";
-        44 => OPEN_TYPE_FEATURE_ATOM_44, "just";
-        45 => OPEN_TYPE_FEATURE_ATOM_45, "lfbd";
-        46 => OPEN_TYPE_FEATURE_ATOM_46, "opbd";
-        47 => OPEN_TYPE_FEATURE_ATOM_47, "rtbd";
-        48 => OPEN_TYPE_FEATURE_ATOM_48, "palt";
-        49 => OPEN_TYPE_FEATURE_ATOM_49, "pkna";
-        50 => OPEN_TYPE_FEATURE_ATOM_50, "ltra";
-        51 => OPEN_TYPE_FEATURE_ATOM_51, "ltrm";
-        52 => OPEN_TYPE_FEATURE_ATOM_52, "rtla";
-        53 => OPEN_TYPE_FEATURE_ATOM_53, "rtlm";
-        54 => OPEN_TYPE_FEATURE_ATOM_54, "abrv";
-        55 => OPEN_TYPE_FEATURE_ATOM_55, "abvm";
-        56 => OPEN_TYPE_FEATURE_ATOM_56, "abvs";
-        57 => OPEN_TYPE_FEATURE_ATOM_57, "valt";
-        58 => OPEN_TYPE_FEATURE_ATOM_58, "vhal";
-        59 => OPEN_TYPE_FEATURE_ATOM_59, "blwf";
-        60 => OPEN_TYPE_FEATURE_ATOM_60, "blwm";
-        61 => OPEN_TYPE_FEATURE_ATOM_61, "blws";
-        62 => OPEN_TYPE_FEATURE_ATOM_62, "akhn";
-        63 => OPEN_TYPE_FEATURE_ATOM_63, "cjct";
-        64 => OPEN_TYPE_FEATURE_ATOM_64, "cfar";
-        65 => OPEN_TYPE_FEATURE_ATOM_65, "cpct";
-        66 => OPEN_TYPE_FEATURE_ATOM_66, "curs";
-        67 => OPEN_TYPE_FEATURE_ATOM_67, "dist";
-        68 => OPEN_TYPE_FEATURE_ATOM_68, "expt";
-        69 => OPEN_TYPE_FEATURE_ATOM_69, "falt";
-        70 => OPEN_TYPE_FEATURE_ATOM_70, "fina";
-        71 => OPEN_TYPE_FEATURE_ATOM_71, "fin2";
-        72 => OPEN_TYPE_FEATURE_ATOM_72, "fin3";
-        73 => OPEN_TYPE_FEATURE_ATOM_73, "half";
-        74 => OPEN_TYPE_FEATURE_ATOM_74, "haln";
-        75 => OPEN_TYPE_FEATURE_ATOM_75, "hkna";
-        76 => OPEN_TYPE_FEATURE_ATOM_76, "hngl";
-        77 => OPEN_TYPE_FEATURE_ATOM_77, "hojo";
-        78 => OPEN_TYPE_FEATURE_ATOM_78, "init";
-        79 => OPEN_TYPE_FEATURE_ATOM_79, "isol";
-        80 => OPEN_TYPE_FEATURE_ATOM_80, "jp78";
-        81 => OPEN_TYPE_FEATURE_ATOM_81, "jp83";
-        82 => OPEN_TYPE_FEATURE_ATOM_82, "jp90";
-        83 => OPEN_TYPE_FEATURE_ATOM_83, "jp04";
-        84 => OPEN_TYPE_FEATURE_ATOM_84, "ljmo";
-        85 => OPEN_TYPE_FEATURE_ATOM_85, "locl";
-        86 => OPEN_TYPE_FEATURE_ATOM_86, "mark";
-        87 => OPEN_TYPE_FEATURE_ATOM_87, "medi";
-        88 => OPEN_TYPE_FEATURE_ATOM_88, "med2";
-        89 => OPEN_TYPE_FEATURE_ATOM_89, "mkmk";
-        90 => OPEN_TYPE_FEATURE_ATOM_90, "nlck";
-        91 => OPEN_TYPE_FEATURE_ATOM_91, "nukt";
-        92 => OPEN_TYPE_FEATURE_ATOM_92, "pref";
-        93 => OPEN_TYPE_FEATURE_ATOM_93, "pres";
-        94 => OPEN_TYPE_FEATURE_ATOM_94, "vpal";
-        95 => OPEN_TYPE_FEATURE_ATOM_95, "pstf";
-        96 => OPEN_TYPE_FEATURE_ATOM_96, "psts";
-        97 => OPEN_TYPE_FEATURE_ATOM_97, "rkrf";
-        98 => OPEN_TYPE_FEATURE_ATOM_98, "rphf";
-        99 => OPEN_TYPE_FEATURE_ATOM_99, "ruby";
-        100 => OPEN_TYPE_FEATURE_ATOM_100, "smpl";
-        101 => OPEN_TYPE_FEATURE_ATOM_101, "tjmo";
-        102 => OPEN_TYPE_FEATURE_ATOM_102, "tnam";
-        103 => OPEN_TYPE_FEATURE_ATOM_103, "trad";
-        104 => OPEN_TYPE_FEATURE_ATOM_104, "vatu";
-        105 => OPEN_TYPE_FEATURE_ATOM_105, "vjmo";
-        106 => OPEN_TYPE_FEATURE_ATOM_106, "vkna";
-        107 => OPEN_TYPE_FEATURE_ATOM_107, "vkrn";
-        108 => OPEN_TYPE_FEATURE_ATOM_108, "vrtr";
-        109 => OPEN_TYPE_FEATURE_ATOM_109, "vrt2";
-        110 => OPEN_TYPE_FEATURE_ATOM_110, "ss01";
-        111 => OPEN_TYPE_FEATURE_ATOM_111, "ss02";
-        112 => OPEN_TYPE_FEATURE_ATOM_112, "ss03";
-        113 => OPEN_TYPE_FEATURE_ATOM_113, "ss04";
-        114 => OPEN_TYPE_FEATURE_ATOM_114, "ss05";
-        115 => OPEN_TYPE_FEATURE_ATOM_115, "ss06";
-        116 => OPEN_TYPE_FEATURE_ATOM_116, "ss07";
-        117 => OPEN_TYPE_FEATURE_ATOM_117, "ss08";
-        118 => OPEN_TYPE_FEATURE_ATOM_118, "ss09";
-        119 => OPEN_TYPE_FEATURE_ATOM_119, "ss10";
-        120 => OPEN_TYPE_FEATURE_ATOM_120, "ss11";
-        121 => OPEN_TYPE_FEATURE_ATOM_121, "ss12";
-        122 => OPEN_TYPE_FEATURE_ATOM_122, "ss13";
-        123 => OPEN_TYPE_FEATURE_ATOM_123, "ss14";
-        124 => OPEN_TYPE_FEATURE_ATOM_124, "ss15";
-        125 => OPEN_TYPE_FEATURE_ATOM_125, "ss16";
-        126 => OPEN_TYPE_FEATURE_ATOM_126, "ss17";
-        127 => OPEN_TYPE_FEATURE_ATOM_127, "ss18";
-        128 => OPEN_TYPE_FEATURE_ATOM_128, "ss19";
-        129 => OPEN_TYPE_FEATURE_ATOM_129, "ss20";
-        130 => OPEN_TYPE_FEATURE_ATOM_130, "cv01";
-        131 => OPEN_TYPE_FEATURE_ATOM_131, "cv02";
-        132 => OPEN_TYPE_FEATURE_ATOM_132, "cv03";
-        133 => OPEN_TYPE_FEATURE_ATOM_133, "cv04";
-        134 => OPEN_TYPE_FEATURE_ATOM_134, "cv05";
-        135 => OPEN_TYPE_FEATURE_ATOM_135, "cv06";
-        136 => OPEN_TYPE_FEATURE_ATOM_136, "cv07";
-        137 => OPEN_TYPE_FEATURE_ATOM_137, "cv08";
-        138 => OPEN_TYPE_FEATURE_ATOM_138, "cv09";
-        139 => OPEN_TYPE_FEATURE_ATOM_139, "cv10";
-        140 => OPEN_TYPE_FEATURE_ATOM_140, "cv11";
-        141 => OPEN_TYPE_FEATURE_ATOM_141, "cv12";
-        142 => OPEN_TYPE_FEATURE_ATOM_142, "cv13";
-        143 => OPEN_TYPE_FEATURE_ATOM_143, "cv14";
-        144 => OPEN_TYPE_FEATURE_ATOM_144, "cv15";
-        145 => OPEN_TYPE_FEATURE_ATOM_145, "cv16";
-        146 => OPEN_TYPE_FEATURE_ATOM_146, "cv17";
-        147 => OPEN_TYPE_FEATURE_ATOM_147, "cv18";
-        148 => OPEN_TYPE_FEATURE_ATOM_148, "cv19";
-        149 => OPEN_TYPE_FEATURE_ATOM_149, "cv20";
-        150 => OPEN_TYPE_FEATURE_ATOM_150, "cv21";
-        151 => OPEN_TYPE_FEATURE_ATOM_151, "cv22";
-        152 => OPEN_TYPE_FEATURE_ATOM_152, "cv23";
-        153 => OPEN_TYPE_FEATURE_ATOM_153, "cv24";
-        154 => OPEN_TYPE_FEATURE_ATOM_154, "cv25";
-        155 => OPEN_TYPE_FEATURE_ATOM_155, "cv26";
-        156 => OPEN_TYPE_FEATURE_ATOM_156, "cv27";
-        157 => OPEN_TYPE_FEATURE_ATOM_157, "cv28";
-        158 => OPEN_TYPE_FEATURE_ATOM_158, "cv29";
-        159 => OPEN_TYPE_FEATURE_ATOM_159, "cv30";
-        160 => OPEN_TYPE_FEATURE_ATOM_160, "cv31";
-        161 => OPEN_TYPE_FEATURE_ATOM_161, "cv32";
-        162 => OPEN_TYPE_FEATURE_ATOM_162, "cv33";
-        163 => OPEN_TYPE_FEATURE_ATOM_163, "cv34";
-        164 => OPEN_TYPE_FEATURE_ATOM_164, "cv35";
-        165 => OPEN_TYPE_FEATURE_ATOM_165, "cv36";
-        166 => OPEN_TYPE_FEATURE_ATOM_166, "cv37";
-        167 => OPEN_TYPE_FEATURE_ATOM_167, "cv38";
-        168 => OPEN_TYPE_FEATURE_ATOM_168, "cv39";
-        169 => OPEN_TYPE_FEATURE_ATOM_169, "cv40";
-        170 => OPEN_TYPE_FEATURE_ATOM_170, "cv41";
-        171 => OPEN_TYPE_FEATURE_ATOM_171, "cv42";
-        172 => OPEN_TYPE_FEATURE_ATOM_172, "cv43";
-        173 => OPEN_TYPE_FEATURE_ATOM_173, "cv44";
-        174 => OPEN_TYPE_FEATURE_ATOM_174, "cv45";
-        175 => OPEN_TYPE_FEATURE_ATOM_175, "cv46";
-        176 => OPEN_TYPE_FEATURE_ATOM_176, "cv47";
-        177 => OPEN_TYPE_FEATURE_ATOM_177, "cv48";
-        178 => OPEN_TYPE_FEATURE_ATOM_178, "cv49";
-        179 => OPEN_TYPE_FEATURE_ATOM_179, "cv50";
-        180 => OPEN_TYPE_FEATURE_ATOM_180, "cv51";
-        181 => OPEN_TYPE_FEATURE_ATOM_181, "cv52";
-        182 => OPEN_TYPE_FEATURE_ATOM_182, "cv53";
-        183 => OPEN_TYPE_FEATURE_ATOM_183, "cv54";
-        184 => OPEN_TYPE_FEATURE_ATOM_184, "cv55";
-        185 => OPEN_TYPE_FEATURE_ATOM_185, "cv56";
-        186 => OPEN_TYPE_FEATURE_ATOM_186, "cv57";
-        187 => OPEN_TYPE_FEATURE_ATOM_187, "cv58";
-        188 => OPEN_TYPE_FEATURE_ATOM_188, "cv59";
-        189 => OPEN_TYPE_FEATURE_ATOM_189, "cv60";
-        190 => OPEN_TYPE_FEATURE_ATOM_190, "cv61";
-        191 => OPEN_TYPE_FEATURE_ATOM_191, "cv62";
-        192 => OPEN_TYPE_FEATURE_ATOM_192, "cv63";
-        193 => OPEN_TYPE_FEATURE_ATOM_193, "cv64";
-        194 => OPEN_TYPE_FEATURE_ATOM_194, "cv65";
-        195 => OPEN_TYPE_FEATURE_ATOM_195, "cv66";
-        196 => OPEN_TYPE_FEATURE_ATOM_196, "cv67";
-        197 => OPEN_TYPE_FEATURE_ATOM_197, "cv68";
-        198 => OPEN_TYPE_FEATURE_ATOM_198, "cv69";
-        199 => OPEN_TYPE_FEATURE_ATOM_199, "cv70";
-        200 => OPEN_TYPE_FEATURE_ATOM_200, "cv71";
-        201 => OPEN_TYPE_FEATURE_ATOM_201, "cv72";
-        202 => OPEN_TYPE_FEATURE_ATOM_202, "cv73";
-        203 => OPEN_TYPE_FEATURE_ATOM_203, "cv74";
-        204 => OPEN_TYPE_FEATURE_ATOM_204, "cv75";
-        205 => OPEN_TYPE_FEATURE_ATOM_205, "cv76";
-        206 => OPEN_TYPE_FEATURE_ATOM_206, "cv77";
-        207 => OPEN_TYPE_FEATURE_ATOM_207, "cv78";
-        208 => OPEN_TYPE_FEATURE_ATOM_208, "cv79";
-        209 => OPEN_TYPE_FEATURE_ATOM_209, "cv80";
-        210 => OPEN_TYPE_FEATURE_ATOM_210, "cv81";
-        211 => OPEN_TYPE_FEATURE_ATOM_211, "cv82";
-        212 => OPEN_TYPE_FEATURE_ATOM_212, "cv83";
-        213 => OPEN_TYPE_FEATURE_ATOM_213, "cv84";
-        214 => OPEN_TYPE_FEATURE_ATOM_214, "cv85";
-        215 => OPEN_TYPE_FEATURE_ATOM_215, "cv86";
-        216 => OPEN_TYPE_FEATURE_ATOM_216, "cv87";
-        217 => OPEN_TYPE_FEATURE_ATOM_217, "cv88";
-        218 => OPEN_TYPE_FEATURE_ATOM_218, "cv89";
-        219 => OPEN_TYPE_FEATURE_ATOM_219, "cv90";
-        220 => OPEN_TYPE_FEATURE_ATOM_220, "cv91";
-        221 => OPEN_TYPE_FEATURE_ATOM_221, "cv92";
-        222 => OPEN_TYPE_FEATURE_ATOM_222, "cv93";
-        223 => OPEN_TYPE_FEATURE_ATOM_223, "cv94";
-        224 => OPEN_TYPE_FEATURE_ATOM_224, "cv95";
-        225 => OPEN_TYPE_FEATURE_ATOM_225, "cv96";
-        226 => OPEN_TYPE_FEATURE_ATOM_226, "cv97";
-        227 => OPEN_TYPE_FEATURE_ATOM_227, "cv98";
-        228 => OPEN_TYPE_FEATURE_ATOM_228, "cv99";
+        0 => "pcap";
+        1 => "c2_pc";
+        2 => "case";
+        3 => "cpsp";
+        4 => "titl";
+        5 => "unic";
+        6 => "zero";
+        7 => "sinf";
+        8 => "ordn";
+        9 => "afrc";
+        10 => "dnom";
+        11 => "numr";
+        12 => "liga";
+        13 => "clig";
+        14 => "dlig";
+        15 => "hlig";
+        16 => "rlig";
+        17 => "aalt";
+        18 => "calt";
+        19 => "rclt";
+        20 => "salt";
+        21 => "rvrn";
+        22 => "vert";
+        23 => "swsh";
+        24 => "cswh";
+        25 => "nalt";
+        26 => "ccmp";
+        27 => "stch";
+        28 => "hist";
+        29 => "size";
+        30 => "ornm";
+        31 => "ital";
+        32 => "rand";
+        33 => "dtls";
+        34 => "flac";
+        35 => "mgrk";
+        36 => "ssty";
+        37 => "kern";
+        38 => "fwid";
+        39 => "hwid";
+        40 => "halt";
+        41 => "twid";
+        42 => "qwid";
+        43 => "pwid";
+        44 => "just";
+        45 => "lfbd";
+        46 => "opbd";
+        47 => "rtbd";
+        48 => "palt";
+        49 => "pkna";
+        50 => "ltra";
+        51 => "ltrm";
+        52 => "rtla";
+        53 => "rtlm";
+        54 => "abrv";
+        55 => "abvm";
+        56 => "abvs";
+        57 => "valt";
+        58 => "vhal";
+        59 => "blwf";
+        60 => "blwm";
+        61 => "blws";
+        62 => "akhn";
+        63 => "cjct";
+        64 => "cfar";
+        65 => "cpct";
+        66 => "curs";
+        67 => "dist";
+        68 => "expt";
+        69 => "falt";
+        70 => "fina";
+        71 => "fin2";
+        72 => "fin3";
+        73 => "half";
+        74 => "haln";
+        75 => "hkna";
+        76 => "hngl";
+        77 => "hojo";
+        78 => "init";
+        79 => "isol";
+        80 => "jp78";
+        81 => "jp83";
+        82 => "jp90";
+        83 => "jp04";
+        84 => "ljmo";
+        85 => "locl";
+        86 => "mark";
+        87 => "medi";
+        88 => "med2";
+        89 => "mkmk";
+        90 => "nlck";
+        91 => "nukt";
+        92 => "pref";
+        93 => "pres";
+        94 => "vpal";
+        95 => "pstf";
+        96 => "psts";
+        97 => "rkrf";
+        98 => "rphf";
+        99 => "ruby";
+        100 => "smpl";
+        101 => "tjmo";
+        102 => "tnam";
+        103 => "trad";
+        104 => "vatu";
+        105 => "vjmo";
+        106 => "vkna";
+        107 => "vkrn";
+        108 => "vrtr";
+        109 => "vrt2";
+        110 => "ss01";
+        111 => "ss02";
+        112 => "ss03";
+        113 => "ss04";
+        114 => "ss05";
+        115 => "ss06";
+        116 => "ss07";
+        117 => "ss08";
+        118 => "ss09";
+        119 => "ss10";
+        120 => "ss11";
+        121 => "ss12";
+        122 => "ss13";
+        123 => "ss14";
+        124 => "ss15";
+        125 => "ss16";
+        126 => "ss17";
+        127 => "ss18";
+        128 => "ss19";
+        129 => "ss20";
+        130 => "cv01";
+        131 => "cv02";
+        132 => "cv03";
+        133 => "cv04";
+        134 => "cv05";
+        135 => "cv06";
+        136 => "cv07";
+        137 => "cv08";
+        138 => "cv09";
+        139 => "cv10";
+        140 => "cv11";
+        141 => "cv12";
+        142 => "cv13";
+        143 => "cv14";
+        144 => "cv15";
+        145 => "cv16";
+        146 => "cv17";
+        147 => "cv18";
+        148 => "cv19";
+        149 => "cv20";
+        150 => "cv21";
+        151 => "cv22";
+        152 => "cv23";
+        153 => "cv24";
+        154 => "cv25";
+        155 => "cv26";
+        156 => "cv27";
+        157 => "cv28";
+        158 => "cv29";
+        159 => "cv30";
+        160 => "cv31";
+        161 => "cv32";
+        162 => "cv33";
+        163 => "cv34";
+        164 => "cv35";
+        165 => "cv36";
+        166 => "cv37";
+        167 => "cv38";
+        168 => "cv39";
+        169 => "cv40";
+        170 => "cv41";
+        171 => "cv42";
+        172 => "cv43";
+        173 => "cv44";
+        174 => "cv45";
+        175 => "cv46";
+        176 => "cv47";
+        177 => "cv48";
+        178 => "cv49";
+        179 => "cv50";
+        180 => "cv51";
+        181 => "cv52";
+        182 => "cv53";
+        183 => "cv54";
+        184 => "cv55";
+        185 => "cv56";
+        186 => "cv57";
+        187 => "cv58";
+        188 => "cv59";
+        189 => "cv60";
+        190 => "cv61";
+        191 => "cv62";
+        192 => "cv63";
+        193 => "cv64";
+        194 => "cv65";
+        195 => "cv66";
+        196 => "cv67";
+        197 => "cv68";
+        198 => "cv69";
+        199 => "cv70";
+        200 => "cv71";
+        201 => "cv72";
+        202 => "cv73";
+        203 => "cv74";
+        204 => "cv75";
+        205 => "cv76";
+        206 => "cv77";
+        207 => "cv78";
+        208 => "cv79";
+        209 => "cv80";
+        210 => "cv81";
+        211 => "cv82";
+        212 => "cv83";
+        213 => "cv84";
+        214 => "cv85";
+        215 => "cv86";
+        216 => "cv87";
+        217 => "cv88";
+        218 => "cv89";
+        219 => "cv90";
+        220 => "cv91";
+        221 => "cv92";
+        222 => "cv93";
+        223 => "cv94";
+        224 => "cv95";
+        225 => "cv96";
+        226 => "cv97";
+        227 => "cv98";
+        228 => "cv99";
     ]
 }
 
@@ -3772,105 +1893,51 @@ kiwi_message_decoder! {
     ]
 }
 
-static NOISE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static NOISE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static NOISE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_noise_type_from_decoder;
     variants [
-        0 => NOISE_TYPE_ATOM_0, "multitone";
-        1 => NOISE_TYPE_ATOM_1, "monotone";
-        2 => NOISE_TYPE_ATOM_2, "duotone";
+        0 => "multitone";
+        1 => "monotone";
+        2 => "duotone";
     ]
 }
-
-static PATTERN_TILE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PATTERN_TILE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PATTERN_TILE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_pattern_tile_type_from_decoder;
     variants [
-        0 => PATTERN_TILE_TYPE_ATOM_0, "rectangular";
-        1 => PATTERN_TILE_TYPE_ATOM_1, "horizontal_hexagonal";
-        2 => PATTERN_TILE_TYPE_ATOM_2, "vertical_hexagonal";
+        0 => "rectangular";
+        1 => "horizontal_hexagonal";
+        2 => "vertical_hexagonal";
     ]
 }
-
-static PATTERN_ALIGNMENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PATTERN_ALIGNMENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PATTERN_ALIGNMENT_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_pattern_alignment_from_decoder;
     variants [
-        0 => PATTERN_ALIGNMENT_ATOM_0, "start";
-        1 => PATTERN_ALIGNMENT_ATOM_1, "center";
-        2 => PATTERN_ALIGNMENT_ATOM_2, "end";
+        0 => "start";
+        1 => "center";
+        2 => "end";
     ]
 }
-
-static INTERPOLATION_COLOR_SPACE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_COLOR_SPACE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_COLOR_SPACE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_COLOR_SPACE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_COLOR_SPACE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_interpolation_color_space_from_decoder;
     variants [
-        0 => INTERPOLATION_COLOR_SPACE_ATOM_0, "default";
-        1 => INTERPOLATION_COLOR_SPACE_ATOM_1, "oklab";
-        2 => INTERPOLATION_COLOR_SPACE_ATOM_2, "oklch";
-        3 => INTERPOLATION_COLOR_SPACE_ATOM_3, "hsl";
-        4 => INTERPOLATION_COLOR_SPACE_ATOM_4, "srgb_linear";
+        0 => "default";
+        1 => "oklab";
+        2 => "oklch";
+        3 => "hsl";
+        4 => "srgb_linear";
     ]
 }
-
-static INTERPOLATION_HUE_METHOD_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_HUE_METHOD_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_HUE_METHOD_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_HUE_METHOD_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_interpolation_hue_method_from_decoder;
     variants [
-        0 => INTERPOLATION_HUE_METHOD_ATOM_0, "shorter";
-        1 => INTERPOLATION_HUE_METHOD_ATOM_1, "longer";
-        2 => INTERPOLATION_HUE_METHOD_ATOM_2, "increasing";
-        3 => INTERPOLATION_HUE_METHOD_ATOM_3, "decreasing";
+        0 => "shorter";
+        1 => "longer";
+        2 => "increasing";
+        3 => "decreasing";
     ]
 }
 
@@ -4707,17 +2774,11 @@ kiwi_struct_decoder! {
     ]
 }
 
-static COLLABORATIVE_TEXT_OP_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static COLLABORATIVE_TEXT_OP_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_collaborative_text_op_type_from_decoder;
     variants [
-        0 => COLLABORATIVE_TEXT_OP_TYPE_ATOM_0, "insert";
-        1 => COLLABORATIVE_TEXT_OP_TYPE_ATOM_1, "delete";
+        0 => "insert";
+        1 => "delete";
     ]
 }
 
@@ -4878,29 +2939,14 @@ kiwi_message_decoder! {
     ]
 }
 
-static FLAPP_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FLAPP_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static FLAPP_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static FLAPP_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static FLAPP_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_flapp_type_from_decoder;
     variants [
-        0 => FLAPP_TYPE_ATOM_0, "poll";
-        1 => FLAPP_TYPE_ATOM_1, "embed";
-        2 => FLAPP_TYPE_ATOM_2, "facepile";
-        3 => FLAPP_TYPE_ATOM_3, "alignment";
-        4 => FLAPP_TYPE_ATOM_4, "youtube";
+        0 => "poll";
+        1 => "embed";
+        2 => "facepile";
+        3 => "alignment";
+        4 => "youtube";
     ]
 }
 
@@ -5110,77 +3156,44 @@ kiwi_message_decoder! {
     ]
 }
 
-static BLUR_OP_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static BLUR_OP_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_blur_op_type_from_decoder;
     variants [
-        0 => BLUR_OP_TYPE_ATOM_0, "normal";
-        1 => BLUR_OP_TYPE_ATOM_1, "progressive";
+        0 => "normal";
+        1 => "progressive";
     ]
 }
-
-static REPEAT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static REPEAT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_repeat_type_from_decoder;
     variants [
-        0 => REPEAT_TYPE_ATOM_0, "linear";
-        1 => REPEAT_TYPE_ATOM_1, "radial";
+        0 => "linear";
+        1 => "radial";
     ]
 }
-
-static UNIT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static UNIT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_unit_type_from_decoder;
     variants [
-        0 => UNIT_TYPE_ATOM_0, "pixels";
-        1 => UNIT_TYPE_ATOM_1, "relative";
+        0 => "pixels";
+        1 => "relative";
     ]
 }
-
-static REPEAT_ORDER_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static REPEAT_ORDER_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_repeat_order_from_decoder;
     variants [
-        0 => REPEAT_ORDER_ATOM_0, "forward";
-        1 => REPEAT_ORDER_ATOM_1, "reverse";
+        0 => "forward";
+        1 => "reverse";
     ]
 }
-
-static EFFECT_AXIS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_AXIS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_AXIS_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_effect_axis_from_decoder;
     variants [
-        0 => EFFECT_AXIS_ATOM_0, "x";
-        1 => EFFECT_AXIS_ATOM_1, "y";
-        2 => EFFECT_AXIS_ATOM_2, "x_and_y";
+        0 => "x";
+        1 => "y";
+        2 => "x_and_y";
     ]
 }
 
@@ -5258,21 +3271,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static TRANSFORM_MODIFIER_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_MODIFIER_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_MODIFIER_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_transform_modifier_type_from_decoder;
     variants [
-        0 => TRANSFORM_MODIFIER_TYPE_ATOM_0, "repeat";
-        1 => TRANSFORM_MODIFIER_TYPE_ATOM_1, "symmetry";
-        2 => TRANSFORM_MODIFIER_TYPE_ATOM_2, "skew";
+        0 => "repeat";
+        1 => "symmetry";
+        2 => "skew";
     ]
 }
 
@@ -5305,21 +3309,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static TRANSFORM_SCHEMA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_SCHEMA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_SCHEMA_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_transform_schema_type_from_decoder;
     variants [
-        0 => TRANSFORM_SCHEMA_TYPE_ATOM_0, "none";
-        1 => TRANSFORM_SCHEMA_TYPE_ATOM_1, "fixed_order";
-        2 => TRANSFORM_SCHEMA_TYPE_ATOM_2, "freeform";
+        0 => "none";
+        1 => "fixed_order";
+        2 => "freeform";
     ]
 }
 
@@ -5381,37 +3376,16 @@ kiwi_message_decoder! {
     ]
 }
 
-static TRANSFORM_FN_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_FN_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_FN_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_FN_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_FN_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_FN_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_FN_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_transform_fn_type_from_decoder;
     variants [
-        0 => TRANSFORM_FN_TYPE_ATOM_0, "none";
-        1 => TRANSFORM_FN_TYPE_ATOM_1, "matrix_3_d";
-        2 => TRANSFORM_FN_TYPE_ATOM_2, "perspective";
-        3 => TRANSFORM_FN_TYPE_ATOM_3, "translate_z";
-        4 => TRANSFORM_FN_TYPE_ATOM_4, "rotate_x";
-        5 => TRANSFORM_FN_TYPE_ATOM_5, "rotate_y";
-        6 => TRANSFORM_FN_TYPE_ATOM_6, "rotate_z";
+        0 => "none";
+        1 => "matrix_3_d";
+        2 => "perspective";
+        3 => "translate_z";
+        4 => "rotate_x";
+        5 => "rotate_y";
+        6 => "rotate_z";
     ]
 }
 
@@ -5586,39 +3560,21 @@ kiwi_message_decoder! {
     ]
 }
 
-static PROTOTYPE_DEVICE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_DEVICE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_DEVICE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_DEVICE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_prototype_device_type_from_decoder;
     variants [
-        0 => PROTOTYPE_DEVICE_TYPE_ATOM_0, "none";
-        1 => PROTOTYPE_DEVICE_TYPE_ATOM_1, "preset";
-        2 => PROTOTYPE_DEVICE_TYPE_ATOM_2, "custom";
-        3 => PROTOTYPE_DEVICE_TYPE_ATOM_3, "presentation";
+        0 => "none";
+        1 => "preset";
+        2 => "custom";
+        3 => "presentation";
     ]
 }
-
-static DEVICE_ROTATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static DEVICE_ROTATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_device_rotation_from_decoder;
     variants [
-        0 => DEVICE_ROTATION_ATOM_0, "none";
-        1 => DEVICE_ROTATION_ATOM_1, "ccw_90";
+        0 => "none";
+        1 => "ccw_90";
     ]
 }
 
@@ -5645,69 +3601,33 @@ kiwi_message_decoder! {
     ]
 }
 
-static OVERLAY_POSITION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_POSITION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_POSITION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_POSITION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_POSITION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_POSITION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_POSITION_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_POSITION_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_overlay_position_type_from_decoder;
     variants [
-        0 => OVERLAY_POSITION_TYPE_ATOM_0, "center";
-        1 => OVERLAY_POSITION_TYPE_ATOM_1, "top_left";
-        2 => OVERLAY_POSITION_TYPE_ATOM_2, "top_center";
-        3 => OVERLAY_POSITION_TYPE_ATOM_3, "top_right";
-        4 => OVERLAY_POSITION_TYPE_ATOM_4, "bottom_left";
-        5 => OVERLAY_POSITION_TYPE_ATOM_5, "bottom_center";
-        6 => OVERLAY_POSITION_TYPE_ATOM_6, "bottom_right";
-        7 => OVERLAY_POSITION_TYPE_ATOM_7, "manual";
+        0 => "center";
+        1 => "top_left";
+        2 => "top_center";
+        3 => "top_right";
+        4 => "bottom_left";
+        5 => "bottom_center";
+        6 => "bottom_right";
+        7 => "manual";
     ]
 }
-
-static OVERLAY_BACKGROUND_INTERACTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_BACKGROUND_INTERACTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_overlay_background_interaction_from_decoder;
     variants [
-        0 => OVERLAY_BACKGROUND_INTERACTION_ATOM_0, "none";
-        1 => OVERLAY_BACKGROUND_INTERACTION_ATOM_1, "close_on_click_outside";
+        0 => "none";
+        1 => "close_on_click_outside";
     ]
 }
-
-static OVERLAY_BACKGROUND_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_BACKGROUND_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_overlay_background_type_from_decoder;
     variants [
-        0 => OVERLAY_BACKGROUND_TYPE_ATOM_0, "none";
-        1 => OVERLAY_BACKGROUND_TYPE_ATOM_1, "solid_color";
+        0 => "none";
+        1 => "solid_color";
     ]
 }
 
@@ -5734,69 +3654,33 @@ kiwi_message_decoder! {
     ]
 }
 
-static NAVIGATION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static NAVIGATION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static NAVIGATION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static NAVIGATION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static NAVIGATION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_navigation_type_from_decoder;
     variants [
-        0 => NAVIGATION_TYPE_ATOM_0, "navigate";
-        1 => NAVIGATION_TYPE_ATOM_1, "overlay";
-        2 => NAVIGATION_TYPE_ATOM_2, "swap";
-        3 => NAVIGATION_TYPE_ATOM_3, "swap_state";
-        4 => NAVIGATION_TYPE_ATOM_4, "scroll_to";
+        0 => "navigate";
+        1 => "overlay";
+        2 => "swap";
+        3 => "swap_state";
+        4 => "scroll_to";
     ]
 }
-
-static EXPORT_COLOR_PROFILE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_COLOR_PROFILE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_COLOR_PROFILE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_COLOR_PROFILE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_export_color_profile_from_decoder;
     variants [
-        0 => EXPORT_COLOR_PROFILE_ATOM_0, "document";
-        1 => EXPORT_COLOR_PROFILE_ATOM_1, "srgb";
-        2 => EXPORT_COLOR_PROFILE_ATOM_2, "display_p3_v4";
-        3 => EXPORT_COLOR_PROFILE_ATOM_3, "cmyk";
+        0 => "document";
+        1 => "srgb";
+        2 => "display_p3_v4";
+        3 => "cmyk";
     ]
 }
-
-static EXPORT_BACKGROUND_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_BACKGROUND_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_BACKGROUND_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_export_background_type_from_decoder;
     variants [
-        0 => EXPORT_BACKGROUND_TYPE_ATOM_0, "solid";
-        1 => EXPORT_BACKGROUND_TYPE_ATOM_1, "transparent";
-        2 => EXPORT_BACKGROUND_TYPE_ATOM_2, "grid";
+        0 => "solid";
+        1 => "transparent";
+        2 => "grid";
     ]
 }
 
@@ -5834,17 +3718,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static EXPORT_SVGID_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_SVGID_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_export_svgid_mode_from_decoder;
     variants [
-        0 => EXPORT_SVGID_MODE_ATOM_0, "if_needed";
-        1 => EXPORT_SVGID_MODE_ATOM_1, "always";
+        0 => "if_needed";
+        1 => "always";
     ]
 }
 
@@ -5924,69 +3802,33 @@ kiwi_message_decoder! {
     ]
 }
 
-static STYLE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_style_type_from_decoder;
     variants [
-        0 => STYLE_TYPE_ATOM_0, "none";
-        1 => STYLE_TYPE_ATOM_1, "fill";
-        2 => STYLE_TYPE_ATOM_2, "stroke";
-        3 => STYLE_TYPE_ATOM_3, "text";
-        4 => STYLE_TYPE_ATOM_4, "effect";
-        5 => STYLE_TYPE_ATOM_5, "export";
-        6 => STYLE_TYPE_ATOM_6, "grid";
-        7 => STYLE_TYPE_ATOM_7, "animation";
+        0 => "none";
+        1 => "fill";
+        2 => "stroke";
+        3 => "text";
+        4 => "effect";
+        5 => "export";
+        6 => "grid";
+        7 => "animation";
     ]
 }
-
-static BRUSH_ORIENTATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static BRUSH_ORIENTATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_brush_orientation_from_decoder;
     variants [
-        0 => BRUSH_ORIENTATION_ATOM_0, "forward";
-        1 => BRUSH_ORIENTATION_ATOM_1, "reverse";
+        0 => "forward";
+        1 => "reverse";
     ]
 }
-
-static BRUSH_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static BRUSH_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_brush_type_from_decoder;
     variants [
-        0 => BRUSH_TYPE_ATOM_0, "stretch";
-        1 => BRUSH_TYPE_ATOM_1, "scatter";
+        0 => "stretch";
+        1 => "scatter";
     ]
 }
 
@@ -6176,21 +4018,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static SCROLL_BEHAVIOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_BEHAVIOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_BEHAVIOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_scroll_behavior_from_decoder;
     variants [
-        0 => SCROLL_BEHAVIOR_ATOM_0, "scrolls";
-        1 => SCROLL_BEHAVIOR_ATOM_1, "fixed_when_child_of_scrolling_frame";
-        2 => SCROLL_BEHAVIOR_ATOM_2, "sticky_scrolls";
+        0 => "scrolls";
+        1 => "fixed_when_child_of_scrolling_frame";
+        2 => "sticky_scrolls";
     ]
 }
 
@@ -6307,49 +4140,19 @@ kiwi_message_decoder! {
     ]
 }
 
-static CONNECTOR_MAGNET_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_MAGNET_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_connector_magnet_from_decoder;
     variants [
-        0 => CONNECTOR_MAGNET_ATOM_0, "none";
-        1 => CONNECTOR_MAGNET_ATOM_1, "auto";
-        2 => CONNECTOR_MAGNET_ATOM_2, "top";
-        3 => CONNECTOR_MAGNET_ATOM_3, "left";
-        4 => CONNECTOR_MAGNET_ATOM_4, "bottom";
-        5 => CONNECTOR_MAGNET_ATOM_5, "right";
-        6 => CONNECTOR_MAGNET_ATOM_6, "center";
-        7 => CONNECTOR_MAGNET_ATOM_7, "auto_horizontal";
-        8 => CONNECTOR_MAGNET_ATOM_8, "edge";
-        9 => CONNECTOR_MAGNET_ATOM_9, "absolute";
+        0 => "none";
+        1 => "auto";
+        2 => "top";
+        3 => "left";
+        4 => "bottom";
+        5 => "right";
+        6 => "center";
+        7 => "auto_horizontal";
+        8 => "edge";
+        9 => "absolute";
     ]
 }
 
@@ -6397,35 +4200,20 @@ kiwi_message_decoder! {
     ]
 }
 
-static CONNECTOR_TEXT_SECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_TEXT_SECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_connector_text_section_from_decoder;
     variants [
-        0 => CONNECTOR_TEXT_SECTION_ATOM_0, "middle_to_start";
-        1 => CONNECTOR_TEXT_SECTION_ATOM_1, "middle_to_end";
+        0 => "middle_to_start";
+        1 => "middle_to_end";
     ]
 }
-
-static CONNECTOR_OFF_AXIS_OFFSET_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_OFF_AXIS_OFFSET_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_OFF_AXIS_OFFSET_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_connector_off_axis_offset_from_decoder;
     variants [
-        0 => CONNECTOR_OFF_AXIS_OFFSET_ATOM_0, "none";
-        1 => CONNECTOR_OFF_AXIS_OFFSET_ATOM_1, "above";
-        2 => CONNECTOR_OFF_AXIS_OFFSET_ATOM_2, "below";
+        0 => "none";
+        1 => "above";
+        2 => "below";
     ]
 }
 
@@ -6451,173 +4239,59 @@ kiwi_message_decoder! {
     ]
 }
 
-static CONNECTOR_LINE_STYLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_LINE_STYLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_LINE_STYLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_connector_line_style_from_decoder;
     variants [
-        0 => CONNECTOR_LINE_STYLE_ATOM_0, "elbowed";
-        1 => CONNECTOR_LINE_STYLE_ATOM_1, "straight";
-        2 => CONNECTOR_LINE_STYLE_ATOM_2, "curved";
+        0 => "elbowed";
+        1 => "straight";
+        2 => "curved";
     ]
 }
-
-static CONNECTOR_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_connector_type_from_decoder;
     variants [
-        0 => CONNECTOR_TYPE_ATOM_0, "manual";
-        1 => CONNECTOR_TYPE_ATOM_1, "diagram";
+        0 => "manual";
+        1 => "diagram";
     ]
 }
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_30: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_31: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_TYPE_ATOM_32: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_annotation_property_type_from_decoder;
     variants [
-        0 => ANNOTATION_PROPERTY_TYPE_ATOM_0, "fill";
-        1 => ANNOTATION_PROPERTY_TYPE_ATOM_1, "stroke";
-        2 => ANNOTATION_PROPERTY_TYPE_ATOM_2, "width";
-        3 => ANNOTATION_PROPERTY_TYPE_ATOM_3, "height";
-        4 => ANNOTATION_PROPERTY_TYPE_ATOM_4, "min_width";
-        5 => ANNOTATION_PROPERTY_TYPE_ATOM_5, "min_height";
-        6 => ANNOTATION_PROPERTY_TYPE_ATOM_6, "max_width";
-        7 => ANNOTATION_PROPERTY_TYPE_ATOM_7, "max_height";
-        8 => ANNOTATION_PROPERTY_TYPE_ATOM_8, "stroke_width";
-        9 => ANNOTATION_PROPERTY_TYPE_ATOM_9, "corner_radius";
-        10 => ANNOTATION_PROPERTY_TYPE_ATOM_10, "effect";
-        11 => ANNOTATION_PROPERTY_TYPE_ATOM_11, "text_style";
-        12 => ANNOTATION_PROPERTY_TYPE_ATOM_12, "text_align_horizontal";
-        13 => ANNOTATION_PROPERTY_TYPE_ATOM_13, "font_family";
-        14 => ANNOTATION_PROPERTY_TYPE_ATOM_14, "font_size";
-        15 => ANNOTATION_PROPERTY_TYPE_ATOM_15, "font_weight";
-        16 => ANNOTATION_PROPERTY_TYPE_ATOM_16, "line_height";
-        17 => ANNOTATION_PROPERTY_TYPE_ATOM_17, "letter_spacing";
-        18 => ANNOTATION_PROPERTY_TYPE_ATOM_18, "stack_spacing";
-        19 => ANNOTATION_PROPERTY_TYPE_ATOM_19, "stack_padding";
-        20 => ANNOTATION_PROPERTY_TYPE_ATOM_20, "stack_mode";
-        21 => ANNOTATION_PROPERTY_TYPE_ATOM_21, "stack_alignment";
-        22 => ANNOTATION_PROPERTY_TYPE_ATOM_22, "opacity";
-        23 => ANNOTATION_PROPERTY_TYPE_ATOM_23, "component";
-        24 => ANNOTATION_PROPERTY_TYPE_ATOM_24, "font_style";
-        25 => ANNOTATION_PROPERTY_TYPE_ATOM_25, "grid_row_gap";
-        26 => ANNOTATION_PROPERTY_TYPE_ATOM_26, "grid_column_gap";
-        27 => ANNOTATION_PROPERTY_TYPE_ATOM_27, "grid_row_count";
-        28 => ANNOTATION_PROPERTY_TYPE_ATOM_28, "grid_column_count";
-        29 => ANNOTATION_PROPERTY_TYPE_ATOM_29, "grid_row_anchor_index";
-        30 => ANNOTATION_PROPERTY_TYPE_ATOM_30, "grid_column_anchor_index";
-        31 => ANNOTATION_PROPERTY_TYPE_ATOM_31, "grid_row_span";
-        32 => ANNOTATION_PROPERTY_TYPE_ATOM_32, "grid_column_span";
+        0 => "fill";
+        1 => "stroke";
+        2 => "width";
+        3 => "height";
+        4 => "min_width";
+        5 => "min_height";
+        6 => "max_width";
+        7 => "max_height";
+        8 => "stroke_width";
+        9 => "corner_radius";
+        10 => "effect";
+        11 => "text_style";
+        12 => "text_align_horizontal";
+        13 => "font_family";
+        14 => "font_size";
+        15 => "font_weight";
+        16 => "line_height";
+        17 => "letter_spacing";
+        18 => "stack_spacing";
+        19 => "stack_padding";
+        20 => "stack_mode";
+        21 => "stack_alignment";
+        22 => "opacity";
+        23 => "component";
+        24 => "font_style";
+        25 => "grid_row_gap";
+        26 => "grid_column_gap";
+        27 => "grid_row_count";
+        28 => "grid_column_count";
+        29 => "grid_row_anchor_index";
+        30 => "grid_column_anchor_index";
+        31 => "grid_row_span";
+        32 => "grid_column_span";
     ]
 }
 
@@ -6641,71 +4315,29 @@ kiwi_message_decoder! {
     ]
 }
 
-static ANNOTATION_CATEGORY_PRESET_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_PRESET_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_PRESET_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_PRESET_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_PRESET_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_PRESET_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_annotation_category_preset_from_decoder;
     variants [
-        0 => ANNOTATION_CATEGORY_PRESET_ATOM_0, "none";
-        1 => ANNOTATION_CATEGORY_PRESET_ATOM_1, "accessibility";
-        2 => ANNOTATION_CATEGORY_PRESET_ATOM_2, "behavior";
-        3 => ANNOTATION_CATEGORY_PRESET_ATOM_3, "content";
-        4 => ANNOTATION_CATEGORY_PRESET_ATOM_4, "development";
-        5 => ANNOTATION_CATEGORY_PRESET_ATOM_5, "interaction";
+        0 => "none";
+        1 => "accessibility";
+        2 => "behavior";
+        3 => "content";
+        4 => "development";
+        5 => "interaction";
     ]
 }
-
-static ANNOTATION_CATEGORY_COLOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_COLOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_COLOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_COLOR_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_COLOR_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_COLOR_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_COLOR_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_COLOR_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_annotation_category_color_from_decoder;
     variants [
-        0 => ANNOTATION_CATEGORY_COLOR_ATOM_0, "yellow";
-        1 => ANNOTATION_CATEGORY_COLOR_ATOM_1, "orange";
-        2 => ANNOTATION_CATEGORY_COLOR_ATOM_2, "red";
-        3 => ANNOTATION_CATEGORY_COLOR_ATOM_3, "pink";
-        4 => ANNOTATION_CATEGORY_COLOR_ATOM_4, "violet";
-        5 => ANNOTATION_CATEGORY_COLOR_ATOM_5, "blue";
-        6 => ANNOTATION_CATEGORY_COLOR_ATOM_6, "teal";
-        7 => ANNOTATION_CATEGORY_COLOR_ATOM_7, "green";
+        0 => "yellow";
+        1 => "orange";
+        2 => "red";
+        3 => "pink";
+        4 => "violet";
+        5 => "blue";
+        6 => "teal";
+        7 => "green";
     ]
 }
 
@@ -6799,25 +4431,13 @@ kiwi_message_decoder! {
     ]
 }
 
-static ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_annotation_measurement_node_side_from_decoder;
     variants [
-        0 => ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_0, "top";
-        1 => ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_1, "bottom";
-        2 => ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_2, "left";
-        3 => ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_3, "right";
+        0 => "top";
+        1 => "bottom";
+        2 => "left";
+        3 => "right";
     ]
 }
 
@@ -6959,99 +4579,45 @@ kiwi_message_decoder! {
     ]
 }
 
-static EDITOR_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EDITOR_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EDITOR_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static EDITOR_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static EDITOR_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static EDITOR_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static EDITOR_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static EDITOR_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static EDITOR_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_editor_type_from_decoder;
     variants [
-        0 => EDITOR_TYPE_ATOM_0, "design";
-        1 => EDITOR_TYPE_ATOM_1, "whiteboard";
-        2 => EDITOR_TYPE_ATOM_2, "slides";
-        3 => EDITOR_TYPE_ATOM_3, "dev_handoff";
-        4 => EDITOR_TYPE_ATOM_4, "sites";
-        5 => EDITOR_TYPE_ATOM_5, "cooper";
-        6 => EDITOR_TYPE_ATOM_6, "illustration";
-        7 => EDITOR_TYPE_ATOM_7, "figmake";
-        8 => EDITOR_TYPE_ATOM_8, "figspec";
+        0 => "design";
+        1 => "whiteboard";
+        2 => "slides";
+        3 => "dev_handoff";
+        4 => "sites";
+        5 => "cooper";
+        6 => "illustration";
+        7 => "figmake";
+        8 => "figspec";
     ]
 }
-
-static MASK_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MASK_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MASK_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_mask_type_from_decoder;
     variants [
-        0 => MASK_TYPE_ATOM_0, "alpha";
-        1 => MASK_TYPE_ATOM_1, "outline";
-        2 => MASK_TYPE_ATOM_2, "luminance";
+        0 => "alpha";
+        1 => "outline";
+        2 => "luminance";
     ]
 }
-
-static MODULE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MODULE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MODULE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_module_type_from_decoder;
     variants [
-        0 => MODULE_TYPE_ATOM_0, "none";
-        1 => MODULE_TYPE_ATOM_1, "single_node";
-        2 => MODULE_TYPE_ATOM_2, "multi_node";
+        0 => "none";
+        1 => "single_node";
+        2 => "multi_node";
     ]
 }
-
-static SECTION_STATUS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SECTION_STATUS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SECTION_STATUS_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_section_status_from_decoder;
     variants [
-        0 => SECTION_STATUS_ATOM_0, "none";
-        1 => SECTION_STATUS_ATOM_1, "build";
-        2 => SECTION_STATUS_ATOM_2, "completed";
+        0 => "none";
+        1 => "build";
+        2 => "completed";
     ]
 }
 
@@ -7127,25 +4693,13 @@ kiwi_message_decoder! {
     ]
 }
 
-static BUZZ_APPROVAL_NODE_STATUS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static BUZZ_APPROVAL_NODE_STATUS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static BUZZ_APPROVAL_NODE_STATUS_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static BUZZ_APPROVAL_NODE_STATUS_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_buzz_approval_node_status_from_decoder;
     variants [
-        0 => BUZZ_APPROVAL_NODE_STATUS_ATOM_0, "none";
-        1 => BUZZ_APPROVAL_NODE_STATUS_ATOM_1, "in_review";
-        2 => BUZZ_APPROVAL_NODE_STATUS_ATOM_2, "approved";
-        3 => BUZZ_APPROVAL_NODE_STATUS_ATOM_3, "changes_requested";
+        0 => "none";
+        1 => "in_review";
+        2 => "approved";
+        3 => "changes_requested";
     ]
 }
 
@@ -7197,17 +4751,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static VARIABLE_TIMING_DISPLAY_UNIT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_TIMING_DISPLAY_UNIT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_variable_timing_display_unit_from_decoder;
     variants [
-        0 => VARIABLE_TIMING_DISPLAY_UNIT_ATOM_0, "milliseconds";
-        1 => VARIABLE_TIMING_DISPLAY_UNIT_ATOM_1, "seconds";
+        0 => "milliseconds";
+        1 => "seconds";
     ]
 }
 
@@ -7820,21 +5368,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static GIT_REPO_REF_PROVIDER_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static GIT_REPO_REF_PROVIDER_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static GIT_REPO_REF_PROVIDER_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_git_repo_ref_provider_from_decoder;
     variants [
-        0 => GIT_REPO_REF_PROVIDER_ATOM_0, "ugit";
-        1 => GIT_REPO_REF_PROVIDER_ATOM_1, "github";
-        2 => GIT_REPO_REF_PROVIDER_ATOM_2, "other";
+        0 => "ugit";
+        1 => "github";
+        2 => "other";
     ]
 }
 
@@ -8081,67 +5620,37 @@ kiwi_message_decoder! {
     ]
 }
 
-static COOKIE_BANNER_COMPONENT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static COOKIE_BANNER_COMPONENT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_cookie_banner_component_type_from_decoder;
     variants [
-        0 => COOKIE_BANNER_COMPONENT_TYPE_ATOM_0, "banner";
-        1 => COOKIE_BANNER_COMPONENT_TYPE_ATOM_1, "modal";
+        0 => "banner";
+        1 => "modal";
     ]
 }
-
-static TRIGGER_COMPONENT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGER_COMPONENT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_trigger_component_type_from_decoder;
     variants [
-        0 => TRIGGER_COMPONENT_TYPE_ATOM_0, "banner";
-        1 => TRIGGER_COMPONENT_TYPE_ATOM_1, "tag";
+        0 => "banner";
+        1 => "tag";
     ]
 }
-
-static COOKIE_X_ALIGNMENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static COOKIE_X_ALIGNMENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static COOKIE_X_ALIGNMENT_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_cookie_x_alignment_from_decoder;
     variants [
-        0 => COOKIE_X_ALIGNMENT_ATOM_0, "left";
-        1 => COOKIE_X_ALIGNMENT_ATOM_1, "center";
-        2 => COOKIE_X_ALIGNMENT_ATOM_2, "right";
+        0 => "left";
+        1 => "center";
+        2 => "right";
     ]
 }
-
-static COOKIE_Y_ALIGNMENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static COOKIE_Y_ALIGNMENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static COOKIE_Y_ALIGNMENT_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_cookie_y_alignment_from_decoder;
     variants [
-        0 => COOKIE_Y_ALIGNMENT_ATOM_0, "top";
-        1 => COOKIE_Y_ALIGNMENT_ATOM_1, "center";
-        2 => COOKIE_Y_ALIGNMENT_ATOM_2, "bottom";
+        0 => "top";
+        1 => "center";
+        2 => "bottom";
     ]
 }
 
@@ -8185,17 +5694,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static RESPONSIVE_SCALING_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static RESPONSIVE_SCALING_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_responsive_scaling_mode_from_decoder;
     variants [
-        0 => RESPONSIVE_SCALING_MODE_ATOM_0, "reflow";
-        1 => RESPONSIVE_SCALING_MODE_ATOM_1, "scale";
+        0 => "reflow";
+        1 => "scale";
     ]
 }
 
@@ -8243,17 +5746,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_cms_filter_criteria_match_type_from_decoder;
     variants [
-        0 => CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_0, "match_all";
-        1 => CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_1, "match_any";
+        0 => "match_all";
+        1 => "match_any";
     ]
 }
 
@@ -8279,13 +5776,10 @@ kiwi_message_decoder! {
     ]
 }
 
-static CMS_SELECTOR_FILTER_OPERATOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_cms_selector_filter_operator_from_decoder;
     variants [
-        0 => CMS_SELECTOR_FILTER_OPERATOR_ATOM_0, "equals";
+        0 => "equals";
     ]
 }
 
@@ -8310,17 +5804,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static CMS_FIELD_ORDER_BY_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_FIELD_ORDER_BY_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_cms_field_order_by_from_decoder;
     variants [
-        0 => CMS_FIELD_ORDER_BY_ATOM_0, "ascending";
-        1 => CMS_FIELD_ORDER_BY_ATOM_1, "descending";
+        0 => "ascending";
+        1 => "descending";
     ]
 }
 
@@ -8367,17 +5855,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static CMS_CONSUMPTION_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_CONSUMPTION_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_cms_consumption_field_from_decoder;
     variants [
-        0 => CMS_CONSUMPTION_FIELD_ATOM_0, "missing";
-        1 => CMS_CONSUMPTION_FIELD_ATOM_1, "text_data";
+        0 => "missing";
+        1 => "text_data";
     ]
 }
 
@@ -8424,45 +5906,18 @@ kiwi_message_decoder! {
     ]
 }
 
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_CLASS_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_cms_rich_text_style_class_from_decoder;
     variants [
-        0 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_0, "heading1";
-        1 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_1, "heading2";
-        2 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_2, "heading3";
-        3 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_3, "heading4";
-        4 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_4, "heading5";
-        5 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_5, "heading6";
-        6 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_6, "paragraph";
-        7 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_7, "link";
-        8 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_8, "blockquote";
+        0 => "heading1";
+        1 => "heading2";
+        2 => "heading3";
+        3 => "heading4";
+        4 => "heading5";
+        5 => "heading6";
+        6 => "paragraph";
+        7 => "link";
+        8 => "blockquote";
     ]
 }
 
@@ -8659,35 +6114,20 @@ kiwi_message_decoder! {
     ]
 }
 
-static MANAGED_STRING_CONTENT_SCHEMA_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_managed_string_content_schema_from_decoder;
     variants [
-        0 => MANAGED_STRING_CONTENT_SCHEMA_ATOM_0, "v0";
+        0 => "v0";
     ]
 }
-
-static MANAGED_STRING_NODE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_NODE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_NODE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_NODE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_managed_string_node_type_from_decoder;
     variants [
-        0 => MANAGED_STRING_NODE_TYPE_ATOM_0, "text";
-        1 => MANAGED_STRING_NODE_TYPE_ATOM_1, "concatenate";
-        2 => MANAGED_STRING_NODE_TYPE_ATOM_2, "plural";
-        3 => MANAGED_STRING_NODE_TYPE_ATOM_3, "placeholder";
+        0 => "text";
+        1 => "concatenate";
+        2 => "plural";
+        3 => "placeholder";
     ]
 }
 
@@ -8759,33 +6199,15 @@ kiwi_message_decoder! {
     ]
 }
 
-static MANAGED_STRING_PLURAL_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLURAL_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLURAL_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLURAL_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLURAL_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLURAL_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_managed_string_plural_type_from_decoder;
     variants [
-        0 => MANAGED_STRING_PLURAL_TYPE_ATOM_0, "zero";
-        1 => MANAGED_STRING_PLURAL_TYPE_ATOM_1, "one";
-        2 => MANAGED_STRING_PLURAL_TYPE_ATOM_2, "two";
-        3 => MANAGED_STRING_PLURAL_TYPE_ATOM_3, "few";
-        4 => MANAGED_STRING_PLURAL_TYPE_ATOM_4, "many";
-        5 => MANAGED_STRING_PLURAL_TYPE_ATOM_5, "other";
+        0 => "zero";
+        1 => "one";
+        2 => "two";
+        3 => "few";
+        4 => "many";
+        5 => "other";
     ]
 }
 
@@ -8835,25 +6257,13 @@ kiwi_message_decoder! {
     ]
 }
 
-static MANAGED_STRING_FORMAT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_FORMAT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_FORMAT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_FORMAT_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_managed_string_format_type_from_decoder;
     variants [
-        0 => MANAGED_STRING_FORMAT_TYPE_ATOM_0, "text";
-        1 => MANAGED_STRING_FORMAT_TYPE_ATOM_1, "date";
-        2 => MANAGED_STRING_FORMAT_TYPE_ATOM_2, "time";
-        3 => MANAGED_STRING_FORMAT_TYPE_ATOM_3, "number";
+        0 => "text";
+        1 => "date";
+        2 => "time";
+        3 => "number";
     ]
 }
 
@@ -8926,71 +6336,29 @@ kiwi_message_decoder! {
     ]
 }
 
-static MEDIA_ACTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static MEDIA_ACTION_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_media_action_from_decoder;
     variants [
-        0 => MEDIA_ACTION_ATOM_0, "play";
-        1 => MEDIA_ACTION_ATOM_1, "pause";
-        2 => MEDIA_ACTION_ATOM_2, "toggle_play_pause";
-        3 => MEDIA_ACTION_ATOM_3, "mute";
-        4 => MEDIA_ACTION_ATOM_4, "unmute";
-        5 => MEDIA_ACTION_ATOM_5, "toggle_mute_unmute";
-        6 => MEDIA_ACTION_ATOM_6, "skip_forward";
-        7 => MEDIA_ACTION_ATOM_7, "skip_backward";
-        8 => MEDIA_ACTION_ATOM_8, "skip_to";
-        9 => MEDIA_ACTION_ATOM_9, "set_playback_rate";
+        0 => "play";
+        1 => "pause";
+        2 => "toggle_play_pause";
+        3 => "mute";
+        4 => "unmute";
+        5 => "toggle_mute_unmute";
+        6 => "skip_forward";
+        7 => "skip_backward";
+        8 => "skip_to";
+        9 => "set_playback_rate";
     ]
 }
-
-static ANIMATION_TIMELINE_ACTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_TIMELINE_ACTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_TIMELINE_ACTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_TIMELINE_ACTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_animation_timeline_action_from_decoder;
     variants [
-        0 => ANIMATION_TIMELINE_ACTION_ATOM_0, "play";
-        1 => ANIMATION_TIMELINE_ACTION_ATOM_1, "pause";
-        2 => ANIMATION_TIMELINE_ACTION_ATOM_2, "toggle_play_pause";
-        3 => ANIMATION_TIMELINE_ACTION_ATOM_3, "set_playhead";
+        0 => "play";
+        1 => "pause";
+        2 => "toggle_play_pause";
+        3 => "set_playhead";
     ]
 }
 
@@ -9125,273 +6493,75 @@ kiwi_message_decoder! {
     ]
 }
 
-static VARIABLE_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_30: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_31: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_32: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_33: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_34: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_35: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_36: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_37: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_38: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_39: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_40: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_41: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_42: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_43: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_44: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_45: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_46: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_47: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_48: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_49: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_50: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_51: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_52: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_53: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_54: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_55: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_56: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_57: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_58: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_59: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_60: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_61: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_62: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_63: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_64: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FIELD_ATOM_65: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_variable_field_from_decoder;
     variants [
-        0 => VARIABLE_FIELD_ATOM_0, "missing";
-        1 => VARIABLE_FIELD_ATOM_1, "corner_radius";
-        2 => VARIABLE_FIELD_ATOM_2, "paragraph_spacing";
-        3 => VARIABLE_FIELD_ATOM_3, "paragraph_indent";
-        4 => VARIABLE_FIELD_ATOM_4, "stroke_weight";
-        5 => VARIABLE_FIELD_ATOM_5, "stack_spacing";
-        6 => VARIABLE_FIELD_ATOM_6, "stack_padding_left";
-        7 => VARIABLE_FIELD_ATOM_7, "stack_padding_top";
-        8 => VARIABLE_FIELD_ATOM_8, "stack_padding_right";
-        9 => VARIABLE_FIELD_ATOM_9, "stack_padding_bottom";
-        10 => VARIABLE_FIELD_ATOM_10, "visible";
-        11 => VARIABLE_FIELD_ATOM_11, "text_data";
-        12 => VARIABLE_FIELD_ATOM_12, "width";
-        13 => VARIABLE_FIELD_ATOM_13, "height";
-        14 => VARIABLE_FIELD_ATOM_14, "rectangle_top_left_corner_radius";
-        15 => VARIABLE_FIELD_ATOM_15, "rectangle_top_right_corner_radius";
-        16 => VARIABLE_FIELD_ATOM_16, "rectangle_bottom_left_corner_radius";
-        17 => VARIABLE_FIELD_ATOM_17, "rectangle_bottom_right_corner_radius";
-        18 => VARIABLE_FIELD_ATOM_18, "border_top_weight";
-        19 => VARIABLE_FIELD_ATOM_19, "border_bottom_weight";
-        20 => VARIABLE_FIELD_ATOM_20, "border_left_weight";
-        21 => VARIABLE_FIELD_ATOM_21, "border_right_weight";
-        22 => VARIABLE_FIELD_ATOM_22, "variant_properties";
-        23 => VARIABLE_FIELD_ATOM_23, "stack_counter_spacing";
-        24 => VARIABLE_FIELD_ATOM_24, "min_width";
-        25 => VARIABLE_FIELD_ATOM_25, "max_width";
-        26 => VARIABLE_FIELD_ATOM_26, "min_height";
-        27 => VARIABLE_FIELD_ATOM_27, "max_height";
-        28 => VARIABLE_FIELD_ATOM_28, "font_family";
-        29 => VARIABLE_FIELD_ATOM_29, "font_style";
-        30 => VARIABLE_FIELD_ATOM_30, "font_variations";
-        31 => VARIABLE_FIELD_ATOM_31, "opacity";
-        32 => VARIABLE_FIELD_ATOM_32, "font_size";
-        34 => VARIABLE_FIELD_ATOM_33, "letter_spacing";
-        36 => VARIABLE_FIELD_ATOM_34, "line_height";
-        37 => VARIABLE_FIELD_ATOM_35, "overridden_symbol_id";
-        38 => VARIABLE_FIELD_ATOM_36, "hyperlink";
-        39 => VARIABLE_FIELD_ATOM_37, "cms_serialized_rich_text_data";
-        40 => VARIABLE_FIELD_ATOM_38, "slot_content_id";
-        41 => VARIABLE_FIELD_ATOM_39, "grid_row_gap";
-        42 => VARIABLE_FIELD_ATOM_40, "grid_column_gap";
-        43 => VARIABLE_FIELD_ATOM_41, "x_position";
-        44 => VARIABLE_FIELD_ATOM_42, "y_position";
-        45 => VARIABLE_FIELD_ATOM_43, "rotation";
-        46 => VARIABLE_FIELD_ATOM_44, "motion_translation_x";
-        47 => VARIABLE_FIELD_ATOM_45, "motion_translation_y";
-        48 => VARIABLE_FIELD_ATOM_46, "motion_rotation";
-        49 => VARIABLE_FIELD_ATOM_47, "motion_scale_x";
-        50 => VARIABLE_FIELD_ATOM_48, "motion_scale_y";
-        51 => VARIABLE_FIELD_ATOM_49, "motion_shear";
-        52 => VARIABLE_FIELD_ATOM_50, "scroll_offset_x";
-        53 => VARIABLE_FIELD_ATOM_51, "scroll_offset_y";
-        54 => VARIABLE_FIELD_ATOM_52, "path_trim_start";
-        55 => VARIABLE_FIELD_ATOM_53, "path_trim_end";
-        56 => VARIABLE_FIELD_ATOM_54, "dissolve_progress";
-        57 => VARIABLE_FIELD_ATOM_55, "easing_data";
-        58 => VARIABLE_FIELD_ATOM_56, "media_current_time";
-        59 => VARIABLE_FIELD_ATOM_57, "transform_3_d_perspective";
-        60 => VARIABLE_FIELD_ATOM_58, "transform_3_d_translation_z";
-        61 => VARIABLE_FIELD_ATOM_59, "transform_3_d_rotation_x";
-        62 => VARIABLE_FIELD_ATOM_60, "transform_3_d_rotation_y";
-        63 => VARIABLE_FIELD_ATOM_61, "transform_3_d_rotation_z";
-        64 => VARIABLE_FIELD_ATOM_62, "polygon_count";
-        65 => VARIABLE_FIELD_ATOM_63, "arc_data_starting_angle";
-        66 => VARIABLE_FIELD_ATOM_64, "arc_data_ending_angle";
-        67 => VARIABLE_FIELD_ATOM_65, "arc_data_inner_radius";
+        0 => "missing";
+        1 => "corner_radius";
+        2 => "paragraph_spacing";
+        3 => "paragraph_indent";
+        4 => "stroke_weight";
+        5 => "stack_spacing";
+        6 => "stack_padding_left";
+        7 => "stack_padding_top";
+        8 => "stack_padding_right";
+        9 => "stack_padding_bottom";
+        10 => "visible";
+        11 => "text_data";
+        12 => "width";
+        13 => "height";
+        14 => "rectangle_top_left_corner_radius";
+        15 => "rectangle_top_right_corner_radius";
+        16 => "rectangle_bottom_left_corner_radius";
+        17 => "rectangle_bottom_right_corner_radius";
+        18 => "border_top_weight";
+        19 => "border_bottom_weight";
+        20 => "border_left_weight";
+        21 => "border_right_weight";
+        22 => "variant_properties";
+        23 => "stack_counter_spacing";
+        24 => "min_width";
+        25 => "max_width";
+        26 => "min_height";
+        27 => "max_height";
+        28 => "font_family";
+        29 => "font_style";
+        30 => "font_variations";
+        31 => "opacity";
+        32 => "font_size";
+        34 => "letter_spacing";
+        36 => "line_height";
+        37 => "overridden_symbol_id";
+        38 => "hyperlink";
+        39 => "cms_serialized_rich_text_data";
+        40 => "slot_content_id";
+        41 => "grid_row_gap";
+        42 => "grid_column_gap";
+        43 => "x_position";
+        44 => "y_position";
+        45 => "rotation";
+        46 => "motion_translation_x";
+        47 => "motion_translation_y";
+        48 => "motion_rotation";
+        49 => "motion_scale_x";
+        50 => "motion_scale_y";
+        51 => "motion_shear";
+        52 => "scroll_offset_x";
+        53 => "scroll_offset_y";
+        54 => "path_trim_start";
+        55 => "path_trim_end";
+        56 => "dissolve_progress";
+        57 => "easing_data";
+        58 => "media_current_time";
+        59 => "transform_3_d_perspective";
+        60 => "transform_3_d_translation_z";
+        61 => "transform_3_d_rotation_x";
+        62 => "transform_3_d_rotation_y";
+        63 => "transform_3_d_rotation_z";
+        64 => "polygon_count";
+        65 => "arc_data_starting_angle";
+        66 => "arc_data_ending_angle";
+        67 => "arc_data_inner_radius";
     ]
 }
 
@@ -9741,21 +6911,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static GRID_TRACK_SIZING_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static GRID_TRACK_SIZING_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static GRID_TRACK_SIZING_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_grid_track_sizing_type_from_decoder;
     variants [
-        0 => GRID_TRACK_SIZING_TYPE_ATOM_0, "flex";
-        1 => GRID_TRACK_SIZING_TYPE_ATOM_1, "fixed";
-        2 => GRID_TRACK_SIZING_TYPE_ATOM_2, "hug";
+        0 => "flex";
+        1 => "fixed";
+        2 => "hug";
     ]
 }
 
@@ -9847,17 +7008,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static AGENDA_ITEM_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_ITEM_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_agenda_item_type_from_decoder;
     variants [
-        0 => AGENDA_ITEM_TYPE_ATOM_0, "node";
-        1 => AGENDA_ITEM_TYPE_ATOM_1, "block";
+        0 => "node";
+        1 => "block";
     ]
 }
 
@@ -9990,17 +7145,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static DIAGRAM_LAYOUT_RULE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static DIAGRAM_LAYOUT_RULE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_diagram_layout_rule_type_from_decoder;
     variants [
-        0 => DIAGRAM_LAYOUT_RULE_TYPE_ATOM_0, "none";
-        1 => DIAGRAM_LAYOUT_RULE_TYPE_ATOM_1, "tree";
+        0 => "none";
+        1 => "tree";
     ]
 }
 
@@ -10024,17 +7173,11 @@ kiwi_struct_decoder! {
     ]
 }
 
-static DIAGRAM_LAYOUT_PAUSED_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static DIAGRAM_LAYOUT_PAUSED_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_diagram_layout_paused_from_decoder;
     variants [
-        0 => DIAGRAM_LAYOUT_PAUSED_ATOM_0, "no";
-        1 => DIAGRAM_LAYOUT_PAUSED_ATOM_1, "yes";
+        0 => "no";
+        1 => "yes";
     ]
 }
 
@@ -10062,29 +7205,14 @@ kiwi_message_decoder! {
     ]
 }
 
-static COMPONENT_PROP_NODE_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_NODE_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_NODE_FIELD_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_NODE_FIELD_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_NODE_FIELD_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_component_prop_node_field_from_decoder;
     variants [
-        0 => COMPONENT_PROP_NODE_FIELD_ATOM_0, "visible";
-        1 => COMPONENT_PROP_NODE_FIELD_ATOM_1, "text_data";
-        2 => COMPONENT_PROP_NODE_FIELD_ATOM_2, "overridden_symbol_id";
-        3 => COMPONENT_PROP_NODE_FIELD_ATOM_3, "inherit_fill_style_id";
-        4 => COMPONENT_PROP_NODE_FIELD_ATOM_4, "slot_content_id";
+        0 => "visible";
+        1 => "text_data";
+        2 => "overridden_symbol_id";
+        3 => "inherit_fill_style_id";
+        4 => "slot_content_id";
     ]
 }
 
@@ -10327,77 +7455,26 @@ kiwi_message_decoder! {
     ]
 }
 
-static COMPONENT_PROP_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_component_prop_type_from_decoder;
     variants [
-        0 => COMPONENT_PROP_TYPE_ATOM_0, "bool";
-        1 => COMPONENT_PROP_TYPE_ATOM_1, "text";
-        2 => COMPONENT_PROP_TYPE_ATOM_2, "color";
-        3 => COMPONENT_PROP_TYPE_ATOM_3, "instance_swap";
-        4 => COMPONENT_PROP_TYPE_ATOM_4, "variant";
-        5 => COMPONENT_PROP_TYPE_ATOM_5, "number";
-        6 => COMPONENT_PROP_TYPE_ATOM_6, "image";
-        7 => COMPONENT_PROP_TYPE_ATOM_7, "slot";
-        8 => COMPONENT_PROP_TYPE_ATOM_8, "easing";
-        9 => COMPONENT_PROP_TYPE_ATOM_9, "color_array";
-        10 => COMPONENT_PROP_TYPE_ATOM_10, "vector";
-        11 => COMPONENT_PROP_TYPE_ATOM_11, "line";
-        12 => COMPONENT_PROP_TYPE_ATOM_12, "circle";
-        13 => COMPONENT_PROP_TYPE_ATOM_13, "rotation_3_d";
-        14 => COMPONENT_PROP_TYPE_ATOM_14, "circle_point";
-        15 => COMPONENT_PROP_TYPE_ATOM_15, "gradient";
-        16 => COMPONENT_PROP_TYPE_ATOM_16, "color_point";
+        0 => "bool";
+        1 => "text";
+        2 => "color";
+        3 => "instance_swap";
+        4 => "variant";
+        5 => "number";
+        6 => "image";
+        7 => "slot";
+        8 => "easing";
+        9 => "color_array";
+        10 => "vector";
+        11 => "line";
+        12 => "circle";
+        13 => "rotation_3_d";
+        14 => "circle_point";
+        15 => "gradient";
+        16 => "color_point";
     ]
 }
 
@@ -10456,25 +7533,13 @@ kiwi_message_decoder! {
     ]
 }
 
-static PARAMETER_CONFIG_CONTROL_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PARAMETER_CONFIG_CONTROL_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PARAMETER_CONFIG_CONTROL_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static PARAMETER_CONFIG_CONTROL_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_parameter_config_control_from_decoder;
     variants [
-        0 => PARAMETER_CONFIG_CONTROL_ATOM_0, "default";
-        1 => PARAMETER_CONFIG_CONTROL_ATOM_1, "slider";
-        2 => PARAMETER_CONFIG_CONTROL_ATOM_2, "input";
-        3 => PARAMETER_CONFIG_CONTROL_ATOM_3, "select";
+        0 => "default";
+        1 => "slider";
+        2 => "input";
+        3 => "select";
     ]
 }
 
@@ -10523,21 +7588,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static POINT_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static POINT_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static POINT_MODE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_point_mode_from_decoder;
     variants [
-        0 => POINT_MODE_ATOM_0, "canvas_and_ui";
-        1 => POINT_MODE_ATOM_1, "canvas";
-        2 => POINT_MODE_ATOM_2, "ui";
+        0 => "canvas_and_ui";
+        1 => "canvas";
+        2 => "ui";
     ]
 }
 
@@ -10953,61 +8009,31 @@ kiwi_message_decoder! {
     ]
 }
 
-static INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_instance_swap_preferred_value_type_from_decoder;
     variants [
-        0 => INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_0, "component";
-        1 => INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_1, "state_group";
+        0 => "component";
+        1 => "state_group";
     ]
 }
-
-static WIDGET_EVENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_EVENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_EVENT_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_EVENT_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_EVENT_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_widget_event_from_decoder;
     variants [
-        0 => WIDGET_EVENT_ATOM_0, "mouse_down";
-        1 => WIDGET_EVENT_ATOM_1, "click";
-        2 => WIDGET_EVENT_ATOM_2, "text_edit_end";
-        3 => WIDGET_EVENT_ATOM_3, "attached_stickables_changed";
-        4 => WIDGET_EVENT_ATOM_4, "stuck_status_changed";
+        0 => "mouse_down";
+        1 => "click";
+        2 => "text_edit_end";
+        3 => "attached_stickables_changed";
+        4 => "stuck_status_changed";
     ]
 }
-
-static WIDGET_INPUT_BEHAVIOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_INPUT_BEHAVIOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_INPUT_BEHAVIOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_widget_input_behavior_from_decoder;
     variants [
-        0 => WIDGET_INPUT_BEHAVIOR_ATOM_0, "wrap";
-        1 => WIDGET_INPUT_BEHAVIOR_ATOM_1, "truncate";
-        2 => WIDGET_INPUT_BEHAVIOR_ATOM_2, "multiline";
+        0 => "wrap";
+        1 => "truncate";
+        2 => "multiline";
     ]
 }
 
@@ -11035,37 +8061,16 @@ kiwi_message_decoder! {
     ]
 }
 
-static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_widget_property_menu_item_type_from_decoder;
     variants [
-        0 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_0, "action";
-        1 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_1, "separator";
-        2 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_2, "color";
-        3 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_3, "dropdown";
-        4 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_4, "color_selector";
-        5 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_5, "toggle";
-        6 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_6, "link";
+        0 => "action";
+        1 => "separator";
+        2 => "color";
+        3 => "dropdown";
+        4 => "color_selector";
+        5 => "toggle";
+        6 => "link";
     ]
 }
 
@@ -11092,17 +8097,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_widget_input_text_node_type_from_decoder;
     variants [
-        0 => WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_0, "widget_controlled";
-        1 => WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_1, "rich_text";
+        0 => "widget_controlled";
+        1 => "rich_text";
     ]
 }
 
@@ -11136,211 +8135,73 @@ kiwi_message_decoder! {
     ]
 }
 
-static CODE_BLOCK_LANGUAGE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_LANGUAGE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_code_block_language_from_decoder;
     variants [
-        0 => CODE_BLOCK_LANGUAGE_ATOM_0, "typescript";
-        1 => CODE_BLOCK_LANGUAGE_ATOM_1, "cpp";
-        2 => CODE_BLOCK_LANGUAGE_ATOM_2, "ruby";
-        3 => CODE_BLOCK_LANGUAGE_ATOM_3, "css";
-        4 => CODE_BLOCK_LANGUAGE_ATOM_4, "javascript";
-        5 => CODE_BLOCK_LANGUAGE_ATOM_5, "html";
-        6 => CODE_BLOCK_LANGUAGE_ATOM_6, "json";
-        7 => CODE_BLOCK_LANGUAGE_ATOM_7, "graphql";
-        8 => CODE_BLOCK_LANGUAGE_ATOM_8, "python";
-        9 => CODE_BLOCK_LANGUAGE_ATOM_9, "go";
-        10 => CODE_BLOCK_LANGUAGE_ATOM_10, "sql";
-        11 => CODE_BLOCK_LANGUAGE_ATOM_11, "swift";
-        12 => CODE_BLOCK_LANGUAGE_ATOM_12, "kotlin";
-        13 => CODE_BLOCK_LANGUAGE_ATOM_13, "rust";
-        14 => CODE_BLOCK_LANGUAGE_ATOM_14, "bash";
-        15 => CODE_BLOCK_LANGUAGE_ATOM_15, "plaintext";
-        16 => CODE_BLOCK_LANGUAGE_ATOM_16, "markdown";
+        0 => "typescript";
+        1 => "cpp";
+        2 => "ruby";
+        3 => "css";
+        4 => "javascript";
+        5 => "html";
+        6 => "json";
+        7 => "graphql";
+        8 => "python";
+        9 => "go";
+        10 => "sql";
+        11 => "swift";
+        12 => "kotlin";
+        13 => "rust";
+        14 => "bash";
+        15 => "plaintext";
+        16 => "markdown";
     ]
 }
-
-static CODE_BLOCK_THEME_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_THEME_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_THEME_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_THEME_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_THEME_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_THEME_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BLOCK_THEME_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_code_block_theme_from_decoder;
     variants [
-        0 => CODE_BLOCK_THEME_ATOM_0, "figjam_dark";
-        1 => CODE_BLOCK_THEME_ATOM_1, "dracula";
-        2 => CODE_BLOCK_THEME_ATOM_2, "duotone_sea";
-        3 => CODE_BLOCK_THEME_ATOM_3, "duotone_space";
-        4 => CODE_BLOCK_THEME_ATOM_4, "duotone_earth";
-        5 => CODE_BLOCK_THEME_ATOM_5, "duotone_forest";
-        6 => CODE_BLOCK_THEME_ATOM_6, "duotone_light";
+        0 => "figjam_dark";
+        1 => "dracula";
+        2 => "duotone_sea";
+        3 => "duotone_space";
+        4 => "duotone_earth";
+        5 => "duotone_forest";
+        6 => "duotone_light";
     ]
 }
-
-static SPEC_BLOCK_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static SPEC_BLOCK_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_spec_block_type_from_decoder;
     variants [
-        0 => SPEC_BLOCK_TYPE_ATOM_0, "default";
-        1 => SPEC_BLOCK_TYPE_ATOM_1, "paragraph";
-        2 => SPEC_BLOCK_TYPE_ATOM_2, "heading_1";
-        3 => SPEC_BLOCK_TYPE_ATOM_3, "heading_2";
-        4 => SPEC_BLOCK_TYPE_ATOM_4, "heading_3";
-        5 => SPEC_BLOCK_TYPE_ATOM_5, "heading_4";
-        6 => SPEC_BLOCK_TYPE_ATOM_6, "heading_5";
-        7 => SPEC_BLOCK_TYPE_ATOM_7, "heading_6";
-        8 => SPEC_BLOCK_TYPE_ATOM_8, "code_block";
-        9 => SPEC_BLOCK_TYPE_ATOM_9, "block_quote";
-        10 => SPEC_BLOCK_TYPE_ATOM_10, "horizontal_rule";
-        11 => SPEC_BLOCK_TYPE_ATOM_11, "ordered_list_item";
-        12 => SPEC_BLOCK_TYPE_ATOM_12, "unordered_list_item";
-        13 => SPEC_BLOCK_TYPE_ATOM_13, "document";
-        14 => SPEC_BLOCK_TYPE_ATOM_14, "table";
-        15 => SPEC_BLOCK_TYPE_ATOM_15, "table_row";
-        16 => SPEC_BLOCK_TYPE_ATOM_16, "table_cell";
-        17 => SPEC_BLOCK_TYPE_ATOM_17, "todo_list_item_unchecked";
-        18 => SPEC_BLOCK_TYPE_ATOM_18, "todo_list_item_checked";
-        19 => SPEC_BLOCK_TYPE_ATOM_19, "image";
-        20 => SPEC_BLOCK_TYPE_ATOM_20, "embed";
+        0 => "default";
+        1 => "paragraph";
+        2 => "heading_1";
+        3 => "heading_2";
+        4 => "heading_3";
+        5 => "heading_4";
+        6 => "heading_5";
+        7 => "heading_6";
+        8 => "code_block";
+        9 => "block_quote";
+        10 => "horizontal_rule";
+        11 => "ordered_list_item";
+        12 => "unordered_list_item";
+        13 => "document";
+        14 => "table";
+        15 => "table_row";
+        16 => "table_cell";
+        17 => "todo_list_item_unchecked";
+        18 => "todo_list_item_checked";
+        19 => "image";
+        20 => "embed";
     ]
 }
-
-static INTERNAL_ENUM_FOR_TEST_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_internal_enum_for_test_from_decoder;
     variants [
-        1 => INTERNAL_ENUM_FOR_TEST_ATOM_0, "old";
+        1 => "old";
     ]
 }
 
@@ -11387,25 +8248,13 @@ kiwi_message_decoder! {
     ]
 }
 
-static BACKFILL_ERROR_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static BACKFILL_ERROR_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static BACKFILL_ERROR_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static BACKFILL_ERROR_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_backfill_error_from_decoder;
     variants [
-        0 => BACKFILL_ERROR_ATOM_0, "none";
-        1 => BACKFILL_ERROR_ATOM_1, "transient_retrying";
-        2 => BACKFILL_ERROR_ATOM_2, "permanently_failed";
-        3 => BACKFILL_ERROR_ATOM_3, "paste_failed";
+        0 => "none";
+        1 => "transient_retrying";
+        2 => "permanently_failed";
+        3 => "paste_failed";
     ]
 }
 
@@ -11475,25 +8324,13 @@ kiwi_message_decoder! {
     ]
 }
 
-static BULLET_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static BULLET_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static BULLET_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static BULLET_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_bullet_type_from_decoder;
     variants [
-        0 => BULLET_TYPE_ATOM_0, "ordered";
-        1 => BULLET_TYPE_ATOM_1, "unordered";
-        2 => BULLET_TYPE_ATOM_2, "indent";
-        3 => BULLET_TYPE_ATOM_3, "no_list";
+        0 => "ordered";
+        1 => "unordered";
+        2 => "indent";
+        3 => "no_list";
     ]
 }
 
@@ -11546,75 +8383,39 @@ kiwi_message_decoder! {
     ]
 }
 
-static LINE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static LINE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static LINE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static LINE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static LINE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_line_type_from_decoder;
     variants [
-        0 => LINE_TYPE_ATOM_0, "plain";
-        1 => LINE_TYPE_ATOM_1, "ordered_list";
-        2 => LINE_TYPE_ATOM_2, "unordered_list";
-        3 => LINE_TYPE_ATOM_3, "blockquote";
-        4 => LINE_TYPE_ATOM_4, "header";
+        0 => "plain";
+        1 => "ordered_list";
+        2 => "unordered_list";
+        3 => "blockquote";
+        4 => "header";
     ]
 }
-
-static SOURCE_DIRECTIONALITY_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SOURCE_DIRECTIONALITY_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SOURCE_DIRECTIONALITY_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_source_directionality_from_decoder;
     variants [
-        0 => SOURCE_DIRECTIONALITY_ATOM_0, "auto";
-        1 => SOURCE_DIRECTIONALITY_ATOM_1, "ltr";
-        2 => SOURCE_DIRECTIONALITY_ATOM_2, "rtl";
+        0 => "auto";
+        1 => "ltr";
+        2 => "rtl";
     ]
 }
-
-static DIRECTIONALITY_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static DIRECTIONALITY_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_directionality_from_decoder;
     variants [
-        0 => DIRECTIONALITY_ATOM_0, "ltr";
-        1 => DIRECTIONALITY_ATOM_1, "rtl";
+        0 => "ltr";
+        1 => "rtl";
     ]
 }
-
-static DIRECTIONALITY_INTENT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static DIRECTIONALITY_INTENT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_directionality_intent_from_decoder;
     variants [
-        0 => DIRECTIONALITY_INTENT_ATOM_0, "implicit";
-        1 => DIRECTIONALITY_INTENT_ATOM_1, "explicit";
+        0 => "implicit";
+        1 => "explicit";
     ]
 }
 
@@ -11773,47 +8574,23 @@ kiwi_message_decoder! {
     ]
 }
 
-static ANIMATION_PHASE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_PHASE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_animation_phase_from_decoder;
     variants [
-        0 => ANIMATION_PHASE_ATOM_0, "in";
-        1 => ANIMATION_PHASE_ATOM_1, "out";
+        0 => "in";
+        1 => "out";
     ]
 }
-
-static ANIMATION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_animation_type_from_decoder;
     variants [
-        0 => ANIMATION_TYPE_ATOM_0, "none";
-        1 => ANIMATION_TYPE_ATOM_1, "fade";
-        2 => ANIMATION_TYPE_ATOM_2, "slide_from_left";
-        3 => ANIMATION_TYPE_ATOM_3, "slide_from_right";
-        4 => ANIMATION_TYPE_ATOM_4, "slide_from_top";
-        5 => ANIMATION_TYPE_ATOM_5, "slide_from_bottom";
+        0 => "none";
+        1 => "fade";
+        2 => "slide_from_left";
+        3 => "slide_from_right";
+        4 => "slide_from_top";
+        5 => "slide_from_bottom";
     ]
 }
 
@@ -11860,29 +8637,14 @@ kiwi_message_decoder! {
     ]
 }
 
-static TRIGGER_DEVICE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGER_DEVICE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGER_DEVICE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGER_DEVICE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGER_DEVICE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_trigger_device_from_decoder;
     variants [
-        0 => TRIGGER_DEVICE_ATOM_0, "keyboard";
-        1 => TRIGGER_DEVICE_ATOM_1, "unknown_controller";
-        2 => TRIGGER_DEVICE_ATOM_2, "xbox_one";
-        3 => TRIGGER_DEVICE_ATOM_3, "ps4";
-        4 => TRIGGER_DEVICE_ATOM_4, "switch_pro";
+        0 => "keyboard";
+        1 => "unknown_controller";
+        2 => "xbox_one";
+        3 => "ps4";
+        4 => "switch_pro";
     ]
 }
 
@@ -11952,21 +8714,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static MENTION_SOURCE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static MENTION_SOURCE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static MENTION_SOURCE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_mention_source_from_decoder;
     variants [
-        0 => MENTION_SOURCE_ATOM_0, "default";
-        1 => MENTION_SOURCE_ATOM_1, "copy_duplicate";
-        2 => MENTION_SOURCE_ATOM_2, "silent_insert";
+        0 => "default";
+        1 => "copy_duplicate";
+        2 => "silent_insert";
     ]
 }
 
@@ -12327,17 +9080,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static TRANSITION_DIRECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_DIRECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_transition_direction_from_decoder;
     variants [
-        0 => TRANSITION_DIRECTION_ATOM_0, "forward";
-        1 => TRANSITION_DIRECTION_ATOM_1, "reverse";
+        0 => "forward";
+        1 => "reverse";
     ]
 }
 
@@ -12441,21 +9188,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static PLAYBACK_CHANGE_PHASE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PLAYBACK_CHANGE_PHASE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PLAYBACK_CHANGE_PHASE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_playback_change_phase_from_decoder;
     variants [
-        0 => PLAYBACK_CHANGE_PHASE_ATOM_0, "initiated";
-        1 => PLAYBACK_CHANGE_PHASE_ATOM_1, "aborted";
-        2 => PLAYBACK_CHANGE_PHASE_ATOM_2, "committed";
+        0 => "initiated";
+        1 => "aborted";
+        2 => "committed";
     ]
 }
 
@@ -12635,65 +9373,32 @@ kiwi_message_decoder! {
     ]
 }
 
-static HEARTBEAT_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static HEARTBEAT_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_heartbeat_from_decoder;
     variants [
-        0 => HEARTBEAT_ATOM_0, "foreground";
-        1 => HEARTBEAT_ATOM_1, "background";
+        0 => "foreground";
+        1 => "background";
     ]
 }
-
-static SITES_VIEW_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SITES_VIEW_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SITES_VIEW_STATE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static SITES_VIEW_STATE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static SITES_VIEW_STATE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static SITES_VIEW_STATE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_sites_view_state_from_decoder;
     variants [
-        0 => SITES_VIEW_STATE_ATOM_0, "file";
-        1 => SITES_VIEW_STATE_ATOM_1, "code";
-        2 => SITES_VIEW_STATE_ATOM_2, "dakota";
-        3 => SITES_VIEW_STATE_ATOM_3, "settings";
-        4 => SITES_VIEW_STATE_ATOM_4, "insert";
-        5 => SITES_VIEW_STATE_ATOM_5, "variables";
+        0 => "file";
+        1 => "code";
+        2 => "dakota";
+        3 => "settings";
+        4 => "insert";
+        5 => "variables";
     ]
 }
-
-static DESIGN_FULL_PAGE_VIEW_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static DESIGN_FULL_PAGE_VIEW_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static DESIGN_FULL_PAGE_VIEW_STATE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_design_full_page_view_state_from_decoder;
     variants [
-        0 => DESIGN_FULL_PAGE_VIEW_STATE_ATOM_0, "none";
-        1 => DESIGN_FULL_PAGE_VIEW_STATE_ATOM_1, "design_system";
-        2 => DESIGN_FULL_PAGE_VIEW_STATE_ATOM_2, "variables";
+        0 => "none";
+        1 => "design_system";
+        2 => "variables";
     ]
 }
 
@@ -12875,35 +9580,20 @@ kiwi_message_decoder! {
     ]
 }
 
-static SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_scene_graph_query_behavior_from_decoder;
     variants [
-        0 => SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_0, "default";
-        1 => SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_1, "containing_page";
-        2 => SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_2, "plugin";
+        0 => "default";
+        1 => "containing_page";
+        2 => "plugin";
     ]
 }
-
-static SCENE_GRAPH_QUERY_MODE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SCENE_GRAPH_QUERY_MODE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_scene_graph_query_mode_from_decoder;
     variants [
-        0 => SCENE_GRAPH_QUERY_MODE_ATOM_0, "add";
-        1 => SCENE_GRAPH_QUERY_MODE_ATOM_1, "set";
+        0 => "add";
+        1 => "set";
     ]
 }
 
@@ -13088,17 +9778,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static PASTE_ASSET_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PASTE_ASSET_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_paste_asset_type_from_decoder;
     variants [
-        0 => PASTE_ASSET_TYPE_ATOM_0, "unknown";
-        1 => PASTE_ASSET_TYPE_ATOM_1, "variable";
+        0 => "unknown";
+        1 => "variable";
     ]
 }
 
@@ -13209,17 +9893,11 @@ kiwi_struct_decoder! {
     ]
 }
 
-static RICH_MEDIA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static RICH_MEDIA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_rich_media_type_from_decoder;
     variants [
-        0 => RICH_MEDIA_TYPE_ATOM_0, "animated_image";
-        1 => RICH_MEDIA_TYPE_ATOM_1, "video";
+        0 => "animated_image";
+        1 => "video";
     ]
 }
 
@@ -13244,239 +9922,71 @@ kiwi_message_decoder! {
     ]
 }
 
-static VARIABLE_DATA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_30: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_TYPE_ATOM_31: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_variable_data_type_from_decoder;
     variants [
-        0 => VARIABLE_DATA_TYPE_ATOM_0, "boolean";
-        1 => VARIABLE_DATA_TYPE_ATOM_1, "float";
-        2 => VARIABLE_DATA_TYPE_ATOM_2, "string";
-        3 => VARIABLE_DATA_TYPE_ATOM_3, "alias";
-        4 => VARIABLE_DATA_TYPE_ATOM_4, "color";
-        5 => VARIABLE_DATA_TYPE_ATOM_5, "expression";
-        6 => VARIABLE_DATA_TYPE_ATOM_6, "map";
-        7 => VARIABLE_DATA_TYPE_ATOM_7, "symbol_id";
-        8 => VARIABLE_DATA_TYPE_ATOM_8, "font_style";
-        9 => VARIABLE_DATA_TYPE_ATOM_9, "text_data";
-        10 => VARIABLE_DATA_TYPE_ATOM_10, "invalid";
-        11 => VARIABLE_DATA_TYPE_ATOM_11, "node_field_alias";
-        12 => VARIABLE_DATA_TYPE_ATOM_12, "cms_alias";
-        13 => VARIABLE_DATA_TYPE_ATOM_13, "prop_ref";
-        14 => VARIABLE_DATA_TYPE_ATOM_14, "image";
-        15 => VARIABLE_DATA_TYPE_ATOM_15, "managed_string_alias";
-        16 => VARIABLE_DATA_TYPE_ATOM_16, "link";
-        17 => VARIABLE_DATA_TYPE_ATOM_17, "js_runtime_alias";
-        18 => VARIABLE_DATA_TYPE_ATOM_18, "slot_content_id";
-        19 => VARIABLE_DATA_TYPE_ATOM_19, "date";
-        20 => VARIABLE_DATA_TYPE_ATOM_20, "keyframe_track_id";
-        21 => VARIABLE_DATA_TYPE_ATOM_21, "keyframe_track_parameter_data";
-        22 => VARIABLE_DATA_TYPE_ATOM_22, "easing";
-        23 => VARIABLE_DATA_TYPE_ATOM_23, "timing";
-        24 => VARIABLE_DATA_TYPE_ATOM_24, "vector";
-        25 => VARIABLE_DATA_TYPE_ATOM_25, "color_array";
-        26 => VARIABLE_DATA_TYPE_ATOM_26, "line";
-        27 => VARIABLE_DATA_TYPE_ATOM_27, "circle";
-        28 => VARIABLE_DATA_TYPE_ATOM_28, "rotation_3_d";
-        29 => VARIABLE_DATA_TYPE_ATOM_29, "circle_point";
-        30 => VARIABLE_DATA_TYPE_ATOM_30, "gradient";
-        31 => VARIABLE_DATA_TYPE_ATOM_31, "color_point";
+        0 => "boolean";
+        1 => "float";
+        2 => "string";
+        3 => "alias";
+        4 => "color";
+        5 => "expression";
+        6 => "map";
+        7 => "symbol_id";
+        8 => "font_style";
+        9 => "text_data";
+        10 => "invalid";
+        11 => "node_field_alias";
+        12 => "cms_alias";
+        13 => "prop_ref";
+        14 => "image";
+        15 => "managed_string_alias";
+        16 => "link";
+        17 => "js_runtime_alias";
+        18 => "slot_content_id";
+        19 => "date";
+        20 => "keyframe_track_id";
+        21 => "keyframe_track_parameter_data";
+        22 => "easing";
+        23 => "timing";
+        24 => "vector";
+        25 => "color_array";
+        26 => "line";
+        27 => "circle";
+        28 => "rotation_3_d";
+        29 => "circle_point";
+        30 => "gradient";
+        31 => "color_point";
     ]
 }
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_RESOLVED_DATA_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_variable_resolved_data_type_from_decoder;
     variants [
-        0 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_0, "boolean";
-        1 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_1, "float";
-        2 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_2, "string";
-        4 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_3, "color";
-        5 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_4, "map";
-        6 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_5, "symbol_id";
-        7 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_6, "font_style";
-        8 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_7, "text_data";
-        9 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_8, "image";
-        10 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_9, "link";
-        11 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_10, "js_runtime_alias";
-        12 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_11, "slot_content_id";
-        13 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_12, "keyframe_track_id";
-        14 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_13, "keyframe_track_parameter_data";
-        15 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_14, "easing";
-        16 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_15, "timing";
-        17 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_16, "vector";
-        18 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_17, "color_array";
-        19 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_18, "line";
-        20 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_19, "circle";
-        21 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_20, "rotation_3_d";
-        22 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_21, "circle_point";
-        23 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_22, "gradient";
-        24 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_23, "color_point";
+        0 => "boolean";
+        1 => "float";
+        2 => "string";
+        4 => "color";
+        5 => "map";
+        6 => "symbol_id";
+        7 => "font_style";
+        8 => "text_data";
+        9 => "image";
+        10 => "link";
+        11 => "js_runtime_alias";
+        12 => "slot_content_id";
+        13 => "keyframe_track_id";
+        14 => "keyframe_track_parameter_data";
+        15 => "easing";
+        16 => "timing";
+        17 => "vector";
+        18 => "color_array";
+        19 => "line";
+        20 => "circle";
+        21 => "rotation_3_d";
+        22 => "circle_point";
+        23 => "gradient";
+        24 => "color_point";
     ]
 }
 
@@ -13528,89 +10038,29 @@ kiwi_message_decoder! {
     ]
 }
 
-static EXPRESSION_FUNCTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_FUNCTION_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_expression_function_from_decoder;
     variants [
-        0 => EXPRESSION_FUNCTION_ATOM_0, "addition";
-        1 => EXPRESSION_FUNCTION_ATOM_1, "subtraction";
-        2 => EXPRESSION_FUNCTION_ATOM_2, "resolve_variant";
-        3 => EXPRESSION_FUNCTION_ATOM_3, "multiply";
-        4 => EXPRESSION_FUNCTION_ATOM_4, "divide";
-        5 => EXPRESSION_FUNCTION_ATOM_5, "equals";
-        6 => EXPRESSION_FUNCTION_ATOM_6, "not_equal";
-        7 => EXPRESSION_FUNCTION_ATOM_7, "less_than";
-        8 => EXPRESSION_FUNCTION_ATOM_8, "less_than_or_equal";
-        9 => EXPRESSION_FUNCTION_ATOM_9, "greater_than";
-        10 => EXPRESSION_FUNCTION_ATOM_10, "greater_than_or_equal";
-        11 => EXPRESSION_FUNCTION_ATOM_11, "and";
-        12 => EXPRESSION_FUNCTION_ATOM_12, "or";
-        13 => EXPRESSION_FUNCTION_ATOM_13, "not";
-        14 => EXPRESSION_FUNCTION_ATOM_14, "stringify";
-        15 => EXPRESSION_FUNCTION_ATOM_15, "ternary";
-        16 => EXPRESSION_FUNCTION_ATOM_16, "var_mode_lookup";
-        17 => EXPRESSION_FUNCTION_ATOM_17, "negate";
-        18 => EXPRESSION_FUNCTION_ATOM_18, "is_truthy";
-        19 => EXPRESSION_FUNCTION_ATOM_19, "keyframe";
+        0 => "addition";
+        1 => "subtraction";
+        2 => "resolve_variant";
+        3 => "multiply";
+        4 => "divide";
+        5 => "equals";
+        6 => "not_equal";
+        7 => "less_than";
+        8 => "less_than_or_equal";
+        9 => "greater_than";
+        10 => "greater_than_or_equal";
+        11 => "and";
+        12 => "or";
+        13 => "not";
+        14 => "stringify";
+        15 => "ternary";
+        16 => "var_mode_lookup";
+        17 => "negate";
+        18 => "is_truthy";
+        19 => "keyframe";
     ]
 }
 
@@ -13810,17 +10260,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static NODE_FIELD_ALIAS_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_FIELD_ALIAS_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_node_field_alias_type_from_decoder;
     variants [
-        0 => NODE_FIELD_ALIAS_TYPE_ATOM_0, "missing";
-        1 => NODE_FIELD_ALIAS_TYPE_ATOM_1, "component_prop_assignments";
+        0 => "missing";
+        1 => "component_prop_assignments";
     ]
 }
 
@@ -14168,101 +10612,32 @@ kiwi_message_decoder! {
     ]
 }
 
-static VARIABLE_SCOPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SCOPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_variable_scope_from_decoder;
     variants [
-        0 => VARIABLE_SCOPE_ATOM_0, "all_scopes";
-        1 => VARIABLE_SCOPE_ATOM_1, "text_content";
-        2 => VARIABLE_SCOPE_ATOM_2, "corner_radius";
-        3 => VARIABLE_SCOPE_ATOM_3, "width_height";
-        4 => VARIABLE_SCOPE_ATOM_4, "gap";
-        5 => VARIABLE_SCOPE_ATOM_5, "all_fills";
-        6 => VARIABLE_SCOPE_ATOM_6, "frame_fill";
-        7 => VARIABLE_SCOPE_ATOM_7, "shape_fill";
-        8 => VARIABLE_SCOPE_ATOM_8, "text_fill";
-        9 => VARIABLE_SCOPE_ATOM_9, "stroke";
-        10 => VARIABLE_SCOPE_ATOM_10, "stroke_float";
-        11 => VARIABLE_SCOPE_ATOM_11, "effect_float";
-        12 => VARIABLE_SCOPE_ATOM_12, "effect_color";
-        13 => VARIABLE_SCOPE_ATOM_13, "opacity";
-        14 => VARIABLE_SCOPE_ATOM_14, "font_style";
-        15 => VARIABLE_SCOPE_ATOM_15, "font_family";
-        16 => VARIABLE_SCOPE_ATOM_16, "font_size";
-        17 => VARIABLE_SCOPE_ATOM_17, "line_height";
-        18 => VARIABLE_SCOPE_ATOM_18, "letter_spacing";
-        19 => VARIABLE_SCOPE_ATOM_19, "paragraph_spacing";
-        20 => VARIABLE_SCOPE_ATOM_20, "paragraph_indent";
-        21 => VARIABLE_SCOPE_ATOM_21, "font_variations";
-        22 => VARIABLE_SCOPE_ATOM_22, "transform";
+        0 => "all_scopes";
+        1 => "text_content";
+        2 => "corner_radius";
+        3 => "width_height";
+        4 => "gap";
+        5 => "all_fills";
+        6 => "frame_fill";
+        7 => "shape_fill";
+        8 => "text_fill";
+        9 => "stroke";
+        10 => "stroke_float";
+        11 => "effect_float";
+        12 => "effect_color";
+        13 => "opacity";
+        14 => "font_style";
+        15 => "font_family";
+        16 => "font_size";
+        17 => "line_height";
+        18 => "letter_spacing";
+        19 => "paragraph_spacing";
+        20 => "paragraph_indent";
+        21 => "font_variations";
+        22 => "transform";
     ]
 }
 
@@ -14289,29 +10664,14 @@ kiwi_message_decoder! {
     ]
 }
 
-static KEYFRAME_VALUE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_VALUE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_VALUE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_VALUE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_VALUE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_keyframe_value_type_from_decoder;
     variants [
-        0 => KEYFRAME_VALUE_TYPE_ATOM_0, "float";
-        1 => KEYFRAME_VALUE_TYPE_ATOM_1, "invalid";
-        2 => KEYFRAME_VALUE_TYPE_ATOM_2, "color";
-        3 => KEYFRAME_VALUE_TYPE_ATOM_3, "text_data";
-        4 => KEYFRAME_VALUE_TYPE_ATOM_4, "vector";
+        0 => "float";
+        1 => "invalid";
+        2 => "color";
+        3 => "text_data";
+        4 => "vector";
     ]
 }
 
@@ -14336,21 +10696,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_keyframe_track_parameter_type_from_decoder;
     variants [
-        0 => KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_0, "invalid";
-        1 => KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_1, "manual";
-        2 => KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_2, "animation_preset";
+        0 => "invalid";
+        1 => "manual";
+        2 => "animation_preset";
     ]
 }
 
@@ -14750,55 +11101,25 @@ kiwi_message_decoder! {
     ]
 }
 
-static TRANSITION_OVERRIDE_PROP_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_PROP_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_PROP_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_PROP_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_PROP_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_transition_override_prop_from_decoder;
     variants [
-        0 => TRANSITION_OVERRIDE_PROP_ATOM_0, "all";
-        1 => TRANSITION_OVERRIDE_PROP_ATOM_1, "opacity";
-        2 => TRANSITION_OVERRIDE_PROP_ATOM_2, "translation";
-        3 => TRANSITION_OVERRIDE_PROP_ATOM_3, "rotation";
-        4 => TRANSITION_OVERRIDE_PROP_ATOM_4, "scale";
+        0 => "all";
+        1 => "opacity";
+        2 => "translation";
+        3 => "rotation";
+        4 => "scale";
     ]
 }
-
-static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_transition_override_binding_top_level_field_from_decoder;
     variants [
-        0 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_0, "missing";
-        1 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_1, "parameter_consumption_map";
-        2 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_2, "effect_data";
-        3 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_3, "fill_paint_data";
-        4 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_4, "stroke_paint_data";
+        0 => "missing";
+        1 => "parameter_consumption_map";
+        2 => "effect_data";
+        3 => "fill_paint_data";
+        4 => "stroke_paint_data";
     ]
 }
 
@@ -14827,97 +11148,31 @@ kiwi_message_decoder! {
     ]
 }
 
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_keyframe_binding_effect_parametrized_field_from_decoder;
     variants [
-        0 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_0, "missing";
-        1 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_1, "offset_x";
-        2 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_2, "offset_y";
-        3 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_3, "radius";
-        4 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_4, "spread";
-        5 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_5, "color";
-        6 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_6, "refraction_radius";
-        7 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_7, "specular_angle";
-        8 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_8, "specular_intensity";
-        9 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_9, "chromatic_aberration";
-        10 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_10, "splay";
-        11 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_11, "refraction_intensity";
-        12 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_12, "start_radius";
-        13 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_13, "start_offset_x";
-        14 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_14, "start_offset_y";
-        15 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_15, "end_offset_x";
-        16 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_16, "end_offset_y";
-        17 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_17, "noise_size_x";
-        18 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_18, "noise_size_y";
-        19 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_19, "density";
-        20 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_20, "effect_opacity";
-        21 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_21, "secondary_color";
+        0 => "missing";
+        1 => "offset_x";
+        2 => "offset_y";
+        3 => "radius";
+        4 => "spread";
+        5 => "color";
+        6 => "refraction_radius";
+        7 => "specular_angle";
+        8 => "specular_intensity";
+        9 => "chromatic_aberration";
+        10 => "splay";
+        11 => "refraction_intensity";
+        12 => "start_radius";
+        13 => "start_offset_x";
+        14 => "start_offset_y";
+        15 => "end_offset_x";
+        16 => "end_offset_y";
+        17 => "noise_size_x";
+        18 => "noise_size_y";
+        19 => "density";
+        20 => "effect_opacity";
+        21 => "secondary_color";
     ]
 }
 
@@ -14993,21 +11248,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static CODE_SYNTAX_PLATFORM_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SYNTAX_PLATFORM_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SYNTAX_PLATFORM_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_code_syntax_platform_from_decoder;
     variants [
-        0 => CODE_SYNTAX_PLATFORM_ATOM_0, "web";
-        1 => CODE_SYNTAX_PLATFORM_ATOM_1, "android";
-        2 => CODE_SYNTAX_PLATFORM_ATOM_2, "i_os";
+        0 => "web";
+        1 => "android";
+        2 => "i_os";
     ]
 }
 
@@ -15031,707 +11277,188 @@ kiwi_message_decoder! {
     ]
 }
 
-static HTML_TAG_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_30: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_31: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_32: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_33: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_34: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_35: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_36: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_37: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_38: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_39: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_40: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_41: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_42: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_43: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_44: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_45: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_46: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_47: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_48: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_49: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_50: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_51: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_52: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_53: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_54: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_55: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_56: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_57: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_58: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_59: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_60: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_61: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_62: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_63: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_64: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_65: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_66: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_67: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_68: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_69: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_70: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_71: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_72: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_73: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_74: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_75: OnceLock<Atom> = OnceLock::new();
-
-
-static HTML_TAG_ATOM_76: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_html_tag_from_decoder;
     variants [
-        0 => HTML_TAG_ATOM_0, "auto";
-        1 => HTML_TAG_ATOM_1, "article";
-        2 => HTML_TAG_ATOM_2, "section";
-        3 => HTML_TAG_ATOM_3, "nav";
-        4 => HTML_TAG_ATOM_4, "aside";
-        5 => HTML_TAG_ATOM_5, "h1";
-        6 => HTML_TAG_ATOM_6, "h2";
-        7 => HTML_TAG_ATOM_7, "h3";
-        8 => HTML_TAG_ATOM_8, "h4";
-        9 => HTML_TAG_ATOM_9, "h5";
-        10 => HTML_TAG_ATOM_10, "h6";
-        11 => HTML_TAG_ATOM_11, "hgroup";
-        12 => HTML_TAG_ATOM_12, "header";
-        13 => HTML_TAG_ATOM_13, "footer";
-        14 => HTML_TAG_ATOM_14, "address";
-        15 => HTML_TAG_ATOM_15, "p";
-        16 => HTML_TAG_ATOM_16, "hr";
-        17 => HTML_TAG_ATOM_17, "pre";
-        18 => HTML_TAG_ATOM_18, "blockquote";
-        19 => HTML_TAG_ATOM_19, "ol";
-        20 => HTML_TAG_ATOM_20, "ul";
-        21 => HTML_TAG_ATOM_21, "menu";
-        22 => HTML_TAG_ATOM_22, "li";
-        23 => HTML_TAG_ATOM_23, "dl";
-        24 => HTML_TAG_ATOM_24, "dt";
-        25 => HTML_TAG_ATOM_25, "dd";
-        26 => HTML_TAG_ATOM_26, "figure";
-        27 => HTML_TAG_ATOM_27, "figcaption";
-        28 => HTML_TAG_ATOM_28, "main";
-        29 => HTML_TAG_ATOM_29, "div";
-        30 => HTML_TAG_ATOM_30, "a";
-        31 => HTML_TAG_ATOM_31, "em";
-        32 => HTML_TAG_ATOM_32, "strong";
-        33 => HTML_TAG_ATOM_33, "small";
-        34 => HTML_TAG_ATOM_34, "s";
-        35 => HTML_TAG_ATOM_35, "cite";
-        36 => HTML_TAG_ATOM_36, "q";
-        37 => HTML_TAG_ATOM_37, "dfn";
-        38 => HTML_TAG_ATOM_38, "abbr";
-        39 => HTML_TAG_ATOM_39, "ruby";
-        40 => HTML_TAG_ATOM_40, "rt";
-        41 => HTML_TAG_ATOM_41, "rp";
-        42 => HTML_TAG_ATOM_42, "data";
-        43 => HTML_TAG_ATOM_43, "time";
-        44 => HTML_TAG_ATOM_44, "code";
-        45 => HTML_TAG_ATOM_45, "var";
-        46 => HTML_TAG_ATOM_46, "samp";
-        47 => HTML_TAG_ATOM_47, "kbd";
-        48 => HTML_TAG_ATOM_48, "sub";
-        49 => HTML_TAG_ATOM_49, "sup";
-        50 => HTML_TAG_ATOM_50, "i";
-        51 => HTML_TAG_ATOM_51, "b";
-        52 => HTML_TAG_ATOM_52, "u";
-        53 => HTML_TAG_ATOM_53, "mark";
-        54 => HTML_TAG_ATOM_54, "bdi";
-        55 => HTML_TAG_ATOM_55, "bdo";
-        56 => HTML_TAG_ATOM_56, "span";
-        57 => HTML_TAG_ATOM_57, "br";
-        58 => HTML_TAG_ATOM_58, "wbr";
-        59 => HTML_TAG_ATOM_59, "picture";
-        60 => HTML_TAG_ATOM_60, "source";
-        61 => HTML_TAG_ATOM_61, "img";
-        62 => HTML_TAG_ATOM_62, "form";
-        63 => HTML_TAG_ATOM_63, "label";
-        64 => HTML_TAG_ATOM_64, "input";
-        65 => HTML_TAG_ATOM_65, "button";
-        66 => HTML_TAG_ATOM_66, "select";
-        67 => HTML_TAG_ATOM_67, "datalist";
-        68 => HTML_TAG_ATOM_68, "optgroup";
-        69 => HTML_TAG_ATOM_69, "option";
-        70 => HTML_TAG_ATOM_70, "textarea";
-        71 => HTML_TAG_ATOM_71, "output";
-        72 => HTML_TAG_ATOM_72, "progress";
-        73 => HTML_TAG_ATOM_73, "meter";
-        74 => HTML_TAG_ATOM_74, "fieldset";
-        75 => HTML_TAG_ATOM_75, "legend";
-        76 => HTML_TAG_ATOM_76, "video";
+        0 => "auto";
+        1 => "article";
+        2 => "section";
+        3 => "nav";
+        4 => "aside";
+        5 => "h1";
+        6 => "h2";
+        7 => "h3";
+        8 => "h4";
+        9 => "h5";
+        10 => "h6";
+        11 => "hgroup";
+        12 => "header";
+        13 => "footer";
+        14 => "address";
+        15 => "p";
+        16 => "hr";
+        17 => "pre";
+        18 => "blockquote";
+        19 => "ol";
+        20 => "ul";
+        21 => "menu";
+        22 => "li";
+        23 => "dl";
+        24 => "dt";
+        25 => "dd";
+        26 => "figure";
+        27 => "figcaption";
+        28 => "main";
+        29 => "div";
+        30 => "a";
+        31 => "em";
+        32 => "strong";
+        33 => "small";
+        34 => "s";
+        35 => "cite";
+        36 => "q";
+        37 => "dfn";
+        38 => "abbr";
+        39 => "ruby";
+        40 => "rt";
+        41 => "rp";
+        42 => "data";
+        43 => "time";
+        44 => "code";
+        45 => "var";
+        46 => "samp";
+        47 => "kbd";
+        48 => "sub";
+        49 => "sup";
+        50 => "i";
+        51 => "b";
+        52 => "u";
+        53 => "mark";
+        54 => "bdi";
+        55 => "bdo";
+        56 => "span";
+        57 => "br";
+        58 => "wbr";
+        59 => "picture";
+        60 => "source";
+        61 => "img";
+        62 => "form";
+        63 => "label";
+        64 => "input";
+        65 => "button";
+        66 => "select";
+        67 => "datalist";
+        68 => "optgroup";
+        69 => "option";
+        70 => "textarea";
+        71 => "output";
+        72 => "progress";
+        73 => "meter";
+        74 => "fieldset";
+        75 => "legend";
+        76 => "video";
     ]
 }
-
-static ARIA_ROLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_30: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_31: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_32: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_33: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_34: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_35: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_36: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_37: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_38: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_39: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_40: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_41: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_42: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_43: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_44: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_45: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_46: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_47: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_48: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_49: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_50: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_51: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_52: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_53: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_54: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_55: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_56: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_57: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_58: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_59: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_60: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_61: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_62: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_63: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_64: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_65: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_66: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_67: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_68: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_69: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_70: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_71: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_72: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_73: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_74: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_75: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_76: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_77: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_78: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_79: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_80: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_81: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_82: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_83: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_84: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_85: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_86: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_87: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_88: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_89: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_90: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_91: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_92: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_93: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_94: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ROLE_ATOM_95: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_aria_role_from_decoder;
     variants [
-        0 => ARIA_ROLE_ATOM_0, "auto";
-        52 => ARIA_ROLE_ATOM_1, "none";
-        30 => ARIA_ROLE_ATOM_2, "application";
-        67 => ARIA_ROLE_ATOM_3, "banner";
-        68 => ARIA_ROLE_ATOM_4, "complementary";
-        69 => ARIA_ROLE_ATOM_5, "contentinfo";
-        70 => ARIA_ROLE_ATOM_6, "form";
-        71 => ARIA_ROLE_ATOM_7, "main";
-        72 => ARIA_ROLE_ATOM_8, "navigation";
-        73 => ARIA_ROLE_ATOM_9, "region";
-        74 => ARIA_ROLE_ATOM_10, "search";
-        13 => ARIA_ROLE_ATOM_11, "separator";
-        31 => ARIA_ROLE_ATOM_12, "article";
-        35 => ARIA_ROLE_ATOM_13, "columnheader";
-        36 => ARIA_ROLE_ATOM_14, "definition";
-        38 => ARIA_ROLE_ATOM_15, "directory";
-        39 => ARIA_ROLE_ATOM_16, "document";
-        44 => ARIA_ROLE_ATOM_17, "group";
-        45 => ARIA_ROLE_ATOM_18, "heading";
-        46 => ARIA_ROLE_ATOM_19, "img";
-        48 => ARIA_ROLE_ATOM_20, "list";
-        49 => ARIA_ROLE_ATOM_21, "listitem";
-        50 => ARIA_ROLE_ATOM_22, "math";
-        53 => ARIA_ROLE_ATOM_23, "note";
-        55 => ARIA_ROLE_ATOM_24, "presentation";
-        56 => ARIA_ROLE_ATOM_25, "row";
-        57 => ARIA_ROLE_ATOM_26, "rowgroup";
-        58 => ARIA_ROLE_ATOM_27, "rowheader";
-        62 => ARIA_ROLE_ATOM_28, "table";
-        65 => ARIA_ROLE_ATOM_29, "toolbar";
-        1 => ARIA_ROLE_ATOM_30, "button";
-        2 => ARIA_ROLE_ATOM_31, "checkbox";
-        3 => ARIA_ROLE_ATOM_32, "gridcell";
-        4 => ARIA_ROLE_ATOM_33, "link";
-        5 => ARIA_ROLE_ATOM_34, "menuitem";
-        6 => ARIA_ROLE_ATOM_35, "menuitemcheckbox";
-        7 => ARIA_ROLE_ATOM_36, "menuitemradio";
-        8 => ARIA_ROLE_ATOM_37, "option";
-        9 => ARIA_ROLE_ATOM_38, "progressbar";
-        10 => ARIA_ROLE_ATOM_39, "radio";
-        11 => ARIA_ROLE_ATOM_40, "scrollbar";
-        14 => ARIA_ROLE_ATOM_41, "slider";
-        15 => ARIA_ROLE_ATOM_42, "spinbutton";
-        17 => ARIA_ROLE_ATOM_43, "tab";
-        18 => ARIA_ROLE_ATOM_44, "tabpanel";
-        19 => ARIA_ROLE_ATOM_45, "textbox";
-        20 => ARIA_ROLE_ATOM_46, "treeitem";
-        21 => ARIA_ROLE_ATOM_47, "combobox";
-        22 => ARIA_ROLE_ATOM_48, "grid";
-        23 => ARIA_ROLE_ATOM_49, "listbox";
-        24 => ARIA_ROLE_ATOM_50, "menu";
-        25 => ARIA_ROLE_ATOM_51, "menubar";
-        26 => ARIA_ROLE_ATOM_52, "radiogroup";
-        27 => ARIA_ROLE_ATOM_53, "tablist";
-        28 => ARIA_ROLE_ATOM_54, "tree";
-        29 => ARIA_ROLE_ATOM_55, "treegrid";
-        66 => ARIA_ROLE_ATOM_56, "tooltip";
-        75 => ARIA_ROLE_ATOM_57, "alert";
-        76 => ARIA_ROLE_ATOM_58, "log";
-        77 => ARIA_ROLE_ATOM_59, "marquee";
-        78 => ARIA_ROLE_ATOM_60, "status";
-        79 => ARIA_ROLE_ATOM_61, "timer";
-        80 => ARIA_ROLE_ATOM_62, "alertdialog";
-        81 => ARIA_ROLE_ATOM_63, "dialog";
-        12 => ARIA_ROLE_ATOM_64, "searchbox";
-        16 => ARIA_ROLE_ATOM_65, "switch";
-        32 => ARIA_ROLE_ATOM_66, "blockquote";
-        33 => ARIA_ROLE_ATOM_67, "caption";
-        34 => ARIA_ROLE_ATOM_68, "cell";
-        37 => ARIA_ROLE_ATOM_69, "deletion";
-        40 => ARIA_ROLE_ATOM_70, "emphasis";
-        41 => ARIA_ROLE_ATOM_71, "feed";
-        42 => ARIA_ROLE_ATOM_72, "figure";
-        43 => ARIA_ROLE_ATOM_73, "generic";
-        47 => ARIA_ROLE_ATOM_74, "insertion";
-        51 => ARIA_ROLE_ATOM_75, "meter";
-        54 => ARIA_ROLE_ATOM_76, "paragraph";
-        59 => ARIA_ROLE_ATOM_77, "strong";
-        60 => ARIA_ROLE_ATOM_78, "subscript";
-        61 => ARIA_ROLE_ATOM_79, "superscript";
-        63 => ARIA_ROLE_ATOM_80, "term";
-        64 => ARIA_ROLE_ATOM_81, "time";
-        82 => ARIA_ROLE_ATOM_82, "image";
-        83 => ARIA_ROLE_ATOM_83, "heading_1";
-        84 => ARIA_ROLE_ATOM_84, "heading_2";
-        85 => ARIA_ROLE_ATOM_85, "heading_3";
-        86 => ARIA_ROLE_ATOM_86, "heading_4";
-        87 => ARIA_ROLE_ATOM_87, "heading_5";
-        88 => ARIA_ROLE_ATOM_88, "heading_6";
-        89 => ARIA_ROLE_ATOM_89, "header";
-        90 => ARIA_ROLE_ATOM_90, "footer";
-        91 => ARIA_ROLE_ATOM_91, "sidebar";
-        92 => ARIA_ROLE_ATOM_92, "section";
-        93 => ARIA_ROLE_ATOM_93, "maincontent";
-        94 => ARIA_ROLE_ATOM_94, "table_cell";
-        95 => ARIA_ROLE_ATOM_95, "widget";
+        0 => "auto";
+        52 => "none";
+        30 => "application";
+        67 => "banner";
+        68 => "complementary";
+        69 => "contentinfo";
+        70 => "form";
+        71 => "main";
+        72 => "navigation";
+        73 => "region";
+        74 => "search";
+        13 => "separator";
+        31 => "article";
+        35 => "columnheader";
+        36 => "definition";
+        38 => "directory";
+        39 => "document";
+        44 => "group";
+        45 => "heading";
+        46 => "img";
+        48 => "list";
+        49 => "listitem";
+        50 => "math";
+        53 => "note";
+        55 => "presentation";
+        56 => "row";
+        57 => "rowgroup";
+        58 => "rowheader";
+        62 => "table";
+        65 => "toolbar";
+        1 => "button";
+        2 => "checkbox";
+        3 => "gridcell";
+        4 => "link";
+        5 => "menuitem";
+        6 => "menuitemcheckbox";
+        7 => "menuitemradio";
+        8 => "option";
+        9 => "progressbar";
+        10 => "radio";
+        11 => "scrollbar";
+        14 => "slider";
+        15 => "spinbutton";
+        17 => "tab";
+        18 => "tabpanel";
+        19 => "textbox";
+        20 => "treeitem";
+        21 => "combobox";
+        22 => "grid";
+        23 => "listbox";
+        24 => "menu";
+        25 => "menubar";
+        26 => "radiogroup";
+        27 => "tablist";
+        28 => "tree";
+        29 => "treegrid";
+        66 => "tooltip";
+        75 => "alert";
+        76 => "log";
+        77 => "marquee";
+        78 => "status";
+        79 => "timer";
+        80 => "alertdialog";
+        81 => "dialog";
+        12 => "searchbox";
+        16 => "switch";
+        32 => "blockquote";
+        33 => "caption";
+        34 => "cell";
+        37 => "deletion";
+        40 => "emphasis";
+        41 => "feed";
+        42 => "figure";
+        43 => "generic";
+        47 => "insertion";
+        51 => "meter";
+        54 => "paragraph";
+        59 => "strong";
+        60 => "subscript";
+        61 => "superscript";
+        63 => "term";
+        64 => "time";
+        82 => "image";
+        83 => "heading_1";
+        84 => "heading_2";
+        85 => "heading_3";
+        86 => "heading_4";
+        87 => "heading_5";
+        88 => "heading_6";
+        89 => "header";
+        90 => "footer";
+        91 => "sidebar";
+        92 => "section";
+        93 => "maincontent";
+        94 => "table_cell";
+        95 => "widget";
     ]
 }
 
@@ -15755,53 +11482,29 @@ kiwi_message_decoder! {
     ]
 }
 
-static COLOR_PROFILE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static COLOR_PROFILE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_color_profile_from_decoder;
     variants [
-        0 => COLOR_PROFILE_ATOM_0, "srgb";
-        1 => COLOR_PROFILE_ATOM_1, "display_p3";
+        0 => "srgb";
+        1 => "display_p3";
     ]
 }
-
-static DOCUMENT_COLOR_PROFILE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static DOCUMENT_COLOR_PROFILE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static DOCUMENT_COLOR_PROFILE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_document_color_profile_from_decoder;
     variants [
-        0 => DOCUMENT_COLOR_PROFILE_ATOM_0, "legacy";
-        1 => DOCUMENT_COLOR_PROFILE_ATOM_1, "srgb";
-        2 => DOCUMENT_COLOR_PROFILE_ATOM_2, "display_p3";
+        0 => "legacy";
+        1 => "srgb";
+        2 => "display_p3";
     ]
 }
-
-static CHILD_READING_DIRECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static CHILD_READING_DIRECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static CHILD_READING_DIRECTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_child_reading_direction_from_decoder;
     variants [
-        0 => CHILD_READING_DIRECTION_ATOM_0, "none";
-        1 => CHILD_READING_DIRECTION_ATOM_1, "left_to_right";
-        2 => CHILD_READING_DIRECTION_ATOM_2, "right_to_left";
+        0 => "none";
+        1 => "left_to_right";
+        2 => "right_to_left";
     ]
 }
 
@@ -15829,29 +11532,14 @@ kiwi_message_decoder! {
     ]
 }
 
-static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ATTRIBUTE_DATA_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_aria_attribute_data_type_from_decoder;
     variants [
-        0 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_0, "boolean";
-        1 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_1, "string";
-        2 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_2, "float";
-        3 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_3, "int";
-        4 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_4, "string_list";
+        0 => "boolean";
+        1 => "string";
+        2 => "float";
+        3 => "int";
+        4 => "string_list";
     ]
 }
 
@@ -16044,91 +11732,43 @@ kiwi_message_decoder! {
     ]
 }
 
-static EDIT_SCOPE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_edit_scope_type_from_decoder;
     variants [
-        0 => EDIT_SCOPE_TYPE_ATOM_0, "invalid";
-        1 => EDIT_SCOPE_TYPE_ATOM_1, "test_setup";
-        2 => EDIT_SCOPE_TYPE_ATOM_2, "user";
-        3 => EDIT_SCOPE_TYPE_ATOM_3, "plugin";
-        4 => EDIT_SCOPE_TYPE_ATOM_4, "system";
-        5 => EDIT_SCOPE_TYPE_ATOM_5, "rest_api";
-        6 => EDIT_SCOPE_TYPE_ATOM_6, "onboarding";
-        7 => EDIT_SCOPE_TYPE_ATOM_7, "autosave";
-        8 => EDIT_SCOPE_TYPE_ATOM_8, "ai";
+        0 => "invalid";
+        1 => "test_setup";
+        2 => "user";
+        3 => "plugin";
+        4 => "system";
+        5 => "rest_api";
+        6 => "onboarding";
+        7 => "autosave";
+        8 => "ai";
     ]
 }
-
-static SECTION_PRESET_STATE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SECTION_PRESET_STATE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_section_preset_state_from_decoder;
     variants [
-        0 => SECTION_PRESET_STATE_ATOM_0, "inserted";
-        1 => SECTION_PRESET_STATE_ATOM_1, "user_edited";
+        0 => "inserted";
+        1 => "user_edited";
     ]
 }
-
-static EMOJI_IMAGE_SET_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static EMOJI_IMAGE_SET_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_emoji_image_set_from_decoder;
     variants [
-        0 => EMOJI_IMAGE_SET_ATOM_0, "apple";
-        1 => EMOJI_IMAGE_SET_ATOM_1, "noto";
+        0 => "apple";
+        1 => "noto";
     ]
 }
-
-static SELECTION_REGION_FOCUS_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SELECTION_REGION_FOCUS_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SELECTION_REGION_FOCUS_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_selection_region_focus_type_from_decoder;
     variants [
-        0 => SELECTION_REGION_FOCUS_TYPE_ATOM_0, "none";
-        1 => SELECTION_REGION_FOCUS_TYPE_ATOM_1, "primary";
-        2 => SELECTION_REGION_FOCUS_TYPE_ATOM_2, "secondary";
+        0 => "none";
+        1 => "primary";
+        2 => "secondary";
     ]
 }
 
@@ -16181,21 +11821,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static FIRST_DRAFT_KIT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FIRST_DRAFT_KIT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static FIRST_DRAFT_KIT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_first_draft_kit_type_from_decoder;
     variants [
-        0 => FIRST_DRAFT_KIT_TYPE_ATOM_0, "local";
-        1 => FIRST_DRAFT_KIT_TYPE_ATOM_1, "library";
-        2 => FIRST_DRAFT_KIT_TYPE_ATOM_2, "none";
+        0 => "local";
+        1 => "library";
+        2 => "none";
     ]
 }
 
@@ -16241,21 +11872,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_first_draft_kit_element_type_from_decoder;
     variants [
-        0 => FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_0, "none";
-        1 => FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_1, "building_block";
-        2 => FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_2, "grouped_component";
+        0 => "none";
+        1 => "building_block";
+        2 => "grouped_component";
     ]
 }
 
@@ -16281,43 +11903,22 @@ kiwi_message_decoder! {
     ]
 }
 
-static PLATFORM_SHAPE_PROPERTY_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PLATFORM_SHAPE_PROPERTY_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PLATFORM_SHAPE_PROPERTY_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static PLATFORM_SHAPE_PROPERTY_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_platform_shape_property_from_decoder;
     variants [
-        0 => PLATFORM_SHAPE_PROPERTY_ATOM_0, "fill";
-        1 => PLATFORM_SHAPE_PROPERTY_ATOM_1, "stroke";
-        2 => PLATFORM_SHAPE_PROPERTY_ATOM_2, "text";
-        3 => PLATFORM_SHAPE_PROPERTY_ATOM_3, "stroke_color";
+        0 => "fill";
+        1 => "stroke";
+        2 => "text";
+        3 => "stroke_color";
     ]
 }
-
-static PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_platform_shape_behavior_type_from_decoder;
     variants [
-        0 => PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_0, "shape";
-        1 => PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_1, "container";
-        2 => PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_2, "advanced_container";
+        0 => "shape";
+        1 => "container";
+        2 => "advanced_container";
     ]
 }
 
@@ -16422,47 +12023,23 @@ kiwi_message_decoder! {
     ]
 }
 
-static APPEAR_BEHAVIOR_TRIGGER_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static APPEAR_BEHAVIOR_TRIGGER_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static APPEAR_BEHAVIOR_TRIGGER_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static APPEAR_BEHAVIOR_TRIGGER_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_appear_behavior_trigger_from_decoder;
     variants [
-        1 => APPEAR_BEHAVIOR_TRIGGER_ATOM_0, "page_load";
-        2 => APPEAR_BEHAVIOR_TRIGGER_ATOM_1, "this_layer_in_view";
-        3 => APPEAR_BEHAVIOR_TRIGGER_ATOM_2, "other_layer_in_view";
-        4 => APPEAR_BEHAVIOR_TRIGGER_ATOM_3, "scroll_direction";
+        1 => "page_load";
+        2 => "this_layer_in_view";
+        3 => "other_layer_in_view";
+        4 => "scroll_direction";
     ]
 }
-
-static RELATIVE_DIRECTION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static RELATIVE_DIRECTION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static RELATIVE_DIRECTION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static RELATIVE_DIRECTION_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_relative_direction_from_decoder;
     variants [
-        1 => RELATIVE_DIRECTION_ATOM_0, "up";
-        2 => RELATIVE_DIRECTION_ATOM_1, "down";
-        3 => RELATIVE_DIRECTION_ATOM_2, "left";
-        4 => RELATIVE_DIRECTION_ATOM_3, "right";
+        1 => "up";
+        2 => "down";
+        3 => "left";
+        4 => "right";
     ]
 }
 
@@ -16585,21 +12162,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_scroll_transform_behavior_trigger_from_decoder;
     variants [
-        1 => SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_0, "page_height";
-        2 => SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_1, "this_layer_in_view";
-        3 => SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_2, "other_layer_in_view";
+        1 => "page_height";
+        2 => "this_layer_in_view";
+        3 => "other_layer_in_view";
     ]
 }
 
@@ -16727,17 +12295,11 @@ kiwi_message_decoder! {
     ]
 }
 
-static LINK_BEHAVIOR_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static LINK_BEHAVIOR_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_link_behavior_type_from_decoder;
     variants [
-        1 => LINK_BEHAVIOR_TYPE_ATOM_0, "url";
-        2 => LINK_BEHAVIOR_TYPE_ATOM_1, "page";
+        1 => "url";
+        2 => "page";
     ]
 }
 
@@ -16808,55 +12370,25 @@ kiwi_message_decoder! {
     ]
 }
 
-static SLIDE_NUMBER_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_NUMBER_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_NUMBER_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_NUMBER_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_NUMBER_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_NUMBER_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_slide_number_from_decoder;
     variants [
-        0 => SLIDE_NUMBER_ATOM_0, "none";
-        1 => SLIDE_NUMBER_ATOM_1, "slide";
-        2 => SLIDE_NUMBER_ATOM_2, "section";
-        3 => SLIDE_NUMBER_ATOM_3, "subsection";
-        4 => SLIDE_NUMBER_ATOM_4, "total_within_deck";
-        5 => SLIDE_NUMBER_ATOM_5, "total_within_section";
+        0 => "none";
+        1 => "slide";
+        2 => "section";
+        3 => "subsection";
+        4 => "total_within_deck";
+        5 => "total_within_section";
     ]
 }
-
-static NODE_CHAT_MESSAGE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHAT_MESSAGE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHAT_MESSAGE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHAT_MESSAGE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_node_chat_message_type_from_decoder;
     variants [
-        0 => NODE_CHAT_MESSAGE_TYPE_ATOM_0, "user_message";
-        1 => NODE_CHAT_MESSAGE_TYPE_ATOM_1, "assistant_message";
-        2 => NODE_CHAT_MESSAGE_TYPE_ATOM_2, "tool_message";
-        3 => NODE_CHAT_MESSAGE_TYPE_ATOM_3, "system_message";
+        0 => "user_message";
+        1 => "assistant_message";
+        2 => "tool_message";
+        3 => "system_message";
     ]
 }
 
@@ -17020,21 +12552,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static AI_CHAT_CONTENT_PART_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_CONTENT_PART_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_CONTENT_PART_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_ai_chat_content_part_type_from_decoder;
     variants [
-        0 => AI_CHAT_CONTENT_PART_TYPE_ATOM_0, "invalid";
-        1 => AI_CHAT_CONTENT_PART_TYPE_ATOM_1, "text";
-        2 => AI_CHAT_CONTENT_PART_TYPE_ATOM_2, "selected_node_ids";
+        0 => "invalid";
+        1 => "text";
+        2 => "selected_node_ids";
     ]
 }
 
@@ -17061,25 +12584,13 @@ kiwi_message_decoder! {
     ]
 }
 
-static AI_CHAT_MESSAGE_ROLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_MESSAGE_ROLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_MESSAGE_ROLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_MESSAGE_ROLE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_ai_chat_message_role_from_decoder;
     variants [
-        0 => AI_CHAT_MESSAGE_ROLE_ATOM_0, "user";
-        1 => AI_CHAT_MESSAGE_ROLE_ATOM_1, "assistant";
-        2 => AI_CHAT_MESSAGE_ROLE_ATOM_2, "tool";
-        3 => AI_CHAT_MESSAGE_ROLE_ATOM_3, "system";
+        0 => "user";
+        1 => "assistant";
+        2 => "tool";
+        3 => "system";
     ]
 }
 
@@ -17127,269 +12638,74 @@ kiwi_message_decoder! {
     ]
 }
 
-static COOPER_TEMPLATE_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_3: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_4: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_5: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_6: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_7: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_8: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_9: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_10: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_11: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_12: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_13: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_14: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_15: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_16: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_17: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_18: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_19: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_20: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_21: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_22: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_23: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_24: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_25: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_26: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_27: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_28: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_29: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_30: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_31: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_32: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_33: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_34: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_35: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_36: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_37: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_38: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_39: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_40: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_41: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_42: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_43: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_44: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_45: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_46: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_47: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_48: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_49: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_50: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_51: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_52: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_53: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_54: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_55: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_56: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_57: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_58: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_59: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_60: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_61: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_62: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_63: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_TYPE_ATOM_64: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_cooper_template_type_from_decoder;
     variants [
-        0 => COOPER_TEMPLATE_TYPE_ATOM_0, "custom";
-        1 => COOPER_TEMPLATE_TYPE_ATOM_1, "twitter_post";
-        2 => COOPER_TEMPLATE_TYPE_ATOM_2, "linkedin_post";
-        3 => COOPER_TEMPLATE_TYPE_ATOM_3, "insta_post_square";
-        4 => COOPER_TEMPLATE_TYPE_ATOM_4, "insta_post_portrait";
-        5 => COOPER_TEMPLATE_TYPE_ATOM_5, "insta_story";
-        6 => COOPER_TEMPLATE_TYPE_ATOM_6, "insta_ad";
-        7 => COOPER_TEMPLATE_TYPE_ATOM_7, "facebook_post";
-        8 => COOPER_TEMPLATE_TYPE_ATOM_8, "facebook_cover_photo";
-        9 => COOPER_TEMPLATE_TYPE_ATOM_9, "facebook_event_cover";
-        10 => COOPER_TEMPLATE_TYPE_ATOM_10, "facebook_ad_portrait";
-        11 => COOPER_TEMPLATE_TYPE_ATOM_11, "facebook_ad_square";
-        12 => COOPER_TEMPLATE_TYPE_ATOM_12, "pinterest_ad_pin";
-        13 => COOPER_TEMPLATE_TYPE_ATOM_13, "twitter_banner";
-        15 => COOPER_TEMPLATE_TYPE_ATOM_14, "linkedin_post_square";
-        16 => COOPER_TEMPLATE_TYPE_ATOM_15, "linkedin_post_portrait";
-        17 => COOPER_TEMPLATE_TYPE_ATOM_16, "linkedin_post_landscape";
-        18 => COOPER_TEMPLATE_TYPE_ATOM_17, "linkedin_profile_banner";
-        19 => COOPER_TEMPLATE_TYPE_ATOM_18, "linkedin_article_banner";
-        20 => COOPER_TEMPLATE_TYPE_ATOM_19, "linkedin_ad_landscape";
-        21 => COOPER_TEMPLATE_TYPE_ATOM_20, "linkedin_ad_square";
-        22 => COOPER_TEMPLATE_TYPE_ATOM_21, "linkedin_ad_vertical";
-        23 => COOPER_TEMPLATE_TYPE_ATOM_22, "youtube_thumbnail";
-        24 => COOPER_TEMPLATE_TYPE_ATOM_23, "youtube_banner";
-        25 => COOPER_TEMPLATE_TYPE_ATOM_24, "youtube_ad";
-        26 => COOPER_TEMPLATE_TYPE_ATOM_25, "twitch_banner";
-        27 => COOPER_TEMPLATE_TYPE_ATOM_26, "google_leaderboard_ad";
-        28 => COOPER_TEMPLATE_TYPE_ATOM_27, "google_large_ad";
-        29 => COOPER_TEMPLATE_TYPE_ATOM_28, "google_med_ad";
-        30 => COOPER_TEMPLATE_TYPE_ATOM_29, "google_mobile_banner_ad";
-        31 => COOPER_TEMPLATE_TYPE_ATOM_30, "google_skyscraper_ad";
-        32 => COOPER_TEMPLATE_TYPE_ATOM_31, "card_horizontal";
-        33 => COOPER_TEMPLATE_TYPE_ATOM_32, "card_vertical";
-        34 => COOPER_TEMPLATE_TYPE_ATOM_33, "print_us_letter";
-        35 => COOPER_TEMPLATE_TYPE_ATOM_34, "poster";
-        36 => COOPER_TEMPLATE_TYPE_ATOM_35, "banner_standard";
-        37 => COOPER_TEMPLATE_TYPE_ATOM_36, "banner_wide";
-        38 => COOPER_TEMPLATE_TYPE_ATOM_37, "banner_ultrawide";
-        39 => COOPER_TEMPLATE_TYPE_ATOM_38, "name_tag_portrait";
-        40 => COOPER_TEMPLATE_TYPE_ATOM_39, "name_tag_landscape";
-        41 => COOPER_TEMPLATE_TYPE_ATOM_40, "insta_reel_cover";
-        42 => COOPER_TEMPLATE_TYPE_ATOM_41, "zoom_background";
-        43 => COOPER_TEMPLATE_TYPE_ATOM_42, "tiktok_post";
-        44 => COOPER_TEMPLATE_TYPE_ATOM_43, "insta_ad_portrait";
-        45 => COOPER_TEMPLATE_TYPE_ATOM_44, "insta_post_tall_portrait";
-        46 => COOPER_TEMPLATE_TYPE_ATOM_45, "twitter_post_square";
-        47 => COOPER_TEMPLATE_TYPE_ATOM_46, "facebook_post_square";
-        48 => COOPER_TEMPLATE_TYPE_ATOM_47, "facebook_post_portrait";
-        49 => COOPER_TEMPLATE_TYPE_ATOM_48, "facebook_story";
-        50 => COOPER_TEMPLATE_TYPE_ATOM_49, "google_square_ad";
-        51 => COOPER_TEMPLATE_TYPE_ATOM_50, "google_small_square_ad";
-        52 => COOPER_TEMPLATE_TYPE_ATOM_51, "google_narrow_skyscraper_ad";
-        53 => COOPER_TEMPLATE_TYPE_ATOM_52, "google_half_page_ad";
-        54 => COOPER_TEMPLATE_TYPE_ATOM_53, "google_large_leaderboard_ad";
-        55 => COOPER_TEMPLATE_TYPE_ATOM_54, "google_billboard_ad";
-        56 => COOPER_TEMPLATE_TYPE_ATOM_55, "google_banner_leaderboard_ad";
-        57 => COOPER_TEMPLATE_TYPE_ATOM_56, "google_top_banner_ad";
-        58 => COOPER_TEMPLATE_TYPE_ATOM_57, "google_mobile_leaderboard_banner_ad";
-        59 => COOPER_TEMPLATE_TYPE_ATOM_58, "google_large_mobile_banner_ad";
-        60 => COOPER_TEMPLATE_TYPE_ATOM_59, "google_mobile_interstitial_ad";
-        61 => COOPER_TEMPLATE_TYPE_ATOM_60, "google_mobile_med_rectangle_ad";
-        62 => COOPER_TEMPLATE_TYPE_ATOM_61, "pinterest_pin_standard";
-        63 => COOPER_TEMPLATE_TYPE_ATOM_62, "pinterest_pin_square";
-        64 => COOPER_TEMPLATE_TYPE_ATOM_63, "pinterest_ad_square";
-        65 => COOPER_TEMPLATE_TYPE_ATOM_64, "print_a4";
+        0 => "custom";
+        1 => "twitter_post";
+        2 => "linkedin_post";
+        3 => "insta_post_square";
+        4 => "insta_post_portrait";
+        5 => "insta_story";
+        6 => "insta_ad";
+        7 => "facebook_post";
+        8 => "facebook_cover_photo";
+        9 => "facebook_event_cover";
+        10 => "facebook_ad_portrait";
+        11 => "facebook_ad_square";
+        12 => "pinterest_ad_pin";
+        13 => "twitter_banner";
+        15 => "linkedin_post_square";
+        16 => "linkedin_post_portrait";
+        17 => "linkedin_post_landscape";
+        18 => "linkedin_profile_banner";
+        19 => "linkedin_article_banner";
+        20 => "linkedin_ad_landscape";
+        21 => "linkedin_ad_square";
+        22 => "linkedin_ad_vertical";
+        23 => "youtube_thumbnail";
+        24 => "youtube_banner";
+        25 => "youtube_ad";
+        26 => "twitch_banner";
+        27 => "google_leaderboard_ad";
+        28 => "google_large_ad";
+        29 => "google_med_ad";
+        30 => "google_mobile_banner_ad";
+        31 => "google_skyscraper_ad";
+        32 => "card_horizontal";
+        33 => "card_vertical";
+        34 => "print_us_letter";
+        35 => "poster";
+        36 => "banner_standard";
+        37 => "banner_wide";
+        38 => "banner_ultrawide";
+        39 => "name_tag_portrait";
+        40 => "name_tag_landscape";
+        41 => "insta_reel_cover";
+        42 => "zoom_background";
+        43 => "tiktok_post";
+        44 => "insta_ad_portrait";
+        45 => "insta_post_tall_portrait";
+        46 => "twitter_post_square";
+        47 => "facebook_post_square";
+        48 => "facebook_post_portrait";
+        49 => "facebook_story";
+        50 => "google_square_ad";
+        51 => "google_small_square_ad";
+        52 => "google_narrow_skyscraper_ad";
+        53 => "google_half_page_ad";
+        54 => "google_large_leaderboard_ad";
+        55 => "google_billboard_ad";
+        56 => "google_banner_leaderboard_ad";
+        57 => "google_top_banner_ad";
+        58 => "google_mobile_leaderboard_banner_ad";
+        59 => "google_large_mobile_banner_ad";
+        60 => "google_mobile_interstitial_ad";
+        61 => "google_mobile_med_rectangle_ad";
+        62 => "pinterest_pin_standard";
+        63 => "pinterest_pin_square";
+        64 => "pinterest_ad_square";
+        65 => "print_a4";
     ]
 }
 
@@ -17454,21 +12770,12 @@ kiwi_message_decoder! {
     ]
 }
 
-static INTERPOLATION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERPOLATION_TYPE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_interpolation_type_from_decoder;
     variants [
-        0 => INTERPOLATION_TYPE_ATOM_0, "hold";
-        1 => INTERPOLATION_TYPE_ATOM_1, "bezier";
-        2 => INTERPOLATION_TYPE_ATOM_2, "spring";
+        0 => "hold";
+        1 => "bezier";
+        2 => "spring";
     ]
 }
 
@@ -17495,831 +12802,226 @@ kiwi_message_decoder! {
     ]
 }
 
-static KEYFRAME_OPERATION_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_OPERATION_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_OPERATION_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
-
 kiwi_enum_decoder! {
     fn decode_keyframe_operation_from_decoder;
     variants [
-        0 => KEYFRAME_OPERATION_ATOM_0, "set";
-        1 => KEYFRAME_OPERATION_ATOM_1, "scale";
-        2 => KEYFRAME_OPERATION_ATOM_2, "offset";
+        0 => "set";
+        1 => "scale";
+        2 => "offset";
     ]
 }
-
-static TIMELINE_POSITION_TYPE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMELINE_POSITION_TYPE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_timeline_position_type_from_decoder;
     variants [
-        0 => TIMELINE_POSITION_TYPE_ATOM_0, "absolute";
-        1 => TIMELINE_POSITION_TYPE_ATOM_1, "relative";
+        0 => "absolute";
+        1 => "relative";
     ]
 }
-
-static PLAYBACK_STYLE_ATOM_0: OnceLock<Atom> = OnceLock::new();
-
-
-static PLAYBACK_STYLE_ATOM_1: OnceLock<Atom> = OnceLock::new();
-
-
-static PLAYBACK_STYLE_ATOM_2: OnceLock<Atom> = OnceLock::new();
-
 
 kiwi_enum_decoder! {
     fn decode_playback_style_from_decoder;
     variants [
-        0 => PLAYBACK_STYLE_ATOM_0, "once";
-        1 => PLAYBACK_STYLE_ATOM_1, "loop";
-        2 => PLAYBACK_STYLE_ATOM_2, "boomerang";
+        0 => "once";
+        1 => "loop";
+        2 => "boomerang";
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_message_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MESSAGE_TYPE_ATOM_0, "join_start";
-        1 => MESSAGE_TYPE_ATOM_1, "node_changes";
-        2 => MESSAGE_TYPE_ATOM_2, "user_changes";
-        3 => MESSAGE_TYPE_ATOM_3, "join_end";
-        4 => MESSAGE_TYPE_ATOM_4, "signal";
-        5 => MESSAGE_TYPE_ATOM_5, "style";
-        6 => MESSAGE_TYPE_ATOM_6, "style_set";
-        7 => MESSAGE_TYPE_ATOM_7, "join_start_skip_reload";
-        8 => MESSAGE_TYPE_ATOM_8, "notify_should_upgrade";
-        9 => MESSAGE_TYPE_ATOM_9, "upgrade_done";
-        10 => MESSAGE_TYPE_ATOM_10, "upgrade_refresh";
-        11 => MESSAGE_TYPE_ATOM_11, "scene_graph_query";
-        12 => MESSAGE_TYPE_ATOM_12, "scene_graph_reply";
-        13 => MESSAGE_TYPE_ATOM_13, "diff";
-        14 => MESSAGE_TYPE_ATOM_14, "client_broadcast";
-        15 => MESSAGE_TYPE_ATOM_15, "join_start_journaled";
-        16 => MESSAGE_TYPE_ATOM_16, "stream_start";
-        17 => MESSAGE_TYPE_ATOM_17, "stream_end";
-        18 => MESSAGE_TYPE_ATOM_18, "interactive_slide_change";
-        19 => MESSAGE_TYPE_ATOM_19, "reconnect_scene_graph_query";
-        20 => MESSAGE_TYPE_ATOM_20, "reconnect_scene_graph_reply";
-        21 => MESSAGE_TYPE_ATOM_21, "join_end_incremental_reconnect";
-        22 => MESSAGE_TYPE_ATOM_22, "node_status_change";
-        23 => MESSAGE_TYPE_ATOM_23, "client_rendered";
-        24 => MESSAGE_TYPE_ATOM_24, "buzz_approval_change";
-    ]
+fn decode_sparse_message_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_message_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_axis_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => AXIS_ATOM_0, "x";
-        1 => AXIS_ATOM_1, "y";
-    ]
+fn decode_sparse_axis_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_axis_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_access_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ACCESS_ATOM_0, "read_only";
-        1 => ACCESS_ATOM_1, "read_write";
-    ]
+fn decode_sparse_access_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_access_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_node_phase_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => NODE_PHASE_ATOM_0, "created";
-        1 => NODE_PHASE_ATOM_1, "removed";
-    ]
+fn decode_sparse_node_phase_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_node_phase_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_winding_rule_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => WINDING_RULE_ATOM_0, "nonzero";
-        1 => WINDING_RULE_ATOM_1, "odd";
-    ]
+fn decode_sparse_winding_rule_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_winding_rule_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_node_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => NODE_TYPE_ATOM_0, "none";
-        1 => NODE_TYPE_ATOM_1, "document";
-        2 => NODE_TYPE_ATOM_2, "canvas";
-        3 => NODE_TYPE_ATOM_3, "group";
-        4 => NODE_TYPE_ATOM_4, "frame";
-        5 => NODE_TYPE_ATOM_5, "boolean_operation";
-        6 => NODE_TYPE_ATOM_6, "vector";
-        7 => NODE_TYPE_ATOM_7, "star";
-        8 => NODE_TYPE_ATOM_8, "line";
-        9 => NODE_TYPE_ATOM_9, "ellipse";
-        10 => NODE_TYPE_ATOM_10, "rectangle";
-        11 => NODE_TYPE_ATOM_11, "regular_polygon";
-        12 => NODE_TYPE_ATOM_12, "rounded_rectangle";
-        13 => NODE_TYPE_ATOM_13, "text";
-        14 => NODE_TYPE_ATOM_14, "slice";
-        15 => NODE_TYPE_ATOM_15, "symbol";
-        16 => NODE_TYPE_ATOM_16, "instance";
-        17 => NODE_TYPE_ATOM_17, "sticky";
-        18 => NODE_TYPE_ATOM_18, "shape_with_text";
-        19 => NODE_TYPE_ATOM_19, "connector";
-        20 => NODE_TYPE_ATOM_20, "code_block";
-        21 => NODE_TYPE_ATOM_21, "widget";
-        22 => NODE_TYPE_ATOM_22, "stamp";
-        23 => NODE_TYPE_ATOM_23, "media";
-        24 => NODE_TYPE_ATOM_24, "highlight";
-        25 => NODE_TYPE_ATOM_25, "section";
-        26 => NODE_TYPE_ATOM_26, "section_overlay";
-        27 => NODE_TYPE_ATOM_27, "washi_tape";
-        28 => NODE_TYPE_ATOM_28, "variable";
-        29 => NODE_TYPE_ATOM_29, "table";
-        30 => NODE_TYPE_ATOM_30, "table_cell";
-        31 => NODE_TYPE_ATOM_31, "variable_set";
-        32 => NODE_TYPE_ATOM_32, "slide";
-        33 => NODE_TYPE_ATOM_33, "assisted_layout";
-        34 => NODE_TYPE_ATOM_34, "interactive_slide_element";
-        35 => NODE_TYPE_ATOM_35, "variable_override";
-        36 => NODE_TYPE_ATOM_36, "module";
-        37 => NODE_TYPE_ATOM_37, "slide_grid";
-        38 => NODE_TYPE_ATOM_38, "slide_row";
-        39 => NODE_TYPE_ATOM_39, "responsive_set";
-        40 => NODE_TYPE_ATOM_40, "code_component";
-        41 => NODE_TYPE_ATOM_41, "text_path";
-        42 => NODE_TYPE_ATOM_42, "code_instance";
-        43 => NODE_TYPE_ATOM_43, "code_library";
-        44 => NODE_TYPE_ATOM_44, "code_file";
-        45 => NODE_TYPE_ATOM_45, "code_layer";
-        46 => NODE_TYPE_ATOM_46, "brush";
-        47 => NODE_TYPE_ATOM_47, "managed_string";
-        48 => NODE_TYPE_ATOM_48, "transform";
-        49 => NODE_TYPE_ATOM_49, "cms_rich_text";
-        50 => NODE_TYPE_ATOM_50, "repeater";
-        51 => NODE_TYPE_ATOM_51, "jsx";
-        52 => NODE_TYPE_ATOM_52, "embedded_prototype";
-        53 => NODE_TYPE_ATOM_53, "react_fiber";
-        54 => NODE_TYPE_ATOM_54, "responsive_node_set";
-        55 => NODE_TYPE_ATOM_55, "webpage";
-        56 => NODE_TYPE_ATOM_56, "keyframe";
-        57 => NODE_TYPE_ATOM_57, "keyframe_track";
-        58 => NODE_TYPE_ATOM_58, "animation_preset_instance";
-        59 => NODE_TYPE_ATOM_59, "code_embed";
-        60 => NODE_TYPE_ATOM_60, "binary_file";
-        61 => NODE_TYPE_ATOM_61, "spec_block";
-        62 => NODE_TYPE_ATOM_62, "tool_instance";
-        63 => NODE_TYPE_ATOM_63, "custom_effect_instance";
-        64 => NODE_TYPE_ATOM_64, "native_code_layer_instance";
-    ]
+fn decode_sparse_node_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_node_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_shape_with_text_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SHAPE_WITH_TEXT_TYPE_ATOM_0, "square";
-        1 => SHAPE_WITH_TEXT_TYPE_ATOM_1, "ellipse";
-        2 => SHAPE_WITH_TEXT_TYPE_ATOM_2, "diamond";
-        3 => SHAPE_WITH_TEXT_TYPE_ATOM_3, "triangle_up";
-        4 => SHAPE_WITH_TEXT_TYPE_ATOM_4, "triangle_down";
-        5 => SHAPE_WITH_TEXT_TYPE_ATOM_5, "rounded_rectangle";
-        6 => SHAPE_WITH_TEXT_TYPE_ATOM_6, "parallelogram_right";
-        7 => SHAPE_WITH_TEXT_TYPE_ATOM_7, "parallelogram_left";
-        8 => SHAPE_WITH_TEXT_TYPE_ATOM_8, "eng_database";
-        9 => SHAPE_WITH_TEXT_TYPE_ATOM_9, "eng_queue";
-        10 => SHAPE_WITH_TEXT_TYPE_ATOM_10, "eng_file";
-        11 => SHAPE_WITH_TEXT_TYPE_ATOM_11, "eng_folder";
-        12 => SHAPE_WITH_TEXT_TYPE_ATOM_12, "trapezoid";
-        13 => SHAPE_WITH_TEXT_TYPE_ATOM_13, "predefined_process";
-        14 => SHAPE_WITH_TEXT_TYPE_ATOM_14, "shield";
-        15 => SHAPE_WITH_TEXT_TYPE_ATOM_15, "document_single";
-        16 => SHAPE_WITH_TEXT_TYPE_ATOM_16, "document_multiple";
-        17 => SHAPE_WITH_TEXT_TYPE_ATOM_17, "manual_input";
-        18 => SHAPE_WITH_TEXT_TYPE_ATOM_18, "hexagon";
-        19 => SHAPE_WITH_TEXT_TYPE_ATOM_19, "chevron";
-        20 => SHAPE_WITH_TEXT_TYPE_ATOM_20, "pentagon";
-        21 => SHAPE_WITH_TEXT_TYPE_ATOM_21, "octagon";
-        22 => SHAPE_WITH_TEXT_TYPE_ATOM_22, "star";
-        23 => SHAPE_WITH_TEXT_TYPE_ATOM_23, "plus";
-        24 => SHAPE_WITH_TEXT_TYPE_ATOM_24, "arrow_left";
-        25 => SHAPE_WITH_TEXT_TYPE_ATOM_25, "arrow_right";
-        26 => SHAPE_WITH_TEXT_TYPE_ATOM_26, "summing_junction";
-        27 => SHAPE_WITH_TEXT_TYPE_ATOM_27, "or";
-        28 => SHAPE_WITH_TEXT_TYPE_ATOM_28, "speech_bubble";
-        29 => SHAPE_WITH_TEXT_TYPE_ATOM_29, "internal_storage";
-    ]
+fn decode_sparse_shape_with_text_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_shape_with_text_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_blend_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => BLEND_MODE_ATOM_0, "pass_through";
-        1 => BLEND_MODE_ATOM_1, "normal";
-        2 => BLEND_MODE_ATOM_2, "darken";
-        3 => BLEND_MODE_ATOM_3, "multiply";
-        4 => BLEND_MODE_ATOM_4, "linear_burn";
-        5 => BLEND_MODE_ATOM_5, "color_burn";
-        6 => BLEND_MODE_ATOM_6, "lighten";
-        7 => BLEND_MODE_ATOM_7, "screen";
-        8 => BLEND_MODE_ATOM_8, "linear_dodge";
-        9 => BLEND_MODE_ATOM_9, "color_dodge";
-        10 => BLEND_MODE_ATOM_10, "overlay";
-        11 => BLEND_MODE_ATOM_11, "soft_light";
-        12 => BLEND_MODE_ATOM_12, "hard_light";
-        13 => BLEND_MODE_ATOM_13, "difference";
-        14 => BLEND_MODE_ATOM_14, "exclusion";
-        15 => BLEND_MODE_ATOM_15, "hue";
-        16 => BLEND_MODE_ATOM_16, "saturation";
-        17 => BLEND_MODE_ATOM_17, "color";
-        18 => BLEND_MODE_ATOM_18, "luminosity";
-    ]
+fn decode_sparse_blend_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_blend_mode_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_paint_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PAINT_TYPE_ATOM_0, "solid";
-        1 => PAINT_TYPE_ATOM_1, "gradient_linear";
-        2 => PAINT_TYPE_ATOM_2, "gradient_radial";
-        3 => PAINT_TYPE_ATOM_3, "gradient_angular";
-        4 => PAINT_TYPE_ATOM_4, "gradient_diamond";
-        5 => PAINT_TYPE_ATOM_5, "image";
-        6 => PAINT_TYPE_ATOM_6, "emoji";
-        7 => PAINT_TYPE_ATOM_7, "video";
-        8 => PAINT_TYPE_ATOM_8, "pattern";
-        9 => PAINT_TYPE_ATOM_9, "noise";
-        10 => PAINT_TYPE_ATOM_10, "custom";
-    ]
+fn decode_sparse_paint_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_paint_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_image_scale_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => IMAGE_SCALE_MODE_ATOM_0, "stretch";
-        1 => IMAGE_SCALE_MODE_ATOM_1, "fit";
-        2 => IMAGE_SCALE_MODE_ATOM_2, "fill";
-        3 => IMAGE_SCALE_MODE_ATOM_3, "tile";
-    ]
+fn decode_sparse_image_scale_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_image_scale_mode_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_effect_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EFFECT_TYPE_ATOM_0, "inner_shadow";
-        1 => EFFECT_TYPE_ATOM_1, "drop_shadow";
-        2 => EFFECT_TYPE_ATOM_2, "foreground_blur";
-        3 => EFFECT_TYPE_ATOM_3, "background_blur";
-        4 => EFFECT_TYPE_ATOM_4, "repeat";
-        5 => EFFECT_TYPE_ATOM_5, "symmetry";
-        6 => EFFECT_TYPE_ATOM_6, "grain";
-        7 => EFFECT_TYPE_ATOM_7, "noise";
-        8 => EFFECT_TYPE_ATOM_8, "glass";
-        9 => EFFECT_TYPE_ATOM_9, "custom";
-    ]
+fn decode_sparse_effect_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_effect_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_text_case_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TEXT_CASE_ATOM_0, "original";
-        1 => TEXT_CASE_ATOM_1, "upper";
-        2 => TEXT_CASE_ATOM_2, "lower";
-        3 => TEXT_CASE_ATOM_3, "title";
-        4 => TEXT_CASE_ATOM_4, "small_caps";
-        5 => TEXT_CASE_ATOM_5, "small_caps_forced";
-    ]
+fn decode_sparse_text_case_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_text_case_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_text_decoration_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TEXT_DECORATION_ATOM_0, "none";
-        1 => TEXT_DECORATION_ATOM_1, "underline";
-        2 => TEXT_DECORATION_ATOM_2, "strikethrough";
-    ]
+fn decode_sparse_text_decoration_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_text_decoration_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_text_decoration_style_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TEXT_DECORATION_STYLE_ATOM_0, "solid";
-        1 => TEXT_DECORATION_STYLE_ATOM_1, "dotted";
-        2 => TEXT_DECORATION_STYLE_ATOM_2, "wavy";
-    ]
+fn decode_sparse_text_decoration_style_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_text_decoration_style_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_leading_trim_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => LEADING_TRIM_ATOM_0, "none";
-        1 => LEADING_TRIM_ATOM_1, "cap_height";
-    ]
+fn decode_sparse_leading_trim_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_leading_trim_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_number_units_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => NUMBER_UNITS_ATOM_0, "raw";
-        1 => NUMBER_UNITS_ATOM_1, "pixels";
-        2 => NUMBER_UNITS_ATOM_2, "percent";
-    ]
+fn decode_sparse_number_units_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_number_units_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_constraint_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CONSTRAINT_TYPE_ATOM_0, "min";
-        1 => CONSTRAINT_TYPE_ATOM_1, "center";
-        2 => CONSTRAINT_TYPE_ATOM_2, "max";
-        3 => CONSTRAINT_TYPE_ATOM_3, "stretch";
-        4 => CONSTRAINT_TYPE_ATOM_4, "scale";
-        5 => CONSTRAINT_TYPE_ATOM_5, "fixed_min";
-        6 => CONSTRAINT_TYPE_ATOM_6, "fixed_max";
-    ]
+fn decode_sparse_constraint_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_constraint_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stroke_align_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STROKE_ALIGN_ATOM_0, "center";
-        1 => STROKE_ALIGN_ATOM_1, "inside";
-        2 => STROKE_ALIGN_ATOM_2, "outside";
-        3 => STROKE_ALIGN_ATOM_3, "offset";
-    ]
+fn decode_sparse_stroke_align_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stroke_align_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stroke_cap_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STROKE_CAP_ATOM_0, "none";
-        1 => STROKE_CAP_ATOM_1, "round";
-        2 => STROKE_CAP_ATOM_2, "square";
-        3 => STROKE_CAP_ATOM_3, "arrow_lines";
-        4 => STROKE_CAP_ATOM_4, "arrow_equilateral";
-        5 => STROKE_CAP_ATOM_5, "diamond_filled";
-        6 => STROKE_CAP_ATOM_6, "triangle_filled";
-        7 => STROKE_CAP_ATOM_7, "highlight";
-        8 => STROKE_CAP_ATOM_8, "washi_tape_1";
-        9 => STROKE_CAP_ATOM_9, "washi_tape_2";
-        10 => STROKE_CAP_ATOM_10, "washi_tape_3";
-        11 => STROKE_CAP_ATOM_11, "washi_tape_4";
-        12 => STROKE_CAP_ATOM_12, "washi_tape_5";
-        13 => STROKE_CAP_ATOM_13, "washi_tape_6";
-        14 => STROKE_CAP_ATOM_14, "circle_filled";
-        15 => STROKE_CAP_ATOM_15, "erd_zero_or_one";
-        16 => STROKE_CAP_ATOM_16, "erd_exactly_one";
-        17 => STROKE_CAP_ATOM_17, "erd_zero_or_more";
-        18 => STROKE_CAP_ATOM_18, "erd_one_or_more";
-        19 => STROKE_CAP_ATOM_19, "erd_one";
-        20 => STROKE_CAP_ATOM_20, "erd_many";
-    ]
+fn decode_sparse_stroke_cap_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stroke_cap_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stroke_join_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STROKE_JOIN_ATOM_0, "miter";
-        1 => STROKE_JOIN_ATOM_1, "bevel";
-        2 => STROKE_JOIN_ATOM_2, "round";
-    ]
+fn decode_sparse_stroke_join_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stroke_join_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_boolean_operation_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => BOOLEAN_OPERATION_ATOM_0, "union";
-        1 => BOOLEAN_OPERATION_ATOM_1, "intersect";
-        2 => BOOLEAN_OPERATION_ATOM_2, "subtract";
-        3 => BOOLEAN_OPERATION_ATOM_3, "xor";
-    ]
+fn decode_sparse_boolean_operation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_boolean_operation_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_text_align_horizontal_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TEXT_ALIGN_HORIZONTAL_ATOM_0, "left";
-        1 => TEXT_ALIGN_HORIZONTAL_ATOM_1, "center";
-        2 => TEXT_ALIGN_HORIZONTAL_ATOM_2, "right";
-        3 => TEXT_ALIGN_HORIZONTAL_ATOM_3, "justified";
-    ]
+fn decode_sparse_text_align_horizontal_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_text_align_horizontal_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_text_align_vertical_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TEXT_ALIGN_VERTICAL_ATOM_0, "top";
-        1 => TEXT_ALIGN_VERTICAL_ATOM_1, "center";
-        2 => TEXT_ALIGN_VERTICAL_ATOM_2, "bottom";
-    ]
+fn decode_sparse_text_align_vertical_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_text_align_vertical_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_mouse_cursor_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MOUSE_CURSOR_ATOM_0, "default";
-        1 => MOUSE_CURSOR_ATOM_1, "crosshair";
-        2 => MOUSE_CURSOR_ATOM_2, "eyedropper";
-        3 => MOUSE_CURSOR_ATOM_3, "hand";
-        4 => MOUSE_CURSOR_ATOM_4, "paint_bucket";
-        5 => MOUSE_CURSOR_ATOM_5, "pen";
-        6 => MOUSE_CURSOR_ATOM_6, "pencil";
-        7 => MOUSE_CURSOR_ATOM_7, "marker";
-        8 => MOUSE_CURSOR_ATOM_8, "eraser";
-        9 => MOUSE_CURSOR_ATOM_9, "highlighter";
-        10 => MOUSE_CURSOR_ATOM_10, "lasso";
-    ]
+fn decode_sparse_mouse_cursor_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_mouse_cursor_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_vector_mirror_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => VECTOR_MIRROR_ATOM_0, "none";
-        1 => VECTOR_MIRROR_ATOM_1, "angle";
-        2 => VECTOR_MIRROR_ATOM_2, "angle_and_length";
-    ]
+fn decode_sparse_vector_mirror_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_vector_mirror_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_image_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => IMAGE_TYPE_ATOM_0, "png";
-        1 => IMAGE_TYPE_ATOM_1, "jpeg";
-        2 => IMAGE_TYPE_ATOM_2, "svg";
-        3 => IMAGE_TYPE_ATOM_3, "pdf";
-        4 => IMAGE_TYPE_ATOM_4, "mp4";
-        5 => IMAGE_TYPE_ATOM_5, "gif";
-    ]
+fn decode_sparse_image_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_image_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_export_constraint_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EXPORT_CONSTRAINT_TYPE_ATOM_0, "content_scale";
-        1 => EXPORT_CONSTRAINT_TYPE_ATOM_1, "content_width";
-        2 => EXPORT_CONSTRAINT_TYPE_ATOM_2, "content_height";
-    ]
+fn decode_sparse_export_constraint_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_export_constraint_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_layout_grid_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => LAYOUT_GRID_TYPE_ATOM_0, "min";
-        1 => LAYOUT_GRID_TYPE_ATOM_1, "center";
-        2 => LAYOUT_GRID_TYPE_ATOM_2, "stretch";
-        3 => LAYOUT_GRID_TYPE_ATOM_3, "max";
-    ]
+fn decode_sparse_layout_grid_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_layout_grid_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_layout_grid_pattern_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => LAYOUT_GRID_PATTERN_ATOM_0, "stripes";
-        1 => LAYOUT_GRID_PATTERN_ATOM_1, "grid";
-    ]
+fn decode_sparse_layout_grid_pattern_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_layout_grid_pattern_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_text_auto_resize_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TEXT_AUTO_RESIZE_ATOM_0, "none";
-        1 => TEXT_AUTO_RESIZE_ATOM_1, "width_and_height";
-        2 => TEXT_AUTO_RESIZE_ATOM_2, "height";
-    ]
+fn decode_sparse_text_auto_resize_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_text_auto_resize_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_text_truncation_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TEXT_TRUNCATION_ATOM_0, "disabled";
-        1 => TEXT_TRUNCATION_ATOM_1, "ending";
-    ]
+fn decode_sparse_text_truncation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_text_truncation_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_style_set_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STYLE_SET_TYPE_ATOM_0, "personal";
-        1 => STYLE_SET_TYPE_ATOM_1, "team";
-        2 => STYLE_SET_TYPE_ATOM_2, "custom";
-        3 => STYLE_SET_TYPE_ATOM_3, "frequency";
-        4 => STYLE_SET_TYPE_ATOM_4, "temporary";
-    ]
+fn decode_sparse_style_set_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_style_set_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_style_set_content_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STYLE_SET_CONTENT_TYPE_ATOM_0, "solid";
-        1 => STYLE_SET_CONTENT_TYPE_ATOM_1, "gradient";
-        2 => STYLE_SET_CONTENT_TYPE_ATOM_2, "image";
-    ]
+fn decode_sparse_style_set_content_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_style_set_content_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stack_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STACK_MODE_ATOM_0, "none";
-        1 => STACK_MODE_ATOM_1, "horizontal";
-        2 => STACK_MODE_ATOM_2, "vertical";
-        3 => STACK_MODE_ATOM_3, "grid";
-    ]
+fn decode_sparse_stack_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stack_mode_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stack_align_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STACK_ALIGN_ATOM_0, "min";
-        1 => STACK_ALIGN_ATOM_1, "center";
-        2 => STACK_ALIGN_ATOM_2, "max";
-        3 => STACK_ALIGN_ATOM_3, "baseline";
-    ]
+fn decode_sparse_stack_align_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stack_align_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stack_counter_align_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STACK_COUNTER_ALIGN_ATOM_0, "min";
-        1 => STACK_COUNTER_ALIGN_ATOM_1, "center";
-        2 => STACK_COUNTER_ALIGN_ATOM_2, "max";
-        3 => STACK_COUNTER_ALIGN_ATOM_3, "stretch";
-        4 => STACK_COUNTER_ALIGN_ATOM_4, "auto";
-        5 => STACK_COUNTER_ALIGN_ATOM_5, "baseline";
-    ]
+fn decode_sparse_stack_counter_align_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stack_counter_align_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stack_justify_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STACK_JUSTIFY_ATOM_0, "min";
-        1 => STACK_JUSTIFY_ATOM_1, "center";
-        2 => STACK_JUSTIFY_ATOM_2, "max";
-        3 => STACK_JUSTIFY_ATOM_3, "space_evenly";
-        4 => STACK_JUSTIFY_ATOM_4, "space_between";
-    ]
+fn decode_sparse_stack_justify_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stack_justify_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_grid_child_align_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => GRID_CHILD_ALIGN_ATOM_0, "auto";
-        1 => GRID_CHILD_ALIGN_ATOM_1, "min";
-        2 => GRID_CHILD_ALIGN_ATOM_2, "center";
-        3 => GRID_CHILD_ALIGN_ATOM_3, "max";
-    ]
+fn decode_sparse_grid_child_align_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_grid_child_align_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_grid_auto_tracks_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => GRID_AUTO_TRACKS_ATOM_0, "none";
-        1 => GRID_AUTO_TRACKS_ATOM_1, "rows";
-    ]
+fn decode_sparse_grid_auto_tracks_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_grid_auto_tracks_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stack_size_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STACK_SIZE_ATOM_0, "fixed";
-        1 => STACK_SIZE_ATOM_1, "resize_to_fit";
-        2 => STACK_SIZE_ATOM_2, "resize_to_fit_with_implicit_size";
-    ]
+fn decode_sparse_stack_size_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stack_size_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stack_positioning_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STACK_POSITIONING_ATOM_0, "auto";
-        1 => STACK_POSITIONING_ATOM_1, "absolute";
-    ]
+fn decode_sparse_stack_positioning_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stack_positioning_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stack_wrap_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STACK_WRAP_ATOM_0, "no_wrap";
-        1 => STACK_WRAP_ATOM_1, "wrap";
-    ]
+fn decode_sparse_stack_wrap_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stack_wrap_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_stack_counter_align_content_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STACK_COUNTER_ALIGN_CONTENT_ATOM_0, "auto";
-        1 => STACK_COUNTER_ALIGN_CONTENT_ATOM_1, "space_between";
-    ]
+fn decode_sparse_stack_counter_align_content_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_stack_counter_align_content_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_connection_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CONNECTION_TYPE_ATOM_0, "none";
-        1 => CONNECTION_TYPE_ATOM_1, "internal_node";
-        2 => CONNECTION_TYPE_ATOM_2, "url";
-        3 => CONNECTION_TYPE_ATOM_3, "back";
-        4 => CONNECTION_TYPE_ATOM_4, "close";
-        5 => CONNECTION_TYPE_ATOM_5, "set_variable";
-        6 => CONNECTION_TYPE_ATOM_6, "update_media_runtime";
-        7 => CONNECTION_TYPE_ATOM_7, "conditional";
-        8 => CONNECTION_TYPE_ATOM_8, "set_variable_mode";
-        9 => CONNECTION_TYPE_ATOM_9, "object_animation";
-        10 => CONNECTION_TYPE_ATOM_10, "update_animation_timeline_state";
-    ]
+fn decode_sparse_connection_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_connection_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_interaction_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => INTERACTION_TYPE_ATOM_0, "on_click";
-        1 => INTERACTION_TYPE_ATOM_1, "after_timeout";
-        2 => INTERACTION_TYPE_ATOM_2, "mouse_in";
-        3 => INTERACTION_TYPE_ATOM_3, "mouse_out";
-        4 => INTERACTION_TYPE_ATOM_4, "on_hover";
-        5 => INTERACTION_TYPE_ATOM_5, "mouse_down";
-        6 => INTERACTION_TYPE_ATOM_6, "mouse_up";
-        7 => INTERACTION_TYPE_ATOM_7, "on_press";
-        8 => INTERACTION_TYPE_ATOM_8, "none";
-        9 => INTERACTION_TYPE_ATOM_9, "drag";
-        10 => INTERACTION_TYPE_ATOM_10, "on_key_down";
-        11 => INTERACTION_TYPE_ATOM_11, "on_voice";
-        12 => INTERACTION_TYPE_ATOM_12, "on_media_hit";
-        13 => INTERACTION_TYPE_ATOM_13, "on_media_end";
-        14 => INTERACTION_TYPE_ATOM_14, "mouse_enter";
-        15 => INTERACTION_TYPE_ATOM_15, "mouse_leave";
-    ]
+fn decode_sparse_interaction_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_interaction_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_transition_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRANSITION_TYPE_ATOM_0, "instant_transition";
-        1 => TRANSITION_TYPE_ATOM_1, "dissolve";
-        2 => TRANSITION_TYPE_ATOM_2, "fade";
-        3 => TRANSITION_TYPE_ATOM_3, "slide_from_left";
-        4 => TRANSITION_TYPE_ATOM_4, "slide_from_right";
-        5 => TRANSITION_TYPE_ATOM_5, "slide_from_top";
-        6 => TRANSITION_TYPE_ATOM_6, "slide_from_bottom";
-        7 => TRANSITION_TYPE_ATOM_7, "push_from_left";
-        8 => TRANSITION_TYPE_ATOM_8, "push_from_right";
-        9 => TRANSITION_TYPE_ATOM_9, "push_from_top";
-        10 => TRANSITION_TYPE_ATOM_10, "push_from_bottom";
-        11 => TRANSITION_TYPE_ATOM_11, "move_from_left";
-        12 => TRANSITION_TYPE_ATOM_12, "move_from_right";
-        13 => TRANSITION_TYPE_ATOM_13, "move_from_top";
-        14 => TRANSITION_TYPE_ATOM_14, "move_from_bottom";
-        15 => TRANSITION_TYPE_ATOM_15, "slide_out_to_left";
-        16 => TRANSITION_TYPE_ATOM_16, "slide_out_to_right";
-        17 => TRANSITION_TYPE_ATOM_17, "slide_out_to_top";
-        18 => TRANSITION_TYPE_ATOM_18, "slide_out_to_bottom";
-        19 => TRANSITION_TYPE_ATOM_19, "move_out_to_left";
-        20 => TRANSITION_TYPE_ATOM_20, "move_out_to_right";
-        21 => TRANSITION_TYPE_ATOM_21, "move_out_to_top";
-        22 => TRANSITION_TYPE_ATOM_22, "move_out_to_bottom";
-        23 => TRANSITION_TYPE_ATOM_23, "magic_move";
-        24 => TRANSITION_TYPE_ATOM_24, "smart_animate";
-        25 => TRANSITION_TYPE_ATOM_25, "scroll_animate";
-    ]
+fn decode_sparse_transition_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_transition_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_easing_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EASING_TYPE_ATOM_0, "in_cubic";
-        1 => EASING_TYPE_ATOM_1, "out_cubic";
-        2 => EASING_TYPE_ATOM_2, "inout_cubic";
-        3 => EASING_TYPE_ATOM_3, "linear";
-        4 => EASING_TYPE_ATOM_4, "in_back_cubic";
-        5 => EASING_TYPE_ATOM_5, "out_back_cubic";
-        6 => EASING_TYPE_ATOM_6, "inout_back_cubic";
-        7 => EASING_TYPE_ATOM_7, "custom_cubic";
-        8 => EASING_TYPE_ATOM_8, "spring";
-        9 => EASING_TYPE_ATOM_9, "gentle_spring";
-        10 => EASING_TYPE_ATOM_10, "custom_spring";
-        11 => EASING_TYPE_ATOM_11, "spring_preset_one";
-        12 => EASING_TYPE_ATOM_12, "spring_preset_two";
-        13 => EASING_TYPE_ATOM_13, "spring_preset_three";
-        14 => EASING_TYPE_ATOM_14, "hold";
-    ]
+fn decode_sparse_easing_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_easing_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_scroll_direction_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SCROLL_DIRECTION_ATOM_0, "none";
-        1 => SCROLL_DIRECTION_ATOM_1, "horizontal";
-        2 => SCROLL_DIRECTION_ATOM_2, "vertical";
-        3 => SCROLL_DIRECTION_ATOM_3, "both";
-    ]
+fn decode_sparse_scroll_direction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_scroll_direction_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_scroll_contracted_state_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SCROLL_CONTRACTED_STATE_ATOM_0, "expanded";
-        1 => SCROLL_CONTRACTED_STATE_ATOM_1, "contracted";
-    ]
+fn decode_sparse_scroll_contracted_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_scroll_contracted_state_from_decoder(env, decoder)
 }
 
 kiwi_sparse_struct_decoder! {
@@ -18453,116 +13155,44 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_font_variant_numeric_figure_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FONT_VARIANT_NUMERIC_FIGURE_ATOM_0, "normal";
-        1 => FONT_VARIANT_NUMERIC_FIGURE_ATOM_1, "lining";
-        2 => FONT_VARIANT_NUMERIC_FIGURE_ATOM_2, "oldstyle";
-    ]
+fn decode_sparse_font_variant_numeric_figure_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_font_variant_numeric_figure_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_font_variant_numeric_spacing_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FONT_VARIANT_NUMERIC_SPACING_ATOM_0, "normal";
-        1 => FONT_VARIANT_NUMERIC_SPACING_ATOM_1, "proportional";
-        2 => FONT_VARIANT_NUMERIC_SPACING_ATOM_2, "tabular";
-    ]
+fn decode_sparse_font_variant_numeric_spacing_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_font_variant_numeric_spacing_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_font_variant_numeric_fraction_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FONT_VARIANT_NUMERIC_FRACTION_ATOM_0, "normal";
-        1 => FONT_VARIANT_NUMERIC_FRACTION_ATOM_1, "diagonal";
-        2 => FONT_VARIANT_NUMERIC_FRACTION_ATOM_2, "stacked";
-    ]
+fn decode_sparse_font_variant_numeric_fraction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_font_variant_numeric_fraction_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_font_variant_caps_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FONT_VARIANT_CAPS_ATOM_0, "normal";
-        1 => FONT_VARIANT_CAPS_ATOM_1, "small";
-        2 => FONT_VARIANT_CAPS_ATOM_2, "all_small";
-        3 => FONT_VARIANT_CAPS_ATOM_3, "petite";
-        4 => FONT_VARIANT_CAPS_ATOM_4, "all_petite";
-        5 => FONT_VARIANT_CAPS_ATOM_5, "unicase";
-        6 => FONT_VARIANT_CAPS_ATOM_6, "titling";
-    ]
+fn decode_sparse_font_variant_caps_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_font_variant_caps_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_font_variant_position_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FONT_VARIANT_POSITION_ATOM_0, "normal";
-        1 => FONT_VARIANT_POSITION_ATOM_1, "sub";
-        2 => FONT_VARIANT_POSITION_ATOM_2, "super";
-    ]
+fn decode_sparse_font_variant_position_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_font_variant_position_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_font_style_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FONT_STYLE_ATOM_0, "normal";
-        1 => FONT_STYLE_ATOM_1, "italic";
-    ]
+fn decode_sparse_font_style_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_font_style_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_semantic_weight_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SEMANTIC_WEIGHT_ATOM_0, "normal";
-        1 => SEMANTIC_WEIGHT_ATOM_1, "bold";
-    ]
+fn decode_sparse_semantic_weight_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_semantic_weight_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_semantic_italic_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SEMANTIC_ITALIC_ATOM_0, "normal";
-        1 => SEMANTIC_ITALIC_ATOM_1, "italic";
-    ]
+fn decode_sparse_semantic_italic_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_semantic_italic_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_code_snapshot_state_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CODE_SNAPSHOT_STATE_ATOM_0, "initial";
-        1 => CODE_SNAPSHOT_STATE_ATOM_1, "snapshotting";
-        2 => CODE_SNAPSHOT_STATE_ATOM_2, "ok";
-        3 => CODE_SNAPSHOT_STATE_ATOM_3, "snapshot_error";
-        4 => CODE_SNAPSHOT_STATE_ATOM_4, "llm_in_progress";
-    ]
+fn decode_sparse_code_snapshot_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_code_snapshot_state_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_snapshot_capture_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SNAPSHOT_CAPTURE_MODE_ATOM_0, "full";
-        1 => SNAPSHOT_CAPTURE_MODE_ATOM_1, "partial";
-    ]
+fn decode_sparse_snapshot_capture_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_snapshot_capture_mode_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -18582,21 +13212,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_code_object_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CODE_OBJECT_TYPE_ATOM_0, "web_layer";
-        1 => CODE_OBJECT_TYPE_ATOM_1, "web_interaction";
-        2 => CODE_OBJECT_TYPE_ATOM_2, "native_layer";
-        3 => CODE_OBJECT_TYPE_ATOM_3, "animation_preset";
-        4 => CODE_OBJECT_TYPE_ATOM_4, "tool";
-        5 => CODE_OBJECT_TYPE_ATOM_5, "custom_effect";
-        6 => CODE_OBJECT_TYPE_ATOM_6, "plugin";
-        7 => CODE_OBJECT_TYPE_ATOM_7, "web_layer_generic";
-        8 => CODE_OBJECT_TYPE_ATOM_8, "custom_fill";
-    ]
+fn decode_sparse_code_object_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_code_object_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -18614,252 +13231,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_lock_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => LOCK_MODE_ATOM_0, "none";
-        1 => LOCK_MODE_ATOM_1, "all";
-        2 => LOCK_MODE_ATOM_2, "background_only";
-    ]
+fn decode_sparse_lock_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_lock_mode_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_open_type_feature_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => OPEN_TYPE_FEATURE_ATOM_0, "pcap";
-        1 => OPEN_TYPE_FEATURE_ATOM_1, "c2_pc";
-        2 => OPEN_TYPE_FEATURE_ATOM_2, "case";
-        3 => OPEN_TYPE_FEATURE_ATOM_3, "cpsp";
-        4 => OPEN_TYPE_FEATURE_ATOM_4, "titl";
-        5 => OPEN_TYPE_FEATURE_ATOM_5, "unic";
-        6 => OPEN_TYPE_FEATURE_ATOM_6, "zero";
-        7 => OPEN_TYPE_FEATURE_ATOM_7, "sinf";
-        8 => OPEN_TYPE_FEATURE_ATOM_8, "ordn";
-        9 => OPEN_TYPE_FEATURE_ATOM_9, "afrc";
-        10 => OPEN_TYPE_FEATURE_ATOM_10, "dnom";
-        11 => OPEN_TYPE_FEATURE_ATOM_11, "numr";
-        12 => OPEN_TYPE_FEATURE_ATOM_12, "liga";
-        13 => OPEN_TYPE_FEATURE_ATOM_13, "clig";
-        14 => OPEN_TYPE_FEATURE_ATOM_14, "dlig";
-        15 => OPEN_TYPE_FEATURE_ATOM_15, "hlig";
-        16 => OPEN_TYPE_FEATURE_ATOM_16, "rlig";
-        17 => OPEN_TYPE_FEATURE_ATOM_17, "aalt";
-        18 => OPEN_TYPE_FEATURE_ATOM_18, "calt";
-        19 => OPEN_TYPE_FEATURE_ATOM_19, "rclt";
-        20 => OPEN_TYPE_FEATURE_ATOM_20, "salt";
-        21 => OPEN_TYPE_FEATURE_ATOM_21, "rvrn";
-        22 => OPEN_TYPE_FEATURE_ATOM_22, "vert";
-        23 => OPEN_TYPE_FEATURE_ATOM_23, "swsh";
-        24 => OPEN_TYPE_FEATURE_ATOM_24, "cswh";
-        25 => OPEN_TYPE_FEATURE_ATOM_25, "nalt";
-        26 => OPEN_TYPE_FEATURE_ATOM_26, "ccmp";
-        27 => OPEN_TYPE_FEATURE_ATOM_27, "stch";
-        28 => OPEN_TYPE_FEATURE_ATOM_28, "hist";
-        29 => OPEN_TYPE_FEATURE_ATOM_29, "size";
-        30 => OPEN_TYPE_FEATURE_ATOM_30, "ornm";
-        31 => OPEN_TYPE_FEATURE_ATOM_31, "ital";
-        32 => OPEN_TYPE_FEATURE_ATOM_32, "rand";
-        33 => OPEN_TYPE_FEATURE_ATOM_33, "dtls";
-        34 => OPEN_TYPE_FEATURE_ATOM_34, "flac";
-        35 => OPEN_TYPE_FEATURE_ATOM_35, "mgrk";
-        36 => OPEN_TYPE_FEATURE_ATOM_36, "ssty";
-        37 => OPEN_TYPE_FEATURE_ATOM_37, "kern";
-        38 => OPEN_TYPE_FEATURE_ATOM_38, "fwid";
-        39 => OPEN_TYPE_FEATURE_ATOM_39, "hwid";
-        40 => OPEN_TYPE_FEATURE_ATOM_40, "halt";
-        41 => OPEN_TYPE_FEATURE_ATOM_41, "twid";
-        42 => OPEN_TYPE_FEATURE_ATOM_42, "qwid";
-        43 => OPEN_TYPE_FEATURE_ATOM_43, "pwid";
-        44 => OPEN_TYPE_FEATURE_ATOM_44, "just";
-        45 => OPEN_TYPE_FEATURE_ATOM_45, "lfbd";
-        46 => OPEN_TYPE_FEATURE_ATOM_46, "opbd";
-        47 => OPEN_TYPE_FEATURE_ATOM_47, "rtbd";
-        48 => OPEN_TYPE_FEATURE_ATOM_48, "palt";
-        49 => OPEN_TYPE_FEATURE_ATOM_49, "pkna";
-        50 => OPEN_TYPE_FEATURE_ATOM_50, "ltra";
-        51 => OPEN_TYPE_FEATURE_ATOM_51, "ltrm";
-        52 => OPEN_TYPE_FEATURE_ATOM_52, "rtla";
-        53 => OPEN_TYPE_FEATURE_ATOM_53, "rtlm";
-        54 => OPEN_TYPE_FEATURE_ATOM_54, "abrv";
-        55 => OPEN_TYPE_FEATURE_ATOM_55, "abvm";
-        56 => OPEN_TYPE_FEATURE_ATOM_56, "abvs";
-        57 => OPEN_TYPE_FEATURE_ATOM_57, "valt";
-        58 => OPEN_TYPE_FEATURE_ATOM_58, "vhal";
-        59 => OPEN_TYPE_FEATURE_ATOM_59, "blwf";
-        60 => OPEN_TYPE_FEATURE_ATOM_60, "blwm";
-        61 => OPEN_TYPE_FEATURE_ATOM_61, "blws";
-        62 => OPEN_TYPE_FEATURE_ATOM_62, "akhn";
-        63 => OPEN_TYPE_FEATURE_ATOM_63, "cjct";
-        64 => OPEN_TYPE_FEATURE_ATOM_64, "cfar";
-        65 => OPEN_TYPE_FEATURE_ATOM_65, "cpct";
-        66 => OPEN_TYPE_FEATURE_ATOM_66, "curs";
-        67 => OPEN_TYPE_FEATURE_ATOM_67, "dist";
-        68 => OPEN_TYPE_FEATURE_ATOM_68, "expt";
-        69 => OPEN_TYPE_FEATURE_ATOM_69, "falt";
-        70 => OPEN_TYPE_FEATURE_ATOM_70, "fina";
-        71 => OPEN_TYPE_FEATURE_ATOM_71, "fin2";
-        72 => OPEN_TYPE_FEATURE_ATOM_72, "fin3";
-        73 => OPEN_TYPE_FEATURE_ATOM_73, "half";
-        74 => OPEN_TYPE_FEATURE_ATOM_74, "haln";
-        75 => OPEN_TYPE_FEATURE_ATOM_75, "hkna";
-        76 => OPEN_TYPE_FEATURE_ATOM_76, "hngl";
-        77 => OPEN_TYPE_FEATURE_ATOM_77, "hojo";
-        78 => OPEN_TYPE_FEATURE_ATOM_78, "init";
-        79 => OPEN_TYPE_FEATURE_ATOM_79, "isol";
-        80 => OPEN_TYPE_FEATURE_ATOM_80, "jp78";
-        81 => OPEN_TYPE_FEATURE_ATOM_81, "jp83";
-        82 => OPEN_TYPE_FEATURE_ATOM_82, "jp90";
-        83 => OPEN_TYPE_FEATURE_ATOM_83, "jp04";
-        84 => OPEN_TYPE_FEATURE_ATOM_84, "ljmo";
-        85 => OPEN_TYPE_FEATURE_ATOM_85, "locl";
-        86 => OPEN_TYPE_FEATURE_ATOM_86, "mark";
-        87 => OPEN_TYPE_FEATURE_ATOM_87, "medi";
-        88 => OPEN_TYPE_FEATURE_ATOM_88, "med2";
-        89 => OPEN_TYPE_FEATURE_ATOM_89, "mkmk";
-        90 => OPEN_TYPE_FEATURE_ATOM_90, "nlck";
-        91 => OPEN_TYPE_FEATURE_ATOM_91, "nukt";
-        92 => OPEN_TYPE_FEATURE_ATOM_92, "pref";
-        93 => OPEN_TYPE_FEATURE_ATOM_93, "pres";
-        94 => OPEN_TYPE_FEATURE_ATOM_94, "vpal";
-        95 => OPEN_TYPE_FEATURE_ATOM_95, "pstf";
-        96 => OPEN_TYPE_FEATURE_ATOM_96, "psts";
-        97 => OPEN_TYPE_FEATURE_ATOM_97, "rkrf";
-        98 => OPEN_TYPE_FEATURE_ATOM_98, "rphf";
-        99 => OPEN_TYPE_FEATURE_ATOM_99, "ruby";
-        100 => OPEN_TYPE_FEATURE_ATOM_100, "smpl";
-        101 => OPEN_TYPE_FEATURE_ATOM_101, "tjmo";
-        102 => OPEN_TYPE_FEATURE_ATOM_102, "tnam";
-        103 => OPEN_TYPE_FEATURE_ATOM_103, "trad";
-        104 => OPEN_TYPE_FEATURE_ATOM_104, "vatu";
-        105 => OPEN_TYPE_FEATURE_ATOM_105, "vjmo";
-        106 => OPEN_TYPE_FEATURE_ATOM_106, "vkna";
-        107 => OPEN_TYPE_FEATURE_ATOM_107, "vkrn";
-        108 => OPEN_TYPE_FEATURE_ATOM_108, "vrtr";
-        109 => OPEN_TYPE_FEATURE_ATOM_109, "vrt2";
-        110 => OPEN_TYPE_FEATURE_ATOM_110, "ss01";
-        111 => OPEN_TYPE_FEATURE_ATOM_111, "ss02";
-        112 => OPEN_TYPE_FEATURE_ATOM_112, "ss03";
-        113 => OPEN_TYPE_FEATURE_ATOM_113, "ss04";
-        114 => OPEN_TYPE_FEATURE_ATOM_114, "ss05";
-        115 => OPEN_TYPE_FEATURE_ATOM_115, "ss06";
-        116 => OPEN_TYPE_FEATURE_ATOM_116, "ss07";
-        117 => OPEN_TYPE_FEATURE_ATOM_117, "ss08";
-        118 => OPEN_TYPE_FEATURE_ATOM_118, "ss09";
-        119 => OPEN_TYPE_FEATURE_ATOM_119, "ss10";
-        120 => OPEN_TYPE_FEATURE_ATOM_120, "ss11";
-        121 => OPEN_TYPE_FEATURE_ATOM_121, "ss12";
-        122 => OPEN_TYPE_FEATURE_ATOM_122, "ss13";
-        123 => OPEN_TYPE_FEATURE_ATOM_123, "ss14";
-        124 => OPEN_TYPE_FEATURE_ATOM_124, "ss15";
-        125 => OPEN_TYPE_FEATURE_ATOM_125, "ss16";
-        126 => OPEN_TYPE_FEATURE_ATOM_126, "ss17";
-        127 => OPEN_TYPE_FEATURE_ATOM_127, "ss18";
-        128 => OPEN_TYPE_FEATURE_ATOM_128, "ss19";
-        129 => OPEN_TYPE_FEATURE_ATOM_129, "ss20";
-        130 => OPEN_TYPE_FEATURE_ATOM_130, "cv01";
-        131 => OPEN_TYPE_FEATURE_ATOM_131, "cv02";
-        132 => OPEN_TYPE_FEATURE_ATOM_132, "cv03";
-        133 => OPEN_TYPE_FEATURE_ATOM_133, "cv04";
-        134 => OPEN_TYPE_FEATURE_ATOM_134, "cv05";
-        135 => OPEN_TYPE_FEATURE_ATOM_135, "cv06";
-        136 => OPEN_TYPE_FEATURE_ATOM_136, "cv07";
-        137 => OPEN_TYPE_FEATURE_ATOM_137, "cv08";
-        138 => OPEN_TYPE_FEATURE_ATOM_138, "cv09";
-        139 => OPEN_TYPE_FEATURE_ATOM_139, "cv10";
-        140 => OPEN_TYPE_FEATURE_ATOM_140, "cv11";
-        141 => OPEN_TYPE_FEATURE_ATOM_141, "cv12";
-        142 => OPEN_TYPE_FEATURE_ATOM_142, "cv13";
-        143 => OPEN_TYPE_FEATURE_ATOM_143, "cv14";
-        144 => OPEN_TYPE_FEATURE_ATOM_144, "cv15";
-        145 => OPEN_TYPE_FEATURE_ATOM_145, "cv16";
-        146 => OPEN_TYPE_FEATURE_ATOM_146, "cv17";
-        147 => OPEN_TYPE_FEATURE_ATOM_147, "cv18";
-        148 => OPEN_TYPE_FEATURE_ATOM_148, "cv19";
-        149 => OPEN_TYPE_FEATURE_ATOM_149, "cv20";
-        150 => OPEN_TYPE_FEATURE_ATOM_150, "cv21";
-        151 => OPEN_TYPE_FEATURE_ATOM_151, "cv22";
-        152 => OPEN_TYPE_FEATURE_ATOM_152, "cv23";
-        153 => OPEN_TYPE_FEATURE_ATOM_153, "cv24";
-        154 => OPEN_TYPE_FEATURE_ATOM_154, "cv25";
-        155 => OPEN_TYPE_FEATURE_ATOM_155, "cv26";
-        156 => OPEN_TYPE_FEATURE_ATOM_156, "cv27";
-        157 => OPEN_TYPE_FEATURE_ATOM_157, "cv28";
-        158 => OPEN_TYPE_FEATURE_ATOM_158, "cv29";
-        159 => OPEN_TYPE_FEATURE_ATOM_159, "cv30";
-        160 => OPEN_TYPE_FEATURE_ATOM_160, "cv31";
-        161 => OPEN_TYPE_FEATURE_ATOM_161, "cv32";
-        162 => OPEN_TYPE_FEATURE_ATOM_162, "cv33";
-        163 => OPEN_TYPE_FEATURE_ATOM_163, "cv34";
-        164 => OPEN_TYPE_FEATURE_ATOM_164, "cv35";
-        165 => OPEN_TYPE_FEATURE_ATOM_165, "cv36";
-        166 => OPEN_TYPE_FEATURE_ATOM_166, "cv37";
-        167 => OPEN_TYPE_FEATURE_ATOM_167, "cv38";
-        168 => OPEN_TYPE_FEATURE_ATOM_168, "cv39";
-        169 => OPEN_TYPE_FEATURE_ATOM_169, "cv40";
-        170 => OPEN_TYPE_FEATURE_ATOM_170, "cv41";
-        171 => OPEN_TYPE_FEATURE_ATOM_171, "cv42";
-        172 => OPEN_TYPE_FEATURE_ATOM_172, "cv43";
-        173 => OPEN_TYPE_FEATURE_ATOM_173, "cv44";
-        174 => OPEN_TYPE_FEATURE_ATOM_174, "cv45";
-        175 => OPEN_TYPE_FEATURE_ATOM_175, "cv46";
-        176 => OPEN_TYPE_FEATURE_ATOM_176, "cv47";
-        177 => OPEN_TYPE_FEATURE_ATOM_177, "cv48";
-        178 => OPEN_TYPE_FEATURE_ATOM_178, "cv49";
-        179 => OPEN_TYPE_FEATURE_ATOM_179, "cv50";
-        180 => OPEN_TYPE_FEATURE_ATOM_180, "cv51";
-        181 => OPEN_TYPE_FEATURE_ATOM_181, "cv52";
-        182 => OPEN_TYPE_FEATURE_ATOM_182, "cv53";
-        183 => OPEN_TYPE_FEATURE_ATOM_183, "cv54";
-        184 => OPEN_TYPE_FEATURE_ATOM_184, "cv55";
-        185 => OPEN_TYPE_FEATURE_ATOM_185, "cv56";
-        186 => OPEN_TYPE_FEATURE_ATOM_186, "cv57";
-        187 => OPEN_TYPE_FEATURE_ATOM_187, "cv58";
-        188 => OPEN_TYPE_FEATURE_ATOM_188, "cv59";
-        189 => OPEN_TYPE_FEATURE_ATOM_189, "cv60";
-        190 => OPEN_TYPE_FEATURE_ATOM_190, "cv61";
-        191 => OPEN_TYPE_FEATURE_ATOM_191, "cv62";
-        192 => OPEN_TYPE_FEATURE_ATOM_192, "cv63";
-        193 => OPEN_TYPE_FEATURE_ATOM_193, "cv64";
-        194 => OPEN_TYPE_FEATURE_ATOM_194, "cv65";
-        195 => OPEN_TYPE_FEATURE_ATOM_195, "cv66";
-        196 => OPEN_TYPE_FEATURE_ATOM_196, "cv67";
-        197 => OPEN_TYPE_FEATURE_ATOM_197, "cv68";
-        198 => OPEN_TYPE_FEATURE_ATOM_198, "cv69";
-        199 => OPEN_TYPE_FEATURE_ATOM_199, "cv70";
-        200 => OPEN_TYPE_FEATURE_ATOM_200, "cv71";
-        201 => OPEN_TYPE_FEATURE_ATOM_201, "cv72";
-        202 => OPEN_TYPE_FEATURE_ATOM_202, "cv73";
-        203 => OPEN_TYPE_FEATURE_ATOM_203, "cv74";
-        204 => OPEN_TYPE_FEATURE_ATOM_204, "cv75";
-        205 => OPEN_TYPE_FEATURE_ATOM_205, "cv76";
-        206 => OPEN_TYPE_FEATURE_ATOM_206, "cv77";
-        207 => OPEN_TYPE_FEATURE_ATOM_207, "cv78";
-        208 => OPEN_TYPE_FEATURE_ATOM_208, "cv79";
-        209 => OPEN_TYPE_FEATURE_ATOM_209, "cv80";
-        210 => OPEN_TYPE_FEATURE_ATOM_210, "cv81";
-        211 => OPEN_TYPE_FEATURE_ATOM_211, "cv82";
-        212 => OPEN_TYPE_FEATURE_ATOM_212, "cv83";
-        213 => OPEN_TYPE_FEATURE_ATOM_213, "cv84";
-        214 => OPEN_TYPE_FEATURE_ATOM_214, "cv85";
-        215 => OPEN_TYPE_FEATURE_ATOM_215, "cv86";
-        216 => OPEN_TYPE_FEATURE_ATOM_216, "cv87";
-        217 => OPEN_TYPE_FEATURE_ATOM_217, "cv88";
-        218 => OPEN_TYPE_FEATURE_ATOM_218, "cv89";
-        219 => OPEN_TYPE_FEATURE_ATOM_219, "cv90";
-        220 => OPEN_TYPE_FEATURE_ATOM_220, "cv91";
-        221 => OPEN_TYPE_FEATURE_ATOM_221, "cv92";
-        222 => OPEN_TYPE_FEATURE_ATOM_222, "cv93";
-        223 => OPEN_TYPE_FEATURE_ATOM_223, "cv94";
-        224 => OPEN_TYPE_FEATURE_ATOM_224, "cv95";
-        225 => OPEN_TYPE_FEATURE_ATOM_225, "cv96";
-        226 => OPEN_TYPE_FEATURE_ATOM_226, "cv97";
-        227 => OPEN_TYPE_FEATURE_ATOM_227, "cv98";
-        228 => OPEN_TYPE_FEATURE_ATOM_228, "cv99";
-    ]
+fn decode_sparse_open_type_feature_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_open_type_feature_from_decoder(env, decoder)
 }
 
 kiwi_sparse_struct_decoder! {
@@ -19029,62 +13406,24 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_noise_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => NOISE_TYPE_ATOM_0, "multitone";
-        1 => NOISE_TYPE_ATOM_1, "monotone";
-        2 => NOISE_TYPE_ATOM_2, "duotone";
-    ]
+fn decode_sparse_noise_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_noise_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_pattern_tile_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PATTERN_TILE_TYPE_ATOM_0, "rectangular";
-        1 => PATTERN_TILE_TYPE_ATOM_1, "horizontal_hexagonal";
-        2 => PATTERN_TILE_TYPE_ATOM_2, "vertical_hexagonal";
-    ]
+fn decode_sparse_pattern_tile_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_pattern_tile_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_pattern_alignment_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PATTERN_ALIGNMENT_ATOM_0, "start";
-        1 => PATTERN_ALIGNMENT_ATOM_1, "center";
-        2 => PATTERN_ALIGNMENT_ATOM_2, "end";
-    ]
+fn decode_sparse_pattern_alignment_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_pattern_alignment_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_interpolation_color_space_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => INTERPOLATION_COLOR_SPACE_ATOM_0, "default";
-        1 => INTERPOLATION_COLOR_SPACE_ATOM_1, "oklab";
-        2 => INTERPOLATION_COLOR_SPACE_ATOM_2, "oklch";
-        3 => INTERPOLATION_COLOR_SPACE_ATOM_3, "hsl";
-        4 => INTERPOLATION_COLOR_SPACE_ATOM_4, "srgb_linear";
-    ]
+fn decode_sparse_interpolation_color_space_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_interpolation_color_space_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_interpolation_hue_method_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => INTERPOLATION_HUE_METHOD_ATOM_0, "shorter";
-        1 => INTERPOLATION_HUE_METHOD_ATOM_1, "longer";
-        2 => INTERPOLATION_HUE_METHOD_ATOM_2, "increasing";
-        3 => INTERPOLATION_HUE_METHOD_ATOM_3, "decreasing";
-    ]
+fn decode_sparse_interpolation_hue_method_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_interpolation_hue_method_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -19622,14 +13961,8 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_collaborative_text_op_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => COLLABORATIVE_TEXT_OP_TYPE_ATOM_0, "insert";
-        1 => COLLABORATIVE_TEXT_OP_TYPE_ATOM_1, "delete";
-    ]
+fn decode_sparse_collaborative_text_op_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_collaborative_text_op_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -19731,17 +14064,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_flapp_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FLAPP_TYPE_ATOM_0, "poll";
-        1 => FLAPP_TYPE_ATOM_1, "embed";
-        2 => FLAPP_TYPE_ATOM_2, "facepile";
-        3 => FLAPP_TYPE_ATOM_3, "alignment";
-        4 => FLAPP_TYPE_ATOM_4, "youtube";
-    ]
+fn decode_sparse_flapp_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_flapp_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -19874,55 +14198,24 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_blur_op_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => BLUR_OP_TYPE_ATOM_0, "normal";
-        1 => BLUR_OP_TYPE_ATOM_1, "progressive";
-    ]
+fn decode_sparse_blur_op_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_blur_op_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_repeat_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => REPEAT_TYPE_ATOM_0, "linear";
-        1 => REPEAT_TYPE_ATOM_1, "radial";
-    ]
+fn decode_sparse_repeat_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_repeat_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_unit_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => UNIT_TYPE_ATOM_0, "pixels";
-        1 => UNIT_TYPE_ATOM_1, "relative";
-    ]
+fn decode_sparse_unit_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_unit_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_repeat_order_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => REPEAT_ORDER_ATOM_0, "forward";
-        1 => REPEAT_ORDER_ATOM_1, "reverse";
-    ]
+fn decode_sparse_repeat_order_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_repeat_order_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_effect_axis_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EFFECT_AXIS_ATOM_0, "x";
-        1 => EFFECT_AXIS_ATOM_1, "y";
-        2 => EFFECT_AXIS_ATOM_2, "x_and_y";
-    ]
+fn decode_sparse_effect_axis_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_effect_axis_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -19991,15 +14284,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_transform_modifier_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRANSFORM_MODIFIER_TYPE_ATOM_0, "repeat";
-        1 => TRANSFORM_MODIFIER_TYPE_ATOM_1, "symmetry";
-        2 => TRANSFORM_MODIFIER_TYPE_ATOM_2, "skew";
-    ]
+fn decode_sparse_transform_modifier_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_transform_modifier_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20023,15 +14309,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_transform_schema_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRANSFORM_SCHEMA_TYPE_ATOM_0, "none";
-        1 => TRANSFORM_SCHEMA_TYPE_ATOM_1, "fixed_order";
-        2 => TRANSFORM_SCHEMA_TYPE_ATOM_2, "freeform";
-    ]
+fn decode_sparse_transform_schema_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_transform_schema_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_struct_decoder! {
@@ -20076,19 +14355,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_transform_fn_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRANSFORM_FN_TYPE_ATOM_0, "none";
-        1 => TRANSFORM_FN_TYPE_ATOM_1, "matrix_3_d";
-        2 => TRANSFORM_FN_TYPE_ATOM_2, "perspective";
-        3 => TRANSFORM_FN_TYPE_ATOM_3, "translate_z";
-        4 => TRANSFORM_FN_TYPE_ATOM_4, "rotate_x";
-        5 => TRANSFORM_FN_TYPE_ATOM_5, "rotate_y";
-        6 => TRANSFORM_FN_TYPE_ATOM_6, "rotate_z";
-    ]
+fn decode_sparse_transform_fn_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_transform_fn_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20198,26 +14466,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_prototype_device_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PROTOTYPE_DEVICE_TYPE_ATOM_0, "none";
-        1 => PROTOTYPE_DEVICE_TYPE_ATOM_1, "preset";
-        2 => PROTOTYPE_DEVICE_TYPE_ATOM_2, "custom";
-        3 => PROTOTYPE_DEVICE_TYPE_ATOM_3, "presentation";
-    ]
+fn decode_sparse_prototype_device_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_prototype_device_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_device_rotation_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => DEVICE_ROTATION_ATOM_0, "none";
-        1 => DEVICE_ROTATION_ATOM_1, "ccw_90";
-    ]
+fn decode_sparse_device_rotation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_device_rotation_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20235,40 +14489,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_overlay_position_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => OVERLAY_POSITION_TYPE_ATOM_0, "center";
-        1 => OVERLAY_POSITION_TYPE_ATOM_1, "top_left";
-        2 => OVERLAY_POSITION_TYPE_ATOM_2, "top_center";
-        3 => OVERLAY_POSITION_TYPE_ATOM_3, "top_right";
-        4 => OVERLAY_POSITION_TYPE_ATOM_4, "bottom_left";
-        5 => OVERLAY_POSITION_TYPE_ATOM_5, "bottom_center";
-        6 => OVERLAY_POSITION_TYPE_ATOM_6, "bottom_right";
-        7 => OVERLAY_POSITION_TYPE_ATOM_7, "manual";
-    ]
+fn decode_sparse_overlay_position_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_overlay_position_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_overlay_background_interaction_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => OVERLAY_BACKGROUND_INTERACTION_ATOM_0, "none";
-        1 => OVERLAY_BACKGROUND_INTERACTION_ATOM_1, "close_on_click_outside";
-    ]
+fn decode_sparse_overlay_background_interaction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_overlay_background_interaction_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_overlay_background_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => OVERLAY_BACKGROUND_TYPE_ATOM_0, "none";
-        1 => OVERLAY_BACKGROUND_TYPE_ATOM_1, "solid_color";
-    ]
+fn decode_sparse_overlay_background_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_overlay_background_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20284,40 +14514,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_navigation_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => NAVIGATION_TYPE_ATOM_0, "navigate";
-        1 => NAVIGATION_TYPE_ATOM_1, "overlay";
-        2 => NAVIGATION_TYPE_ATOM_2, "swap";
-        3 => NAVIGATION_TYPE_ATOM_3, "swap_state";
-        4 => NAVIGATION_TYPE_ATOM_4, "scroll_to";
-    ]
+fn decode_sparse_navigation_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_navigation_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_export_color_profile_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EXPORT_COLOR_PROFILE_ATOM_0, "document";
-        1 => EXPORT_COLOR_PROFILE_ATOM_1, "srgb";
-        2 => EXPORT_COLOR_PROFILE_ATOM_2, "display_p3_v4";
-        3 => EXPORT_COLOR_PROFILE_ATOM_3, "cmyk";
-    ]
+fn decode_sparse_export_color_profile_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_export_color_profile_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_export_background_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EXPORT_BACKGROUND_TYPE_ATOM_0, "solid";
-        1 => EXPORT_BACKGROUND_TYPE_ATOM_1, "transparent";
-        2 => EXPORT_BACKGROUND_TYPE_ATOM_2, "grid";
-    ]
+fn decode_sparse_export_background_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_export_background_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20346,14 +14552,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_export_svgid_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EXPORT_SVGID_MODE_ATOM_0, "if_needed";
-        1 => EXPORT_SVGID_MODE_ATOM_1, "always";
-    ]
+fn decode_sparse_export_svgid_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_export_svgid_mode_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20408,40 +14608,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_style_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => STYLE_TYPE_ATOM_0, "none";
-        1 => STYLE_TYPE_ATOM_1, "fill";
-        2 => STYLE_TYPE_ATOM_2, "stroke";
-        3 => STYLE_TYPE_ATOM_3, "text";
-        4 => STYLE_TYPE_ATOM_4, "effect";
-        5 => STYLE_TYPE_ATOM_5, "export";
-        6 => STYLE_TYPE_ATOM_6, "grid";
-        7 => STYLE_TYPE_ATOM_7, "animation";
-    ]
+fn decode_sparse_style_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_style_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_brush_orientation_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => BRUSH_ORIENTATION_ATOM_0, "forward";
-        1 => BRUSH_ORIENTATION_ATOM_1, "reverse";
-    ]
+fn decode_sparse_brush_orientation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_brush_orientation_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_brush_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => BRUSH_TYPE_ATOM_0, "stretch";
-        1 => BRUSH_TYPE_ATOM_1, "scatter";
-    ]
+fn decode_sparse_brush_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_brush_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20566,15 +14742,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_scroll_behavior_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SCROLL_BEHAVIOR_ATOM_0, "scrolls";
-        1 => SCROLL_BEHAVIOR_ATOM_1, "fixed_when_child_of_scrolling_frame";
-        2 => SCROLL_BEHAVIOR_ATOM_2, "sticky_scrolls";
-    ]
+fn decode_sparse_scroll_behavior_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_scroll_behavior_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20648,22 +14817,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_connector_magnet_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CONNECTOR_MAGNET_ATOM_0, "none";
-        1 => CONNECTOR_MAGNET_ATOM_1, "auto";
-        2 => CONNECTOR_MAGNET_ATOM_2, "top";
-        3 => CONNECTOR_MAGNET_ATOM_3, "left";
-        4 => CONNECTOR_MAGNET_ATOM_4, "bottom";
-        5 => CONNECTOR_MAGNET_ATOM_5, "right";
-        6 => CONNECTOR_MAGNET_ATOM_6, "center";
-        7 => CONNECTOR_MAGNET_ATOM_7, "auto_horizontal";
-        8 => CONNECTOR_MAGNET_ATOM_8, "edge";
-        9 => CONNECTOR_MAGNET_ATOM_9, "absolute";
-    ]
+fn decode_sparse_connector_magnet_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_connector_magnet_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20694,25 +14849,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_connector_text_section_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CONNECTOR_TEXT_SECTION_ATOM_0, "middle_to_start";
-        1 => CONNECTOR_TEXT_SECTION_ATOM_1, "middle_to_end";
-    ]
+fn decode_sparse_connector_text_section_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_connector_text_section_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_connector_off_axis_offset_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CONNECTOR_OFF_AXIS_OFFSET_ATOM_0, "none";
-        1 => CONNECTOR_OFF_AXIS_OFFSET_ATOM_1, "above";
-        2 => CONNECTOR_OFF_AXIS_OFFSET_ATOM_2, "below";
-    ]
+fn decode_sparse_connector_off_axis_offset_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_connector_off_axis_offset_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20729,66 +14871,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_connector_line_style_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CONNECTOR_LINE_STYLE_ATOM_0, "elbowed";
-        1 => CONNECTOR_LINE_STYLE_ATOM_1, "straight";
-        2 => CONNECTOR_LINE_STYLE_ATOM_2, "curved";
-    ]
+fn decode_sparse_connector_line_style_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_connector_line_style_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_connector_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CONNECTOR_TYPE_ATOM_0, "manual";
-        1 => CONNECTOR_TYPE_ATOM_1, "diagram";
-    ]
+fn decode_sparse_connector_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_connector_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_annotation_property_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ANNOTATION_PROPERTY_TYPE_ATOM_0, "fill";
-        1 => ANNOTATION_PROPERTY_TYPE_ATOM_1, "stroke";
-        2 => ANNOTATION_PROPERTY_TYPE_ATOM_2, "width";
-        3 => ANNOTATION_PROPERTY_TYPE_ATOM_3, "height";
-        4 => ANNOTATION_PROPERTY_TYPE_ATOM_4, "min_width";
-        5 => ANNOTATION_PROPERTY_TYPE_ATOM_5, "min_height";
-        6 => ANNOTATION_PROPERTY_TYPE_ATOM_6, "max_width";
-        7 => ANNOTATION_PROPERTY_TYPE_ATOM_7, "max_height";
-        8 => ANNOTATION_PROPERTY_TYPE_ATOM_8, "stroke_width";
-        9 => ANNOTATION_PROPERTY_TYPE_ATOM_9, "corner_radius";
-        10 => ANNOTATION_PROPERTY_TYPE_ATOM_10, "effect";
-        11 => ANNOTATION_PROPERTY_TYPE_ATOM_11, "text_style";
-        12 => ANNOTATION_PROPERTY_TYPE_ATOM_12, "text_align_horizontal";
-        13 => ANNOTATION_PROPERTY_TYPE_ATOM_13, "font_family";
-        14 => ANNOTATION_PROPERTY_TYPE_ATOM_14, "font_size";
-        15 => ANNOTATION_PROPERTY_TYPE_ATOM_15, "font_weight";
-        16 => ANNOTATION_PROPERTY_TYPE_ATOM_16, "line_height";
-        17 => ANNOTATION_PROPERTY_TYPE_ATOM_17, "letter_spacing";
-        18 => ANNOTATION_PROPERTY_TYPE_ATOM_18, "stack_spacing";
-        19 => ANNOTATION_PROPERTY_TYPE_ATOM_19, "stack_padding";
-        20 => ANNOTATION_PROPERTY_TYPE_ATOM_20, "stack_mode";
-        21 => ANNOTATION_PROPERTY_TYPE_ATOM_21, "stack_alignment";
-        22 => ANNOTATION_PROPERTY_TYPE_ATOM_22, "opacity";
-        23 => ANNOTATION_PROPERTY_TYPE_ATOM_23, "component";
-        24 => ANNOTATION_PROPERTY_TYPE_ATOM_24, "font_style";
-        25 => ANNOTATION_PROPERTY_TYPE_ATOM_25, "grid_row_gap";
-        26 => ANNOTATION_PROPERTY_TYPE_ATOM_26, "grid_column_gap";
-        27 => ANNOTATION_PROPERTY_TYPE_ATOM_27, "grid_row_count";
-        28 => ANNOTATION_PROPERTY_TYPE_ATOM_28, "grid_column_count";
-        29 => ANNOTATION_PROPERTY_TYPE_ATOM_29, "grid_row_anchor_index";
-        30 => ANNOTATION_PROPERTY_TYPE_ATOM_30, "grid_column_anchor_index";
-        31 => ANNOTATION_PROPERTY_TYPE_ATOM_31, "grid_row_span";
-        32 => ANNOTATION_PROPERTY_TYPE_ATOM_32, "grid_column_span";
-    ]
+fn decode_sparse_annotation_property_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_annotation_property_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20803,34 +14895,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_annotation_category_preset_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ANNOTATION_CATEGORY_PRESET_ATOM_0, "none";
-        1 => ANNOTATION_CATEGORY_PRESET_ATOM_1, "accessibility";
-        2 => ANNOTATION_CATEGORY_PRESET_ATOM_2, "behavior";
-        3 => ANNOTATION_CATEGORY_PRESET_ATOM_3, "content";
-        4 => ANNOTATION_CATEGORY_PRESET_ATOM_4, "development";
-        5 => ANNOTATION_CATEGORY_PRESET_ATOM_5, "interaction";
-    ]
+fn decode_sparse_annotation_category_preset_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_annotation_category_preset_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_annotation_category_color_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ANNOTATION_CATEGORY_COLOR_ATOM_0, "yellow";
-        1 => ANNOTATION_CATEGORY_COLOR_ATOM_1, "orange";
-        2 => ANNOTATION_CATEGORY_COLOR_ATOM_2, "red";
-        3 => ANNOTATION_CATEGORY_COLOR_ATOM_3, "pink";
-        4 => ANNOTATION_CATEGORY_COLOR_ATOM_4, "violet";
-        5 => ANNOTATION_CATEGORY_COLOR_ATOM_5, "blue";
-        6 => ANNOTATION_CATEGORY_COLOR_ATOM_6, "teal";
-        7 => ANNOTATION_CATEGORY_COLOR_ATOM_7, "green";
-    ]
+fn decode_sparse_annotation_category_color_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_annotation_category_color_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20889,16 +14959,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_annotation_measurement_node_side_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_0, "top";
-        1 => ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_1, "bottom";
-        2 => ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_2, "left";
-        3 => ANNOTATION_MEASUREMENT_NODE_SIDE_ATOM_3, "right";
-    ]
+fn decode_sparse_annotation_measurement_node_side_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_annotation_measurement_node_side_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -20989,54 +15051,20 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_editor_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EDITOR_TYPE_ATOM_0, "design";
-        1 => EDITOR_TYPE_ATOM_1, "whiteboard";
-        2 => EDITOR_TYPE_ATOM_2, "slides";
-        3 => EDITOR_TYPE_ATOM_3, "dev_handoff";
-        4 => EDITOR_TYPE_ATOM_4, "sites";
-        5 => EDITOR_TYPE_ATOM_5, "cooper";
-        6 => EDITOR_TYPE_ATOM_6, "illustration";
-        7 => EDITOR_TYPE_ATOM_7, "figmake";
-        8 => EDITOR_TYPE_ATOM_8, "figspec";
-    ]
+fn decode_sparse_editor_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_editor_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_mask_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MASK_TYPE_ATOM_0, "alpha";
-        1 => MASK_TYPE_ATOM_1, "outline";
-        2 => MASK_TYPE_ATOM_2, "luminance";
-    ]
+fn decode_sparse_mask_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_mask_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_module_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MODULE_TYPE_ATOM_0, "none";
-        1 => MODULE_TYPE_ATOM_1, "single_node";
-        2 => MODULE_TYPE_ATOM_2, "multi_node";
-    ]
+fn decode_sparse_module_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_module_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_section_status_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SECTION_STATUS_ATOM_0, "none";
-        1 => SECTION_STATUS_ATOM_1, "build";
-        2 => SECTION_STATUS_ATOM_2, "completed";
-    ]
+fn decode_sparse_section_status_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_section_status_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -21085,16 +15113,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_buzz_approval_node_status_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => BUZZ_APPROVAL_NODE_STATUS_ATOM_0, "none";
-        1 => BUZZ_APPROVAL_NODE_STATUS_ATOM_1, "in_review";
-        2 => BUZZ_APPROVAL_NODE_STATUS_ATOM_2, "approved";
-        3 => BUZZ_APPROVAL_NODE_STATUS_ATOM_3, "changes_requested";
-    ]
+fn decode_sparse_buzz_approval_node_status_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_buzz_approval_node_status_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -21127,14 +15147,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_variable_timing_display_unit_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => VARIABLE_TIMING_DISPLAY_UNIT_ATOM_0, "milliseconds";
-        1 => VARIABLE_TIMING_DISPLAY_UNIT_ATOM_1, "seconds";
-    ]
+fn decode_sparse_variable_timing_display_unit_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_variable_timing_display_unit_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -21738,15 +15752,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_git_repo_ref_provider_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => GIT_REPO_REF_PROVIDER_ATOM_0, "ugit";
-        1 => GIT_REPO_REF_PROVIDER_ATOM_1, "github";
-        2 => GIT_REPO_REF_PROVIDER_ATOM_2, "other";
-    ]
+fn decode_sparse_git_repo_ref_provider_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_git_repo_ref_provider_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -21912,46 +15919,20 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cookie_banner_component_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => COOKIE_BANNER_COMPONENT_TYPE_ATOM_0, "banner";
-        1 => COOKIE_BANNER_COMPONENT_TYPE_ATOM_1, "modal";
-    ]
+fn decode_sparse_cookie_banner_component_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cookie_banner_component_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_trigger_component_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRIGGER_COMPONENT_TYPE_ATOM_0, "banner";
-        1 => TRIGGER_COMPONENT_TYPE_ATOM_1, "tag";
-    ]
+fn decode_sparse_trigger_component_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_trigger_component_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cookie_x_alignment_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => COOKIE_X_ALIGNMENT_ATOM_0, "left";
-        1 => COOKIE_X_ALIGNMENT_ATOM_1, "center";
-        2 => COOKIE_X_ALIGNMENT_ATOM_2, "right";
-    ]
+fn decode_sparse_cookie_x_alignment_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cookie_x_alignment_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cookie_y_alignment_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => COOKIE_Y_ALIGNMENT_ATOM_0, "top";
-        1 => COOKIE_Y_ALIGNMENT_ATOM_1, "center";
-        2 => COOKIE_Y_ALIGNMENT_ATOM_2, "bottom";
-    ]
+fn decode_sparse_cookie_y_alignment_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cookie_y_alignment_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -21986,14 +15967,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_responsive_scaling_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => RESPONSIVE_SCALING_MODE_ATOM_0, "reflow";
-        1 => RESPONSIVE_SCALING_MODE_ATOM_1, "scale";
-    ]
+fn decode_sparse_responsive_scaling_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_responsive_scaling_mode_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22024,14 +15999,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cms_filter_criteria_match_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_0, "match_all";
-        1 => CMS_FILTER_CRITERIA_MATCH_TYPE_ATOM_1, "match_any";
-    ]
+fn decode_sparse_cms_filter_criteria_match_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cms_filter_criteria_match_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22048,13 +16017,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cms_selector_filter_operator_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CMS_SELECTOR_FILTER_OPERATOR_ATOM_0, "equals";
-    ]
+fn decode_sparse_cms_selector_filter_operator_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cms_selector_filter_operator_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22070,14 +16034,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cms_field_order_by_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CMS_FIELD_ORDER_BY_ATOM_0, "ascending";
-        1 => CMS_FIELD_ORDER_BY_ATOM_1, "descending";
-    ]
+fn decode_sparse_cms_field_order_by_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cms_field_order_by_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22105,14 +16063,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cms_consumption_field_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CMS_CONSUMPTION_FIELD_ATOM_0, "missing";
-        1 => CMS_CONSUMPTION_FIELD_ATOM_1, "text_data";
-    ]
+fn decode_sparse_cms_consumption_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cms_consumption_field_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22140,21 +16092,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cms_rich_text_style_class_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_0, "heading1";
-        1 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_1, "heading2";
-        2 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_2, "heading3";
-        3 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_3, "heading4";
-        4 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_4, "heading5";
-        5 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_5, "heading6";
-        6 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_6, "paragraph";
-        7 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_7, "link";
-        8 => CMS_RICH_TEXT_STYLE_CLASS_ATOM_8, "blockquote";
-    ]
+fn decode_sparse_cms_rich_text_style_class_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cms_rich_text_style_class_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22272,25 +16211,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_managed_string_content_schema_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MANAGED_STRING_CONTENT_SCHEMA_ATOM_0, "v0";
-    ]
+fn decode_sparse_managed_string_content_schema_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_managed_string_content_schema_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_managed_string_node_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MANAGED_STRING_NODE_TYPE_ATOM_0, "text";
-        1 => MANAGED_STRING_NODE_TYPE_ATOM_1, "concatenate";
-        2 => MANAGED_STRING_NODE_TYPE_ATOM_2, "plural";
-        3 => MANAGED_STRING_NODE_TYPE_ATOM_3, "placeholder";
-    ]
+fn decode_sparse_managed_string_node_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_managed_string_node_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22333,18 +16259,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_managed_string_plural_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MANAGED_STRING_PLURAL_TYPE_ATOM_0, "zero";
-        1 => MANAGED_STRING_PLURAL_TYPE_ATOM_1, "one";
-        2 => MANAGED_STRING_PLURAL_TYPE_ATOM_2, "two";
-        3 => MANAGED_STRING_PLURAL_TYPE_ATOM_3, "few";
-        4 => MANAGED_STRING_PLURAL_TYPE_ATOM_4, "many";
-        5 => MANAGED_STRING_PLURAL_TYPE_ATOM_5, "other";
-    ]
+fn decode_sparse_managed_string_plural_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_managed_string_plural_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22373,16 +16289,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_managed_string_format_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MANAGED_STRING_FORMAT_TYPE_ATOM_0, "text";
-        1 => MANAGED_STRING_FORMAT_TYPE_ATOM_1, "date";
-        2 => MANAGED_STRING_FORMAT_TYPE_ATOM_2, "time";
-        3 => MANAGED_STRING_FORMAT_TYPE_ATOM_3, "number";
-    ]
+fn decode_sparse_managed_string_format_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_managed_string_format_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22428,34 +16336,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_media_action_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MEDIA_ACTION_ATOM_0, "play";
-        1 => MEDIA_ACTION_ATOM_1, "pause";
-        2 => MEDIA_ACTION_ATOM_2, "toggle_play_pause";
-        3 => MEDIA_ACTION_ATOM_3, "mute";
-        4 => MEDIA_ACTION_ATOM_4, "unmute";
-        5 => MEDIA_ACTION_ATOM_5, "toggle_mute_unmute";
-        6 => MEDIA_ACTION_ATOM_6, "skip_forward";
-        7 => MEDIA_ACTION_ATOM_7, "skip_backward";
-        8 => MEDIA_ACTION_ATOM_8, "skip_to";
-        9 => MEDIA_ACTION_ATOM_9, "set_playback_rate";
-    ]
+fn decode_sparse_media_action_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_media_action_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_animation_timeline_action_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ANIMATION_TIMELINE_ACTION_ATOM_0, "play";
-        1 => ANIMATION_TIMELINE_ACTION_ATOM_1, "pause";
-        2 => ANIMATION_TIMELINE_ACTION_ATOM_2, "toggle_play_pause";
-        3 => ANIMATION_TIMELINE_ACTION_ATOM_3, "set_playhead";
-    ]
+fn decode_sparse_animation_timeline_action_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_animation_timeline_action_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22539,78 +16425,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_variable_field_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => VARIABLE_FIELD_ATOM_0, "missing";
-        1 => VARIABLE_FIELD_ATOM_1, "corner_radius";
-        2 => VARIABLE_FIELD_ATOM_2, "paragraph_spacing";
-        3 => VARIABLE_FIELD_ATOM_3, "paragraph_indent";
-        4 => VARIABLE_FIELD_ATOM_4, "stroke_weight";
-        5 => VARIABLE_FIELD_ATOM_5, "stack_spacing";
-        6 => VARIABLE_FIELD_ATOM_6, "stack_padding_left";
-        7 => VARIABLE_FIELD_ATOM_7, "stack_padding_top";
-        8 => VARIABLE_FIELD_ATOM_8, "stack_padding_right";
-        9 => VARIABLE_FIELD_ATOM_9, "stack_padding_bottom";
-        10 => VARIABLE_FIELD_ATOM_10, "visible";
-        11 => VARIABLE_FIELD_ATOM_11, "text_data";
-        12 => VARIABLE_FIELD_ATOM_12, "width";
-        13 => VARIABLE_FIELD_ATOM_13, "height";
-        14 => VARIABLE_FIELD_ATOM_14, "rectangle_top_left_corner_radius";
-        15 => VARIABLE_FIELD_ATOM_15, "rectangle_top_right_corner_radius";
-        16 => VARIABLE_FIELD_ATOM_16, "rectangle_bottom_left_corner_radius";
-        17 => VARIABLE_FIELD_ATOM_17, "rectangle_bottom_right_corner_radius";
-        18 => VARIABLE_FIELD_ATOM_18, "border_top_weight";
-        19 => VARIABLE_FIELD_ATOM_19, "border_bottom_weight";
-        20 => VARIABLE_FIELD_ATOM_20, "border_left_weight";
-        21 => VARIABLE_FIELD_ATOM_21, "border_right_weight";
-        22 => VARIABLE_FIELD_ATOM_22, "variant_properties";
-        23 => VARIABLE_FIELD_ATOM_23, "stack_counter_spacing";
-        24 => VARIABLE_FIELD_ATOM_24, "min_width";
-        25 => VARIABLE_FIELD_ATOM_25, "max_width";
-        26 => VARIABLE_FIELD_ATOM_26, "min_height";
-        27 => VARIABLE_FIELD_ATOM_27, "max_height";
-        28 => VARIABLE_FIELD_ATOM_28, "font_family";
-        29 => VARIABLE_FIELD_ATOM_29, "font_style";
-        30 => VARIABLE_FIELD_ATOM_30, "font_variations";
-        31 => VARIABLE_FIELD_ATOM_31, "opacity";
-        32 => VARIABLE_FIELD_ATOM_32, "font_size";
-        34 => VARIABLE_FIELD_ATOM_33, "letter_spacing";
-        36 => VARIABLE_FIELD_ATOM_34, "line_height";
-        37 => VARIABLE_FIELD_ATOM_35, "overridden_symbol_id";
-        38 => VARIABLE_FIELD_ATOM_36, "hyperlink";
-        39 => VARIABLE_FIELD_ATOM_37, "cms_serialized_rich_text_data";
-        40 => VARIABLE_FIELD_ATOM_38, "slot_content_id";
-        41 => VARIABLE_FIELD_ATOM_39, "grid_row_gap";
-        42 => VARIABLE_FIELD_ATOM_40, "grid_column_gap";
-        43 => VARIABLE_FIELD_ATOM_41, "x_position";
-        44 => VARIABLE_FIELD_ATOM_42, "y_position";
-        45 => VARIABLE_FIELD_ATOM_43, "rotation";
-        46 => VARIABLE_FIELD_ATOM_44, "motion_translation_x";
-        47 => VARIABLE_FIELD_ATOM_45, "motion_translation_y";
-        48 => VARIABLE_FIELD_ATOM_46, "motion_rotation";
-        49 => VARIABLE_FIELD_ATOM_47, "motion_scale_x";
-        50 => VARIABLE_FIELD_ATOM_48, "motion_scale_y";
-        51 => VARIABLE_FIELD_ATOM_49, "motion_shear";
-        52 => VARIABLE_FIELD_ATOM_50, "scroll_offset_x";
-        53 => VARIABLE_FIELD_ATOM_51, "scroll_offset_y";
-        54 => VARIABLE_FIELD_ATOM_52, "path_trim_start";
-        55 => VARIABLE_FIELD_ATOM_53, "path_trim_end";
-        56 => VARIABLE_FIELD_ATOM_54, "dissolve_progress";
-        57 => VARIABLE_FIELD_ATOM_55, "easing_data";
-        58 => VARIABLE_FIELD_ATOM_56, "media_current_time";
-        59 => VARIABLE_FIELD_ATOM_57, "transform_3_d_perspective";
-        60 => VARIABLE_FIELD_ATOM_58, "transform_3_d_translation_z";
-        61 => VARIABLE_FIELD_ATOM_59, "transform_3_d_rotation_x";
-        62 => VARIABLE_FIELD_ATOM_60, "transform_3_d_rotation_y";
-        63 => VARIABLE_FIELD_ATOM_61, "transform_3_d_rotation_z";
-        64 => VARIABLE_FIELD_ATOM_62, "polygon_count";
-        65 => VARIABLE_FIELD_ATOM_63, "arc_data_starting_angle";
-        66 => VARIABLE_FIELD_ATOM_64, "arc_data_ending_angle";
-        67 => VARIABLE_FIELD_ATOM_65, "arc_data_inner_radius";
-    ]
+fn decode_sparse_variable_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_variable_field_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22817,15 +16633,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_grid_track_sizing_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => GRID_TRACK_SIZING_TYPE_ATOM_0, "flex";
-        1 => GRID_TRACK_SIZING_TYPE_ATOM_1, "fixed";
-        2 => GRID_TRACK_SIZING_TYPE_ATOM_2, "hug";
-    ]
+fn decode_sparse_grid_track_sizing_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_grid_track_sizing_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22878,14 +16687,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_agenda_item_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => AGENDA_ITEM_TYPE_ATOM_0, "node";
-        1 => AGENDA_ITEM_TYPE_ATOM_1, "block";
-    ]
+fn decode_sparse_agenda_item_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_agenda_item_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -22967,14 +16770,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_diagram_layout_rule_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => DIAGRAM_LAYOUT_RULE_TYPE_ATOM_0, "none";
-        1 => DIAGRAM_LAYOUT_RULE_TYPE_ATOM_1, "tree";
-    ]
+fn decode_sparse_diagram_layout_rule_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_diagram_layout_rule_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_struct_decoder! {
@@ -22989,14 +16786,8 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_diagram_layout_paused_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => DIAGRAM_LAYOUT_PAUSED_ATOM_0, "no";
-        1 => DIAGRAM_LAYOUT_PAUSED_ATOM_1, "yes";
-    ]
+fn decode_sparse_diagram_layout_paused_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_diagram_layout_paused_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23015,17 +16806,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_component_prop_node_field_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => COMPONENT_PROP_NODE_FIELD_ATOM_0, "visible";
-        1 => COMPONENT_PROP_NODE_FIELD_ATOM_1, "text_data";
-        2 => COMPONENT_PROP_NODE_FIELD_ATOM_2, "overridden_symbol_id";
-        3 => COMPONENT_PROP_NODE_FIELD_ATOM_3, "inherit_fill_style_id";
-        4 => COMPONENT_PROP_NODE_FIELD_ATOM_4, "slot_content_id";
-    ]
+fn decode_sparse_component_prop_node_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_component_prop_node_field_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23181,29 +16963,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_component_prop_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => COMPONENT_PROP_TYPE_ATOM_0, "bool";
-        1 => COMPONENT_PROP_TYPE_ATOM_1, "text";
-        2 => COMPONENT_PROP_TYPE_ATOM_2, "color";
-        3 => COMPONENT_PROP_TYPE_ATOM_3, "instance_swap";
-        4 => COMPONENT_PROP_TYPE_ATOM_4, "variant";
-        5 => COMPONENT_PROP_TYPE_ATOM_5, "number";
-        6 => COMPONENT_PROP_TYPE_ATOM_6, "image";
-        7 => COMPONENT_PROP_TYPE_ATOM_7, "slot";
-        8 => COMPONENT_PROP_TYPE_ATOM_8, "easing";
-        9 => COMPONENT_PROP_TYPE_ATOM_9, "color_array";
-        10 => COMPONENT_PROP_TYPE_ATOM_10, "vector";
-        11 => COMPONENT_PROP_TYPE_ATOM_11, "line";
-        12 => COMPONENT_PROP_TYPE_ATOM_12, "circle";
-        13 => COMPONENT_PROP_TYPE_ATOM_13, "rotation_3_d";
-        14 => COMPONENT_PROP_TYPE_ATOM_14, "circle_point";
-        15 => COMPONENT_PROP_TYPE_ATOM_15, "gradient";
-        16 => COMPONENT_PROP_TYPE_ATOM_16, "color_point";
-    ]
+fn decode_sparse_component_prop_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_component_prop_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23243,16 +17004,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_parameter_config_control_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PARAMETER_CONFIG_CONTROL_ATOM_0, "default";
-        1 => PARAMETER_CONFIG_CONTROL_ATOM_1, "slider";
-        2 => PARAMETER_CONFIG_CONTROL_ATOM_2, "input";
-        3 => PARAMETER_CONFIG_CONTROL_ATOM_3, "select";
-    ]
+fn decode_sparse_parameter_config_control_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_parameter_config_control_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23284,15 +17037,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_point_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => POINT_MODE_ATOM_0, "canvas_and_ui";
-        1 => POINT_MODE_ATOM_1, "canvas";
-        2 => POINT_MODE_ATOM_2, "ui";
-    ]
+fn decode_sparse_point_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_point_mode_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23553,38 +17299,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_instance_swap_preferred_value_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_0, "component";
-        1 => INSTANCE_SWAP_PREFERRED_VALUE_TYPE_ATOM_1, "state_group";
-    ]
+fn decode_sparse_instance_swap_preferred_value_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_instance_swap_preferred_value_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_widget_event_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => WIDGET_EVENT_ATOM_0, "mouse_down";
-        1 => WIDGET_EVENT_ATOM_1, "click";
-        2 => WIDGET_EVENT_ATOM_2, "text_edit_end";
-        3 => WIDGET_EVENT_ATOM_3, "attached_stickables_changed";
-        4 => WIDGET_EVENT_ATOM_4, "stuck_status_changed";
-    ]
+fn decode_sparse_widget_event_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_widget_event_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_widget_input_behavior_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => WIDGET_INPUT_BEHAVIOR_ATOM_0, "wrap";
-        1 => WIDGET_INPUT_BEHAVIOR_ATOM_1, "truncate";
-        2 => WIDGET_INPUT_BEHAVIOR_ATOM_2, "multiline";
-    ]
+fn decode_sparse_widget_input_behavior_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_widget_input_behavior_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23603,19 +17327,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_widget_property_menu_item_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_0, "action";
-        1 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_1, "separator";
-        2 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_2, "color";
-        3 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_3, "dropdown";
-        4 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_4, "color_selector";
-        5 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_5, "toggle";
-        6 => WIDGET_PROPERTY_MENU_ITEM_TYPE_ATOM_6, "link";
-    ]
+fn decode_sparse_widget_property_menu_item_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_widget_property_menu_item_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23631,14 +17344,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_widget_input_text_node_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_0, "widget_controlled";
-        1 => WIDGET_INPUT_TEXT_NODE_TYPE_ATOM_1, "rich_text";
-    ]
+fn decode_sparse_widget_input_text_node_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_widget_input_text_node_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23661,82 +17368,20 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_code_block_language_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CODE_BLOCK_LANGUAGE_ATOM_0, "typescript";
-        1 => CODE_BLOCK_LANGUAGE_ATOM_1, "cpp";
-        2 => CODE_BLOCK_LANGUAGE_ATOM_2, "ruby";
-        3 => CODE_BLOCK_LANGUAGE_ATOM_3, "css";
-        4 => CODE_BLOCK_LANGUAGE_ATOM_4, "javascript";
-        5 => CODE_BLOCK_LANGUAGE_ATOM_5, "html";
-        6 => CODE_BLOCK_LANGUAGE_ATOM_6, "json";
-        7 => CODE_BLOCK_LANGUAGE_ATOM_7, "graphql";
-        8 => CODE_BLOCK_LANGUAGE_ATOM_8, "python";
-        9 => CODE_BLOCK_LANGUAGE_ATOM_9, "go";
-        10 => CODE_BLOCK_LANGUAGE_ATOM_10, "sql";
-        11 => CODE_BLOCK_LANGUAGE_ATOM_11, "swift";
-        12 => CODE_BLOCK_LANGUAGE_ATOM_12, "kotlin";
-        13 => CODE_BLOCK_LANGUAGE_ATOM_13, "rust";
-        14 => CODE_BLOCK_LANGUAGE_ATOM_14, "bash";
-        15 => CODE_BLOCK_LANGUAGE_ATOM_15, "plaintext";
-        16 => CODE_BLOCK_LANGUAGE_ATOM_16, "markdown";
-    ]
+fn decode_sparse_code_block_language_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_code_block_language_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_code_block_theme_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CODE_BLOCK_THEME_ATOM_0, "figjam_dark";
-        1 => CODE_BLOCK_THEME_ATOM_1, "dracula";
-        2 => CODE_BLOCK_THEME_ATOM_2, "duotone_sea";
-        3 => CODE_BLOCK_THEME_ATOM_3, "duotone_space";
-        4 => CODE_BLOCK_THEME_ATOM_4, "duotone_earth";
-        5 => CODE_BLOCK_THEME_ATOM_5, "duotone_forest";
-        6 => CODE_BLOCK_THEME_ATOM_6, "duotone_light";
-    ]
+fn decode_sparse_code_block_theme_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_code_block_theme_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_spec_block_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SPEC_BLOCK_TYPE_ATOM_0, "default";
-        1 => SPEC_BLOCK_TYPE_ATOM_1, "paragraph";
-        2 => SPEC_BLOCK_TYPE_ATOM_2, "heading_1";
-        3 => SPEC_BLOCK_TYPE_ATOM_3, "heading_2";
-        4 => SPEC_BLOCK_TYPE_ATOM_4, "heading_3";
-        5 => SPEC_BLOCK_TYPE_ATOM_5, "heading_4";
-        6 => SPEC_BLOCK_TYPE_ATOM_6, "heading_5";
-        7 => SPEC_BLOCK_TYPE_ATOM_7, "heading_6";
-        8 => SPEC_BLOCK_TYPE_ATOM_8, "code_block";
-        9 => SPEC_BLOCK_TYPE_ATOM_9, "block_quote";
-        10 => SPEC_BLOCK_TYPE_ATOM_10, "horizontal_rule";
-        11 => SPEC_BLOCK_TYPE_ATOM_11, "ordered_list_item";
-        12 => SPEC_BLOCK_TYPE_ATOM_12, "unordered_list_item";
-        13 => SPEC_BLOCK_TYPE_ATOM_13, "document";
-        14 => SPEC_BLOCK_TYPE_ATOM_14, "table";
-        15 => SPEC_BLOCK_TYPE_ATOM_15, "table_row";
-        16 => SPEC_BLOCK_TYPE_ATOM_16, "table_cell";
-        17 => SPEC_BLOCK_TYPE_ATOM_17, "todo_list_item_unchecked";
-        18 => SPEC_BLOCK_TYPE_ATOM_18, "todo_list_item_checked";
-        19 => SPEC_BLOCK_TYPE_ATOM_19, "image";
-        20 => SPEC_BLOCK_TYPE_ATOM_20, "embed";
-    ]
+fn decode_sparse_spec_block_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_spec_block_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_internal_enum_for_test_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        1 => INTERNAL_ENUM_FOR_TEST_ATOM_0, "old";
-    ]
+fn decode_sparse_internal_enum_for_test_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_internal_enum_for_test_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23764,16 +17409,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_backfill_error_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => BACKFILL_ERROR_ATOM_0, "none";
-        1 => BACKFILL_ERROR_ATOM_1, "transient_retrying";
-        2 => BACKFILL_ERROR_ATOM_2, "permanently_failed";
-        3 => BACKFILL_ERROR_ATOM_3, "paste_failed";
-    ]
+fn decode_sparse_backfill_error_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_backfill_error_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23818,16 +17455,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_bullet_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => BULLET_TYPE_ATOM_0, "ordered";
-        1 => BULLET_TYPE_ATOM_1, "unordered";
-        2 => BULLET_TYPE_ATOM_2, "indent";
-        3 => BULLET_TYPE_ATOM_3, "no_list";
-    ]
+fn decode_sparse_bullet_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_bullet_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -23863,48 +17492,20 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_line_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => LINE_TYPE_ATOM_0, "plain";
-        1 => LINE_TYPE_ATOM_1, "ordered_list";
-        2 => LINE_TYPE_ATOM_2, "unordered_list";
-        3 => LINE_TYPE_ATOM_3, "blockquote";
-        4 => LINE_TYPE_ATOM_4, "header";
-    ]
+fn decode_sparse_line_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_line_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_source_directionality_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SOURCE_DIRECTIONALITY_ATOM_0, "auto";
-        1 => SOURCE_DIRECTIONALITY_ATOM_1, "ltr";
-        2 => SOURCE_DIRECTIONALITY_ATOM_2, "rtl";
-    ]
+fn decode_sparse_source_directionality_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_source_directionality_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_directionality_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => DIRECTIONALITY_ATOM_0, "ltr";
-        1 => DIRECTIONALITY_ATOM_1, "rtl";
-    ]
+fn decode_sparse_directionality_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_directionality_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_directionality_intent_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => DIRECTIONALITY_INTENT_ATOM_0, "implicit";
-        1 => DIRECTIONALITY_INTENT_ATOM_1, "explicit";
-    ]
+fn decode_sparse_directionality_intent_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_directionality_intent_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24020,28 +17621,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_animation_phase_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ANIMATION_PHASE_ATOM_0, "in";
-        1 => ANIMATION_PHASE_ATOM_1, "out";
-    ]
+fn decode_sparse_animation_phase_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_animation_phase_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_animation_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ANIMATION_TYPE_ATOM_0, "none";
-        1 => ANIMATION_TYPE_ATOM_1, "fade";
-        2 => ANIMATION_TYPE_ATOM_2, "slide_from_left";
-        3 => ANIMATION_TYPE_ATOM_3, "slide_from_right";
-        4 => ANIMATION_TYPE_ATOM_4, "slide_from_top";
-        5 => ANIMATION_TYPE_ATOM_5, "slide_from_bottom";
-    ]
+fn decode_sparse_animation_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_animation_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24071,17 +17656,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_trigger_device_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRIGGER_DEVICE_ATOM_0, "keyboard";
-        1 => TRIGGER_DEVICE_ATOM_1, "unknown_controller";
-        2 => TRIGGER_DEVICE_ATOM_2, "xbox_one";
-        3 => TRIGGER_DEVICE_ATOM_3, "ps4";
-        4 => TRIGGER_DEVICE_ATOM_4, "switch_pro";
-    ]
+fn decode_sparse_trigger_device_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_trigger_device_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24126,15 +17702,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_mention_source_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => MENTION_SOURCE_ATOM_0, "default";
-        1 => MENTION_SOURCE_ATOM_1, "copy_duplicate";
-        2 => MENTION_SOURCE_ATOM_2, "silent_insert";
-    ]
+fn decode_sparse_mention_source_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_mention_source_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24370,14 +17939,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_transition_direction_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRANSITION_DIRECTION_ATOM_0, "forward";
-        1 => TRANSITION_DIRECTION_ATOM_1, "reverse";
-    ]
+fn decode_sparse_transition_direction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_transition_direction_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24446,15 +18009,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_playback_change_phase_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PLAYBACK_CHANGE_PHASE_ATOM_0, "initiated";
-        1 => PLAYBACK_CHANGE_PHASE_ATOM_1, "aborted";
-        2 => PLAYBACK_CHANGE_PHASE_ATOM_2, "committed";
-    ]
+fn decode_sparse_playback_change_phase_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_playback_change_phase_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24569,39 +18125,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_heartbeat_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => HEARTBEAT_ATOM_0, "foreground";
-        1 => HEARTBEAT_ATOM_1, "background";
-    ]
+fn decode_sparse_heartbeat_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_heartbeat_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_sites_view_state_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SITES_VIEW_STATE_ATOM_0, "file";
-        1 => SITES_VIEW_STATE_ATOM_1, "code";
-        2 => SITES_VIEW_STATE_ATOM_2, "dakota";
-        3 => SITES_VIEW_STATE_ATOM_3, "settings";
-        4 => SITES_VIEW_STATE_ATOM_4, "insert";
-        5 => SITES_VIEW_STATE_ATOM_5, "variables";
-    ]
+fn decode_sparse_sites_view_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_sites_view_state_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_design_full_page_view_state_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => DESIGN_FULL_PAGE_VIEW_STATE_ATOM_0, "none";
-        1 => DESIGN_FULL_PAGE_VIEW_STATE_ATOM_1, "design_system";
-        2 => DESIGN_FULL_PAGE_VIEW_STATE_ATOM_2, "variables";
-    ]
+fn decode_sparse_design_full_page_view_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_design_full_page_view_state_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24730,25 +18263,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_scene_graph_query_behavior_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_0, "default";
-        1 => SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_1, "containing_page";
-        2 => SCENE_GRAPH_QUERY_BEHAVIOR_ATOM_2, "plugin";
-    ]
+fn decode_sparse_scene_graph_query_behavior_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_scene_graph_query_behavior_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_scene_graph_query_mode_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SCENE_GRAPH_QUERY_MODE_ATOM_0, "add";
-        1 => SCENE_GRAPH_QUERY_MODE_ATOM_1, "set";
-    ]
+fn decode_sparse_scene_graph_query_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_scene_graph_query_mode_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24868,14 +18388,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_paste_asset_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PASTE_ASSET_TYPE_ATOM_0, "unknown";
-        1 => PASTE_ASSET_TYPE_ATOM_1, "variable";
-    ]
+fn decode_sparse_paste_asset_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_paste_asset_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24961,14 +18475,8 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_rich_media_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => RICH_MEDIA_TYPE_ATOM_0, "animated_image";
-        1 => RICH_MEDIA_TYPE_ATOM_1, "video";
-    ]
+fn decode_sparse_rich_media_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_rich_media_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -24984,76 +18492,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_variable_data_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => VARIABLE_DATA_TYPE_ATOM_0, "boolean";
-        1 => VARIABLE_DATA_TYPE_ATOM_1, "float";
-        2 => VARIABLE_DATA_TYPE_ATOM_2, "string";
-        3 => VARIABLE_DATA_TYPE_ATOM_3, "alias";
-        4 => VARIABLE_DATA_TYPE_ATOM_4, "color";
-        5 => VARIABLE_DATA_TYPE_ATOM_5, "expression";
-        6 => VARIABLE_DATA_TYPE_ATOM_6, "map";
-        7 => VARIABLE_DATA_TYPE_ATOM_7, "symbol_id";
-        8 => VARIABLE_DATA_TYPE_ATOM_8, "font_style";
-        9 => VARIABLE_DATA_TYPE_ATOM_9, "text_data";
-        10 => VARIABLE_DATA_TYPE_ATOM_10, "invalid";
-        11 => VARIABLE_DATA_TYPE_ATOM_11, "node_field_alias";
-        12 => VARIABLE_DATA_TYPE_ATOM_12, "cms_alias";
-        13 => VARIABLE_DATA_TYPE_ATOM_13, "prop_ref";
-        14 => VARIABLE_DATA_TYPE_ATOM_14, "image";
-        15 => VARIABLE_DATA_TYPE_ATOM_15, "managed_string_alias";
-        16 => VARIABLE_DATA_TYPE_ATOM_16, "link";
-        17 => VARIABLE_DATA_TYPE_ATOM_17, "js_runtime_alias";
-        18 => VARIABLE_DATA_TYPE_ATOM_18, "slot_content_id";
-        19 => VARIABLE_DATA_TYPE_ATOM_19, "date";
-        20 => VARIABLE_DATA_TYPE_ATOM_20, "keyframe_track_id";
-        21 => VARIABLE_DATA_TYPE_ATOM_21, "keyframe_track_parameter_data";
-        22 => VARIABLE_DATA_TYPE_ATOM_22, "easing";
-        23 => VARIABLE_DATA_TYPE_ATOM_23, "timing";
-        24 => VARIABLE_DATA_TYPE_ATOM_24, "vector";
-        25 => VARIABLE_DATA_TYPE_ATOM_25, "color_array";
-        26 => VARIABLE_DATA_TYPE_ATOM_26, "line";
-        27 => VARIABLE_DATA_TYPE_ATOM_27, "circle";
-        28 => VARIABLE_DATA_TYPE_ATOM_28, "rotation_3_d";
-        29 => VARIABLE_DATA_TYPE_ATOM_29, "circle_point";
-        30 => VARIABLE_DATA_TYPE_ATOM_30, "gradient";
-        31 => VARIABLE_DATA_TYPE_ATOM_31, "color_point";
-    ]
+fn decode_sparse_variable_data_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_variable_data_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_variable_resolved_data_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_0, "boolean";
-        1 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_1, "float";
-        2 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_2, "string";
-        4 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_3, "color";
-        5 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_4, "map";
-        6 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_5, "symbol_id";
-        7 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_6, "font_style";
-        8 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_7, "text_data";
-        9 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_8, "image";
-        10 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_9, "link";
-        11 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_10, "js_runtime_alias";
-        12 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_11, "slot_content_id";
-        13 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_12, "keyframe_track_id";
-        14 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_13, "keyframe_track_parameter_data";
-        15 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_14, "easing";
-        16 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_15, "timing";
-        17 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_16, "vector";
-        18 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_17, "color_array";
-        19 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_18, "line";
-        20 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_19, "circle";
-        21 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_20, "rotation_3_d";
-        22 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_21, "circle_point";
-        23 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_22, "gradient";
-        24 => VARIABLE_RESOLVED_DATA_TYPE_ATOM_23, "color_point";
-    ]
+fn decode_sparse_variable_resolved_data_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_variable_resolved_data_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25096,32 +18540,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_expression_function_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EXPRESSION_FUNCTION_ATOM_0, "addition";
-        1 => EXPRESSION_FUNCTION_ATOM_1, "subtraction";
-        2 => EXPRESSION_FUNCTION_ATOM_2, "resolve_variant";
-        3 => EXPRESSION_FUNCTION_ATOM_3, "multiply";
-        4 => EXPRESSION_FUNCTION_ATOM_4, "divide";
-        5 => EXPRESSION_FUNCTION_ATOM_5, "equals";
-        6 => EXPRESSION_FUNCTION_ATOM_6, "not_equal";
-        7 => EXPRESSION_FUNCTION_ATOM_7, "less_than";
-        8 => EXPRESSION_FUNCTION_ATOM_8, "less_than_or_equal";
-        9 => EXPRESSION_FUNCTION_ATOM_9, "greater_than";
-        10 => EXPRESSION_FUNCTION_ATOM_10, "greater_than_or_equal";
-        11 => EXPRESSION_FUNCTION_ATOM_11, "and";
-        12 => EXPRESSION_FUNCTION_ATOM_12, "or";
-        13 => EXPRESSION_FUNCTION_ATOM_13, "not";
-        14 => EXPRESSION_FUNCTION_ATOM_14, "stringify";
-        15 => EXPRESSION_FUNCTION_ATOM_15, "ternary";
-        16 => EXPRESSION_FUNCTION_ATOM_16, "var_mode_lookup";
-        17 => EXPRESSION_FUNCTION_ATOM_17, "negate";
-        18 => EXPRESSION_FUNCTION_ATOM_18, "is_truthy";
-        19 => EXPRESSION_FUNCTION_ATOM_19, "keyframe";
-    ]
+fn decode_sparse_expression_function_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_expression_function_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25248,14 +18668,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_node_field_alias_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => NODE_FIELD_ALIAS_TYPE_ATOM_0, "missing";
-        1 => NODE_FIELD_ALIAS_TYPE_ATOM_1, "component_prop_assignments";
-    ]
+fn decode_sparse_node_field_alias_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_node_field_alias_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25470,35 +18884,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_variable_scope_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => VARIABLE_SCOPE_ATOM_0, "all_scopes";
-        1 => VARIABLE_SCOPE_ATOM_1, "text_content";
-        2 => VARIABLE_SCOPE_ATOM_2, "corner_radius";
-        3 => VARIABLE_SCOPE_ATOM_3, "width_height";
-        4 => VARIABLE_SCOPE_ATOM_4, "gap";
-        5 => VARIABLE_SCOPE_ATOM_5, "all_fills";
-        6 => VARIABLE_SCOPE_ATOM_6, "frame_fill";
-        7 => VARIABLE_SCOPE_ATOM_7, "shape_fill";
-        8 => VARIABLE_SCOPE_ATOM_8, "text_fill";
-        9 => VARIABLE_SCOPE_ATOM_9, "stroke";
-        10 => VARIABLE_SCOPE_ATOM_10, "stroke_float";
-        11 => VARIABLE_SCOPE_ATOM_11, "effect_float";
-        12 => VARIABLE_SCOPE_ATOM_12, "effect_color";
-        13 => VARIABLE_SCOPE_ATOM_13, "opacity";
-        14 => VARIABLE_SCOPE_ATOM_14, "font_style";
-        15 => VARIABLE_SCOPE_ATOM_15, "font_family";
-        16 => VARIABLE_SCOPE_ATOM_16, "font_size";
-        17 => VARIABLE_SCOPE_ATOM_17, "line_height";
-        18 => VARIABLE_SCOPE_ATOM_18, "letter_spacing";
-        19 => VARIABLE_SCOPE_ATOM_19, "paragraph_spacing";
-        20 => VARIABLE_SCOPE_ATOM_20, "paragraph_indent";
-        21 => VARIABLE_SCOPE_ATOM_21, "font_variations";
-        22 => VARIABLE_SCOPE_ATOM_22, "transform";
-    ]
+fn decode_sparse_variable_scope_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_variable_scope_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25516,17 +18903,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_keyframe_value_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => KEYFRAME_VALUE_TYPE_ATOM_0, "float";
-        1 => KEYFRAME_VALUE_TYPE_ATOM_1, "invalid";
-        2 => KEYFRAME_VALUE_TYPE_ATOM_2, "color";
-        3 => KEYFRAME_VALUE_TYPE_ATOM_3, "text_data";
-        4 => KEYFRAME_VALUE_TYPE_ATOM_4, "vector";
-    ]
+fn decode_sparse_keyframe_value_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_keyframe_value_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25542,15 +18920,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_keyframe_track_parameter_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_0, "invalid";
-        1 => KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_1, "manual";
-        2 => KEYFRAME_TRACK_PARAMETER_TYPE_ATOM_2, "animation_preset";
-    ]
+fn decode_sparse_keyframe_track_parameter_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_keyframe_track_parameter_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25795,30 +19166,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_transition_override_prop_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRANSITION_OVERRIDE_PROP_ATOM_0, "all";
-        1 => TRANSITION_OVERRIDE_PROP_ATOM_1, "opacity";
-        2 => TRANSITION_OVERRIDE_PROP_ATOM_2, "translation";
-        3 => TRANSITION_OVERRIDE_PROP_ATOM_3, "rotation";
-        4 => TRANSITION_OVERRIDE_PROP_ATOM_4, "scale";
-    ]
+fn decode_sparse_transition_override_prop_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_transition_override_prop_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_transition_override_binding_top_level_field_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_0, "missing";
-        1 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_1, "parameter_consumption_map";
-        2 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_2, "effect_data";
-        3 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_3, "fill_paint_data";
-        4 => TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD_ATOM_4, "stroke_paint_data";
-    ]
+fn decode_sparse_transition_override_binding_top_level_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_transition_override_binding_top_level_field_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25836,34 +19189,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_0, "missing";
-        1 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_1, "offset_x";
-        2 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_2, "offset_y";
-        3 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_3, "radius";
-        4 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_4, "spread";
-        5 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_5, "color";
-        6 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_6, "refraction_radius";
-        7 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_7, "specular_angle";
-        8 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_8, "specular_intensity";
-        9 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_9, "chromatic_aberration";
-        10 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_10, "splay";
-        11 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_11, "refraction_intensity";
-        12 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_12, "start_radius";
-        13 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_13, "start_offset_x";
-        14 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_14, "start_offset_y";
-        15 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_15, "end_offset_x";
-        16 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_16, "end_offset_y";
-        17 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_17, "noise_size_x";
-        18 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_18, "noise_size_y";
-        19 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_19, "density";
-        20 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_20, "effect_opacity";
-        21 => KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD_ATOM_21, "secondary_color";
-    ]
+fn decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_keyframe_binding_effect_parametrized_field_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25908,15 +19235,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_code_syntax_platform_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CODE_SYNTAX_PLATFORM_ATOM_0, "web";
-        1 => CODE_SYNTAX_PLATFORM_ATOM_1, "android";
-        2 => CODE_SYNTAX_PLATFORM_ATOM_2, "i_os";
-    ]
+fn decode_sparse_code_syntax_platform_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_code_syntax_platform_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -25931,193 +19251,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_html_tag_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => HTML_TAG_ATOM_0, "auto";
-        1 => HTML_TAG_ATOM_1, "article";
-        2 => HTML_TAG_ATOM_2, "section";
-        3 => HTML_TAG_ATOM_3, "nav";
-        4 => HTML_TAG_ATOM_4, "aside";
-        5 => HTML_TAG_ATOM_5, "h1";
-        6 => HTML_TAG_ATOM_6, "h2";
-        7 => HTML_TAG_ATOM_7, "h3";
-        8 => HTML_TAG_ATOM_8, "h4";
-        9 => HTML_TAG_ATOM_9, "h5";
-        10 => HTML_TAG_ATOM_10, "h6";
-        11 => HTML_TAG_ATOM_11, "hgroup";
-        12 => HTML_TAG_ATOM_12, "header";
-        13 => HTML_TAG_ATOM_13, "footer";
-        14 => HTML_TAG_ATOM_14, "address";
-        15 => HTML_TAG_ATOM_15, "p";
-        16 => HTML_TAG_ATOM_16, "hr";
-        17 => HTML_TAG_ATOM_17, "pre";
-        18 => HTML_TAG_ATOM_18, "blockquote";
-        19 => HTML_TAG_ATOM_19, "ol";
-        20 => HTML_TAG_ATOM_20, "ul";
-        21 => HTML_TAG_ATOM_21, "menu";
-        22 => HTML_TAG_ATOM_22, "li";
-        23 => HTML_TAG_ATOM_23, "dl";
-        24 => HTML_TAG_ATOM_24, "dt";
-        25 => HTML_TAG_ATOM_25, "dd";
-        26 => HTML_TAG_ATOM_26, "figure";
-        27 => HTML_TAG_ATOM_27, "figcaption";
-        28 => HTML_TAG_ATOM_28, "main";
-        29 => HTML_TAG_ATOM_29, "div";
-        30 => HTML_TAG_ATOM_30, "a";
-        31 => HTML_TAG_ATOM_31, "em";
-        32 => HTML_TAG_ATOM_32, "strong";
-        33 => HTML_TAG_ATOM_33, "small";
-        34 => HTML_TAG_ATOM_34, "s";
-        35 => HTML_TAG_ATOM_35, "cite";
-        36 => HTML_TAG_ATOM_36, "q";
-        37 => HTML_TAG_ATOM_37, "dfn";
-        38 => HTML_TAG_ATOM_38, "abbr";
-        39 => HTML_TAG_ATOM_39, "ruby";
-        40 => HTML_TAG_ATOM_40, "rt";
-        41 => HTML_TAG_ATOM_41, "rp";
-        42 => HTML_TAG_ATOM_42, "data";
-        43 => HTML_TAG_ATOM_43, "time";
-        44 => HTML_TAG_ATOM_44, "code";
-        45 => HTML_TAG_ATOM_45, "var";
-        46 => HTML_TAG_ATOM_46, "samp";
-        47 => HTML_TAG_ATOM_47, "kbd";
-        48 => HTML_TAG_ATOM_48, "sub";
-        49 => HTML_TAG_ATOM_49, "sup";
-        50 => HTML_TAG_ATOM_50, "i";
-        51 => HTML_TAG_ATOM_51, "b";
-        52 => HTML_TAG_ATOM_52, "u";
-        53 => HTML_TAG_ATOM_53, "mark";
-        54 => HTML_TAG_ATOM_54, "bdi";
-        55 => HTML_TAG_ATOM_55, "bdo";
-        56 => HTML_TAG_ATOM_56, "span";
-        57 => HTML_TAG_ATOM_57, "br";
-        58 => HTML_TAG_ATOM_58, "wbr";
-        59 => HTML_TAG_ATOM_59, "picture";
-        60 => HTML_TAG_ATOM_60, "source";
-        61 => HTML_TAG_ATOM_61, "img";
-        62 => HTML_TAG_ATOM_62, "form";
-        63 => HTML_TAG_ATOM_63, "label";
-        64 => HTML_TAG_ATOM_64, "input";
-        65 => HTML_TAG_ATOM_65, "button";
-        66 => HTML_TAG_ATOM_66, "select";
-        67 => HTML_TAG_ATOM_67, "datalist";
-        68 => HTML_TAG_ATOM_68, "optgroup";
-        69 => HTML_TAG_ATOM_69, "option";
-        70 => HTML_TAG_ATOM_70, "textarea";
-        71 => HTML_TAG_ATOM_71, "output";
-        72 => HTML_TAG_ATOM_72, "progress";
-        73 => HTML_TAG_ATOM_73, "meter";
-        74 => HTML_TAG_ATOM_74, "fieldset";
-        75 => HTML_TAG_ATOM_75, "legend";
-        76 => HTML_TAG_ATOM_76, "video";
-    ]
+fn decode_sparse_html_tag_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_html_tag_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_aria_role_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ARIA_ROLE_ATOM_0, "auto";
-        52 => ARIA_ROLE_ATOM_1, "none";
-        30 => ARIA_ROLE_ATOM_2, "application";
-        67 => ARIA_ROLE_ATOM_3, "banner";
-        68 => ARIA_ROLE_ATOM_4, "complementary";
-        69 => ARIA_ROLE_ATOM_5, "contentinfo";
-        70 => ARIA_ROLE_ATOM_6, "form";
-        71 => ARIA_ROLE_ATOM_7, "main";
-        72 => ARIA_ROLE_ATOM_8, "navigation";
-        73 => ARIA_ROLE_ATOM_9, "region";
-        74 => ARIA_ROLE_ATOM_10, "search";
-        13 => ARIA_ROLE_ATOM_11, "separator";
-        31 => ARIA_ROLE_ATOM_12, "article";
-        35 => ARIA_ROLE_ATOM_13, "columnheader";
-        36 => ARIA_ROLE_ATOM_14, "definition";
-        38 => ARIA_ROLE_ATOM_15, "directory";
-        39 => ARIA_ROLE_ATOM_16, "document";
-        44 => ARIA_ROLE_ATOM_17, "group";
-        45 => ARIA_ROLE_ATOM_18, "heading";
-        46 => ARIA_ROLE_ATOM_19, "img";
-        48 => ARIA_ROLE_ATOM_20, "list";
-        49 => ARIA_ROLE_ATOM_21, "listitem";
-        50 => ARIA_ROLE_ATOM_22, "math";
-        53 => ARIA_ROLE_ATOM_23, "note";
-        55 => ARIA_ROLE_ATOM_24, "presentation";
-        56 => ARIA_ROLE_ATOM_25, "row";
-        57 => ARIA_ROLE_ATOM_26, "rowgroup";
-        58 => ARIA_ROLE_ATOM_27, "rowheader";
-        62 => ARIA_ROLE_ATOM_28, "table";
-        65 => ARIA_ROLE_ATOM_29, "toolbar";
-        1 => ARIA_ROLE_ATOM_30, "button";
-        2 => ARIA_ROLE_ATOM_31, "checkbox";
-        3 => ARIA_ROLE_ATOM_32, "gridcell";
-        4 => ARIA_ROLE_ATOM_33, "link";
-        5 => ARIA_ROLE_ATOM_34, "menuitem";
-        6 => ARIA_ROLE_ATOM_35, "menuitemcheckbox";
-        7 => ARIA_ROLE_ATOM_36, "menuitemradio";
-        8 => ARIA_ROLE_ATOM_37, "option";
-        9 => ARIA_ROLE_ATOM_38, "progressbar";
-        10 => ARIA_ROLE_ATOM_39, "radio";
-        11 => ARIA_ROLE_ATOM_40, "scrollbar";
-        14 => ARIA_ROLE_ATOM_41, "slider";
-        15 => ARIA_ROLE_ATOM_42, "spinbutton";
-        17 => ARIA_ROLE_ATOM_43, "tab";
-        18 => ARIA_ROLE_ATOM_44, "tabpanel";
-        19 => ARIA_ROLE_ATOM_45, "textbox";
-        20 => ARIA_ROLE_ATOM_46, "treeitem";
-        21 => ARIA_ROLE_ATOM_47, "combobox";
-        22 => ARIA_ROLE_ATOM_48, "grid";
-        23 => ARIA_ROLE_ATOM_49, "listbox";
-        24 => ARIA_ROLE_ATOM_50, "menu";
-        25 => ARIA_ROLE_ATOM_51, "menubar";
-        26 => ARIA_ROLE_ATOM_52, "radiogroup";
-        27 => ARIA_ROLE_ATOM_53, "tablist";
-        28 => ARIA_ROLE_ATOM_54, "tree";
-        29 => ARIA_ROLE_ATOM_55, "treegrid";
-        66 => ARIA_ROLE_ATOM_56, "tooltip";
-        75 => ARIA_ROLE_ATOM_57, "alert";
-        76 => ARIA_ROLE_ATOM_58, "log";
-        77 => ARIA_ROLE_ATOM_59, "marquee";
-        78 => ARIA_ROLE_ATOM_60, "status";
-        79 => ARIA_ROLE_ATOM_61, "timer";
-        80 => ARIA_ROLE_ATOM_62, "alertdialog";
-        81 => ARIA_ROLE_ATOM_63, "dialog";
-        12 => ARIA_ROLE_ATOM_64, "searchbox";
-        16 => ARIA_ROLE_ATOM_65, "switch";
-        32 => ARIA_ROLE_ATOM_66, "blockquote";
-        33 => ARIA_ROLE_ATOM_67, "caption";
-        34 => ARIA_ROLE_ATOM_68, "cell";
-        37 => ARIA_ROLE_ATOM_69, "deletion";
-        40 => ARIA_ROLE_ATOM_70, "emphasis";
-        41 => ARIA_ROLE_ATOM_71, "feed";
-        42 => ARIA_ROLE_ATOM_72, "figure";
-        43 => ARIA_ROLE_ATOM_73, "generic";
-        47 => ARIA_ROLE_ATOM_74, "insertion";
-        51 => ARIA_ROLE_ATOM_75, "meter";
-        54 => ARIA_ROLE_ATOM_76, "paragraph";
-        59 => ARIA_ROLE_ATOM_77, "strong";
-        60 => ARIA_ROLE_ATOM_78, "subscript";
-        61 => ARIA_ROLE_ATOM_79, "superscript";
-        63 => ARIA_ROLE_ATOM_80, "term";
-        64 => ARIA_ROLE_ATOM_81, "time";
-        82 => ARIA_ROLE_ATOM_82, "image";
-        83 => ARIA_ROLE_ATOM_83, "heading_1";
-        84 => ARIA_ROLE_ATOM_84, "heading_2";
-        85 => ARIA_ROLE_ATOM_85, "heading_3";
-        86 => ARIA_ROLE_ATOM_86, "heading_4";
-        87 => ARIA_ROLE_ATOM_87, "heading_5";
-        88 => ARIA_ROLE_ATOM_88, "heading_6";
-        89 => ARIA_ROLE_ATOM_89, "header";
-        90 => ARIA_ROLE_ATOM_90, "footer";
-        91 => ARIA_ROLE_ATOM_91, "sidebar";
-        92 => ARIA_ROLE_ATOM_92, "section";
-        93 => ARIA_ROLE_ATOM_93, "maincontent";
-        94 => ARIA_ROLE_ATOM_94, "table_cell";
-        95 => ARIA_ROLE_ATOM_95, "widget";
-    ]
+fn decode_sparse_aria_role_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_aria_role_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26132,36 +19271,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_color_profile_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => COLOR_PROFILE_ATOM_0, "srgb";
-        1 => COLOR_PROFILE_ATOM_1, "display_p3";
-    ]
+fn decode_sparse_color_profile_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_color_profile_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_document_color_profile_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => DOCUMENT_COLOR_PROFILE_ATOM_0, "legacy";
-        1 => DOCUMENT_COLOR_PROFILE_ATOM_1, "srgb";
-        2 => DOCUMENT_COLOR_PROFILE_ATOM_2, "display_p3";
-    ]
+fn decode_sparse_document_color_profile_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_document_color_profile_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_child_reading_direction_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => CHILD_READING_DIRECTION_ATOM_0, "none";
-        1 => CHILD_READING_DIRECTION_ATOM_1, "left_to_right";
-        2 => CHILD_READING_DIRECTION_ATOM_2, "right_to_left";
-    ]
+fn decode_sparse_child_reading_direction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_child_reading_direction_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26180,17 +19299,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_aria_attribute_data_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_0, "boolean";
-        1 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_1, "string";
-        2 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_2, "float";
-        3 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_3, "int";
-        4 => ARIA_ATTRIBUTE_DATA_TYPE_ATOM_4, "string_list";
-    ]
+fn decode_sparse_aria_attribute_data_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_aria_attribute_data_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26308,52 +19418,20 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_edit_scope_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EDIT_SCOPE_TYPE_ATOM_0, "invalid";
-        1 => EDIT_SCOPE_TYPE_ATOM_1, "test_setup";
-        2 => EDIT_SCOPE_TYPE_ATOM_2, "user";
-        3 => EDIT_SCOPE_TYPE_ATOM_3, "plugin";
-        4 => EDIT_SCOPE_TYPE_ATOM_4, "system";
-        5 => EDIT_SCOPE_TYPE_ATOM_5, "rest_api";
-        6 => EDIT_SCOPE_TYPE_ATOM_6, "onboarding";
-        7 => EDIT_SCOPE_TYPE_ATOM_7, "autosave";
-        8 => EDIT_SCOPE_TYPE_ATOM_8, "ai";
-    ]
+fn decode_sparse_edit_scope_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_edit_scope_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_section_preset_state_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SECTION_PRESET_STATE_ATOM_0, "inserted";
-        1 => SECTION_PRESET_STATE_ATOM_1, "user_edited";
-    ]
+fn decode_sparse_section_preset_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_section_preset_state_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_emoji_image_set_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => EMOJI_IMAGE_SET_ATOM_0, "apple";
-        1 => EMOJI_IMAGE_SET_ATOM_1, "noto";
-    ]
+fn decode_sparse_emoji_image_set_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_emoji_image_set_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_selection_region_focus_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SELECTION_REGION_FOCUS_TYPE_ATOM_0, "none";
-        1 => SELECTION_REGION_FOCUS_TYPE_ATOM_1, "primary";
-        2 => SELECTION_REGION_FOCUS_TYPE_ATOM_2, "secondary";
-    ]
+fn decode_sparse_selection_region_focus_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_selection_region_focus_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26387,15 +19465,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_first_draft_kit_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FIRST_DRAFT_KIT_TYPE_ATOM_0, "local";
-        1 => FIRST_DRAFT_KIT_TYPE_ATOM_1, "library";
-        2 => FIRST_DRAFT_KIT_TYPE_ATOM_2, "none";
-    ]
+fn decode_sparse_first_draft_kit_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_first_draft_kit_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26424,15 +19495,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_first_draft_kit_element_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_0, "none";
-        1 => FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_1, "building_block";
-        2 => FIRST_DRAFT_KIT_ELEMENT_TYPE_ATOM_2, "grouped_component";
-    ]
+fn decode_sparse_first_draft_kit_element_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_first_draft_kit_element_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26447,27 +19511,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_platform_shape_property_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PLATFORM_SHAPE_PROPERTY_ATOM_0, "fill";
-        1 => PLATFORM_SHAPE_PROPERTY_ATOM_1, "stroke";
-        2 => PLATFORM_SHAPE_PROPERTY_ATOM_2, "text";
-        3 => PLATFORM_SHAPE_PROPERTY_ATOM_3, "stroke_color";
-    ]
+fn decode_sparse_platform_shape_property_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_platform_shape_property_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_platform_shape_behavior_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_0, "shape";
-        1 => PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_1, "container";
-        2 => PLATFORM_SHAPE_BEHAVIOR_TYPE_ATOM_2, "advanced_container";
-    ]
+fn decode_sparse_platform_shape_behavior_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_platform_shape_behavior_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26535,28 +19584,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_appear_behavior_trigger_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        1 => APPEAR_BEHAVIOR_TRIGGER_ATOM_0, "page_load";
-        2 => APPEAR_BEHAVIOR_TRIGGER_ATOM_1, "this_layer_in_view";
-        3 => APPEAR_BEHAVIOR_TRIGGER_ATOM_2, "other_layer_in_view";
-        4 => APPEAR_BEHAVIOR_TRIGGER_ATOM_3, "scroll_direction";
-    ]
+fn decode_sparse_appear_behavior_trigger_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_appear_behavior_trigger_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_relative_direction_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        1 => RELATIVE_DIRECTION_ATOM_0, "up";
-        2 => RELATIVE_DIRECTION_ATOM_1, "down";
-        3 => RELATIVE_DIRECTION_ATOM_2, "left";
-        4 => RELATIVE_DIRECTION_ATOM_3, "right";
-    ]
+fn decode_sparse_relative_direction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_relative_direction_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26638,15 +19671,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_scroll_transform_behavior_trigger_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        1 => SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_0, "page_height";
-        2 => SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_1, "this_layer_in_view";
-        3 => SCROLL_TRANSFORM_BEHAVIOR_TRIGGER_ATOM_2, "other_layer_in_view";
-    ]
+fn decode_sparse_scroll_transform_behavior_trigger_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_scroll_transform_behavior_trigger_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26731,14 +19757,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_link_behavior_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        1 => LINK_BEHAVIOR_TYPE_ATOM_0, "url";
-        2 => LINK_BEHAVIOR_TYPE_ATOM_1, "page";
-    ]
+fn decode_sparse_link_behavior_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_link_behavior_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26782,30 +19802,12 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_slide_number_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => SLIDE_NUMBER_ATOM_0, "none";
-        1 => SLIDE_NUMBER_ATOM_1, "slide";
-        2 => SLIDE_NUMBER_ATOM_2, "section";
-        3 => SLIDE_NUMBER_ATOM_3, "subsection";
-        4 => SLIDE_NUMBER_ATOM_4, "total_within_deck";
-        5 => SLIDE_NUMBER_ATOM_5, "total_within_section";
-    ]
+fn decode_sparse_slide_number_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_slide_number_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_node_chat_message_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => NODE_CHAT_MESSAGE_TYPE_ATOM_0, "user_message";
-        1 => NODE_CHAT_MESSAGE_TYPE_ATOM_1, "assistant_message";
-        2 => NODE_CHAT_MESSAGE_TYPE_ATOM_2, "tool_message";
-        3 => NODE_CHAT_MESSAGE_TYPE_ATOM_3, "system_message";
-    ]
+fn decode_sparse_node_chat_message_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_node_chat_message_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26910,15 +19912,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_ai_chat_content_part_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => AI_CHAT_CONTENT_PART_TYPE_ATOM_0, "invalid";
-        1 => AI_CHAT_CONTENT_PART_TYPE_ATOM_1, "text";
-        2 => AI_CHAT_CONTENT_PART_TYPE_ATOM_2, "selected_node_ids";
-    ]
+fn decode_sparse_ai_chat_content_part_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_ai_chat_content_part_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26934,16 +19929,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_ai_chat_message_role_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => AI_CHAT_MESSAGE_ROLE_ATOM_0, "user";
-        1 => AI_CHAT_MESSAGE_ROLE_ATOM_1, "assistant";
-        2 => AI_CHAT_MESSAGE_ROLE_ATOM_2, "tool";
-        3 => AI_CHAT_MESSAGE_ROLE_ATOM_3, "system";
-    ]
+fn decode_sparse_ai_chat_message_role_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_ai_chat_message_role_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -26974,77 +19961,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_cooper_template_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => COOPER_TEMPLATE_TYPE_ATOM_0, "custom";
-        1 => COOPER_TEMPLATE_TYPE_ATOM_1, "twitter_post";
-        2 => COOPER_TEMPLATE_TYPE_ATOM_2, "linkedin_post";
-        3 => COOPER_TEMPLATE_TYPE_ATOM_3, "insta_post_square";
-        4 => COOPER_TEMPLATE_TYPE_ATOM_4, "insta_post_portrait";
-        5 => COOPER_TEMPLATE_TYPE_ATOM_5, "insta_story";
-        6 => COOPER_TEMPLATE_TYPE_ATOM_6, "insta_ad";
-        7 => COOPER_TEMPLATE_TYPE_ATOM_7, "facebook_post";
-        8 => COOPER_TEMPLATE_TYPE_ATOM_8, "facebook_cover_photo";
-        9 => COOPER_TEMPLATE_TYPE_ATOM_9, "facebook_event_cover";
-        10 => COOPER_TEMPLATE_TYPE_ATOM_10, "facebook_ad_portrait";
-        11 => COOPER_TEMPLATE_TYPE_ATOM_11, "facebook_ad_square";
-        12 => COOPER_TEMPLATE_TYPE_ATOM_12, "pinterest_ad_pin";
-        13 => COOPER_TEMPLATE_TYPE_ATOM_13, "twitter_banner";
-        15 => COOPER_TEMPLATE_TYPE_ATOM_14, "linkedin_post_square";
-        16 => COOPER_TEMPLATE_TYPE_ATOM_15, "linkedin_post_portrait";
-        17 => COOPER_TEMPLATE_TYPE_ATOM_16, "linkedin_post_landscape";
-        18 => COOPER_TEMPLATE_TYPE_ATOM_17, "linkedin_profile_banner";
-        19 => COOPER_TEMPLATE_TYPE_ATOM_18, "linkedin_article_banner";
-        20 => COOPER_TEMPLATE_TYPE_ATOM_19, "linkedin_ad_landscape";
-        21 => COOPER_TEMPLATE_TYPE_ATOM_20, "linkedin_ad_square";
-        22 => COOPER_TEMPLATE_TYPE_ATOM_21, "linkedin_ad_vertical";
-        23 => COOPER_TEMPLATE_TYPE_ATOM_22, "youtube_thumbnail";
-        24 => COOPER_TEMPLATE_TYPE_ATOM_23, "youtube_banner";
-        25 => COOPER_TEMPLATE_TYPE_ATOM_24, "youtube_ad";
-        26 => COOPER_TEMPLATE_TYPE_ATOM_25, "twitch_banner";
-        27 => COOPER_TEMPLATE_TYPE_ATOM_26, "google_leaderboard_ad";
-        28 => COOPER_TEMPLATE_TYPE_ATOM_27, "google_large_ad";
-        29 => COOPER_TEMPLATE_TYPE_ATOM_28, "google_med_ad";
-        30 => COOPER_TEMPLATE_TYPE_ATOM_29, "google_mobile_banner_ad";
-        31 => COOPER_TEMPLATE_TYPE_ATOM_30, "google_skyscraper_ad";
-        32 => COOPER_TEMPLATE_TYPE_ATOM_31, "card_horizontal";
-        33 => COOPER_TEMPLATE_TYPE_ATOM_32, "card_vertical";
-        34 => COOPER_TEMPLATE_TYPE_ATOM_33, "print_us_letter";
-        35 => COOPER_TEMPLATE_TYPE_ATOM_34, "poster";
-        36 => COOPER_TEMPLATE_TYPE_ATOM_35, "banner_standard";
-        37 => COOPER_TEMPLATE_TYPE_ATOM_36, "banner_wide";
-        38 => COOPER_TEMPLATE_TYPE_ATOM_37, "banner_ultrawide";
-        39 => COOPER_TEMPLATE_TYPE_ATOM_38, "name_tag_portrait";
-        40 => COOPER_TEMPLATE_TYPE_ATOM_39, "name_tag_landscape";
-        41 => COOPER_TEMPLATE_TYPE_ATOM_40, "insta_reel_cover";
-        42 => COOPER_TEMPLATE_TYPE_ATOM_41, "zoom_background";
-        43 => COOPER_TEMPLATE_TYPE_ATOM_42, "tiktok_post";
-        44 => COOPER_TEMPLATE_TYPE_ATOM_43, "insta_ad_portrait";
-        45 => COOPER_TEMPLATE_TYPE_ATOM_44, "insta_post_tall_portrait";
-        46 => COOPER_TEMPLATE_TYPE_ATOM_45, "twitter_post_square";
-        47 => COOPER_TEMPLATE_TYPE_ATOM_46, "facebook_post_square";
-        48 => COOPER_TEMPLATE_TYPE_ATOM_47, "facebook_post_portrait";
-        49 => COOPER_TEMPLATE_TYPE_ATOM_48, "facebook_story";
-        50 => COOPER_TEMPLATE_TYPE_ATOM_49, "google_square_ad";
-        51 => COOPER_TEMPLATE_TYPE_ATOM_50, "google_small_square_ad";
-        52 => COOPER_TEMPLATE_TYPE_ATOM_51, "google_narrow_skyscraper_ad";
-        53 => COOPER_TEMPLATE_TYPE_ATOM_52, "google_half_page_ad";
-        54 => COOPER_TEMPLATE_TYPE_ATOM_53, "google_large_leaderboard_ad";
-        55 => COOPER_TEMPLATE_TYPE_ATOM_54, "google_billboard_ad";
-        56 => COOPER_TEMPLATE_TYPE_ATOM_55, "google_banner_leaderboard_ad";
-        57 => COOPER_TEMPLATE_TYPE_ATOM_56, "google_top_banner_ad";
-        58 => COOPER_TEMPLATE_TYPE_ATOM_57, "google_mobile_leaderboard_banner_ad";
-        59 => COOPER_TEMPLATE_TYPE_ATOM_58, "google_large_mobile_banner_ad";
-        60 => COOPER_TEMPLATE_TYPE_ATOM_59, "google_mobile_interstitial_ad";
-        61 => COOPER_TEMPLATE_TYPE_ATOM_60, "google_mobile_med_rectangle_ad";
-        62 => COOPER_TEMPLATE_TYPE_ATOM_61, "pinterest_pin_standard";
-        63 => COOPER_TEMPLATE_TYPE_ATOM_62, "pinterest_pin_square";
-        64 => COOPER_TEMPLATE_TYPE_ATOM_63, "pinterest_ad_square";
-        65 => COOPER_TEMPLATE_TYPE_ATOM_64, "print_a4";
-    ]
+fn decode_sparse_cooper_template_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_cooper_template_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -27084,15 +20002,8 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_interpolation_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => INTERPOLATION_TYPE_ATOM_0, "hold";
-        1 => INTERPOLATION_TYPE_ATOM_1, "bezier";
-        2 => INTERPOLATION_TYPE_ATOM_2, "spring";
-    ]
+fn decode_sparse_interpolation_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_interpolation_type_from_decoder(env, decoder)
 }
 
 kiwi_sparse_message_decoder! {
@@ -27110,36 +20021,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_keyframe_operation_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => KEYFRAME_OPERATION_ATOM_0, "set";
-        1 => KEYFRAME_OPERATION_ATOM_1, "scale";
-        2 => KEYFRAME_OPERATION_ATOM_2, "offset";
-    ]
+fn decode_sparse_keyframe_operation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_keyframe_operation_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_timeline_position_type_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => TIMELINE_POSITION_TYPE_ATOM_0, "absolute";
-        1 => TIMELINE_POSITION_TYPE_ATOM_1, "relative";
-    ]
+fn decode_sparse_timeline_position_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_timeline_position_type_from_decoder(env, decoder)
 }
 
-kiwi_sparse_enum_decoder! {
-    fn decode_sparse_playback_style_from_decoder;
-    env env;
-    decoder decoder;
-    variants [
-        0 => PLAYBACK_STYLE_ATOM_0, "once";
-        1 => PLAYBACK_STYLE_ATOM_1, "loop";
-        2 => PLAYBACK_STYLE_ATOM_2, "boomerang";
-    ]
+fn decode_sparse_playback_style_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decode_playback_style_from_decoder(env, decoder)
 }
 
 kiwi_skip_enum_decoder! {
@@ -27391,8 +20282,8 @@ kiwi_skip_struct_decoder! {
     fn skip_guid_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_uint()?;
-        decoder.read_var_uint()?;
+        one kiwi_skip_uint_value;
+        one kiwi_skip_uint_value;
     ]
 }
 
@@ -27400,10 +20291,10 @@ kiwi_skip_struct_decoder! {
     fn skip_color_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
     ]
 }
 
@@ -27411,8 +20302,8 @@ kiwi_skip_struct_decoder! {
     fn skip_vector_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
     ]
 }
 
@@ -27420,10 +20311,10 @@ kiwi_skip_struct_decoder! {
     fn skip_rect_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
     ]
 }
 
@@ -27431,8 +20322,8 @@ kiwi_skip_struct_decoder! {
     fn skip_color_stop_from_decoder;
     decoder decoder;
     fields [
-        skip_color_from_decoder(decoder)?;
-        decoder.read_var_float_value()?;
+        one skip_color_from_decoder;
+        one kiwi_skip_float_value;
     ]
 }
 
@@ -27441,9 +20332,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ColorStopVar";
     fields [
-        1 => skip_color_from_decoder(decoder)?;
-        2 => skip_variable_data_from_decoder(decoder)?;
-        3 => decoder.read_var_float_value()?;
+        1 => one skip_color_from_decoder;
+        2 => one skip_variable_data_from_decoder;
+        3 => one kiwi_skip_float_value;
     ]
 }
 
@@ -27451,12 +20342,12 @@ kiwi_skip_struct_decoder! {
     fn skip_matrix_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
     ]
 }
 
@@ -27464,8 +20355,8 @@ kiwi_skip_struct_decoder! {
     fn skip_parent_index_from_decoder;
     decoder decoder;
     fields [
-        skip_guid_from_decoder(decoder)?;
-        decoder.skip_string()?;
+        one skip_guid_from_decoder;
+        one kiwi_skip_string_value;
     ]
 }
 
@@ -27473,8 +20364,8 @@ kiwi_skip_struct_decoder! {
     fn skip_number_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_float_value()?;
-        skip_number_units_from_decoder(decoder)?;
+        one kiwi_skip_float_value;
+        one skip_number_units_from_decoder;
     ]
 }
 
@@ -27482,9 +20373,9 @@ kiwi_skip_struct_decoder! {
     fn skip_font_name_from_decoder;
     decoder decoder;
     fields [
-        decoder.skip_string()?;
-        decoder.skip_string()?;
-        decoder.skip_string()?;
+        one kiwi_skip_string_value;
+        one kiwi_skip_string_value;
+        one kiwi_skip_string_value;
     ]
 }
 
@@ -27543,12 +20434,12 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeSourceInfo";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => skip_snapshot_capture_mode_from_decoder(decoder)?;
-        5 => decoder.skip_string()?;
-        6 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_guid_from_decoder;
+        4 => one skip_snapshot_capture_mode_from_decoder;
+        5 => one kiwi_skip_string_value;
+        6 => one kiwi_skip_string_value;
     ]
 }
 
@@ -27562,10 +20453,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CustomToolArtifactRef";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
     ]
 }
 
@@ -27583,8 +20474,8 @@ kiwi_skip_struct_decoder! {
     fn skip_export_constraint_from_decoder;
     decoder decoder;
     fields [
-        skip_export_constraint_type_from_decoder(decoder)?;
-        decoder.read_var_float_value()?;
+        one skip_export_constraint_type_from_decoder;
+        one kiwi_skip_float_value;
     ]
 }
 
@@ -27592,8 +20483,8 @@ kiwi_skip_struct_decoder! {
     fn skip_guid_mapping_from_decoder;
     decoder decoder;
     fields [
-        skip_guid_from_decoder(decoder)?;
-        skip_guid_from_decoder(decoder)?;
+        one skip_guid_from_decoder;
+        one skip_guid_from_decoder;
     ]
 }
 
@@ -27601,7 +20492,7 @@ kiwi_skip_struct_decoder! {
     fn skip_blob_from_decoder;
     decoder decoder;
     fields [
-        decoder.skip_byte_array()?;
+        bytes kiwi_skip_bytes_value;
     ]
 }
 
@@ -27610,9 +20501,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Image";
     fields [
-        1 => decoder.skip_byte_array()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_var_uint()?;
+        1 => bytes kiwi_skip_bytes_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -27621,8 +20512,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Video";
     fields [
-        1 => decoder.skip_byte_array()?;
-        2 => decoder.skip_string()?;
+        1 => bytes kiwi_skip_bytes_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -27631,8 +20522,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PasteSource";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_guid_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_guid_from_decoder;
     ]
 }
 
@@ -27640,14 +20531,14 @@ kiwi_skip_struct_decoder! {
     fn skip_filter_color_adjust_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
     ]
 }
 
@@ -27656,16 +20547,16 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PaintFilterMessage";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_float_value()?;
-        5 => decoder.read_var_float_value()?;
-        6 => decoder.read_var_float_value()?;
-        7 => decoder.read_var_float_value()?;
-        8 => decoder.read_var_float_value()?;
-        9 => decoder.read_var_float_value()?;
-        10 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_float_value;
+        6 => one kiwi_skip_float_value;
+        7 => one kiwi_skip_float_value;
+        8 => one kiwi_skip_float_value;
+        9 => one kiwi_skip_float_value;
+        10 => one kiwi_skip_float_value;
     ]
 }
 
@@ -27674,48 +20565,48 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Paint";
     fields [
-        1 => skip_paint_type_from_decoder(decoder)?;
-        2 => skip_color_from_decoder(decoder)?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_bool()?;
-        5 => skip_blend_mode_from_decoder(decoder)?;
-        6 => decoder.read_repeated(|decoder| { skip_color_stop_from_decoder(decoder)?; Ok(()) })?;
-        7 => skip_matrix_from_decoder(decoder)?;
-        8 => skip_image_from_decoder(decoder)?;
-        9 => skip_image_from_decoder(decoder)?;
-        16 => skip_image_from_decoder(decoder)?;
-        17 => decoder.read_var_uint()?;
-        10 => skip_image_scale_mode_from_decoder(decoder)?;
-        22 => decoder.read_bool()?;
-        11 => decoder.read_var_float_value()?;
-        12 => decoder.read_var_float_value()?;
-        13 => skip_filter_color_adjust_from_decoder(decoder)?;
-        14 => skip_paint_filter_message_from_decoder(decoder)?;
-        15 => decoder.read_repeated(|decoder| { decoder.read_var_uint()?; Ok(()) })?;
-        18 => skip_video_from_decoder(decoder)?;
-        19 => decoder.read_var_uint()?;
-        20 => decoder.read_var_uint()?;
-        38 => skip_variable_data_from_decoder(decoder)?;
-        21 => skip_variable_data_from_decoder(decoder)?;
-        31 => skip_variable_data_from_decoder(decoder)?;
-        23 => decoder.read_repeated(|decoder| { skip_color_stop_var_from_decoder(decoder)?; Ok(()) })?;
-        24 => decoder.skip_string()?;
-        25 => decoder.skip_byte_array()?;
-        26 => skip_guid_from_decoder(decoder)?;
-        27 => decoder.read_var_float_value()?;
-        37 => skip_vector_from_decoder(decoder)?;
-        28 => skip_pattern_tile_type_from_decoder(decoder)?;
-        29 => skip_pattern_alignment_from_decoder(decoder)?;
-        30 => skip_pattern_alignment_from_decoder(decoder)?;
-        32 => skip_guid_from_decoder(decoder)?;
-        33 => decoder.skip_string()?;
-        34 => skip_noise_type_from_decoder(decoder)?;
-        35 => decoder.read_var_float_value()?;
-        36 => skip_vector_from_decoder(decoder)?;
-        39 => skip_code_component_id_from_decoder(decoder)?;
-        40 => decoder.read_repeated(|decoder| { skip_component_prop_assignment_from_decoder(decoder)?; Ok(()) })?;
-        41 => skip_interpolation_color_space_from_decoder(decoder)?;
-        42 => skip_interpolation_hue_method_from_decoder(decoder)?;
+        1 => one skip_paint_type_from_decoder;
+        2 => one skip_color_from_decoder;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_bool_value;
+        5 => one skip_blend_mode_from_decoder;
+        6 => repeated skip_color_stop_from_decoder;
+        7 => one skip_matrix_from_decoder;
+        8 => one skip_image_from_decoder;
+        9 => one skip_image_from_decoder;
+        16 => one skip_image_from_decoder;
+        17 => one kiwi_skip_uint_value;
+        10 => one skip_image_scale_mode_from_decoder;
+        22 => one kiwi_skip_bool_value;
+        11 => one kiwi_skip_float_value;
+        12 => one kiwi_skip_float_value;
+        13 => one skip_filter_color_adjust_from_decoder;
+        14 => one skip_paint_filter_message_from_decoder;
+        15 => repeated kiwi_skip_uint_value;
+        18 => one skip_video_from_decoder;
+        19 => one kiwi_skip_uint_value;
+        20 => one kiwi_skip_uint_value;
+        38 => one skip_variable_data_from_decoder;
+        21 => one skip_variable_data_from_decoder;
+        31 => one skip_variable_data_from_decoder;
+        23 => repeated skip_color_stop_var_from_decoder;
+        24 => one kiwi_skip_string_value;
+        25 => bytes kiwi_skip_bytes_value;
+        26 => one skip_guid_from_decoder;
+        27 => one kiwi_skip_float_value;
+        37 => one skip_vector_from_decoder;
+        28 => one skip_pattern_tile_type_from_decoder;
+        29 => one skip_pattern_alignment_from_decoder;
+        30 => one skip_pattern_alignment_from_decoder;
+        32 => one skip_guid_from_decoder;
+        33 => one kiwi_skip_string_value;
+        34 => one skip_noise_type_from_decoder;
+        35 => one kiwi_skip_float_value;
+        36 => one skip_vector_from_decoder;
+        39 => one skip_code_component_id_from_decoder;
+        40 => repeated skip_component_prop_assignment_from_decoder;
+        41 => one skip_interpolation_color_space_from_decoder;
+        42 => one skip_interpolation_hue_method_from_decoder;
     ]
 }
 
@@ -27749,11 +20640,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "FontMetaData";
     fields [
-        1 => skip_font_name_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.skip_byte_array()?;
-        4 => skip_font_style_from_decoder(decoder)?;
-        5 => decoder.read_var_int()?;
+        1 => one skip_font_name_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => bytes kiwi_skip_bytes_value;
+        4 => one skip_font_style_from_decoder;
+        5 => one kiwi_skip_int_value;
     ]
 }
 
@@ -27762,9 +20653,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "FontVariation";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_float_value;
     ]
 }
 
@@ -27773,25 +20664,25 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TextData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.read_repeated(|decoder| { decoder.read_var_uint()?; Ok(()) })?;
-        3 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
-        12 => decoder.read_repeated(|decoder| { skip_text_line_data_from_decoder(decoder)?; Ok(()) })?;
-        8 => decoder.read_var_uint()?;
-        10 => decoder.read_repeated(|decoder| { skip_font_name_from_decoder(decoder)?; Ok(()) })?;
-        17 => decoder.read_var_float_value()?;
-        4 => skip_vector_from_decoder(decoder)?;
-        5 => decoder.read_repeated(|decoder| { skip_baseline_from_decoder(decoder)?; Ok(()) })?;
-        6 => decoder.read_repeated(|decoder| { skip_glyph_from_decoder(decoder)?; Ok(()) })?;
-        7 => decoder.read_repeated(|decoder| { skip_decoration_from_decoder(decoder)?; Ok(()) })?;
-        16 => decoder.read_repeated(|decoder| { skip_blockquote_from_decoder(decoder)?; Ok(()) })?;
-        9 => decoder.read_repeated(|decoder| { skip_font_meta_data_from_decoder(decoder)?; Ok(()) })?;
-        11 => decoder.read_repeated(|decoder| { skip_hyperlink_box_from_decoder(decoder)?; Ok(()) })?;
-        13 => decoder.read_var_int()?;
-        14 => decoder.read_var_float_value()?;
-        15 => decoder.read_repeated(|decoder| { decoder.read_var_float_value()?; Ok(()) })?;
-        18 => decoder.read_repeated(|decoder| { skip_mention_box_from_decoder(decoder)?; Ok(()) })?;
-        19 => decoder.read_repeated(|decoder| { skip_derived_text_line_data_from_decoder(decoder)?; Ok(()) })?;
+        1 => one kiwi_skip_string_value;
+        2 => repeated kiwi_skip_uint_value;
+        3 => repeated skip_node_change_from_decoder;
+        12 => repeated skip_text_line_data_from_decoder;
+        8 => one kiwi_skip_uint_value;
+        10 => repeated skip_font_name_from_decoder;
+        17 => one kiwi_skip_float_value;
+        4 => one skip_vector_from_decoder;
+        5 => repeated skip_baseline_from_decoder;
+        6 => repeated skip_glyph_from_decoder;
+        7 => repeated skip_decoration_from_decoder;
+        16 => repeated skip_blockquote_from_decoder;
+        9 => repeated skip_font_meta_data_from_decoder;
+        11 => repeated skip_hyperlink_box_from_decoder;
+        13 => one kiwi_skip_int_value;
+        14 => one kiwi_skip_float_value;
+        15 => repeated kiwi_skip_float_value;
+        18 => repeated skip_mention_box_from_decoder;
+        19 => repeated skip_derived_text_line_data_from_decoder;
     ]
 }
 
@@ -27800,18 +20691,18 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "DerivedTextData";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_baseline_from_decoder(decoder)?; Ok(()) })?;
-        3 => decoder.read_repeated(|decoder| { skip_glyph_from_decoder(decoder)?; Ok(()) })?;
-        4 => decoder.read_repeated(|decoder| { skip_decoration_from_decoder(decoder)?; Ok(()) })?;
-        5 => decoder.read_repeated(|decoder| { skip_blockquote_from_decoder(decoder)?; Ok(()) })?;
-        6 => decoder.read_repeated(|decoder| { skip_font_meta_data_from_decoder(decoder)?; Ok(()) })?;
-        7 => decoder.read_repeated(|decoder| { skip_hyperlink_box_from_decoder(decoder)?; Ok(()) })?;
-        8 => decoder.read_var_int()?;
-        9 => decoder.read_var_float_value()?;
-        10 => decoder.read_repeated(|decoder| { decoder.read_var_float_value()?; Ok(()) })?;
-        11 => decoder.read_repeated(|decoder| { skip_mention_box_from_decoder(decoder)?; Ok(()) })?;
-        12 => decoder.read_repeated(|decoder| { skip_derived_text_line_data_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_vector_from_decoder;
+        2 => repeated skip_baseline_from_decoder;
+        3 => repeated skip_glyph_from_decoder;
+        4 => repeated skip_decoration_from_decoder;
+        5 => repeated skip_blockquote_from_decoder;
+        6 => repeated skip_font_meta_data_from_decoder;
+        7 => repeated skip_hyperlink_box_from_decoder;
+        8 => one kiwi_skip_int_value;
+        9 => one kiwi_skip_float_value;
+        10 => repeated kiwi_skip_float_value;
+        11 => repeated skip_mention_box_from_decoder;
+        12 => repeated skip_derived_text_line_data_from_decoder;
     ]
 }
 
@@ -27820,12 +20711,12 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "HyperlinkBox";
     fields [
-        1 => skip_rect_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => skip_guid_from_decoder(decoder)?;
-        5 => skip_cms_item_page_target_from_decoder(decoder)?;
-        6 => decoder.read_bool()?;
-        4 => decoder.read_var_int()?;
+        1 => one skip_rect_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one skip_guid_from_decoder;
+        5 => one skip_cms_item_page_target_from_decoder;
+        6 => one kiwi_skip_bool_value;
+        4 => one kiwi_skip_int_value;
     ]
 }
 
@@ -27834,11 +20725,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "MentionBox";
     fields [
-        1 => skip_rect_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        3 => decoder.read_var_uint()?;
-        4 => decoder.read_bool()?;
-        5 => decoder.read_var_uint()?;
+        1 => one skip_rect_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
+        4 => one kiwi_skip_bool_value;
+        5 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -27847,14 +20738,14 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Baseline";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_float_value()?;
-        7 => decoder.read_var_float_value()?;
-        8 => decoder.read_var_float_value()?;
-        5 => decoder.read_var_uint()?;
-        6 => decoder.read_var_uint()?;
+        1 => one skip_vector_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_float_value;
+        7 => one kiwi_skip_float_value;
+        8 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_uint_value;
+        6 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -27863,15 +20754,15 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Glyph";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => skip_vector_from_decoder(decoder)?;
-        3 => decoder.read_var_uint()?;
-        4 => decoder.read_var_float_value()?;
-        5 => decoder.read_var_uint()?;
-        6 => decoder.read_var_float_value()?;
-        7 => decoder.read_repeated(|decoder| { decoder.read_var_uint()?; Ok(()) })?;
-        8 => skip_emoji_image_set_from_decoder(decoder)?;
-        9 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one skip_vector_from_decoder;
+        3 => one kiwi_skip_uint_value;
+        4 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_uint_value;
+        6 => one kiwi_skip_float_value;
+        7 => repeated kiwi_skip_uint_value;
+        8 => one skip_emoji_image_set_from_decoder;
+        9 => one kiwi_skip_float_value;
     ]
 }
 
@@ -27880,8 +20771,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Decoration";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_rect_from_decoder(decoder)?; Ok(()) })?;
-        2 => decoder.read_var_uint()?;
+        1 => repeated skip_rect_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -27890,9 +20781,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Blockquote";
     fields [
-        1 => skip_rect_from_decoder(decoder)?;
-        2 => skip_rect_from_decoder(decoder)?;
-        3 => decoder.read_var_uint()?;
+        1 => one skip_rect_from_decoder;
+        2 => one skip_rect_from_decoder;
+        3 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -27901,9 +20792,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VectorData";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => skip_vector_from_decoder(decoder)?;
-        3 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => one kiwi_skip_uint_value;
+        2 => one skip_vector_from_decoder;
+        3 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -27912,8 +20803,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TextPathStart";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_bool()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -27922,7 +20813,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GUIDPath";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_guid_from_decoder;
     ]
 }
 
@@ -27931,9 +20822,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SymbolData";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
-        3 => decoder.read_var_float_value()?;
+        1 => one skip_guid_from_decoder;
+        2 => repeated skip_node_change_from_decoder;
+        3 => one kiwi_skip_float_value;
     ]
 }
 
@@ -27942,8 +20833,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GUIDPathMapping";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_guid_path_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_guid_path_from_decoder;
     ]
 }
 
@@ -27952,7 +20843,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "DerivedBreakpointData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -27961,9 +20852,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeGenerationData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
-        2 => decoder.read_bool()?;
-        3 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_node_change_from_decoder;
+        2 => one kiwi_skip_bool_value;
+        3 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -27972,8 +20863,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "DerivedImmutableFrameData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
-        2 => decoder.read_var_uint()?;
+        1 => repeated skip_node_change_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -27982,7 +20873,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "JsxData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -27991,7 +20882,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "DerivedJsxData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -28000,7 +20891,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AssetIdMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_asset_id_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_asset_id_entry_from_decoder;
     ]
 }
 
@@ -28009,8 +20900,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AssetIdEntry";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_asset_id_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_asset_id_from_decoder;
     ]
 }
 
@@ -28019,8 +20910,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AssetRef";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -28029,13 +20920,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AssetId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
-        3 => skip_state_group_id_from_decoder(decoder)?;
-        4 => skip_style_id_from_decoder(decoder)?;
-        5 => skip_symbol_id_from_decoder(decoder)?;
-        6 => skip_variable_id_from_decoder(decoder)?;
-        7 => skip_variable_set_id_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
+        3 => one skip_state_group_id_from_decoder;
+        4 => one skip_style_id_from_decoder;
+        5 => one skip_symbol_id_from_decoder;
+        6 => one skip_variable_id_from_decoder;
+        7 => one skip_variable_set_id_from_decoder;
     ]
 }
 
@@ -28044,8 +20935,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StateGroupId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28054,8 +20945,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StyleId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28064,8 +20955,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SymbolId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28074,8 +20965,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableID";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28084,8 +20975,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableOverrideId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28094,8 +20985,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableSetID";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28104,8 +20995,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ThemeID";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28114,8 +21005,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeLibraryId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28124,8 +21015,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeFileId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28134,8 +21025,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeComponentId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -28144,9 +21035,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CanvasNodeId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_symbol_id_from_decoder(decoder)?;
-        3 => skip_state_group_id_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_symbol_id_from_decoder;
+        3 => one skip_state_group_id_from_decoder;
     ]
 }
 
@@ -28154,8 +21045,8 @@ kiwi_skip_struct_decoder! {
     fn skip_index_range_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_uint()?;
-        decoder.read_var_uint()?;
+        one kiwi_skip_uint_value;
+        one kiwi_skip_uint_value;
     ]
 }
 
@@ -28163,8 +21054,8 @@ kiwi_skip_struct_decoder! {
     fn skip_collaborative_text_op_id_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_uint()?;
-        decoder.read_var_uint()?;
+        one kiwi_skip_uint_value;
+        one kiwi_skip_uint_value;
     ]
 }
 
@@ -28178,10 +21069,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CollaborativeTextStrippedOpRunWithIDs";
     fields [
-        1 => skip_collaborative_text_op_id_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        3 => decoder.read_repeated(|decoder| { skip_collaborative_text_op_id_from_decoder(decoder)?; Ok(()) })?;
-        4 => decoder.read_repeated(|decoder| { skip_collaborative_text_op_id_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_collaborative_text_op_id_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => repeated skip_collaborative_text_op_id_from_decoder;
+        4 => repeated skip_collaborative_text_op_id_from_decoder;
     ]
 }
 
@@ -28190,11 +21081,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CollaborativeTextStrippedOpRunWithLoc";
     fields [
-        1 => skip_collaborative_text_op_type_from_decoder(decoder)?;
-        2 => skip_index_range_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
-        4 => skip_index_range_from_decoder(decoder)?;
-        5 => skip_index_range_from_decoder(decoder)?;
+        1 => one skip_collaborative_text_op_type_from_decoder;
+        2 => one skip_index_range_from_decoder;
+        3 => one kiwi_skip_bool_value;
+        4 => one skip_index_range_from_decoder;
+        5 => one skip_index_range_from_decoder;
     ]
 }
 
@@ -28203,14 +21094,14 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CollaborativeTextOpRun";
     fields [
-        1 => skip_collaborative_text_op_id_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_collaborative_text_op_id_from_decoder(decoder)?; Ok(()) })?;
-        3 => skip_collaborative_text_op_type_from_decoder(decoder)?;
-        4 => skip_index_range_from_decoder(decoder)?;
-        5 => decoder.read_bool()?;
-        6 => decoder.skip_string()?;
-        7 => decoder.read_repeated(|decoder| { skip_collaborative_text_op_id_from_decoder(decoder)?; Ok(()) })?;
-        8 => skip_index_range_from_decoder(decoder)?;
+        1 => one skip_collaborative_text_op_id_from_decoder;
+        2 => repeated skip_collaborative_text_op_id_from_decoder;
+        3 => one skip_collaborative_text_op_type_from_decoder;
+        4 => one skip_index_range_from_decoder;
+        5 => one kiwi_skip_bool_value;
+        6 => one kiwi_skip_string_value;
+        7 => repeated skip_collaborative_text_op_id_from_decoder;
+        8 => one skip_index_range_from_decoder;
     ]
 }
 
@@ -28219,10 +21110,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CollaborativePlainText";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder(decoder)?; Ok(()) })?;
-        2 => decoder.read_repeated(|decoder| { skip_collaborative_text_stripped_op_run_with_loc_from_decoder(decoder)?; Ok(()) })?;
-        3 => decoder.skip_byte_array()?;
-        4 => decoder.read_repeated(|decoder| { skip_collaborative_text_op_run_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
+        2 => repeated skip_collaborative_text_stripped_op_run_with_loc_from_decoder;
+        3 => bytes kiwi_skip_bytes_value;
+        4 => repeated skip_collaborative_text_op_run_from_decoder;
     ]
 }
 
@@ -28231,11 +21122,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CollaborativeTextSelection";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        3 => skip_index_range_from_decoder(decoder)?;
-        4 => decoder.read_bool()?;
-        5 => decoder.read_repeated(|decoder| { skip_collaborative_text_op_id_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => one skip_index_range_from_decoder;
+        4 => one kiwi_skip_bool_value;
+        5 => repeated skip_collaborative_text_op_id_from_decoder;
     ]
 }
 
@@ -28244,13 +21135,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ResponsiveTextStyleVariant";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => skip_node_change_from_decoder(decoder)?;
-        3 => skip_variable_data_from_decoder(decoder)?;
-        4 => skip_variable_data_from_decoder(decoder)?;
-        5 => skip_variable_data_from_decoder(decoder)?;
-        6 => skip_variable_data_from_decoder(decoder)?;
-        7 => decoder.skip_string()?;
+        1 => one kiwi_skip_float_value;
+        2 => one skip_node_change_from_decoder;
+        3 => one skip_variable_data_from_decoder;
+        4 => one skip_variable_data_from_decoder;
+        5 => one skip_variable_data_from_decoder;
+        6 => one skip_variable_data_from_decoder;
+        7 => one kiwi_skip_string_value;
     ]
 }
 
@@ -28264,14 +21155,14 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SlideThemeProps";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_variable_set_id_from_decoder(decoder)?;
-        3 => decoder.read_repeated(|decoder| { skip_style_id_from_decoder(decoder)?; Ok(()) })?;
-        4 => decoder.read_bool()?;
-        5 => decoder.read_bool()?;
-        6 => skip_asset_ref_from_decoder(decoder)?;
-        7 => decoder.read_var_uint()?;
-        8 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_variable_set_id_from_decoder;
+        3 => repeated skip_style_id_from_decoder;
+        4 => one kiwi_skip_bool_value;
+        5 => one kiwi_skip_bool_value;
+        6 => one skip_asset_ref_from_decoder;
+        7 => one kiwi_skip_uint_value;
+        8 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -28280,7 +21171,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SlideThemeMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_slide_theme_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_slide_theme_map_entry_from_decoder;
     ]
 }
 
@@ -28289,8 +21180,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SlideThemeMapEntry";
     fields [
-        1 => skip_theme_id_from_decoder(decoder)?;
-        2 => skip_slide_theme_props_from_decoder(decoder)?;
+        1 => one skip_theme_id_from_decoder;
+        2 => one skip_slide_theme_props_from_decoder;
     ]
 }
 
@@ -28299,15 +21190,15 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SharedSymbolReference";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
-        4 => decoder.read_repeated(|decoder| { skip_guid_path_mapping_from_decoder(decoder)?; Ok(()) })?;
-        5 => decoder.skip_byte_array()?;
-        6 => decoder.read_repeated(|decoder| { skip_guid_mapping_from_decoder(decoder)?; Ok(()) })?;
-        7 => decoder.skip_string()?;
-        8 => decoder.read_repeated(|decoder| { skip_guid_path_mapping_from_decoder(decoder)?; Ok(()) })?;
-        9 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_guid_from_decoder;
+        3 => one kiwi_skip_string_value;
+        4 => repeated skip_guid_path_mapping_from_decoder;
+        5 => bytes kiwi_skip_bytes_value;
+        6 => repeated skip_guid_mapping_from_decoder;
+        7 => one kiwi_skip_string_value;
+        8 => repeated skip_guid_path_mapping_from_decoder;
+        9 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -28316,9 +21207,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SharedComponentMasterData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.read_repeated(|decoder| { skip_guid_path_mapping_from_decoder(decoder)?; Ok(()) })?;
-        3 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => repeated skip_guid_path_mapping_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -28327,9 +21218,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InstanceOverrideStash";
     fields [
-        1 => skip_guid_path_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_guid_path_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -28338,9 +21229,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InstanceOverrideStashV2";
     fields [
-        1 => skip_guid_path_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_guid_path_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -28349,7 +21240,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ImportedCodeFileEntry";
     fields [
-        1 => skip_code_file_id_from_decoder(decoder)?;
+        1 => one skip_code_file_id_from_decoder;
     ]
 }
 
@@ -28358,7 +21249,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ImportedCodeFiles";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_imported_code_file_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_imported_code_file_entry_from_decoder;
     ]
 }
 
@@ -28392,61 +21283,61 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Effect";
     fields [
-        1 => skip_effect_type_from_decoder(decoder)?;
-        3 => skip_vector_from_decoder(decoder)?;
-        4 => decoder.read_var_float_value()?;
-        5 => decoder.read_bool()?;
-        6 => skip_blend_mode_from_decoder(decoder)?;
-        7 => decoder.read_var_float_value()?;
-        8 => decoder.read_bool()?;
-        9 => skip_variable_data_from_decoder(decoder)?;
-        10 => skip_variable_data_from_decoder(decoder)?;
-        11 => skip_variable_data_from_decoder(decoder)?;
-        12 => skip_variable_data_from_decoder(decoder)?;
-        13 => skip_variable_data_from_decoder(decoder)?;
-        14 => decoder.read_var_uint()?;
-        15 => skip_repeat_type_from_decoder(decoder)?;
-        16 => skip_effect_axis_from_decoder(decoder)?;
-        17 => skip_unit_type_from_decoder(decoder)?;
-        18 => skip_repeat_order_from_decoder(decoder)?;
-        19 => skip_blur_op_type_from_decoder(decoder)?;
-        20 => skip_vector_from_decoder(decoder)?;
-        28 => skip_vector_from_decoder(decoder)?;
-        21 => decoder.read_var_float_value()?;
-        2 => skip_color_from_decoder(decoder)?;
-        24 => skip_color_from_decoder(decoder)?;
-        22 => skip_vector_from_decoder(decoder)?;
-        29 => decoder.read_var_uint()?;
-        23 => decoder.read_bool()?;
-        25 => decoder.read_var_float_value()?;
-        26 => skip_noise_type_from_decoder(decoder)?;
-        27 => decoder.read_var_float_value()?;
-        30 => decoder.read_var_float_value()?;
-        31 => decoder.read_var_float_value()?;
-        32 => decoder.read_var_float_value()?;
-        33 => decoder.read_var_float_value()?;
-        34 => decoder.read_var_float_value()?;
-        35 => decoder.read_var_float_value()?;
-        36 => decoder.read_var_float_value()?;
-        37 => skip_variable_data_from_decoder(decoder)?;
-        38 => skip_variable_data_from_decoder(decoder)?;
-        39 => skip_variable_data_from_decoder(decoder)?;
-        40 => skip_variable_data_from_decoder(decoder)?;
-        41 => skip_variable_data_from_decoder(decoder)?;
-        42 => skip_variable_data_from_decoder(decoder)?;
-        43 => skip_code_component_id_from_decoder(decoder)?;
-        44 => decoder.read_repeated(|decoder| { skip_component_prop_assignment_from_decoder(decoder)?; Ok(()) })?;
-        45 => skip_variable_data_from_decoder(decoder)?;
-        46 => skip_variable_data_from_decoder(decoder)?;
-        47 => skip_variable_data_from_decoder(decoder)?;
-        48 => skip_variable_data_from_decoder(decoder)?;
-        49 => skip_variable_data_from_decoder(decoder)?;
-        50 => skip_variable_data_from_decoder(decoder)?;
-        51 => skip_variable_data_from_decoder(decoder)?;
-        52 => skip_variable_data_from_decoder(decoder)?;
-        53 => skip_variable_data_from_decoder(decoder)?;
-        54 => skip_variable_data_from_decoder(decoder)?;
-        55 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_effect_type_from_decoder;
+        3 => one skip_vector_from_decoder;
+        4 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_bool_value;
+        6 => one skip_blend_mode_from_decoder;
+        7 => one kiwi_skip_float_value;
+        8 => one kiwi_skip_bool_value;
+        9 => one skip_variable_data_from_decoder;
+        10 => one skip_variable_data_from_decoder;
+        11 => one skip_variable_data_from_decoder;
+        12 => one skip_variable_data_from_decoder;
+        13 => one skip_variable_data_from_decoder;
+        14 => one kiwi_skip_uint_value;
+        15 => one skip_repeat_type_from_decoder;
+        16 => one skip_effect_axis_from_decoder;
+        17 => one skip_unit_type_from_decoder;
+        18 => one skip_repeat_order_from_decoder;
+        19 => one skip_blur_op_type_from_decoder;
+        20 => one skip_vector_from_decoder;
+        28 => one skip_vector_from_decoder;
+        21 => one kiwi_skip_float_value;
+        2 => one skip_color_from_decoder;
+        24 => one skip_color_from_decoder;
+        22 => one skip_vector_from_decoder;
+        29 => one kiwi_skip_uint_value;
+        23 => one kiwi_skip_bool_value;
+        25 => one kiwi_skip_float_value;
+        26 => one skip_noise_type_from_decoder;
+        27 => one kiwi_skip_float_value;
+        30 => one kiwi_skip_float_value;
+        31 => one kiwi_skip_float_value;
+        32 => one kiwi_skip_float_value;
+        33 => one kiwi_skip_float_value;
+        34 => one kiwi_skip_float_value;
+        35 => one kiwi_skip_float_value;
+        36 => one kiwi_skip_float_value;
+        37 => one skip_variable_data_from_decoder;
+        38 => one skip_variable_data_from_decoder;
+        39 => one skip_variable_data_from_decoder;
+        40 => one skip_variable_data_from_decoder;
+        41 => one skip_variable_data_from_decoder;
+        42 => one skip_variable_data_from_decoder;
+        43 => one skip_code_component_id_from_decoder;
+        44 => repeated skip_component_prop_assignment_from_decoder;
+        45 => one skip_variable_data_from_decoder;
+        46 => one skip_variable_data_from_decoder;
+        47 => one skip_variable_data_from_decoder;
+        48 => one skip_variable_data_from_decoder;
+        49 => one skip_variable_data_from_decoder;
+        50 => one skip_variable_data_from_decoder;
+        51 => one skip_variable_data_from_decoder;
+        52 => one skip_variable_data_from_decoder;
+        53 => one skip_variable_data_from_decoder;
+        54 => one skip_variable_data_from_decoder;
+        55 => one skip_guid_from_decoder;
     ]
 }
 
@@ -28460,16 +21351,16 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransformModifier";
     fields [
-        1 => skip_transform_modifier_type_from_decoder(decoder)?;
-        2 => skip_vector_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
-        4 => decoder.read_var_uint()?;
-        5 => skip_repeat_type_from_decoder(decoder)?;
-        6 => skip_effect_axis_from_decoder(decoder)?;
-        7 => skip_unit_type_from_decoder(decoder)?;
-        8 => skip_repeat_order_from_decoder(decoder)?;
-        9 => decoder.read_var_float_value()?;
-        10 => decoder.read_var_float_value()?;
+        1 => one skip_transform_modifier_type_from_decoder;
+        2 => one skip_vector_from_decoder;
+        3 => one kiwi_skip_bool_value;
+        4 => one kiwi_skip_uint_value;
+        5 => one skip_repeat_type_from_decoder;
+        6 => one skip_effect_axis_from_decoder;
+        7 => one skip_unit_type_from_decoder;
+        8 => one skip_repeat_order_from_decoder;
+        9 => one kiwi_skip_float_value;
+        10 => one kiwi_skip_float_value;
     ]
 }
 
@@ -28482,22 +21373,22 @@ kiwi_skip_struct_decoder! {
     fn skip_matrix4f_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
-        decoder.read_var_float_value()?;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
+        one kiwi_skip_float_value;
     ]
 }
 
@@ -28506,11 +21397,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "FixedOrderTransform3d";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_float_value()?;
-        5 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_float_value;
     ]
 }
 
@@ -28524,10 +21415,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransformFnValue";
     fields [
-        1 => skip_matrix4f_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_float_value()?;
+        1 => one skip_matrix4f_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_float_value;
     ]
 }
 
@@ -28536,8 +21427,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransformFn";
     fields [
-        1 => skip_transform_fn_type_from_decoder(decoder)?;
-        2 => skip_transform_fn_value_from_decoder(decoder)?;
+        1 => one skip_transform_fn_type_from_decoder;
+        2 => one skip_transform_fn_value_from_decoder;
     ]
 }
 
@@ -28546,8 +21437,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransformSchemaValue";
     fields [
-        1 => skip_fixed_order_transform3d_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_transform_fn_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_fixed_order_transform3d_from_decoder;
+        2 => repeated skip_transform_fn_from_decoder;
     ]
 }
 
@@ -28556,9 +21447,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Transform3d";
     fields [
-        1 => skip_transform_schema_type_from_decoder(decoder)?;
-        2 => skip_transform_schema_value_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
+        1 => one skip_transform_schema_type_from_decoder;
+        2 => one skip_transform_schema_value_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -28566,8 +21457,8 @@ kiwi_skip_struct_decoder! {
     fn skip_number_vector2_d_from_decoder;
     decoder decoder;
     fields [
-        skip_number_from_decoder(decoder)?;
-        skip_number_from_decoder(decoder)?;
+        one skip_number_from_decoder;
+        one skip_number_from_decoder;
     ]
 }
 
@@ -28576,9 +21467,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Scene3d";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => skip_number_vector2_d_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
+        1 => one kiwi_skip_float_value;
+        2 => one skip_number_vector2_d_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -28587,8 +21478,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransformOrigin";
     fields [
-        1 => skip_number_from_decoder(decoder)?;
-        2 => skip_number_from_decoder(decoder)?;
+        1 => one skip_number_from_decoder;
+        2 => one skip_number_from_decoder;
     ]
 }
 
@@ -28597,8 +21488,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionInfo";
     fields [
-        1 => skip_transition_type_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
+        1 => one skip_transition_type_from_decoder;
+        2 => one kiwi_skip_float_value;
     ]
 }
 
@@ -28617,10 +21508,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PrototypeDevice";
     fields [
-        1 => skip_prototype_device_type_from_decoder(decoder)?;
-        2 => skip_vector_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
-        4 => skip_device_rotation_from_decoder(decoder)?;
+        1 => one skip_prototype_device_type_from_decoder;
+        2 => one skip_vector_from_decoder;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_device_rotation_from_decoder;
     ]
 }
 
@@ -28644,8 +21535,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "OverlayBackgroundAppearance";
     fields [
-        1 => skip_overlay_background_type_from_decoder(decoder)?;
-        2 => skip_color_from_decoder(decoder)?;
+        1 => one skip_overlay_background_type_from_decoder;
+        2 => one skip_color_from_decoder;
     ]
 }
 
@@ -28669,21 +21560,21 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ExportSettings";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_image_type_from_decoder(decoder)?;
-        3 => skip_export_constraint_from_decoder(decoder)?;
-        4 => decoder.read_bool()?;
-        5 => skip_export_svgid_mode_from_decoder(decoder)?;
-        6 => decoder.read_bool()?;
-        7 => decoder.read_bool()?;
-        8 => decoder.read_bool()?;
-        9 => decoder.read_bool()?;
-        10 => skip_export_color_profile_from_decoder(decoder)?;
-        11 => decoder.read_var_float_value()?;
-        12 => decoder.read_bool()?;
-        13 => decoder.read_var_int()?;
-        14 => decoder.read_var_int()?;
-        15 => skip_export_background_type_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_image_type_from_decoder;
+        3 => one skip_export_constraint_from_decoder;
+        4 => one kiwi_skip_bool_value;
+        5 => one skip_export_svgid_mode_from_decoder;
+        6 => one kiwi_skip_bool_value;
+        7 => one kiwi_skip_bool_value;
+        8 => one kiwi_skip_bool_value;
+        9 => one kiwi_skip_bool_value;
+        10 => one skip_export_color_profile_from_decoder;
+        11 => one kiwi_skip_float_value;
+        12 => one kiwi_skip_bool_value;
+        13 => one kiwi_skip_int_value;
+        14 => one kiwi_skip_int_value;
+        15 => one skip_export_background_type_from_decoder;
     ]
 }
 
@@ -28697,19 +21588,19 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "LayoutGrid";
     fields [
-        1 => skip_layout_grid_type_from_decoder(decoder)?;
-        2 => skip_axis_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
-        4 => decoder.read_var_int()?;
-        5 => decoder.read_var_float_value()?;
-        6 => decoder.read_var_float_value()?;
-        7 => decoder.read_var_float_value()?;
-        8 => skip_color_from_decoder(decoder)?;
-        9 => skip_layout_grid_pattern_from_decoder(decoder)?;
-        10 => skip_variable_data_from_decoder(decoder)?;
-        11 => skip_variable_data_from_decoder(decoder)?;
-        12 => skip_variable_data_from_decoder(decoder)?;
-        13 => skip_variable_data_from_decoder(decoder)?;
+        1 => one skip_layout_grid_type_from_decoder;
+        2 => one skip_axis_from_decoder;
+        3 => one kiwi_skip_bool_value;
+        4 => one kiwi_skip_int_value;
+        5 => one kiwi_skip_float_value;
+        6 => one kiwi_skip_float_value;
+        7 => one kiwi_skip_float_value;
+        8 => one skip_color_from_decoder;
+        9 => one skip_layout_grid_pattern_from_decoder;
+        10 => one skip_variable_data_from_decoder;
+        11 => one skip_variable_data_from_decoder;
+        12 => one skip_variable_data_from_decoder;
+        13 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -28718,9 +21609,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Guide";
     fields [
-        1 => skip_axis_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_axis_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one skip_guid_from_decoder;
     ]
 }
 
@@ -28729,9 +21620,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Path";
     fields [
-        1 => skip_winding_rule_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        3 => decoder.read_var_uint()?;
+        1 => one skip_winding_rule_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -28755,9 +21646,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "DynamicStrokeSettings";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
     ]
 }
 
@@ -28766,11 +21657,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ScatterStrokeSettings";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_float_value()?;
-        5 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_float_value;
     ]
 }
 
@@ -28779,7 +21670,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StretchStrokeSettings";
     fields [
-        1 => skip_brush_orientation_from_decoder(decoder)?;
+        1 => one skip_brush_orientation_from_decoder;
     ]
 }
 
@@ -28788,8 +21679,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StrokeData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_stroke_from_decoder(decoder)?; Ok(()) })?;
-        2 => decoder.read_var_uint()?;
+        1 => repeated skip_stroke_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -28798,20 +21689,20 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Stroke";
     fields [
-        1 => decoder.read_var_int()?;
-        2 => decoder.read_var_float_value()?;
-        3 => skip_variable_data_from_decoder(decoder)?;
-        4 => decoder.read_repeated(|decoder| { skip_paint_from_decoder(decoder)?; Ok(()) })?;
-        5 => skip_style_id_from_decoder(decoder)?;
-        6 => skip_stroke_align_from_decoder(decoder)?;
-        7 => skip_stroke_cap_from_decoder(decoder)?;
-        8 => skip_number_from_decoder(decoder)?;
-        9 => skip_stroke_join_from_decoder(decoder)?;
-        10 => decoder.read_var_float_value()?;
-        11 => decoder.read_repeated(|decoder| { decoder.read_var_float_value()?; Ok(()) })?;
-        12 => skip_optional_vector_from_decoder(decoder)?;
-        13 => decoder.read_var_float_value()?;
-        14 => decoder.read_bool()?;
+        1 => one kiwi_skip_int_value;
+        2 => one kiwi_skip_float_value;
+        3 => one skip_variable_data_from_decoder;
+        4 => repeated skip_paint_from_decoder;
+        5 => one skip_style_id_from_decoder;
+        6 => one skip_stroke_align_from_decoder;
+        7 => one skip_stroke_cap_from_decoder;
+        8 => one skip_number_from_decoder;
+        9 => one skip_stroke_join_from_decoder;
+        10 => one kiwi_skip_float_value;
+        11 => repeated kiwi_skip_float_value;
+        12 => one skip_optional_vector_from_decoder;
+        13 => one kiwi_skip_float_value;
+        14 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -28820,10 +21711,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableWidthPoint";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_int()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_int_value;
     ]
 }
 
@@ -28832,8 +21723,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SharedStyleReference";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -28842,9 +21733,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SharedStyleMasterData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -28858,9 +21749,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ArcData";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
     ]
 }
 
@@ -28869,9 +21760,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SymbolLink";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -28880,9 +21771,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PluginData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -28891,11 +21782,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PluginRelaunchData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.read_bool()?;
-        5 => skip_code_component_id_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_bool_value;
+        5 => one skip_code_component_id_from_decoder;
     ]
 }
 
@@ -28904,8 +21795,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "MultiplayerFieldVersion";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -28919,10 +21810,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ConnectorEndpoint";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_vector_from_decoder(decoder)?;
-        3 => skip_connector_magnet_from_decoder(decoder)?;
-        4 => skip_vector_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_vector_from_decoder;
+        3 => one skip_connector_magnet_from_decoder;
+        4 => one skip_vector_from_decoder;
     ]
 }
 
@@ -28931,8 +21822,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ConnectorControlPoint";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
-        2 => skip_vector_from_decoder(decoder)?;
+        1 => one skip_vector_from_decoder;
+        2 => one skip_vector_from_decoder;
     ]
 }
 
@@ -28951,9 +21842,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ConnectorTextMidpoint";
     fields [
-        1 => skip_connector_text_section_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => skip_connector_off_axis_offset_from_decoder(decoder)?;
+        1 => one skip_connector_text_section_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one skip_connector_off_axis_offset_from_decoder;
     ]
 }
 
@@ -28977,7 +21868,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnnotationProperty";
     fields [
-        1 => skip_annotation_property_type_from_decoder(decoder)?;
+        1 => one skip_annotation_property_type_from_decoder;
     ]
 }
 
@@ -28996,9 +21887,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnnotationCategoryCustom";
     fields [
-        1 => skip_annotation_category_color_from_decoder(decoder)?;
-        2 => skip_color_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
+        1 => one skip_annotation_category_color_from_decoder;
+        2 => one skip_color_from_decoder;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29007,9 +21898,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnnotationCategory";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_annotation_category_preset_from_decoder(decoder)?;
-        3 => skip_annotation_category_custom_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_annotation_category_preset_from_decoder;
+        3 => one skip_annotation_category_custom_from_decoder;
     ]
 }
 
@@ -29018,8 +21909,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnnotationCategories";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => decoder.read_repeated(|decoder| { skip_annotation_category_from_decoder(decoder)?; Ok(()) })?;
+        1 => one kiwi_skip_uint_value;
+        2 => repeated skip_annotation_category_from_decoder;
     ]
 }
 
@@ -29028,10 +21919,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Annotation";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.read_repeated(|decoder| { skip_annotation_property_from_decoder(decoder)?; Ok(()) })?;
-        3 => decoder.skip_string()?;
-        4 => skip_guid_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => repeated skip_annotation_property_from_decoder;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_guid_from_decoder;
     ]
 }
 
@@ -29045,15 +21936,15 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnnotationMeasurement";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => skip_annotation_measurement_node_side_from_decoder(decoder)?;
-        5 => decoder.read_bool()?;
-        6 => decoder.read_var_float_value()?;
-        7 => decoder.read_var_float_value()?;
-        8 => skip_guid_path_from_decoder(decoder)?;
-        9 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_guid_from_decoder;
+        4 => one skip_annotation_measurement_node_side_from_decoder;
+        5 => one kiwi_skip_bool_value;
+        6 => one kiwi_skip_float_value;
+        7 => one kiwi_skip_float_value;
+        8 => one skip_guid_path_from_decoder;
+        9 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29062,8 +21953,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "LibraryMoveInfo";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29072,8 +21963,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "LibraryMoveHistoryItem";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29082,10 +21973,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "DeveloperRelatedLink";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29094,7 +21985,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "WidgetPointer";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
     ]
 }
 
@@ -29103,10 +21994,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EditInfo";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_var_uint()?;
-        4 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_uint_value;
+        4 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -29135,11 +22026,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SectionStatusInfo";
     fields [
-        1 => skip_section_status_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
-        5 => skip_section_status_from_decoder(decoder)?;
+        1 => one skip_section_status_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
+        5 => one skip_section_status_from_decoder;
     ]
 }
 
@@ -29148,13 +22039,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "BuzzApprovalRequestInfo";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_var_uint()?;
-        4 => decoder.read_repeated(|decoder| { decoder.skip_string()?; Ok(()) })?;
-        5 => decoder.skip_string()?;
-        6 => decoder.skip_string()?;
-        7 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_uint_value;
+        4 => repeated kiwi_skip_string_value;
+        5 => one kiwi_skip_string_value;
+        6 => one kiwi_skip_string_value;
+        7 => repeated skip_guid_from_decoder;
     ]
 }
 
@@ -29163,7 +22054,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "BuzzApprovalRequests";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_buzz_approval_request_info_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_buzz_approval_request_info_from_decoder;
     ]
 }
 
@@ -29177,9 +22068,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "BuzzApprovalNodeStatusInfo";
     fields [
-        1 => skip_buzz_approval_node_status_from_decoder(decoder)?;
-        2 => decoder.read_bool()?;
-        3 => decoder.read_repeated(|decoder| { decoder.read_var_uint()?; Ok(()) })?;
+        1 => one skip_buzz_approval_node_status_from_decoder;
+        2 => one kiwi_skip_bool_value;
+        3 => repeated kiwi_skip_uint_value;
     ]
 }
 
@@ -29188,11 +22079,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeEmbedInfo";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
-        5 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
+        5 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -29206,596 +22097,596 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeChange";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        53 => decoder.read_var_uint()?;
-        2 => skip_node_phase_from_decoder(decoder)?;
-        54 => decoder.read_var_uint()?;
-        3 => skip_parent_index_from_decoder(decoder)?;
-        55 => decoder.read_var_uint()?;
-        4 => skip_node_type_from_decoder(decoder)?;
-        56 => decoder.read_var_uint()?;
-        5 => decoder.skip_string()?;
-        57 => decoder.read_var_uint()?;
-        174 => decoder.read_bool()?;
-        318 => decoder.skip_string()?;
-        256 => skip_library_move_info_from_decoder(decoder)?;
-        281 => decoder.read_repeated(|decoder| { skip_library_move_history_item_from_decoder(decoder)?; Ok(()) })?;
-        319 => decoder.skip_string()?;
-        383 => skip_asset_id_map_from_decoder(decoder)?;
-        49 => decoder.read_var_uint()?;
-        101 => decoder.read_var_uint()?;
-        157 => decoder.read_bool()?;
-        161 => decoder.read_bool()?;
-        376 => decoder.read_bool()?;
-        163 => skip_style_type_from_decoder(decoder)?;
-        191 => decoder.skip_string()?;
-        171 => decoder.skip_string()?;
-        399 => decoder.skip_string()?;
-        320 => decoder.skip_string()?;
-        345 => skip_shared_style_master_data_from_decoder(decoder)?;
-        348 => skip_shared_style_master_data_from_decoder(decoder)?;
-        176 => decoder.read_bool()?;
-        177 => decoder.read_bool()?;
-        172 => skip_shared_style_master_data_from_decoder(decoder)?;
-        173 => skip_shared_style_reference_from_decoder(decoder)?;
-        158 => skip_guid_from_decoder(decoder)?;
-        162 => skip_guid_from_decoder(decoder)?;
-        167 => skip_guid_from_decoder(decoder)?;
-        168 => skip_guid_from_decoder(decoder)?;
-        169 => skip_guid_from_decoder(decoder)?;
-        170 => skip_guid_from_decoder(decoder)?;
-        185 => skip_guid_from_decoder(decoder)?;
-        332 => skip_style_id_from_decoder(decoder)?;
-        333 => skip_style_id_from_decoder(decoder)?;
-        334 => skip_style_id_from_decoder(decoder)?;
-        335 => skip_style_id_from_decoder(decoder)?;
-        336 => skip_style_id_from_decoder(decoder)?;
-        580 => decoder.read_repeated(|decoder| { skip_style_animation_from_decoder(decoder)?; Ok(()) })?;
-        193 => decoder.read_repeated(|decoder| { skip_paint_from_decoder(decoder)?; Ok(()) })?;
-        194 => skip_guid_from_decoder(decoder)?;
-        225 => decoder.read_bool()?;
-        238 => decoder.read_repeated(|decoder| { skip_state_group_property_value_order_from_decoder(decoder)?; Ok(()) })?;
-        581 => skip_partial_paste_annotation_from_decoder(decoder)?;
-        122 => skip_shared_symbol_reference_from_decoder(decoder)?;
-        123 => decoder.read_bool()?;
-        124 => decoder.read_repeated(|decoder| { skip_guid_path_mapping_from_decoder(decoder)?; Ok(()) })?;
-        126 => decoder.skip_string()?;
-        152 => skip_shared_component_master_data_from_decoder(decoder)?;
-        144 => decoder.skip_string()?;
-        164 => decoder.read_repeated(|decoder| { skip_guid_path_mapping_from_decoder(decoder)?; Ok(()) })?;
-        228 => decoder.read_repeated(|decoder| { skip_guid_path_mapping_from_decoder(decoder)?; Ok(()) })?;
-        214 => decoder.skip_string()?;
-        395 => decoder.skip_string()?;
-        215 => skip_guid_from_decoder(decoder)?;
-        216 => decoder.skip_string()?;
-        217 => decoder.read_bool()?;
-        218 => decoder.skip_string()?;
-        252 => decoder.skip_string()?;
-        266 => decoder.read_repeated(|decoder| { skip_component_prop_def_from_decoder(decoder)?; Ok(()) })?;
-        267 => decoder.read_repeated(|decoder| { skip_component_prop_ref_from_decoder(decoder)?; Ok(()) })?;
-        483 => decoder.read_repeated(|decoder| { skip_variant_prop_spec_from_decoder(decoder)?; Ok(()) })?;
-        113 => skip_symbol_data_from_decoder(decoder)?;
-        114 => decoder.read_var_uint()?;
-        125 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
-        394 => decoder.read_bool()?;
-        143 => skip_guid_from_decoder(decoder)?;
-        268 => decoder.read_repeated(|decoder| { skip_component_prop_assignment_from_decoder(decoder)?; Ok(()) })?;
-        305 => decoder.read_bool()?;
-        248 => decoder.read_repeated(|decoder| { skip_instance_override_stash_from_decoder(decoder)?; Ok(()) })?;
-        250 => decoder.read_repeated(|decoder| { skip_instance_override_stash_v2_from_decoder(decoder)?; Ok(()) })?;
-        111 => skip_guid_path_from_decoder(decoder)?;
-        112 => decoder.read_var_uint()?;
-        321 => decoder.read_var_int()?;
-        382 => skip_module_type_from_decoder(decoder)?;
-        463 => decoder.read_bool()?;
-        495 => decoder.read_bool()?;
-        21 => decoder.read_var_float_value()?;
-        73 => decoder.read_var_uint()?;
-        22 => decoder.read_var_float_value()?;
-        74 => decoder.read_var_uint()?;
-        23 => decoder.read_var_float_value()?;
-        75 => decoder.read_var_uint()?;
-        32 => skip_text_align_horizontal_from_decoder(decoder)?;
-        84 => decoder.read_var_uint()?;
-        33 => skip_text_align_vertical_from_decoder(decoder)?;
-        85 => decoder.read_var_uint()?;
-        34 => skip_text_case_from_decoder(decoder)?;
-        86 => decoder.read_var_uint()?;
-        35 => skip_text_decoration_from_decoder(decoder)?;
-        87 => decoder.read_var_uint()?;
-        40 => skip_number_from_decoder(decoder)?;
-        92 => decoder.read_var_uint()?;
-        41 => skip_font_name_from_decoder(decoder)?;
-        93 => decoder.read_var_uint()?;
-        42 => skip_text_data_from_decoder(decoder)?;
-        94 => decoder.read_var_uint()?;
-        359 => skip_derived_text_data_from_decoder(decoder)?;
-        127 => decoder.read_bool()?;
-        128 => decoder.read_bool()?;
-        129 => decoder.read_bool()?;
-        130 => decoder.read_bool()?;
-        131 => decoder.read_bool()?;
-        132 => decoder.read_bool()?;
-        133 => skip_font_variant_numeric_figure_from_decoder(decoder)?;
-        134 => skip_font_variant_numeric_spacing_from_decoder(decoder)?;
-        135 => skip_font_variant_numeric_fraction_from_decoder(decoder)?;
-        136 => skip_font_variant_caps_from_decoder(decoder)?;
-        137 => skip_font_variant_position_from_decoder(decoder)?;
-        165 => skip_number_from_decoder(decoder)?;
-        202 => decoder.skip_string()?;
-        322 => skip_leading_trim_from_decoder(decoder)?;
-        337 => decoder.read_bool()?;
-        339 => decoder.read_bool()?;
-        550 => decoder.read_bool()?;
-        351 => decoder.read_var_int()?;
-        417 => decoder.read_repeated(|decoder| { skip_responsive_text_style_variant_from_decoder(decoder)?; Ok(()) })?;
-        352 => skip_section_status_from_decoder(decoder)?;
-        355 => skip_section_status_info_from_decoder(decoder)?;
-        203 => decoder.read_var_uint()?;
-        396 => decoder.read_var_uint()?;
-        205 => decoder.read_repeated(|decoder| { skip_open_type_feature_from_decoder(decoder)?; Ok(()) })?;
-        206 => decoder.read_repeated(|decoder| { skip_open_type_feature_from_decoder(decoder)?; Ok(()) })?;
-        223 => skip_hyperlink_from_decoder(decoder)?;
-        340 => skip_mention_from_decoder(decoder)?;
-        260 => decoder.read_repeated(|decoder| { skip_font_variation_from_decoder(decoder)?; Ok(()) })?;
-        279 => decoder.read_var_uint()?;
-        280 => skip_text_truncation_from_decoder(decoder)?;
-        292 => decoder.read_bool()?;
-        391 => skip_emoji_image_set_from_decoder(decoder)?;
-        392 => decoder.skip_string()?;
-        6 => decoder.read_bool()?;
-        58 => decoder.read_var_uint()?;
-        7 => decoder.read_bool()?;
-        59 => decoder.read_var_uint()?;
-        434 => skip_lock_mode_from_decoder(decoder)?;
-        8 => decoder.read_var_float_value()?;
-        60 => decoder.read_var_uint()?;
-        9 => skip_blend_mode_from_decoder(decoder)?;
-        61 => decoder.read_var_uint()?;
-        11 => skip_vector_from_decoder(decoder)?;
-        63 => decoder.read_var_uint()?;
-        12 => skip_matrix_from_decoder(decoder)?;
-        64 => decoder.read_var_uint()?;
-        13 => decoder.read_repeated(|decoder| { decoder.read_var_float_value()?; Ok(()) })?;
-        65 => decoder.read_var_uint()?;
-        16 => decoder.read_bool()?;
-        68 => decoder.read_var_uint()?;
-        424 => skip_vector_from_decoder(decoder)?;
-        18 => decoder.read_bool()?;
-        70 => decoder.read_var_uint()?;
-        317 => skip_mask_type_from_decoder(decoder)?;
-        19 => decoder.read_var_float_value()?;
-        71 => decoder.read_var_uint()?;
-        20 => decoder.read_var_float_value()?;
-        72 => decoder.read_var_uint()?;
-        26 => decoder.read_var_float_value()?;
-        78 => decoder.read_var_uint()?;
-        29 => skip_stroke_align_from_decoder(decoder)?;
-        81 => decoder.read_var_uint()?;
-        30 => skip_stroke_cap_from_decoder(decoder)?;
-        82 => decoder.read_var_uint()?;
-        497 => skip_number_from_decoder(decoder)?;
-        31 => skip_stroke_join_from_decoder(decoder)?;
-        83 => decoder.read_var_uint()?;
-        38 => decoder.read_repeated(|decoder| { skip_paint_from_decoder(decoder)?; Ok(()) })?;
-        90 => decoder.read_var_uint()?;
-        39 => decoder.read_repeated(|decoder| { skip_paint_from_decoder(decoder)?; Ok(()) })?;
-        91 => decoder.read_var_uint()?;
-        43 => decoder.read_repeated(|decoder| { skip_effect_from_decoder(decoder)?; Ok(()) })?;
-        95 => decoder.read_var_uint()?;
-        50 => skip_color_from_decoder(decoder)?;
-        102 => decoder.read_var_uint()?;
-        51 => decoder.read_repeated(|decoder| { skip_path_from_decoder(decoder)?; Ok(()) })?;
-        103 => decoder.read_var_uint()?;
-        52 => decoder.read_repeated(|decoder| { skip_path_from_decoder(decoder)?; Ok(()) })?;
-        104 => decoder.read_var_uint()?;
-        564 => decoder.read_repeated(|decoder| { skip_path_from_decoder(decoder)?; Ok(()) })?;
-        411 => decoder.read_repeated(|decoder| { skip_paint_from_decoder(decoder)?; Ok(()) })?;
-        412 => decoder.read_bool()?;
-        413 => skip_number_from_decoder(decoder)?;
-        415 => skip_number_from_decoder(decoder)?;
-        416 => skip_text_decoration_style_from_decoder(decoder)?;
-        455 => decoder.read_repeated(|decoder| { skip_transform_modifier_from_decoder(decoder)?; Ok(()) })?;
-        570 => skip_transform3d_from_decoder(decoder)?;
-        571 => skip_stroke_data_from_decoder(decoder)?;
-        572 => skip_scene3d_from_decoder(decoder)?;
-        587 => skip_transform_origin_from_decoder(decoder)?;
-        145 => decoder.read_var_float_value()?;
-        146 => decoder.read_var_float_value()?;
-        147 => decoder.read_var_float_value()?;
-        148 => decoder.read_var_float_value()?;
-        149 => decoder.read_bool()?;
-        150 => decoder.read_bool()?;
-        151 => decoder.read_bool()?;
-        423 => skip_optional_vector_from_decoder(decoder)?;
-        258 => decoder.read_bool()?;
-        287 => decoder.read_bool()?;
-        288 => decoder.read_bool()?;
-        289 => decoder.read_bool()?;
-        290 => decoder.read_bool()?;
-        294 => decoder.read_bool()?;
-        295 => decoder.read_var_float_value()?;
-        296 => decoder.read_var_float_value()?;
-        297 => decoder.read_var_float_value()?;
-        298 => decoder.read_var_float_value()?;
-        299 => decoder.read_bool()?;
-        28 => skip_constraint_type_from_decoder(decoder)?;
-        80 => decoder.read_var_uint()?;
-        105 => skip_stack_mode_from_decoder(decoder)?;
-        106 => decoder.read_var_uint()?;
-        107 => decoder.read_var_float_value()?;
-        108 => decoder.read_var_uint()?;
-        109 => decoder.read_var_float_value()?;
-        110 => decoder.read_var_uint()?;
-        120 => skip_stack_counter_align_from_decoder(decoder)?;
-        121 => skip_stack_justify_from_decoder(decoder)?;
-        208 => skip_stack_align_from_decoder(decoder)?;
-        209 => decoder.read_var_float_value()?;
-        210 => decoder.read_var_float_value()?;
-        211 => skip_stack_size_from_decoder(decoder)?;
-        212 => skip_stack_size_from_decoder(decoder)?;
-        229 => skip_stack_size_from_decoder(decoder)?;
-        230 => skip_stack_justify_from_decoder(decoder)?;
-        231 => skip_stack_align_from_decoder(decoder)?;
-        232 => decoder.read_var_float_value()?;
-        233 => decoder.read_var_float_value()?;
-        234 => decoder.read_var_float_value()?;
-        236 => skip_stack_counter_align_from_decoder(decoder)?;
-        269 => skip_stack_positioning_from_decoder(decoder)?;
-        271 => decoder.read_bool()?;
-        323 => skip_stack_wrap_from_decoder(decoder)?;
-        324 => decoder.read_var_float_value()?;
-        325 => skip_optional_vector_from_decoder(decoder)?;
-        326 => skip_optional_vector_from_decoder(decoder)?;
-        343 => skip_stack_counter_align_content_from_decoder(decoder)?;
-        406 => decoder.read_repeated(|decoder| { decoder.read_var_int()?; Ok(()) })?;
-        574 => decoder.read_var_uint()?;
-        435 => skip_guid_position_map_from_decoder(decoder)?;
-        436 => skip_guid_position_map_from_decoder(decoder)?;
-        437 => decoder.read_var_float_value()?;
-        438 => decoder.read_var_float_value()?;
-        439 => skip_guid_from_decoder(decoder)?;
-        440 => skip_guid_from_decoder(decoder)?;
-        441 => decoder.read_var_uint()?;
-        442 => decoder.read_var_uint()?;
-        474 => skip_guid_grid_track_size_map_from_decoder(decoder)?;
-        475 => skip_guid_grid_track_size_map_from_decoder(decoder)?;
-        476 => skip_grid_child_align_from_decoder(decoder)?;
-        477 => skip_grid_child_align_from_decoder(decoder)?;
-        555 => skip_grid_auto_tracks_from_decoder(decoder)?;
-        556 => decoder.read_bool()?;
-        344 => decoder.read_bool()?;
-        139 => skip_guid_from_decoder(decoder)?;
-        140 => skip_guid_from_decoder(decoder)?;
-        141 => skip_color_from_decoder(decoder)?;
-        153 => skip_transition_info_from_decoder(decoder)?;
-        154 => skip_transition_type_from_decoder(decoder)?;
-        155 => decoder.read_var_float_value()?;
-        156 => skip_easing_type_from_decoder(decoder)?;
-        181 => decoder.read_bool()?;
-        182 => skip_connection_type_from_decoder(decoder)?;
-        183 => decoder.skip_string()?;
-        184 => skip_prototype_device_from_decoder(decoder)?;
-        187 => skip_interaction_type_from_decoder(decoder)?;
-        188 => decoder.read_var_float_value()?;
-        189 => decoder.read_bool()?;
-        190 => decoder.read_var_float_value()?;
-        192 => decoder.read_bool()?;
-        207 => decoder.read_bool()?;
-        226 => decoder.read_repeated(|decoder| { skip_prototype_interaction_from_decoder(decoder)?; Ok(()) })?;
-        426 => decoder.read_repeated(|decoder| { skip_prototype_interaction_from_decoder(decoder)?; Ok(()) })?;
-        249 => skip_prototype_starting_point_from_decoder(decoder)?;
-        204 => decoder.read_repeated(|decoder| { skip_plugin_data_from_decoder(decoder)?; Ok(()) })?;
-        219 => decoder.read_repeated(|decoder| { skip_plugin_relaunch_data_from_decoder(decoder)?; Ok(()) })?;
-        242 => skip_connector_endpoint_from_decoder(decoder)?;
-        243 => skip_connector_endpoint_from_decoder(decoder)?;
-        244 => skip_connector_line_style_from_decoder(decoder)?;
-        245 => skip_stroke_cap_from_decoder(decoder)?;
-        246 => skip_stroke_cap_from_decoder(decoder)?;
-        253 => decoder.read_repeated(|decoder| { skip_connector_control_point_from_decoder(decoder)?; Ok(()) })?;
-        479 => decoder.read_repeated(|decoder| { skip_connector_control_point_from_decoder(decoder)?; Ok(()) })?;
-        255 => skip_connector_text_midpoint_from_decoder(decoder)?;
-        373 => skip_connector_type_from_decoder(decoder)?;
-        533 => decoder.read_var_int()?;
-        369 => decoder.read_repeated(|decoder| { skip_annotation_from_decoder(decoder)?; Ok(()) })?;
-        384 => decoder.read_repeated(|decoder| { skip_annotation_measurement_from_decoder(decoder)?; Ok(()) })?;
-        453 => skip_annotation_categories_from_decoder(decoder)?;
-        241 => skip_shape_with_text_type_from_decoder(decoder)?;
-        247 => decoder.read_var_float_value()?;
-        530 => decoder.read_bool()?;
-        254 => skip_derived_immutable_frame_data_from_decoder(decoder)?;
-        338 => skip_multiplayer_field_version_from_decoder(decoder)?;
-        240 => skip_node_generation_data_from_decoder(decoder)?;
-        491 => skip_jsx_data_from_decoder(decoder)?;
-        492 => skip_derived_jsx_data_from_decoder(decoder)?;
-        493 => decoder.skip_string()?;
-        259 => skip_code_block_language_from_decoder(decoder)?;
-        433 => skip_code_block_theme_from_decoder(decoder)?;
-        278 => skip_link_preview_data_from_decoder(decoder)?;
-        282 => decoder.read_bool()?;
-        283 => decoder.read_bool()?;
-        300 => skip_video_playback_from_decoder(decoder)?;
-        301 => skip_stamp_data_from_decoder(decoder)?;
-        370 => skip_section_preset_info_from_decoder(decoder)?;
-        409 => skip_platform_shape_definition_from_decoder(decoder)?;
-        273 => skip_multiplayer_map_from_decoder(decoder)?;
-        274 => decoder.read_var_uint()?;
-        275 => skip_widget_derived_subtree_cursor_from_decoder(decoder)?;
-        276 => skip_widget_pointer_from_decoder(decoder)?;
-        285 => skip_widget_input_behavior_from_decoder(decoder)?;
-        286 => decoder.skip_string()?;
-        291 => skip_widget_hover_style_from_decoder(decoder)?;
-        293 => decoder.read_bool()?;
-        360 => decoder.read_bool()?;
-        262 => skip_widget_metadata_from_decoder(decoder)?;
-        263 => decoder.read_repeated(|decoder| { skip_widget_event_from_decoder(decoder)?; Ok(()) })?;
-        265 => decoder.read_repeated(|decoder| { skip_widget_property_menu_item_from_decoder(decoder)?; Ok(()) })?;
-        401 => skip_widget_input_text_node_type_from_decoder(decoder)?;
-        489 => skip_multiplayer_map_from_decoder(decoder)?;
-        308 => skip_table_row_column_position_map_from_decoder(decoder)?;
-        309 => skip_table_row_column_position_map_from_decoder(decoder)?;
-        310 => skip_table_row_column_size_map_from_decoder(decoder)?;
-        311 => skip_table_row_column_size_map_from_decoder(decoder)?;
-        538 => skip_table_merged_cell_map_from_decoder(decoder)?;
-        371 => skip_multiplayer_map_from_decoder(decoder)?;
-        372 => skip_multiplayer_map_from_decoder(decoder)?;
-        402 => skip_flapp_type_from_decoder(decoder)?;
-        486 => decoder.read_bool()?;
-        389 => decoder.skip_string()?;
-        410 => decoder.read_bool()?;
-        573 => skip_multiplayer_map_from_decoder(decoder)?;
-        379 => skip_theme_id_from_decoder(decoder)?;
-        381 => skip_slide_theme_data_from_decoder(decoder)?;
-        390 => skip_slide_theme_map_from_decoder(decoder)?;
-        393 => decoder.skip_string()?;
-        443 => skip_slide_number_from_decoder(decoder)?;
-        456 => decoder.skip_string()?;
-        363 => skip_guid_from_decoder(decoder)?;
-        362 => skip_guid_from_decoder(decoder)?;
-        364 => decoder.skip_string()?;
-        366 => skip_diagram_layout_rule_type_from_decoder(decoder)?;
-        367 => skip_diagram_parent_index_from_decoder(decoder)?;
-        368 => skip_diagram_layout_paused_from_decoder(decoder)?;
-        380 => decoder.read_bool()?;
-        251 => skip_internal_enum_for_test_from_decoder(decoder)?;
-        257 => skip_internal_data_for_test_from_decoder(decoder)?;
-        14 => decoder.read_bool()?;
-        66 => decoder.read_var_uint()?;
-        15 => decoder.read_bool()?;
-        67 => decoder.read_var_uint()?;
-        17 => decoder.read_bool()?;
-        69 => decoder.read_var_uint()?;
-        25 => decoder.read_var_float_value()?;
-        77 => decoder.read_var_uint()?;
-        27 => decoder.read_var_float_value()?;
-        79 => decoder.read_var_uint()?;
-        37 => skip_constraint_type_from_decoder(decoder)?;
-        89 => decoder.read_var_uint()?;
-        45 => decoder.read_repeated(|decoder| { skip_export_settings_from_decoder(decoder)?; Ok(()) })?;
-        97 => decoder.read_var_uint()?;
-        46 => skip_text_auto_resize_from_decoder(decoder)?;
-        98 => decoder.read_var_uint()?;
-        47 => decoder.read_repeated(|decoder| { skip_layout_grid_from_decoder(decoder)?; Ok(()) })?;
-        99 => decoder.read_var_uint()?;
-        115 => decoder.read_bool()?;
-        116 => decoder.read_var_uint()?;
-        117 => decoder.read_bool()?;
-        118 => decoder.read_var_uint()?;
-        36 => skip_boolean_operation_from_decoder(decoder)?;
-        88 => decoder.read_var_uint()?;
-        44 => skip_vector_mirror_from_decoder(decoder)?;
-        96 => decoder.read_var_uint()?;
-        10 => decoder.read_var_uint()?;
-        62 => decoder.read_var_uint()?;
-        24 => decoder.read_var_float_value()?;
-        76 => decoder.read_var_uint()?;
-        195 => skip_arc_data_from_decoder(decoder)?;
-        48 => skip_vector_data_from_decoder(decoder)?;
-        100 => decoder.read_var_uint()?;
-        425 => decoder.read_var_uint()?;
-        432 => skip_text_path_start_from_decoder(decoder)?;
-        119 => decoder.read_bool()?;
-        138 => decoder.read_repeated(|decoder| { skip_guide_from_decoder(decoder)?; Ok(()) })?;
-        142 => decoder.read_bool()?;
-        159 => skip_scroll_direction_from_decoder(decoder)?;
-        160 => decoder.read_var_float_value()?;
-        166 => skip_vector_from_decoder(decoder)?;
-        175 => decoder.read_bool()?;
-        178 => skip_scroll_contracted_state_from_decoder(decoder)?;
-        179 => skip_vector_from_decoder(decoder)?;
-        180 => decoder.skip_string()?;
-        186 => skip_scroll_behavior_from_decoder(decoder)?;
-        196 => decoder.read_var_int()?;
-        197 => skip_navigation_type_from_decoder(decoder)?;
-        198 => skip_overlay_position_type_from_decoder(decoder)?;
-        199 => skip_vector_from_decoder(decoder)?;
-        200 => skip_overlay_background_interaction_from_decoder(decoder)?;
-        201 => skip_overlay_background_appearance_from_decoder(decoder)?;
-        213 => skip_guid_from_decoder(decoder)?;
-        220 => decoder.read_bool()?;
-        221 => skip_stack_size_from_decoder(decoder)?;
-        222 => decoder.read_bool()?;
-        224 => skip_key_trigger_from_decoder(decoder)?;
-        227 => decoder.skip_string()?;
-        235 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
-        237 => decoder.read_repeated(|decoder| { skip_symbol_link_from_decoder(decoder)?; Ok(()) })?;
-        239 => skip_text_list_data_from_decoder(decoder)?;
-        261 => decoder.read_bool()?;
-        264 => decoder.read_var_float_value()?;
-        270 => skip_embed_data_from_decoder(decoder)?;
-        272 => skip_rich_media_data_from_decoder(decoder)?;
-        277 => skip_multiplayer_map_from_decoder(decoder)?;
-        284 => decoder.read_bool()?;
-        302 => skip_html_tag_from_decoder(decoder)?;
-        303 => skip_aria_role_from_decoder(decoder)?;
-        357 => skip_aria_attributes_map_from_decoder(decoder)?;
-        304 => decoder.skip_string()?;
-        490 => decoder.read_bool()?;
-        306 => skip_variable_data_from_decoder(decoder)?;
-        307 => skip_variable_data_map_from_decoder(decoder)?;
-        316 => skip_variable_mode_by_set_map_from_decoder(decoder)?;
-        312 => decoder.read_repeated(|decoder| { skip_variable_set_mode_from_decoder(decoder)?; Ok(()) })?;
-        313 => skip_variable_set_id_from_decoder(decoder)?;
-        314 => skip_variable_resolved_data_type_from_decoder(decoder)?;
-        315 => skip_variable_data_values_from_decoder(decoder)?;
-        350 => decoder.skip_string()?;
-        566 => skip_variable_timing_display_unit_from_decoder(decoder)?;
-        353 => decoder.read_repeated(|decoder| { skip_variable_scope_from_decoder(decoder)?; Ok(()) })?;
-        445 => skip_variable_data_map_from_decoder(decoder)?;
-        358 => skip_code_syntax_map_from_decoder(decoder)?;
-        388 => skip_paste_source_from_decoder(decoder)?;
-        397 => skip_editor_type_from_decoder(decoder)?;
-        446 => skip_guid_from_decoder(decoder)?;
-        482 => decoder.read_var_uint64()?;
-        447 => decoder.read_repeated(|decoder| { skip_variable_width_point_from_decoder(decoder)?; Ok(()) })?;
-        448 => skip_dynamic_stroke_settings_from_decoder(decoder)?;
-        449 => skip_scatter_stroke_settings_from_decoder(decoder)?;
-        450 => skip_stretch_stroke_settings_from_decoder(decoder)?;
-        488 => decoder.read_repeated(|decoder| { skip_matrix_from_decoder(decoder)?; Ok(()) })?;
-        452 => skip_brush_type_from_decoder(decoder)?;
-        542 => skip_optional_vector_from_decoder(decoder)?;
-        554 => decoder.read_var_float_value()?;
-        377 => skip_variable_set_id_from_decoder(decoder)?;
-        464 => skip_variable_id_from_decoder(decoder)?;
-        378 => skip_variable_id_or_variable_override_id_from_decoder(decoder)?;
-        385 => decoder.read_bool()?;
-        386 => decoder.skip_string()?;
-        517 => skip_inherited_variables_data_from_decoder(decoder)?;
-        361 => skip_handoff_status_map_from_decoder(decoder)?;
-        327 => skip_agenda_position_map_from_decoder(decoder)?;
-        328 => skip_agenda_metadata_map_from_decoder(decoder)?;
-        329 => skip_migration_status_from_decoder(decoder)?;
-        330 => decoder.read_bool()?;
-        331 => skip_edit_info_from_decoder(decoder)?;
-        341 => skip_color_profile_from_decoder(decoder)?;
-        342 => skip_symbol_id_from_decoder(decoder)?;
-        346 => skip_child_reading_direction_from_decoder(decoder)?;
-        347 => decoder.skip_string()?;
-        349 => skip_document_color_profile_from_decoder(decoder)?;
-        354 => decoder.read_repeated(|decoder| { skip_developer_related_link_from_decoder(decoder)?; Ok(()) })?;
-        356 => decoder.skip_string()?;
-        365 => skip_edit_scope_info_from_decoder(decoder)?;
-        374 => skip_semantic_weight_from_decoder(decoder)?;
-        375 => skip_semantic_italic_from_decoder(decoder)?;
-        403 => decoder.read_bool()?;
-        387 => decoder.read_bool()?;
-        500 => skip_derived_breakpoint_data_from_decoder(decoder)?;
-        398 => skip_guid_from_decoder(decoder)?;
-        458 => decoder.read_bool()?;
-        457 => skip_guid_from_decoder(decoder)?;
-        462 => skip_guid_from_decoder(decoder)?;
-        501 => decoder.read_var_float_value()?;
-        522 => decoder.read_bool()?;
-        400 => skip_responsive_set_settings_from_decoder(decoder)?;
-        404 => skip_node_behaviors_from_decoder(decoder)?;
-        414 => decoder.skip_string()?;
-        534 => decoder.read_repeated(|decoder| { skip_collaborative_text_op_id_from_decoder(decoder)?; Ok(()) })?;
-        444 => skip_collaborative_plain_text_from_decoder(decoder)?;
-        427 => skip_code_library_id_from_decoder(decoder)?;
-        467 => skip_imported_code_files_from_decoder(decoder)?;
-        468 => skip_canvas_node_id_from_decoder(decoder)?;
-        498 => decoder.read_bool()?;
-        502 => decoder.skip_string()?;
-        503 => decoder.read_var_uint()?;
-        504 => decoder.skip_string()?;
-        515 => decoder.read_repeated(|decoder| { decoder.skip_string()?; Ok(()) })?;
-        524 => decoder.read_repeated(|decoder| { skip_used_make_library_from_decoder(decoder)?; Ok(()) })?;
-        518 => decoder.skip_string()?;
-        520 => decoder.read_bool()?;
-        551 => decoder.read_bool()?;
-        531 => skip_prototype_device_from_decoder(decoder)?;
-        525 => decoder.read_repeated(|decoder| { skip_code_example_from_decoder(decoder)?; Ok(()) })?;
-        428 => skip_code_file_id_from_decoder(decoder)?;
-        430 => decoder.skip_string()?;
-        547 => decoder.skip_string()?;
-        429 => skip_code_component_id_from_decoder(decoder)?;
-        487 => decoder.read_bool()?;
-        431 => skip_code_snapshot_state_from_decoder(decoder)?;
-        451 => decoder.read_repeated(|decoder| { skip_node_chat_message_from_decoder(decoder)?; Ok(()) })?;
-        485 => skip_node_chat_compression_state_from_decoder(decoder)?;
-        496 => skip_ai_chat_thread_from_decoder(decoder)?;
-        484 => decoder.skip_string()?;
-        459 => skip_code_snapshot_from_decoder(decoder)?;
-        589 => skip_code_snapshot_layers_from_decoder(decoder)?;
-        480 => decoder.read_var_uint()?;
-        465 => decoder.read_bool()?;
-        469 => decoder.read_bool()?;
-        470 => decoder.read_bool()?;
-        471 => decoder.read_bool()?;
-        481 => skip_canvas_node_id_from_decoder(decoder)?;
-        473 => skip_image_import_map_from_decoder(decoder)?;
-        516 => skip_code_object_type_from_decoder(decoder)?;
-        472 => decoder.skip_string()?;
-        478 => skip_code_behavior_data_from_decoder(decoder)?;
-        519 => decoder.read_var_uint()?;
-        527 => decoder.read_bool()?;
-        532 => skip_code_embed_info_from_decoder(decoder)?;
-        546 => decoder.read_bool()?;
-        558 => skip_code_source_info_from_decoder(decoder)?;
-        536 => decoder.skip_string()?;
-        537 => decoder.skip_byte_array()?;
-        419 => skip_cms_selector_from_decoder(decoder)?;
-        420 => skip_cms_consumption_map_from_decoder(decoder)?;
-        460 => skip_cms_rich_text_style_map_from_decoder(decoder)?;
-        539 => skip_symbol_id_from_decoder(decoder)?;
-        540 => skip_repeater_cms_override_data_from_decoder(decoder)?;
-        549 => skip_repeater_symbol_override_data_from_decoder(decoder)?;
-        541 => skip_repeater_override_data_from_decoder(decoder)?;
-        405 => decoder.read_repeated(|decoder| { decoder.read_var_uint()?; Ok(()) })?;
-        408 => decoder.skip_string()?;
-        407 => skip_first_draft_data_from_decoder(decoder)?;
-        418 => skip_first_draft_kit_element_data_from_decoder(decoder)?;
-        421 => skip_cooper_revert_data_from_decoder(decoder)?;
-        461 => skip_cooper_template_data_from_decoder(decoder)?;
-        528 => skip_buzz_approval_requests_from_decoder(decoder)?;
-        529 => skip_buzz_approval_node_status_info_from_decoder(decoder)?;
-        422 => skip_hub_file_attribution_from_decoder(decoder)?;
-        454 => skip_managed_string_data_from_decoder(decoder)?;
-        466 => skip_thumbnail_info_from_decoder(decoder)?;
-        494 => skip_ai_canvas_prompt_from_decoder(decoder)?;
-        499 => skip_canvas_node_id_from_decoder(decoder)?;
-        548 => decoder.skip_string()?;
-        523 => skip_trss_transform2_d_from_decoder(decoder)?;
-        506 => decoder.read_var_int64()?;
-        507 => skip_keyframe_value_data_from_decoder(decoder)?;
-        586 => skip_variable_data_from_decoder(decoder)?;
-        505 => skip_interpolation_type_from_decoder(decoder)?;
-        508 => skip_bezier_handles_from_decoder(decoder)?;
-        535 => skip_easing_data_from_decoder(decoder)?;
-        509 => skip_keyframe_operation_from_decoder(decoder)?;
-        510 => skip_timeline_position_type_from_decoder(decoder)?;
-        545 => decoder.read_bool()?;
-        511 => skip_guid_from_decoder(decoder)?;
-        512 => decoder.read_var_uint64()?;
-        513 => decoder.read_var_int64()?;
-        543 => decoder.read_bool()?;
-        514 => skip_playback_style_from_decoder(decoder)?;
-        552 => skip_timeline_definitions_map_from_decoder(decoder)?;
-        553 => skip_timeline_assignments_map_from_decoder(decoder)?;
-        521 => skip_animation_presets_from_decoder(decoder)?;
-        582 => decoder.read_repeated(|decoder| { skip_style_id_for_animation_from_decoder(decoder)?; Ok(()) })?;
-        583 => skip_animation_preset_id_from_decoder(decoder)?;
-        568 => skip_tools_from_decoder(decoder)?;
-        569 => skip_custom_effects_from_decoder(decoder)?;
-        526 => skip_transition_override_data_from_decoder(decoder)?;
-        544 => decoder.read_bool()?;
-        557 => skip_source_control_config_from_decoder(decoder)?;
-        559 => skip_spec_block_type_from_decoder(decoder)?;
-        560 => skip_collaborative_plain_text_from_decoder(decoder)?;
-        561 => decoder.skip_string()?;
-        562 => decoder.skip_string()?;
-        563 => decoder.read_var_int()?;
-        575 => decoder.skip_string()?;
-        576 => decoder.read_var_int()?;
-        577 => decoder.read_var_int()?;
-        578 => skip_table_row_column_size_map_from_decoder(decoder)?;
-        579 => skip_table_row_column_size_map_from_decoder(decoder)?;
-        590 => decoder.skip_string()?;
-        565 => decoder.read_bool()?;
-        584 => decoder.skip_string()?;
-        585 => decoder.read_var_int()?;
-        567 => decoder.read_bool()?;
-        588 => skip_custom_tool_artifact_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        53 => one kiwi_skip_uint_value;
+        2 => one skip_node_phase_from_decoder;
+        54 => one kiwi_skip_uint_value;
+        3 => one skip_parent_index_from_decoder;
+        55 => one kiwi_skip_uint_value;
+        4 => one skip_node_type_from_decoder;
+        56 => one kiwi_skip_uint_value;
+        5 => one kiwi_skip_string_value;
+        57 => one kiwi_skip_uint_value;
+        174 => one kiwi_skip_bool_value;
+        318 => one kiwi_skip_string_value;
+        256 => one skip_library_move_info_from_decoder;
+        281 => repeated skip_library_move_history_item_from_decoder;
+        319 => one kiwi_skip_string_value;
+        383 => one skip_asset_id_map_from_decoder;
+        49 => one kiwi_skip_uint_value;
+        101 => one kiwi_skip_uint_value;
+        157 => one kiwi_skip_bool_value;
+        161 => one kiwi_skip_bool_value;
+        376 => one kiwi_skip_bool_value;
+        163 => one skip_style_type_from_decoder;
+        191 => one kiwi_skip_string_value;
+        171 => one kiwi_skip_string_value;
+        399 => one kiwi_skip_string_value;
+        320 => one kiwi_skip_string_value;
+        345 => one skip_shared_style_master_data_from_decoder;
+        348 => one skip_shared_style_master_data_from_decoder;
+        176 => one kiwi_skip_bool_value;
+        177 => one kiwi_skip_bool_value;
+        172 => one skip_shared_style_master_data_from_decoder;
+        173 => one skip_shared_style_reference_from_decoder;
+        158 => one skip_guid_from_decoder;
+        162 => one skip_guid_from_decoder;
+        167 => one skip_guid_from_decoder;
+        168 => one skip_guid_from_decoder;
+        169 => one skip_guid_from_decoder;
+        170 => one skip_guid_from_decoder;
+        185 => one skip_guid_from_decoder;
+        332 => one skip_style_id_from_decoder;
+        333 => one skip_style_id_from_decoder;
+        334 => one skip_style_id_from_decoder;
+        335 => one skip_style_id_from_decoder;
+        336 => one skip_style_id_from_decoder;
+        580 => repeated skip_style_animation_from_decoder;
+        193 => repeated skip_paint_from_decoder;
+        194 => one skip_guid_from_decoder;
+        225 => one kiwi_skip_bool_value;
+        238 => repeated skip_state_group_property_value_order_from_decoder;
+        581 => one skip_partial_paste_annotation_from_decoder;
+        122 => one skip_shared_symbol_reference_from_decoder;
+        123 => one kiwi_skip_bool_value;
+        124 => repeated skip_guid_path_mapping_from_decoder;
+        126 => one kiwi_skip_string_value;
+        152 => one skip_shared_component_master_data_from_decoder;
+        144 => one kiwi_skip_string_value;
+        164 => repeated skip_guid_path_mapping_from_decoder;
+        228 => repeated skip_guid_path_mapping_from_decoder;
+        214 => one kiwi_skip_string_value;
+        395 => one kiwi_skip_string_value;
+        215 => one skip_guid_from_decoder;
+        216 => one kiwi_skip_string_value;
+        217 => one kiwi_skip_bool_value;
+        218 => one kiwi_skip_string_value;
+        252 => one kiwi_skip_string_value;
+        266 => repeated skip_component_prop_def_from_decoder;
+        267 => repeated skip_component_prop_ref_from_decoder;
+        483 => repeated skip_variant_prop_spec_from_decoder;
+        113 => one skip_symbol_data_from_decoder;
+        114 => one kiwi_skip_uint_value;
+        125 => repeated skip_node_change_from_decoder;
+        394 => one kiwi_skip_bool_value;
+        143 => one skip_guid_from_decoder;
+        268 => repeated skip_component_prop_assignment_from_decoder;
+        305 => one kiwi_skip_bool_value;
+        248 => repeated skip_instance_override_stash_from_decoder;
+        250 => repeated skip_instance_override_stash_v2_from_decoder;
+        111 => one skip_guid_path_from_decoder;
+        112 => one kiwi_skip_uint_value;
+        321 => one kiwi_skip_int_value;
+        382 => one skip_module_type_from_decoder;
+        463 => one kiwi_skip_bool_value;
+        495 => one kiwi_skip_bool_value;
+        21 => one kiwi_skip_float_value;
+        73 => one kiwi_skip_uint_value;
+        22 => one kiwi_skip_float_value;
+        74 => one kiwi_skip_uint_value;
+        23 => one kiwi_skip_float_value;
+        75 => one kiwi_skip_uint_value;
+        32 => one skip_text_align_horizontal_from_decoder;
+        84 => one kiwi_skip_uint_value;
+        33 => one skip_text_align_vertical_from_decoder;
+        85 => one kiwi_skip_uint_value;
+        34 => one skip_text_case_from_decoder;
+        86 => one kiwi_skip_uint_value;
+        35 => one skip_text_decoration_from_decoder;
+        87 => one kiwi_skip_uint_value;
+        40 => one skip_number_from_decoder;
+        92 => one kiwi_skip_uint_value;
+        41 => one skip_font_name_from_decoder;
+        93 => one kiwi_skip_uint_value;
+        42 => one skip_text_data_from_decoder;
+        94 => one kiwi_skip_uint_value;
+        359 => one skip_derived_text_data_from_decoder;
+        127 => one kiwi_skip_bool_value;
+        128 => one kiwi_skip_bool_value;
+        129 => one kiwi_skip_bool_value;
+        130 => one kiwi_skip_bool_value;
+        131 => one kiwi_skip_bool_value;
+        132 => one kiwi_skip_bool_value;
+        133 => one skip_font_variant_numeric_figure_from_decoder;
+        134 => one skip_font_variant_numeric_spacing_from_decoder;
+        135 => one skip_font_variant_numeric_fraction_from_decoder;
+        136 => one skip_font_variant_caps_from_decoder;
+        137 => one skip_font_variant_position_from_decoder;
+        165 => one skip_number_from_decoder;
+        202 => one kiwi_skip_string_value;
+        322 => one skip_leading_trim_from_decoder;
+        337 => one kiwi_skip_bool_value;
+        339 => one kiwi_skip_bool_value;
+        550 => one kiwi_skip_bool_value;
+        351 => one kiwi_skip_int_value;
+        417 => repeated skip_responsive_text_style_variant_from_decoder;
+        352 => one skip_section_status_from_decoder;
+        355 => one skip_section_status_info_from_decoder;
+        203 => one kiwi_skip_uint_value;
+        396 => one kiwi_skip_uint_value;
+        205 => repeated skip_open_type_feature_from_decoder;
+        206 => repeated skip_open_type_feature_from_decoder;
+        223 => one skip_hyperlink_from_decoder;
+        340 => one skip_mention_from_decoder;
+        260 => repeated skip_font_variation_from_decoder;
+        279 => one kiwi_skip_uint_value;
+        280 => one skip_text_truncation_from_decoder;
+        292 => one kiwi_skip_bool_value;
+        391 => one skip_emoji_image_set_from_decoder;
+        392 => one kiwi_skip_string_value;
+        6 => one kiwi_skip_bool_value;
+        58 => one kiwi_skip_uint_value;
+        7 => one kiwi_skip_bool_value;
+        59 => one kiwi_skip_uint_value;
+        434 => one skip_lock_mode_from_decoder;
+        8 => one kiwi_skip_float_value;
+        60 => one kiwi_skip_uint_value;
+        9 => one skip_blend_mode_from_decoder;
+        61 => one kiwi_skip_uint_value;
+        11 => one skip_vector_from_decoder;
+        63 => one kiwi_skip_uint_value;
+        12 => one skip_matrix_from_decoder;
+        64 => one kiwi_skip_uint_value;
+        13 => repeated kiwi_skip_float_value;
+        65 => one kiwi_skip_uint_value;
+        16 => one kiwi_skip_bool_value;
+        68 => one kiwi_skip_uint_value;
+        424 => one skip_vector_from_decoder;
+        18 => one kiwi_skip_bool_value;
+        70 => one kiwi_skip_uint_value;
+        317 => one skip_mask_type_from_decoder;
+        19 => one kiwi_skip_float_value;
+        71 => one kiwi_skip_uint_value;
+        20 => one kiwi_skip_float_value;
+        72 => one kiwi_skip_uint_value;
+        26 => one kiwi_skip_float_value;
+        78 => one kiwi_skip_uint_value;
+        29 => one skip_stroke_align_from_decoder;
+        81 => one kiwi_skip_uint_value;
+        30 => one skip_stroke_cap_from_decoder;
+        82 => one kiwi_skip_uint_value;
+        497 => one skip_number_from_decoder;
+        31 => one skip_stroke_join_from_decoder;
+        83 => one kiwi_skip_uint_value;
+        38 => repeated skip_paint_from_decoder;
+        90 => one kiwi_skip_uint_value;
+        39 => repeated skip_paint_from_decoder;
+        91 => one kiwi_skip_uint_value;
+        43 => repeated skip_effect_from_decoder;
+        95 => one kiwi_skip_uint_value;
+        50 => one skip_color_from_decoder;
+        102 => one kiwi_skip_uint_value;
+        51 => repeated skip_path_from_decoder;
+        103 => one kiwi_skip_uint_value;
+        52 => repeated skip_path_from_decoder;
+        104 => one kiwi_skip_uint_value;
+        564 => repeated skip_path_from_decoder;
+        411 => repeated skip_paint_from_decoder;
+        412 => one kiwi_skip_bool_value;
+        413 => one skip_number_from_decoder;
+        415 => one skip_number_from_decoder;
+        416 => one skip_text_decoration_style_from_decoder;
+        455 => repeated skip_transform_modifier_from_decoder;
+        570 => one skip_transform3d_from_decoder;
+        571 => one skip_stroke_data_from_decoder;
+        572 => one skip_scene3d_from_decoder;
+        587 => one skip_transform_origin_from_decoder;
+        145 => one kiwi_skip_float_value;
+        146 => one kiwi_skip_float_value;
+        147 => one kiwi_skip_float_value;
+        148 => one kiwi_skip_float_value;
+        149 => one kiwi_skip_bool_value;
+        150 => one kiwi_skip_bool_value;
+        151 => one kiwi_skip_bool_value;
+        423 => one skip_optional_vector_from_decoder;
+        258 => one kiwi_skip_bool_value;
+        287 => one kiwi_skip_bool_value;
+        288 => one kiwi_skip_bool_value;
+        289 => one kiwi_skip_bool_value;
+        290 => one kiwi_skip_bool_value;
+        294 => one kiwi_skip_bool_value;
+        295 => one kiwi_skip_float_value;
+        296 => one kiwi_skip_float_value;
+        297 => one kiwi_skip_float_value;
+        298 => one kiwi_skip_float_value;
+        299 => one kiwi_skip_bool_value;
+        28 => one skip_constraint_type_from_decoder;
+        80 => one kiwi_skip_uint_value;
+        105 => one skip_stack_mode_from_decoder;
+        106 => one kiwi_skip_uint_value;
+        107 => one kiwi_skip_float_value;
+        108 => one kiwi_skip_uint_value;
+        109 => one kiwi_skip_float_value;
+        110 => one kiwi_skip_uint_value;
+        120 => one skip_stack_counter_align_from_decoder;
+        121 => one skip_stack_justify_from_decoder;
+        208 => one skip_stack_align_from_decoder;
+        209 => one kiwi_skip_float_value;
+        210 => one kiwi_skip_float_value;
+        211 => one skip_stack_size_from_decoder;
+        212 => one skip_stack_size_from_decoder;
+        229 => one skip_stack_size_from_decoder;
+        230 => one skip_stack_justify_from_decoder;
+        231 => one skip_stack_align_from_decoder;
+        232 => one kiwi_skip_float_value;
+        233 => one kiwi_skip_float_value;
+        234 => one kiwi_skip_float_value;
+        236 => one skip_stack_counter_align_from_decoder;
+        269 => one skip_stack_positioning_from_decoder;
+        271 => one kiwi_skip_bool_value;
+        323 => one skip_stack_wrap_from_decoder;
+        324 => one kiwi_skip_float_value;
+        325 => one skip_optional_vector_from_decoder;
+        326 => one skip_optional_vector_from_decoder;
+        343 => one skip_stack_counter_align_content_from_decoder;
+        406 => repeated kiwi_skip_int_value;
+        574 => one kiwi_skip_uint_value;
+        435 => one skip_guid_position_map_from_decoder;
+        436 => one skip_guid_position_map_from_decoder;
+        437 => one kiwi_skip_float_value;
+        438 => one kiwi_skip_float_value;
+        439 => one skip_guid_from_decoder;
+        440 => one skip_guid_from_decoder;
+        441 => one kiwi_skip_uint_value;
+        442 => one kiwi_skip_uint_value;
+        474 => one skip_guid_grid_track_size_map_from_decoder;
+        475 => one skip_guid_grid_track_size_map_from_decoder;
+        476 => one skip_grid_child_align_from_decoder;
+        477 => one skip_grid_child_align_from_decoder;
+        555 => one skip_grid_auto_tracks_from_decoder;
+        556 => one kiwi_skip_bool_value;
+        344 => one kiwi_skip_bool_value;
+        139 => one skip_guid_from_decoder;
+        140 => one skip_guid_from_decoder;
+        141 => one skip_color_from_decoder;
+        153 => one skip_transition_info_from_decoder;
+        154 => one skip_transition_type_from_decoder;
+        155 => one kiwi_skip_float_value;
+        156 => one skip_easing_type_from_decoder;
+        181 => one kiwi_skip_bool_value;
+        182 => one skip_connection_type_from_decoder;
+        183 => one kiwi_skip_string_value;
+        184 => one skip_prototype_device_from_decoder;
+        187 => one skip_interaction_type_from_decoder;
+        188 => one kiwi_skip_float_value;
+        189 => one kiwi_skip_bool_value;
+        190 => one kiwi_skip_float_value;
+        192 => one kiwi_skip_bool_value;
+        207 => one kiwi_skip_bool_value;
+        226 => repeated skip_prototype_interaction_from_decoder;
+        426 => repeated skip_prototype_interaction_from_decoder;
+        249 => one skip_prototype_starting_point_from_decoder;
+        204 => repeated skip_plugin_data_from_decoder;
+        219 => repeated skip_plugin_relaunch_data_from_decoder;
+        242 => one skip_connector_endpoint_from_decoder;
+        243 => one skip_connector_endpoint_from_decoder;
+        244 => one skip_connector_line_style_from_decoder;
+        245 => one skip_stroke_cap_from_decoder;
+        246 => one skip_stroke_cap_from_decoder;
+        253 => repeated skip_connector_control_point_from_decoder;
+        479 => repeated skip_connector_control_point_from_decoder;
+        255 => one skip_connector_text_midpoint_from_decoder;
+        373 => one skip_connector_type_from_decoder;
+        533 => one kiwi_skip_int_value;
+        369 => repeated skip_annotation_from_decoder;
+        384 => repeated skip_annotation_measurement_from_decoder;
+        453 => one skip_annotation_categories_from_decoder;
+        241 => one skip_shape_with_text_type_from_decoder;
+        247 => one kiwi_skip_float_value;
+        530 => one kiwi_skip_bool_value;
+        254 => one skip_derived_immutable_frame_data_from_decoder;
+        338 => one skip_multiplayer_field_version_from_decoder;
+        240 => one skip_node_generation_data_from_decoder;
+        491 => one skip_jsx_data_from_decoder;
+        492 => one skip_derived_jsx_data_from_decoder;
+        493 => one kiwi_skip_string_value;
+        259 => one skip_code_block_language_from_decoder;
+        433 => one skip_code_block_theme_from_decoder;
+        278 => one skip_link_preview_data_from_decoder;
+        282 => one kiwi_skip_bool_value;
+        283 => one kiwi_skip_bool_value;
+        300 => one skip_video_playback_from_decoder;
+        301 => one skip_stamp_data_from_decoder;
+        370 => one skip_section_preset_info_from_decoder;
+        409 => one skip_platform_shape_definition_from_decoder;
+        273 => one skip_multiplayer_map_from_decoder;
+        274 => one kiwi_skip_uint_value;
+        275 => one skip_widget_derived_subtree_cursor_from_decoder;
+        276 => one skip_widget_pointer_from_decoder;
+        285 => one skip_widget_input_behavior_from_decoder;
+        286 => one kiwi_skip_string_value;
+        291 => one skip_widget_hover_style_from_decoder;
+        293 => one kiwi_skip_bool_value;
+        360 => one kiwi_skip_bool_value;
+        262 => one skip_widget_metadata_from_decoder;
+        263 => repeated skip_widget_event_from_decoder;
+        265 => repeated skip_widget_property_menu_item_from_decoder;
+        401 => one skip_widget_input_text_node_type_from_decoder;
+        489 => one skip_multiplayer_map_from_decoder;
+        308 => one skip_table_row_column_position_map_from_decoder;
+        309 => one skip_table_row_column_position_map_from_decoder;
+        310 => one skip_table_row_column_size_map_from_decoder;
+        311 => one skip_table_row_column_size_map_from_decoder;
+        538 => one skip_table_merged_cell_map_from_decoder;
+        371 => one skip_multiplayer_map_from_decoder;
+        372 => one skip_multiplayer_map_from_decoder;
+        402 => one skip_flapp_type_from_decoder;
+        486 => one kiwi_skip_bool_value;
+        389 => one kiwi_skip_string_value;
+        410 => one kiwi_skip_bool_value;
+        573 => one skip_multiplayer_map_from_decoder;
+        379 => one skip_theme_id_from_decoder;
+        381 => one skip_slide_theme_data_from_decoder;
+        390 => one skip_slide_theme_map_from_decoder;
+        393 => one kiwi_skip_string_value;
+        443 => one skip_slide_number_from_decoder;
+        456 => one kiwi_skip_string_value;
+        363 => one skip_guid_from_decoder;
+        362 => one skip_guid_from_decoder;
+        364 => one kiwi_skip_string_value;
+        366 => one skip_diagram_layout_rule_type_from_decoder;
+        367 => one skip_diagram_parent_index_from_decoder;
+        368 => one skip_diagram_layout_paused_from_decoder;
+        380 => one kiwi_skip_bool_value;
+        251 => one skip_internal_enum_for_test_from_decoder;
+        257 => one skip_internal_data_for_test_from_decoder;
+        14 => one kiwi_skip_bool_value;
+        66 => one kiwi_skip_uint_value;
+        15 => one kiwi_skip_bool_value;
+        67 => one kiwi_skip_uint_value;
+        17 => one kiwi_skip_bool_value;
+        69 => one kiwi_skip_uint_value;
+        25 => one kiwi_skip_float_value;
+        77 => one kiwi_skip_uint_value;
+        27 => one kiwi_skip_float_value;
+        79 => one kiwi_skip_uint_value;
+        37 => one skip_constraint_type_from_decoder;
+        89 => one kiwi_skip_uint_value;
+        45 => repeated skip_export_settings_from_decoder;
+        97 => one kiwi_skip_uint_value;
+        46 => one skip_text_auto_resize_from_decoder;
+        98 => one kiwi_skip_uint_value;
+        47 => repeated skip_layout_grid_from_decoder;
+        99 => one kiwi_skip_uint_value;
+        115 => one kiwi_skip_bool_value;
+        116 => one kiwi_skip_uint_value;
+        117 => one kiwi_skip_bool_value;
+        118 => one kiwi_skip_uint_value;
+        36 => one skip_boolean_operation_from_decoder;
+        88 => one kiwi_skip_uint_value;
+        44 => one skip_vector_mirror_from_decoder;
+        96 => one kiwi_skip_uint_value;
+        10 => one kiwi_skip_uint_value;
+        62 => one kiwi_skip_uint_value;
+        24 => one kiwi_skip_float_value;
+        76 => one kiwi_skip_uint_value;
+        195 => one skip_arc_data_from_decoder;
+        48 => one skip_vector_data_from_decoder;
+        100 => one kiwi_skip_uint_value;
+        425 => one kiwi_skip_uint_value;
+        432 => one skip_text_path_start_from_decoder;
+        119 => one kiwi_skip_bool_value;
+        138 => repeated skip_guide_from_decoder;
+        142 => one kiwi_skip_bool_value;
+        159 => one skip_scroll_direction_from_decoder;
+        160 => one kiwi_skip_float_value;
+        166 => one skip_vector_from_decoder;
+        175 => one kiwi_skip_bool_value;
+        178 => one skip_scroll_contracted_state_from_decoder;
+        179 => one skip_vector_from_decoder;
+        180 => one kiwi_skip_string_value;
+        186 => one skip_scroll_behavior_from_decoder;
+        196 => one kiwi_skip_int_value;
+        197 => one skip_navigation_type_from_decoder;
+        198 => one skip_overlay_position_type_from_decoder;
+        199 => one skip_vector_from_decoder;
+        200 => one skip_overlay_background_interaction_from_decoder;
+        201 => one skip_overlay_background_appearance_from_decoder;
+        213 => one skip_guid_from_decoder;
+        220 => one kiwi_skip_bool_value;
+        221 => one skip_stack_size_from_decoder;
+        222 => one kiwi_skip_bool_value;
+        224 => one skip_key_trigger_from_decoder;
+        227 => one kiwi_skip_string_value;
+        235 => repeated skip_guid_from_decoder;
+        237 => repeated skip_symbol_link_from_decoder;
+        239 => one skip_text_list_data_from_decoder;
+        261 => one kiwi_skip_bool_value;
+        264 => one kiwi_skip_float_value;
+        270 => one skip_embed_data_from_decoder;
+        272 => one skip_rich_media_data_from_decoder;
+        277 => one skip_multiplayer_map_from_decoder;
+        284 => one kiwi_skip_bool_value;
+        302 => one skip_html_tag_from_decoder;
+        303 => one skip_aria_role_from_decoder;
+        357 => one skip_aria_attributes_map_from_decoder;
+        304 => one kiwi_skip_string_value;
+        490 => one kiwi_skip_bool_value;
+        306 => one skip_variable_data_from_decoder;
+        307 => one skip_variable_data_map_from_decoder;
+        316 => one skip_variable_mode_by_set_map_from_decoder;
+        312 => repeated skip_variable_set_mode_from_decoder;
+        313 => one skip_variable_set_id_from_decoder;
+        314 => one skip_variable_resolved_data_type_from_decoder;
+        315 => one skip_variable_data_values_from_decoder;
+        350 => one kiwi_skip_string_value;
+        566 => one skip_variable_timing_display_unit_from_decoder;
+        353 => repeated skip_variable_scope_from_decoder;
+        445 => one skip_variable_data_map_from_decoder;
+        358 => one skip_code_syntax_map_from_decoder;
+        388 => one skip_paste_source_from_decoder;
+        397 => one skip_editor_type_from_decoder;
+        446 => one skip_guid_from_decoder;
+        482 => one kiwi_skip_uint64_value;
+        447 => repeated skip_variable_width_point_from_decoder;
+        448 => one skip_dynamic_stroke_settings_from_decoder;
+        449 => one skip_scatter_stroke_settings_from_decoder;
+        450 => one skip_stretch_stroke_settings_from_decoder;
+        488 => repeated skip_matrix_from_decoder;
+        452 => one skip_brush_type_from_decoder;
+        542 => one skip_optional_vector_from_decoder;
+        554 => one kiwi_skip_float_value;
+        377 => one skip_variable_set_id_from_decoder;
+        464 => one skip_variable_id_from_decoder;
+        378 => one skip_variable_id_or_variable_override_id_from_decoder;
+        385 => one kiwi_skip_bool_value;
+        386 => one kiwi_skip_string_value;
+        517 => one skip_inherited_variables_data_from_decoder;
+        361 => one skip_handoff_status_map_from_decoder;
+        327 => one skip_agenda_position_map_from_decoder;
+        328 => one skip_agenda_metadata_map_from_decoder;
+        329 => one skip_migration_status_from_decoder;
+        330 => one kiwi_skip_bool_value;
+        331 => one skip_edit_info_from_decoder;
+        341 => one skip_color_profile_from_decoder;
+        342 => one skip_symbol_id_from_decoder;
+        346 => one skip_child_reading_direction_from_decoder;
+        347 => one kiwi_skip_string_value;
+        349 => one skip_document_color_profile_from_decoder;
+        354 => repeated skip_developer_related_link_from_decoder;
+        356 => one kiwi_skip_string_value;
+        365 => one skip_edit_scope_info_from_decoder;
+        374 => one skip_semantic_weight_from_decoder;
+        375 => one skip_semantic_italic_from_decoder;
+        403 => one kiwi_skip_bool_value;
+        387 => one kiwi_skip_bool_value;
+        500 => one skip_derived_breakpoint_data_from_decoder;
+        398 => one skip_guid_from_decoder;
+        458 => one kiwi_skip_bool_value;
+        457 => one skip_guid_from_decoder;
+        462 => one skip_guid_from_decoder;
+        501 => one kiwi_skip_float_value;
+        522 => one kiwi_skip_bool_value;
+        400 => one skip_responsive_set_settings_from_decoder;
+        404 => one skip_node_behaviors_from_decoder;
+        414 => one kiwi_skip_string_value;
+        534 => repeated skip_collaborative_text_op_id_from_decoder;
+        444 => one skip_collaborative_plain_text_from_decoder;
+        427 => one skip_code_library_id_from_decoder;
+        467 => one skip_imported_code_files_from_decoder;
+        468 => one skip_canvas_node_id_from_decoder;
+        498 => one kiwi_skip_bool_value;
+        502 => one kiwi_skip_string_value;
+        503 => one kiwi_skip_uint_value;
+        504 => one kiwi_skip_string_value;
+        515 => repeated kiwi_skip_string_value;
+        524 => repeated skip_used_make_library_from_decoder;
+        518 => one kiwi_skip_string_value;
+        520 => one kiwi_skip_bool_value;
+        551 => one kiwi_skip_bool_value;
+        531 => one skip_prototype_device_from_decoder;
+        525 => repeated skip_code_example_from_decoder;
+        428 => one skip_code_file_id_from_decoder;
+        430 => one kiwi_skip_string_value;
+        547 => one kiwi_skip_string_value;
+        429 => one skip_code_component_id_from_decoder;
+        487 => one kiwi_skip_bool_value;
+        431 => one skip_code_snapshot_state_from_decoder;
+        451 => repeated skip_node_chat_message_from_decoder;
+        485 => one skip_node_chat_compression_state_from_decoder;
+        496 => one skip_ai_chat_thread_from_decoder;
+        484 => one kiwi_skip_string_value;
+        459 => one skip_code_snapshot_from_decoder;
+        589 => one skip_code_snapshot_layers_from_decoder;
+        480 => one kiwi_skip_uint_value;
+        465 => one kiwi_skip_bool_value;
+        469 => one kiwi_skip_bool_value;
+        470 => one kiwi_skip_bool_value;
+        471 => one kiwi_skip_bool_value;
+        481 => one skip_canvas_node_id_from_decoder;
+        473 => one skip_image_import_map_from_decoder;
+        516 => one skip_code_object_type_from_decoder;
+        472 => one kiwi_skip_string_value;
+        478 => one skip_code_behavior_data_from_decoder;
+        519 => one kiwi_skip_uint_value;
+        527 => one kiwi_skip_bool_value;
+        532 => one skip_code_embed_info_from_decoder;
+        546 => one kiwi_skip_bool_value;
+        558 => one skip_code_source_info_from_decoder;
+        536 => one kiwi_skip_string_value;
+        537 => bytes kiwi_skip_bytes_value;
+        419 => one skip_cms_selector_from_decoder;
+        420 => one skip_cms_consumption_map_from_decoder;
+        460 => one skip_cms_rich_text_style_map_from_decoder;
+        539 => one skip_symbol_id_from_decoder;
+        540 => one skip_repeater_cms_override_data_from_decoder;
+        549 => one skip_repeater_symbol_override_data_from_decoder;
+        541 => one skip_repeater_override_data_from_decoder;
+        405 => repeated kiwi_skip_uint_value;
+        408 => one kiwi_skip_string_value;
+        407 => one skip_first_draft_data_from_decoder;
+        418 => one skip_first_draft_kit_element_data_from_decoder;
+        421 => one skip_cooper_revert_data_from_decoder;
+        461 => one skip_cooper_template_data_from_decoder;
+        528 => one skip_buzz_approval_requests_from_decoder;
+        529 => one skip_buzz_approval_node_status_info_from_decoder;
+        422 => one skip_hub_file_attribution_from_decoder;
+        454 => one skip_managed_string_data_from_decoder;
+        466 => one skip_thumbnail_info_from_decoder;
+        494 => one skip_ai_canvas_prompt_from_decoder;
+        499 => one skip_canvas_node_id_from_decoder;
+        548 => one kiwi_skip_string_value;
+        523 => one skip_trss_transform2_d_from_decoder;
+        506 => one kiwi_skip_int64_value;
+        507 => one skip_keyframe_value_data_from_decoder;
+        586 => one skip_variable_data_from_decoder;
+        505 => one skip_interpolation_type_from_decoder;
+        508 => one skip_bezier_handles_from_decoder;
+        535 => one skip_easing_data_from_decoder;
+        509 => one skip_keyframe_operation_from_decoder;
+        510 => one skip_timeline_position_type_from_decoder;
+        545 => one kiwi_skip_bool_value;
+        511 => one skip_guid_from_decoder;
+        512 => one kiwi_skip_uint64_value;
+        513 => one kiwi_skip_int64_value;
+        543 => one kiwi_skip_bool_value;
+        514 => one skip_playback_style_from_decoder;
+        552 => one skip_timeline_definitions_map_from_decoder;
+        553 => one skip_timeline_assignments_map_from_decoder;
+        521 => one skip_animation_presets_from_decoder;
+        582 => repeated skip_style_id_for_animation_from_decoder;
+        583 => one skip_animation_preset_id_from_decoder;
+        568 => one skip_tools_from_decoder;
+        569 => one skip_custom_effects_from_decoder;
+        526 => one skip_transition_override_data_from_decoder;
+        544 => one kiwi_skip_bool_value;
+        557 => one skip_source_control_config_from_decoder;
+        559 => one skip_spec_block_type_from_decoder;
+        560 => one skip_collaborative_plain_text_from_decoder;
+        561 => one kiwi_skip_string_value;
+        562 => one kiwi_skip_string_value;
+        563 => one kiwi_skip_int_value;
+        575 => one kiwi_skip_string_value;
+        576 => one kiwi_skip_int_value;
+        577 => one kiwi_skip_int_value;
+        578 => one skip_table_row_column_size_map_from_decoder;
+        579 => one skip_table_row_column_size_map_from_decoder;
+        590 => one kiwi_skip_string_value;
+        565 => one kiwi_skip_bool_value;
+        584 => one kiwi_skip_string_value;
+        585 => one kiwi_skip_int_value;
+        567 => one kiwi_skip_bool_value;
+        588 => one skip_custom_tool_artifact_ref_from_decoder;
     ]
 }
 
@@ -29809,9 +22700,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GitRepoRef";
     fields [
-        1 => skip_git_repo_ref_provider_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one skip_git_repo_ref_provider_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29820,8 +22711,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SourceControlConfig";
     fields [
-        1 => skip_git_repo_ref_from_decoder(decoder)?;
-        2 => skip_git_repo_ref_from_decoder(decoder)?;
+        1 => one skip_git_repo_ref_from_decoder;
+        2 => one skip_git_repo_ref_from_decoder;
     ]
 }
 
@@ -29830,13 +22721,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeSnapshot";
     fields [
-        6 => skip_code_snapshot_state_from_decoder(decoder)?;
-        7 => decoder.read_var_uint()?;
-        1 => decoder.read_repeated(|decoder| { skip_paint_from_decoder(decoder)?; Ok(()) })?;
-        2 => skip_vector_from_decoder(decoder)?;
-        3 => skip_vector_from_decoder(decoder)?;
-        5 => skip_vector_from_decoder(decoder)?;
-        4 => decoder.read_var_uint()?;
+        6 => one skip_code_snapshot_state_from_decoder;
+        7 => one kiwi_skip_uint_value;
+        1 => repeated skip_paint_from_decoder;
+        2 => one skip_vector_from_decoder;
+        3 => one skip_vector_from_decoder;
+        5 => one skip_vector_from_decoder;
+        4 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -29845,7 +22736,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeOutputLayer";
     fields [
-        1 => skip_node_change_from_decoder(decoder)?;
+        1 => one skip_node_change_from_decoder;
     ]
 }
 
@@ -29854,9 +22745,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeSnapshotLayers";
     fields [
-        1 => skip_code_snapshot_state_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        3 => decoder.read_repeated(|decoder| { skip_code_output_layer_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_code_snapshot_state_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => repeated skip_code_output_layer_from_decoder;
     ]
 }
 
@@ -29865,11 +22756,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeBehaviorData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_repeated(|decoder| { decoder.skip_string()?; Ok(()) })?;
-        4 => decoder.skip_string()?;
-        5 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => repeated kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
+        5 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -29878,8 +22769,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeExample";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29888,7 +22779,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "UsedMakeLibrary";
     fields [
-        1 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29897,24 +22788,24 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CookieBannerText";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
-        5 => decoder.skip_string()?;
-        6 => decoder.skip_string()?;
-        7 => decoder.skip_string()?;
-        8 => decoder.skip_string()?;
-        9 => decoder.skip_string()?;
-        10 => decoder.skip_string()?;
-        11 => decoder.skip_string()?;
-        12 => decoder.skip_string()?;
-        13 => decoder.skip_string()?;
-        14 => decoder.skip_string()?;
-        15 => decoder.skip_string()?;
-        16 => decoder.skip_string()?;
-        17 => decoder.skip_string()?;
-        18 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
+        5 => one kiwi_skip_string_value;
+        6 => one kiwi_skip_string_value;
+        7 => one kiwi_skip_string_value;
+        8 => one kiwi_skip_string_value;
+        9 => one kiwi_skip_string_value;
+        10 => one kiwi_skip_string_value;
+        11 => one kiwi_skip_string_value;
+        12 => one kiwi_skip_string_value;
+        13 => one kiwi_skip_string_value;
+        14 => one kiwi_skip_string_value;
+        15 => one kiwi_skip_string_value;
+        16 => one kiwi_skip_string_value;
+        17 => one kiwi_skip_string_value;
+        18 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29923,17 +22814,17 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CookieBannerSettings";
     fields [
-        1 => decoder.read_bool()?;
-        2 => skip_cookie_banner_component_type_from_decoder(decoder)?;
-        3 => skip_cookie_x_alignment_from_decoder(decoder)?;
-        4 => skip_cookie_y_alignment_from_decoder(decoder)?;
-        5 => skip_cookie_x_alignment_from_decoder(decoder)?;
-        6 => skip_cookie_y_alignment_from_decoder(decoder)?;
-        7 => skip_trigger_component_type_from_decoder(decoder)?;
-        8 => decoder.skip_string()?;
-        9 => skip_cookie_banner_text_from_decoder(decoder)?;
-        10 => skip_guid_from_decoder(decoder)?;
-        11 => decoder.skip_string()?;
+        1 => one kiwi_skip_bool_value;
+        2 => one skip_cookie_banner_component_type_from_decoder;
+        3 => one skip_cookie_x_alignment_from_decoder;
+        4 => one skip_cookie_y_alignment_from_decoder;
+        5 => one skip_cookie_x_alignment_from_decoder;
+        6 => one skip_cookie_y_alignment_from_decoder;
+        7 => one skip_trigger_component_type_from_decoder;
+        8 => one kiwi_skip_string_value;
+        9 => one skip_cookie_banner_text_from_decoder;
+        10 => one skip_guid_from_decoder;
+        11 => one kiwi_skip_string_value;
     ]
 }
 
@@ -29962,27 +22853,27 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ResponsiveSetSettings";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => skip_responsive_scaling_mode_from_decoder(decoder)?;
-        4 => decoder.read_var_float_value()?;
-        5 => decoder.read_var_float_value()?;
-        6 => decoder.read_var_float_value()?;
-        7 => decoder.read_var_float_value()?;
-        8 => decoder.skip_string()?;
-        9 => decoder.skip_string()?;
-        10 => decoder.skip_string()?;
-        11 => decoder.skip_string()?;
-        12 => decoder.read_bool()?;
-        13 => decoder.skip_string()?;
-        14 => decoder.skip_string()?;
-        15 => decoder.skip_string()?;
-        16 => decoder.skip_string()?;
-        17 => skip_guid_from_decoder(decoder)?;
-        18 => skip_guid_from_decoder(decoder)?;
-        19 => decoder.read_bool()?;
-        20 => decoder.read_bool()?;
-        21 => skip_cookie_banner_settings_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one skip_responsive_scaling_mode_from_decoder;
+        4 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_float_value;
+        6 => one kiwi_skip_float_value;
+        7 => one kiwi_skip_float_value;
+        8 => one kiwi_skip_string_value;
+        9 => one kiwi_skip_string_value;
+        10 => one kiwi_skip_string_value;
+        11 => one kiwi_skip_string_value;
+        12 => one kiwi_skip_bool_value;
+        13 => one kiwi_skip_string_value;
+        14 => one kiwi_skip_string_value;
+        15 => one kiwi_skip_string_value;
+        16 => one kiwi_skip_string_value;
+        17 => one skip_guid_from_decoder;
+        18 => one skip_guid_from_decoder;
+        19 => one kiwi_skip_bool_value;
+        20 => one kiwi_skip_bool_value;
+        21 => one skip_cookie_banner_settings_from_decoder;
     ]
 }
 
@@ -29996,10 +22887,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSSelector";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_cms_filter_critera_from_decoder(decoder)?;
-        3 => decoder.read_repeated(|decoder| { skip_cms_selector_sort_from_decoder(decoder)?; Ok(()) })?;
-        4 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_cms_filter_critera_from_decoder;
+        3 => repeated skip_cms_selector_sort_from_decoder;
+        4 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -30008,8 +22899,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSFilterCritera";
     fields [
-        1 => skip_cms_filter_criteria_match_type_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_cms_selector_filter_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_cms_filter_criteria_match_type_from_decoder;
+        2 => repeated skip_cms_selector_filter_from_decoder;
     ]
 }
 
@@ -30023,9 +22914,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSSelectorFilter";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_cms_selector_filter_operator_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_cms_selector_filter_operator_from_decoder;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30039,8 +22930,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSSelectorSort";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_cms_field_order_by_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_cms_field_order_by_from_decoder;
     ]
 }
 
@@ -30054,7 +22945,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSConsumptionMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_cms_consumption_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_cms_consumption_map_entry_from_decoder;
     ]
 }
 
@@ -30063,8 +22954,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSConsumptionMapEntry";
     fields [
-        1 => skip_cms_consumption_field_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_cms_consumption_field_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30078,7 +22969,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSRichTextStyleMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_cms_rich_text_style_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_cms_rich_text_style_entry_from_decoder;
     ]
 }
 
@@ -30087,8 +22978,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSRichTextStyleEntry";
     fields [
-        1 => skip_cms_rich_text_style_class_from_decoder(decoder)?;
-        2 => skip_cms_rich_text_descriptor_from_decoder(decoder)?;
+        1 => one skip_cms_rich_text_style_class_from_decoder;
+        2 => one skip_cms_rich_text_descriptor_from_decoder;
     ]
 }
 
@@ -30102,8 +22993,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSRichTextDescriptor";
     fields [
-        1 => skip_style_id_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_font_name_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_style_id_from_decoder;
+        2 => repeated skip_font_name_from_decoder;
     ]
 }
 
@@ -30112,7 +23003,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "RepeaterCmsOverrideData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -30121,7 +23012,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "RepeaterOverrideData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -30130,7 +23021,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "RepeaterSymbolOverrideData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_repeater_position_overrides_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_repeater_position_overrides_from_decoder;
     ]
 }
 
@@ -30139,8 +23030,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "RepeaterPositionOverrides";
     fields [
-        1 => skip_parent_index_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_parent_index_from_decoder;
+        2 => repeated skip_node_change_from_decoder;
     ]
 }
 
@@ -30149,7 +23040,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InheritedVariablesData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_inherited_variable_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_inherited_variable_entry_from_decoder;
     ]
 }
 
@@ -30158,7 +23049,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InheritedVariableEntry";
     fields [
-        1 => skip_variable_id_from_decoder(decoder)?;
+        1 => one skip_variable_id_from_decoder;
     ]
 }
 
@@ -30167,8 +23058,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "HubFileAttribution";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30177,11 +23068,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => skip_managed_string_node_from_decoder(decoder)?;
-        5 => skip_managed_string_content_schema_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_managed_string_node_from_decoder;
+        5 => one skip_managed_string_content_schema_from_decoder;
     ]
 }
 
@@ -30200,11 +23091,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringNode";
     fields [
-        1 => skip_managed_string_node_type_from_decoder(decoder)?;
-        2 => skip_managed_string_text_node_data_from_decoder(decoder)?;
-        3 => skip_managed_string_concatenate_ast_node_data_from_decoder(decoder)?;
-        4 => skip_managed_string_plural_ast_node_data_from_decoder(decoder)?;
-        5 => skip_managed_string_placeholder_ast_node_data_from_decoder(decoder)?;
+        1 => one skip_managed_string_node_type_from_decoder;
+        2 => one skip_managed_string_text_node_data_from_decoder;
+        3 => one skip_managed_string_concatenate_ast_node_data_from_decoder;
+        4 => one skip_managed_string_plural_ast_node_data_from_decoder;
+        5 => one skip_managed_string_placeholder_ast_node_data_from_decoder;
     ]
 }
 
@@ -30213,7 +23104,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringTextNodeData";
     fields [
-        1 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30222,7 +23113,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringConcatenateAstNodeData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_managed_string_node_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_managed_string_node_from_decoder;
     ]
 }
 
@@ -30236,8 +23127,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringPluralAstNodeData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.read_repeated(|decoder| { skip_managed_string_plural_type_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => one kiwi_skip_string_value;
+        2 => repeated skip_managed_string_plural_type_map_entry_from_decoder;
     ]
 }
 
@@ -30246,8 +23137,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringPluralTypeMapEntry";
     fields [
-        1 => skip_managed_string_plural_type_from_decoder(decoder)?;
-        2 => skip_managed_string_node_from_decoder(decoder)?;
+        1 => one skip_managed_string_plural_type_from_decoder;
+        2 => one skip_managed_string_node_from_decoder;
     ]
 }
 
@@ -30261,9 +23152,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringPlaceholderAstNodeData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_managed_string_format_type_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_managed_string_format_type_from_decoder;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30272,7 +23163,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CooperRevertData";
     fields [
-        1 => skip_node_change_from_decoder(decoder)?;
+        1 => one skip_node_change_from_decoder;
     ]
 }
 
@@ -30281,12 +23172,12 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VideoPlayback";
     fields [
-        1 => decoder.read_bool()?;
-        2 => decoder.read_bool()?;
-        3 => decoder.read_bool()?;
-        4 => decoder.read_bool()?;
-        5 => decoder.read_var_uint()?;
-        6 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_bool_value;
+        2 => one kiwi_skip_bool_value;
+        3 => one kiwi_skip_bool_value;
+        4 => one kiwi_skip_bool_value;
+        5 => one kiwi_skip_uint_value;
+        6 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -30305,12 +23196,12 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "WidgetHoverStyle";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_paint_from_decoder(decoder)?; Ok(()) })?;
-        2 => decoder.read_repeated(|decoder| { skip_paint_from_decoder(decoder)?; Ok(()) })?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_bool()?;
-        5 => decoder.read_bool()?;
-        6 => decoder.read_bool()?;
+        1 => repeated skip_paint_from_decoder;
+        2 => repeated skip_paint_from_decoder;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_bool_value;
+        5 => one kiwi_skip_bool_value;
+        6 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -30319,8 +23210,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "WidgetDerivedSubtreeCursor";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -30329,7 +23220,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "MultiplayerMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_multiplayer_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_multiplayer_map_entry_from_decoder;
     ]
 }
 
@@ -30338,8 +23229,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "MultiplayerMapEntry";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30348,7 +23239,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableDataMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_variable_data_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_variable_data_map_entry_from_decoder;
     ]
 }
 
@@ -30357,9 +23248,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableDataMapEntry";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => skip_variable_data_from_decoder(decoder)?;
-        3 => skip_variable_field_from_decoder(decoder)?;
+        1 => one kiwi_skip_uint_value;
+        2 => one skip_variable_data_from_decoder;
+        3 => one skip_variable_field_from_decoder;
     ]
 }
 
@@ -30373,7 +23264,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableModeBySetMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_variable_mode_by_set_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_variable_mode_by_set_map_entry_from_decoder;
     ]
 }
 
@@ -30382,9 +23273,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableModeBySetMapEntry";
     fields [
-        1 => skip_variable_set_id_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_variable_set_id_from_decoder(decoder)?;
+        1 => one skip_variable_set_id_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_variable_set_id_from_decoder;
     ]
 }
 
@@ -30393,7 +23284,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeSyntaxMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_code_syntax_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_code_syntax_map_entry_from_decoder;
     ]
 }
 
@@ -30402,8 +23293,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeSyntaxMapEntry";
     fields [
-        1 => skip_code_syntax_platform_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_code_syntax_platform_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30412,7 +23303,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TableMergedCellMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_table_merged_cell_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_table_merged_cell_map_entry_from_decoder;
     ]
 }
 
@@ -30421,10 +23312,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TableMergedCellMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => decoder.read_var_int()?;
-        4 => decoder.read_var_int()?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one kiwi_skip_int_value;
+        4 => one kiwi_skip_int_value;
     ]
 }
 
@@ -30433,7 +23324,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TableRowColumnPositionMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_table_row_column_position_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_table_row_column_position_map_entry_from_decoder;
     ]
 }
 
@@ -30442,8 +23333,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TableRowColumnPositionMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30452,7 +23343,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GUIDPositionMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_guid_position_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_guid_position_map_entry_from_decoder;
     ]
 }
 
@@ -30461,8 +23352,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GUIDPositionMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30471,7 +23362,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GUIDGridTrackSizeMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_guid_grid_track_size_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_guid_grid_track_size_map_entry_from_decoder;
     ]
 }
 
@@ -30480,8 +23371,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GUIDGridTrackSizeMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_grid_track_size_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_grid_track_size_from_decoder;
     ]
 }
 
@@ -30490,7 +23381,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ObjectAnimationList";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_object_animation_list_item_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_object_animation_list_item_from_decoder;
     ]
 }
 
@@ -30499,8 +23390,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ObjectAnimationListItem";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_prototype_action_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_prototype_action_from_decoder;
     ]
 }
 
@@ -30509,8 +23400,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GridTrackSize";
     fields [
-        1 => skip_grid_track_sizing_function_from_decoder(decoder)?;
-        2 => skip_grid_track_sizing_function_from_decoder(decoder)?;
+        1 => one skip_grid_track_sizing_function_from_decoder;
+        2 => one skip_grid_track_sizing_function_from_decoder;
     ]
 }
 
@@ -30519,8 +23410,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GridTrackSizingFunction";
     fields [
-        1 => skip_grid_track_sizing_type_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
+        1 => one skip_grid_track_sizing_type_from_decoder;
+        2 => one kiwi_skip_float_value;
     ]
 }
 
@@ -30534,7 +23425,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TableRowColumnSizeMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_table_row_column_size_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_table_row_column_size_map_entry_from_decoder;
     ]
 }
 
@@ -30543,8 +23434,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TableRowColumnSizeMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_float_value;
     ]
 }
 
@@ -30553,7 +23444,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgendaPositionMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_agenda_position_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_agenda_position_map_entry_from_decoder;
     ]
 }
 
@@ -30562,8 +23453,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgendaPositionMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -30577,7 +23468,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgendaMetadataMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_agenda_metadata_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_agenda_metadata_map_entry_from_decoder;
     ]
 }
 
@@ -30586,8 +23477,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgendaMetadataMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_agenda_metadata_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_agenda_metadata_from_decoder;
     ]
 }
 
@@ -30596,12 +23487,12 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgendaMetadata";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_agenda_item_type_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => skip_agenda_timer_info_from_decoder(decoder)?;
-        5 => skip_agenda_vote_info_from_decoder(decoder)?;
-        6 => skip_agenda_music_info_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_agenda_item_type_from_decoder;
+        3 => one skip_guid_from_decoder;
+        4 => one skip_agenda_timer_info_from_decoder;
+        5 => one skip_agenda_vote_info_from_decoder;
+        6 => one skip_agenda_music_info_from_decoder;
     ]
 }
 
@@ -30610,7 +23501,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgendaTimerInfo";
     fields [
-        1 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -30619,7 +23510,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgendaVoteInfo";
     fields [
-        1 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -30628,8 +23519,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgendaMusicInfo";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -30642,8 +23533,8 @@ kiwi_skip_struct_decoder! {
     fn skip_diagram_parent_index_from_decoder;
     decoder decoder;
     fields [
-        skip_guid_from_decoder(decoder)?;
-        decoder.skip_string()?;
+        one skip_guid_from_decoder;
+        one kiwi_skip_string_value;
     ]
 }
 
@@ -30657,11 +23548,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ComponentPropRef";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
-        4 => skip_component_prop_node_field_from_decoder(decoder)?;
-        5 => decoder.read_bool()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one skip_guid_from_decoder;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_component_prop_node_field_from_decoder;
+        5 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -30675,10 +23566,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ComponentPropAssignment";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_component_prop_value_from_decoder(decoder)?;
-        3 => skip_variable_data_from_decoder(decoder)?;
-        4 => skip_derived_text_data_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_component_prop_value_from_decoder;
+        3 => one skip_variable_data_from_decoder;
+        4 => one skip_derived_text_data_from_decoder;
     ]
 }
 
@@ -30687,19 +23578,19 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ComponentPropDef";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => skip_component_prop_value_from_decoder(decoder)?;
-        4 => decoder.skip_string()?;
-        5 => skip_guid_from_decoder(decoder)?;
-        6 => skip_component_prop_type_from_decoder(decoder)?;
-        7 => decoder.read_bool()?;
-        8 => skip_component_prop_preferred_values_from_decoder(decoder)?;
-        9 => skip_variable_data_from_decoder(decoder)?;
-        10 => skip_parameter_config_from_decoder(decoder)?;
-        11 => decoder.skip_string()?;
-        12 => skip_slot_prop_config_from_decoder(decoder)?;
-        13 => skip_color_array_config_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one skip_component_prop_value_from_decoder;
+        4 => one kiwi_skip_string_value;
+        5 => one skip_guid_from_decoder;
+        6 => one skip_component_prop_type_from_decoder;
+        7 => one kiwi_skip_bool_value;
+        8 => one skip_component_prop_preferred_values_from_decoder;
+        9 => one skip_variable_data_from_decoder;
+        10 => one skip_parameter_config_from_decoder;
+        11 => one kiwi_skip_string_value;
+        12 => one skip_slot_prop_config_from_decoder;
+        13 => one skip_color_array_config_from_decoder;
     ]
 }
 
@@ -30708,18 +23599,18 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ComponentPropValue";
     fields [
-        1 => decoder.read_bool()?;
-        2 => skip_text_data_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => decoder.read_var_float_value()?;
-        5 => skip_easing_data_from_decoder(decoder)?;
-        6 => skip_vector_from_decoder(decoder)?;
-        7 => skip_line_from_decoder(decoder)?;
-        8 => skip_circle_from_decoder(decoder)?;
-        9 => skip_rotation3_d_from_decoder(decoder)?;
-        10 => skip_circle_point_from_decoder(decoder)?;
-        11 => skip_gradient_from_decoder(decoder)?;
-        12 => skip_color_point_from_decoder(decoder)?;
+        1 => one kiwi_skip_bool_value;
+        2 => one skip_text_data_from_decoder;
+        3 => one skip_guid_from_decoder;
+        4 => one kiwi_skip_float_value;
+        5 => one skip_easing_data_from_decoder;
+        6 => one skip_vector_from_decoder;
+        7 => one skip_line_from_decoder;
+        8 => one skip_circle_from_decoder;
+        9 => one skip_rotation3_d_from_decoder;
+        10 => one skip_circle_point_from_decoder;
+        11 => one skip_gradient_from_decoder;
+        12 => one skip_color_point_from_decoder;
     ]
 }
 
@@ -30728,10 +23619,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TimelineData";
     fields [
-        1 => decoder.read_var_uint64()?;
-        2 => decoder.read_bool()?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => skip_playback_style_from_decoder(decoder)?;
+        1 => one kiwi_skip_uint64_value;
+        2 => one kiwi_skip_bool_value;
+        3 => one skip_guid_from_decoder;
+        4 => one skip_playback_style_from_decoder;
     ]
 }
 
@@ -30740,7 +23631,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TimelineDefinitionsMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_timeline_definitions_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_timeline_definitions_map_entry_from_decoder;
     ]
 }
 
@@ -30749,8 +23640,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TimelineDefinitionsMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_timeline_data_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_timeline_data_from_decoder;
     ]
 }
 
@@ -30759,8 +23650,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TimelineAssignmentKey";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_guid_from_decoder;
     ]
 }
 
@@ -30769,8 +23660,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TimelineBindingData";
     fields [
-        1 => decoder.read_var_int64()?;
-        2 => decoder.read_bool()?;
+        1 => one kiwi_skip_int64_value;
+        2 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -30779,7 +23670,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TimelineAssignmentsMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_timeline_assignments_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_timeline_assignments_map_entry_from_decoder;
     ]
 }
 
@@ -30788,8 +23679,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TimelineAssignmentsMapEntry";
     fields [
-        1 => skip_timeline_assignment_key_from_decoder(decoder)?;
-        2 => skip_timeline_binding_data_from_decoder(decoder)?;
+        1 => one skip_timeline_assignment_key_from_decoder;
+        2 => one skip_timeline_binding_data_from_decoder;
     ]
 }
 
@@ -30803,8 +23694,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ComponentPropPreferredValues";
     fields [
-        1 => decoder.read_repeated(|decoder| { decoder.skip_string()?; Ok(()) })?;
-        2 => decoder.read_repeated(|decoder| { skip_instance_swap_preferred_value_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated kiwi_skip_string_value;
+        2 => repeated skip_instance_swap_preferred_value_from_decoder;
     ]
 }
 
@@ -30813,19 +23704,19 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ParameterConfig";
     fields [
-        1 => skip_number_prop_config_from_decoder(decoder)?;
-        2 => skip_parameter_config_control_from_decoder(decoder)?;
-        3 => skip_slider_config_from_decoder(decoder)?;
-        4 => skip_variable_data_from_decoder(decoder)?;
-        5 => skip_input_config_from_decoder(decoder)?;
-        6 => skip_select_config_from_decoder(decoder)?;
-        7 => skip_point_config_from_decoder(decoder)?;
-        8 => skip_line_config_from_decoder(decoder)?;
-        9 => skip_point_radius_config_from_decoder(decoder)?;
-        10 => skip_rotation3_d_config_from_decoder(decoder)?;
-        11 => skip_circle_point_config_from_decoder(decoder)?;
-        12 => skip_color_point_config_from_decoder(decoder)?;
-        13 => decoder.read_bool()?;
+        1 => one skip_number_prop_config_from_decoder;
+        2 => one skip_parameter_config_control_from_decoder;
+        3 => one skip_slider_config_from_decoder;
+        4 => one skip_variable_data_from_decoder;
+        5 => one skip_input_config_from_decoder;
+        6 => one skip_select_config_from_decoder;
+        7 => one skip_point_config_from_decoder;
+        8 => one skip_line_config_from_decoder;
+        9 => one skip_point_radius_config_from_decoder;
+        10 => one skip_rotation3_d_config_from_decoder;
+        11 => one skip_circle_point_config_from_decoder;
+        12 => one skip_color_point_config_from_decoder;
+        13 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -30839,9 +23730,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InputConfig";
     fields [
-        1 => skip_variable_data_from_decoder(decoder)?;
-        2 => skip_variable_data_from_decoder(decoder)?;
-        3 => skip_variable_data_from_decoder(decoder)?;
+        1 => one skip_variable_data_from_decoder;
+        2 => one skip_variable_data_from_decoder;
+        3 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -30850,10 +23741,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SliderConfig";
     fields [
-        1 => skip_variable_data_from_decoder(decoder)?;
-        2 => skip_variable_data_from_decoder(decoder)?;
-        3 => skip_variable_data_from_decoder(decoder)?;
-        4 => skip_variable_data_from_decoder(decoder)?;
+        1 => one skip_variable_data_from_decoder;
+        2 => one skip_variable_data_from_decoder;
+        3 => one skip_variable_data_from_decoder;
+        4 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -30867,8 +23758,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PointConfig";
     fields [
-        1 => skip_point_mode_from_decoder(decoder)?;
-        2 => skip_number_units_from_decoder(decoder)?;
+        1 => one skip_point_mode_from_decoder;
+        2 => one skip_number_units_from_decoder;
     ]
 }
 
@@ -30877,8 +23768,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Line";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
-        2 => skip_vector_from_decoder(decoder)?;
+        1 => one skip_vector_from_decoder;
+        2 => one skip_vector_from_decoder;
     ]
 }
 
@@ -30887,8 +23778,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "LineConfig";
     fields [
-        1 => skip_point_mode_from_decoder(decoder)?;
-        2 => skip_number_units_from_decoder(decoder)?;
+        1 => one skip_point_mode_from_decoder;
+        2 => one skip_number_units_from_decoder;
     ]
 }
 
@@ -30897,8 +23788,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Circle";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
+        1 => one skip_vector_from_decoder;
+        2 => one kiwi_skip_float_value;
     ]
 }
 
@@ -30907,11 +23798,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PointRadiusConfig";
     fields [
-        1 => skip_point_mode_from_decoder(decoder)?;
-        2 => skip_number_units_from_decoder(decoder)?;
-        3 => skip_number_units_from_decoder(decoder)?;
-        4 => decoder.read_var_float_value()?;
-        5 => decoder.read_var_float_value()?;
+        1 => one skip_point_mode_from_decoder;
+        2 => one skip_number_units_from_decoder;
+        3 => one skip_number_units_from_decoder;
+        4 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_float_value;
     ]
 }
 
@@ -30920,10 +23811,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Rotation3D";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_float_value;
     ]
 }
 
@@ -30932,7 +23823,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Rotation3DConfig";
     fields [
-        1 => skip_point_mode_from_decoder(decoder)?;
+        1 => one skip_point_mode_from_decoder;
     ]
 }
 
@@ -30941,9 +23832,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CirclePoint";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
+        1 => one skip_vector_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
     ]
 }
 
@@ -30952,11 +23843,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CirclePointConfig";
     fields [
-        1 => skip_point_mode_from_decoder(decoder)?;
-        2 => skip_number_units_from_decoder(decoder)?;
-        3 => skip_number_units_from_decoder(decoder)?;
-        4 => decoder.read_var_float_value()?;
-        5 => decoder.read_var_float_value()?;
+        1 => one skip_point_mode_from_decoder;
+        2 => one skip_number_units_from_decoder;
+        3 => one skip_number_units_from_decoder;
+        4 => one kiwi_skip_float_value;
+        5 => one kiwi_skip_float_value;
     ]
 }
 
@@ -30965,8 +23856,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ColorPoint";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
-        2 => skip_variable_data_from_decoder(decoder)?;
+        1 => one skip_vector_from_decoder;
+        2 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -30975,8 +23866,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ColorPointConfig";
     fields [
-        1 => skip_point_mode_from_decoder(decoder)?;
-        2 => skip_number_units_from_decoder(decoder)?;
+        1 => one skip_point_mode_from_decoder;
+        2 => one skip_number_units_from_decoder;
     ]
 }
 
@@ -30985,7 +23876,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Gradient";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_gradient_stop_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_gradient_stop_from_decoder;
     ]
 }
 
@@ -30994,8 +23885,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GradientStop";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => skip_variable_data_from_decoder(decoder)?;
+        1 => one kiwi_skip_float_value;
+        2 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -31004,8 +23895,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SelectOption";
     fields [
-        1 => skip_variable_data_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_variable_data_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31014,7 +23905,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SelectConfig";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_select_option_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_select_option_from_decoder;
     ]
 }
 
@@ -31023,8 +23914,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ColorArrayConfig";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -31033,11 +23924,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SlotPropConfig";
     fields [
-        1 => decoder.read_bool()?;
-        2 => decoder.read_bool()?;
-        3 => decoder.read_var_uint()?;
-        4 => decoder.read_var_uint()?;
-        5 => decoder.read_bool()?;
+        1 => one kiwi_skip_bool_value;
+        2 => one kiwi_skip_bool_value;
+        3 => one kiwi_skip_uint_value;
+        4 => one kiwi_skip_uint_value;
+        5 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31046,10 +23937,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NumberPropConfig";
     fields [
-        1 => skip_parameter_config_control_from_decoder(decoder)?;
-        2 => skip_variable_data_from_decoder(decoder)?;
-        3 => skip_variable_data_from_decoder(decoder)?;
-        4 => skip_variable_data_from_decoder(decoder)?;
+        1 => one skip_parameter_config_control_from_decoder;
+        2 => one skip_variable_data_from_decoder;
+        3 => one skip_variable_data_from_decoder;
+        4 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -31058,8 +23949,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InstanceSwapPreferredValue";
     fields [
-        1 => skip_instance_swap_preferred_value_type_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_instance_swap_preferred_value_type_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31083,11 +23974,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "WidgetMetadata";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.read_bool()?;
-        5 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_bool_value;
+        5 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31101,8 +23992,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "WidgetPropertyMenuSelectorOption";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31116,15 +24007,15 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "WidgetPropertyMenuItem";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => skip_widget_property_menu_item_type_from_decoder(decoder)?;
-        4 => decoder.skip_string()?;
-        5 => decoder.read_repeated(|decoder| { skip_widget_property_menu_selector_option_from_decoder(decoder)?; Ok(()) })?;
-        6 => decoder.skip_string()?;
-        7 => decoder.read_bool()?;
-        8 => decoder.skip_string()?;
-        9 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one skip_widget_property_menu_item_type_from_decoder;
+        4 => one kiwi_skip_string_value;
+        5 => repeated skip_widget_property_menu_selector_option_from_decoder;
+        6 => one kiwi_skip_string_value;
+        7 => one kiwi_skip_bool_value;
+        8 => one kiwi_skip_string_value;
+        9 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31153,7 +24044,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InternalDataForTest";
     fields [
-        1 => decoder.read_var_int()?;
+        1 => one kiwi_skip_int_value;
     ]
 }
 
@@ -31162,8 +24053,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StateGroupPropertyValueOrder";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.read_repeated(|decoder| { decoder.skip_string()?; Ok(()) })?;
+        1 => one kiwi_skip_string_value;
+        2 => repeated kiwi_skip_string_value;
     ]
 }
 
@@ -31177,9 +24068,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PartialPasteAnnotation";
     fields [
-        1 => decoder.read_bool()?;
-        2 => decoder.read_var_uint64()?;
-        3 => skip_backfill_error_from_decoder(decoder)?;
+        1 => one kiwi_skip_bool_value;
+        2 => one kiwi_skip_uint64_value;
+        3 => one skip_backfill_error_from_decoder;
     ]
 }
 
@@ -31188,8 +24079,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariantPropSpec";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31198,10 +24089,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TextListData";
     fields [
-        1 => decoder.read_var_int()?;
-        2 => skip_bullet_type_from_decoder(decoder)?;
-        3 => decoder.read_var_int()?;
-        4 => decoder.read_var_int()?;
+        1 => one kiwi_skip_int_value;
+        2 => one skip_bullet_type_from_decoder;
+        3 => one kiwi_skip_int_value;
+        4 => one kiwi_skip_int_value;
     ]
 }
 
@@ -31215,16 +24106,16 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TextLineData";
     fields [
-        1 => skip_line_type_from_decoder(decoder)?;
-        10 => decoder.read_var_int()?;
-        2 => decoder.read_var_int()?;
-        9 => skip_source_directionality_from_decoder(decoder)?;
-        3 => skip_directionality_from_decoder(decoder)?;
-        4 => skip_directionality_intent_from_decoder(decoder)?;
-        5 => decoder.read_var_int()?;
-        6 => decoder.read_var_int()?;
-        7 => decoder.read_var_int()?;
-        8 => decoder.read_bool()?;
+        1 => one skip_line_type_from_decoder;
+        10 => one kiwi_skip_int_value;
+        2 => one kiwi_skip_int_value;
+        9 => one skip_source_directionality_from_decoder;
+        3 => one skip_directionality_from_decoder;
+        4 => one skip_directionality_intent_from_decoder;
+        5 => one kiwi_skip_int_value;
+        6 => one kiwi_skip_int_value;
+        7 => one kiwi_skip_int_value;
+        8 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31233,7 +24124,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "DerivedTextLineData";
     fields [
-        1 => skip_directionality_from_decoder(decoder)?;
+        1 => one skip_directionality_from_decoder;
     ]
 }
 
@@ -31262,11 +24153,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PrototypeInteraction";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_prototype_event_from_decoder(decoder)?;
-        3 => decoder.read_repeated(|decoder| { skip_prototype_action_from_decoder(decoder)?; Ok(()) })?;
-        4 => decoder.read_bool()?;
-        5 => decoder.read_var_int()?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_prototype_event_from_decoder;
+        3 => repeated skip_prototype_action_from_decoder;
+        4 => one kiwi_skip_bool_value;
+        5 => one kiwi_skip_int_value;
     ]
 }
 
@@ -31275,13 +24166,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PrototypeEvent";
     fields [
-        1 => skip_interaction_type_from_decoder(decoder)?;
-        2 => decoder.read_bool()?;
-        3 => decoder.read_var_float_value()?;
-        4 => skip_key_trigger_from_decoder(decoder)?;
-        5 => decoder.skip_string()?;
-        6 => decoder.read_var_float_value()?;
-        7 => decoder.read_var_float_value()?;
+        1 => one skip_interaction_type_from_decoder;
+        2 => one kiwi_skip_bool_value;
+        3 => one kiwi_skip_float_value;
+        4 => one skip_key_trigger_from_decoder;
+        5 => one kiwi_skip_string_value;
+        6 => one kiwi_skip_float_value;
+        7 => one kiwi_skip_float_value;
     ]
 }
 
@@ -31290,8 +24181,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PrototypeVariableTarget";
     fields [
-        1 => skip_variable_id_from_decoder(decoder)?;
-        2 => skip_node_field_alias_from_decoder(decoder)?;
+        1 => one skip_variable_id_from_decoder;
+        2 => one skip_node_field_alias_from_decoder;
     ]
 }
 
@@ -31300,8 +24191,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ConditionalActions";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_prototype_action_from_decoder(decoder)?; Ok(()) })?;
-        2 => skip_variable_data_from_decoder(decoder)?;
+        1 => repeated skip_prototype_action_from_decoder;
+        2 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -31310,48 +24201,48 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PrototypeAction";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_transition_type_from_decoder(decoder)?;
-        3 => decoder.read_var_float_value()?;
-        4 => skip_easing_type_from_decoder(decoder)?;
-        5 => decoder.read_var_float_value()?;
-        6 => decoder.read_bool()?;
-        7 => skip_connection_type_from_decoder(decoder)?;
-        9 => skip_vector_from_decoder(decoder)?;
-        10 => skip_navigation_type_from_decoder(decoder)?;
-        11 => decoder.read_bool()?;
-        12 => decoder.read_repeated(|decoder| { decoder.read_var_float_value()?; Ok(()) })?;
-        13 => skip_vector_from_decoder(decoder)?;
-        25 => decoder.read_bool()?;
-        26 => decoder.read_bool()?;
-        42 => decoder.read_bool()?;
-        8 => decoder.skip_string()?;
-        18 => decoder.read_bool()?;
-        34 => skip_variable_data_from_decoder(decoder)?;
-        35 => skip_cms_item_page_target_from_decoder(decoder)?;
-        14 => skip_guid_from_decoder(decoder)?;
-        15 => skip_variable_any_value_from_decoder(decoder)?;
-        19 => skip_prototype_variable_target_from_decoder(decoder)?;
-        20 => skip_variable_data_from_decoder(decoder)?;
-        16 => skip_media_action_from_decoder(decoder)?;
-        17 => decoder.read_bool()?;
-        21 => decoder.read_var_float_value()?;
-        22 => decoder.read_var_float_value()?;
-        36 => decoder.read_var_float_value()?;
-        23 => decoder.read_repeated(|decoder| { skip_variable_data_from_decoder(decoder)?; Ok(()) })?;
-        24 => decoder.read_repeated(|decoder| { skip_conditional_actions_from_decoder(decoder)?; Ok(()) })?;
-        27 => skip_variable_set_id_from_decoder(decoder)?;
-        28 => skip_guid_from_decoder(decoder)?;
-        29 => decoder.skip_string()?;
-        38 => skip_variable_set_id_from_decoder(decoder)?;
-        30 => skip_animation_type_from_decoder(decoder)?;
-        31 => skip_guid_from_decoder(decoder)?;
-        32 => skip_animation_phase_from_decoder(decoder)?;
-        33 => skip_animation_state_from_decoder(decoder)?;
-        37 => decoder.read_bool()?;
-        39 => skip_animation_timeline_action_from_decoder(decoder)?;
-        41 => skip_guid_from_decoder(decoder)?;
-        40 => decoder.read_var_float_value()?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_transition_type_from_decoder;
+        3 => one kiwi_skip_float_value;
+        4 => one skip_easing_type_from_decoder;
+        5 => one kiwi_skip_float_value;
+        6 => one kiwi_skip_bool_value;
+        7 => one skip_connection_type_from_decoder;
+        9 => one skip_vector_from_decoder;
+        10 => one skip_navigation_type_from_decoder;
+        11 => one kiwi_skip_bool_value;
+        12 => repeated kiwi_skip_float_value;
+        13 => one skip_vector_from_decoder;
+        25 => one kiwi_skip_bool_value;
+        26 => one kiwi_skip_bool_value;
+        42 => one kiwi_skip_bool_value;
+        8 => one kiwi_skip_string_value;
+        18 => one kiwi_skip_bool_value;
+        34 => one skip_variable_data_from_decoder;
+        35 => one skip_cms_item_page_target_from_decoder;
+        14 => one skip_guid_from_decoder;
+        15 => one skip_variable_any_value_from_decoder;
+        19 => one skip_prototype_variable_target_from_decoder;
+        20 => one skip_variable_data_from_decoder;
+        16 => one skip_media_action_from_decoder;
+        17 => one kiwi_skip_bool_value;
+        21 => one kiwi_skip_float_value;
+        22 => one kiwi_skip_float_value;
+        36 => one kiwi_skip_float_value;
+        23 => repeated skip_variable_data_from_decoder;
+        24 => repeated skip_conditional_actions_from_decoder;
+        27 => one skip_variable_set_id_from_decoder;
+        28 => one skip_guid_from_decoder;
+        29 => one kiwi_skip_string_value;
+        38 => one skip_variable_set_id_from_decoder;
+        30 => one skip_animation_type_from_decoder;
+        31 => one skip_guid_from_decoder;
+        32 => one skip_animation_phase_from_decoder;
+        33 => one skip_animation_state_from_decoder;
+        37 => one kiwi_skip_bool_value;
+        39 => one skip_animation_timeline_action_from_decoder;
+        41 => one skip_guid_from_decoder;
+        40 => one kiwi_skip_float_value;
     ]
 }
 
@@ -31370,8 +24261,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnimationState";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => skip_matrix_from_decoder(decoder)?;
+        1 => one kiwi_skip_float_value;
+        2 => one skip_matrix_from_decoder;
     ]
 }
 
@@ -31380,9 +24271,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PrototypeStartingPoint";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31396,8 +24287,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "KeyTrigger";
     fields [
-        1 => decoder.read_repeated(|decoder| { decoder.read_var_int()?; Ok(()) })?;
-        2 => skip_trigger_device_from_decoder(decoder)?;
+        1 => repeated kiwi_skip_int_value;
+        2 => one skip_trigger_device_from_decoder;
     ]
 }
 
@@ -31406,10 +24297,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Hyperlink";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_guid_from_decoder(decoder)?;
-        4 => skip_cms_item_page_target_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_guid_from_decoder;
+        4 => one skip_cms_item_page_target_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31418,9 +24309,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSItemPageTarget";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31434,14 +24325,14 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Mention";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
-        5 => skip_mention_source_from_decoder(decoder)?;
-        6 => decoder.read_var_uint64()?;
-        7 => decoder.read_var_uint64()?;
-        8 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
+        5 => one skip_mention_source_from_decoder;
+        6 => one kiwi_skip_uint64_value;
+        7 => one kiwi_skip_uint64_value;
+        8 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31450,20 +24341,20 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EmbedData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
-        5 => decoder.read_var_float_value()?;
-        6 => decoder.read_var_float_value()?;
-        7 => decoder.skip_string()?;
-        8 => decoder.skip_string()?;
-        9 => decoder.skip_string()?;
-        10 => decoder.skip_string()?;
-        11 => decoder.skip_string()?;
-        12 => decoder.skip_string()?;
-        13 => decoder.skip_string()?;
-        14 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
+        5 => one kiwi_skip_float_value;
+        6 => one kiwi_skip_float_value;
+        7 => one kiwi_skip_string_value;
+        8 => one kiwi_skip_string_value;
+        9 => one kiwi_skip_string_value;
+        10 => one kiwi_skip_string_value;
+        11 => one kiwi_skip_string_value;
+        12 => one kiwi_skip_string_value;
+        13 => one kiwi_skip_string_value;
+        14 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31472,9 +24363,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StampData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31483,14 +24374,14 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "LinkPreviewData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
-        5 => decoder.skip_string()?;
-        6 => decoder.skip_string()?;
-        7 => decoder.read_var_float_value()?;
-        8 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
+        5 => one kiwi_skip_string_value;
+        6 => one kiwi_skip_string_value;
+        7 => one kiwi_skip_float_value;
+        8 => one kiwi_skip_float_value;
     ]
 }
 
@@ -31499,10 +24390,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Viewport";
     fields [
-        1 => skip_rect_from_decoder(decoder)?;
-        2 => decoder.read_bool()?;
-        3 => decoder.read_var_float_value()?;
-        4 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_rect_from_decoder;
+        2 => one kiwi_skip_bool_value;
+        3 => one kiwi_skip_float_value;
+        4 => one skip_guid_from_decoder;
     ]
 }
 
@@ -31511,11 +24402,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Mouse";
     fields [
-        1 => skip_mouse_cursor_from_decoder(decoder)?;
-        2 => skip_vector_from_decoder(decoder)?;
-        3 => skip_rect_from_decoder(decoder)?;
-        4 => skip_guid_from_decoder(decoder)?;
-        5 => decoder.read_var_uint()?;
+        1 => one skip_mouse_cursor_from_decoder;
+        2 => one skip_vector_from_decoder;
+        3 => one skip_rect_from_decoder;
+        4 => one skip_guid_from_decoder;
+        5 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -31523,8 +24414,8 @@ kiwi_skip_struct_decoder! {
     fn skip_click_from_decoder;
     decoder decoder;
     fields [
-        decoder.read_var_uint()?;
-        skip_vector_from_decoder(decoder)?;
+        one kiwi_skip_uint_value;
+        one skip_vector_from_decoder;
     ]
 }
 
@@ -31532,8 +24423,8 @@ kiwi_skip_struct_decoder! {
     fn skip_scroll_position_from_decoder;
     decoder decoder;
     fields [
-        skip_guid_from_decoder(decoder)?;
-        skip_vector_from_decoder(decoder)?;
+        one skip_guid_from_decoder;
+        one skip_vector_from_decoder;
     ]
 }
 
@@ -31541,9 +24432,9 @@ kiwi_skip_struct_decoder! {
     fn skip_triggered_overlay_from_decoder;
     decoder decoder;
     fields [
-        skip_guid_from_decoder(decoder)?;
-        skip_guid_from_decoder(decoder)?;
-        skip_guid_from_decoder(decoder)?;
+        one skip_guid_from_decoder;
+        one skip_guid_from_decoder;
+        one skip_guid_from_decoder;
     ]
 }
 
@@ -31552,11 +24443,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TriggeredOverlayData";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => skip_guid_from_decoder(decoder)?;
-        5 => skip_guid_path_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_guid_from_decoder;
+        4 => one skip_guid_from_decoder;
+        5 => one skip_guid_path_from_decoder;
     ]
 }
 
@@ -31565,10 +24456,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TriggeredSetVariableActionData";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31577,10 +24468,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TriggeredSetVariableModeActionData";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => skip_variable_set_id_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_variable_set_id_from_decoder;
     ]
 }
 
@@ -31589,11 +24480,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VideoStateChangeData";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_bool()?;
-        3 => decoder.read_bool()?;
-        4 => decoder.read_repeated(|decoder| { decoder.read_var_uint()?; Ok(()) })?;
-        5 => decoder.read_var_uint()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_bool_value;
+        3 => one kiwi_skip_bool_value;
+        4 => repeated kiwi_skip_uint_value;
+        5 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -31602,8 +24493,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EmbeddedPrototypeData";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -31612,8 +24503,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PresentedState";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_triggered_overlay_data_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_guid_from_decoder;
+        2 => repeated skip_triggered_overlay_data_from_decoder;
     ]
 }
 
@@ -31627,13 +24518,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TopLevelPlaybackChange";
     fields [
-        1 => skip_presented_state_from_decoder(decoder)?;
-        2 => skip_presented_state_from_decoder(decoder)?;
-        3 => skip_guid_path_from_decoder(decoder)?;
-        4 => skip_guid_from_decoder(decoder)?;
-        5 => decoder.read_bool()?;
-        6 => skip_transition_direction_from_decoder(decoder)?;
-        7 => skip_guid_path_from_decoder(decoder)?;
+        1 => one skip_presented_state_from_decoder;
+        2 => one skip_presented_state_from_decoder;
+        3 => one skip_guid_path_from_decoder;
+        4 => one skip_guid_from_decoder;
+        5 => one kiwi_skip_bool_value;
+        6 => one skip_transition_direction_from_decoder;
+        7 => one skip_guid_path_from_decoder;
     ]
 }
 
@@ -31642,11 +24533,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InstanceStateChange";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_guid_path_from_decoder(decoder)?;
-        4 => skip_guid_path_from_decoder(decoder)?;
-        5 => skip_playback_change_phase_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_guid_path_from_decoder;
+        4 => one skip_guid_path_from_decoder;
+        5 => one skip_playback_change_phase_from_decoder;
     ]
 }
 
@@ -31655,9 +24546,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TextCursor";
     fields [
-        1 => skip_rect_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_rect_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_guid_from_decoder;
     ]
 }
 
@@ -31666,13 +24557,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TextSelection";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_rect_from_decoder(decoder)?; Ok(()) })?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => skip_vector_from_decoder(decoder)?;
-        5 => skip_guid_from_decoder(decoder)?;
-        6 => skip_guid_from_decoder(decoder)?;
-        7 => skip_guid_from_decoder(decoder)?;
+        1 => repeated skip_rect_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_guid_from_decoder;
+        4 => one skip_vector_from_decoder;
+        5 => one skip_guid_from_decoder;
+        6 => one skip_guid_from_decoder;
+        7 => one skip_guid_from_decoder;
     ]
 }
 
@@ -31686,9 +24577,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PlaybackChangeKeyframe";
     fields [
-        1 => skip_playback_change_phase_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
+        1 => one skip_playback_change_phase_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
     ]
 }
 
@@ -31697,10 +24588,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StateMapping";
     fields [
-        1 => skip_guid_path_from_decoder(decoder)?;
-        2 => skip_top_level_playback_change_from_decoder(decoder)?;
-        3 => skip_playback_change_keyframe_from_decoder(decoder)?;
-        4 => decoder.read_var_float_value()?;
+        1 => one skip_guid_path_from_decoder;
+        2 => one skip_top_level_playback_change_from_decoder;
+        3 => one skip_playback_change_keyframe_from_decoder;
+        4 => one kiwi_skip_float_value;
     ]
 }
 
@@ -31709,9 +24600,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ScrollMapping";
     fields [
-        1 => skip_guid_path_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        3 => skip_vector_from_decoder(decoder)?;
+        1 => one skip_guid_path_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => one skip_vector_from_decoder;
     ]
 }
 
@@ -31720,13 +24611,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PlaybackUpdate";
     fields [
-        1 => skip_top_level_playback_change_from_decoder(decoder)?;
-        2 => skip_playback_change_keyframe_from_decoder(decoder)?;
-        3 => decoder.read_repeated(|decoder| { skip_scroll_mapping_from_decoder(decoder)?; Ok(()) })?;
-        4 => decoder.read_var_float_value()?;
-        5 => skip_vector_from_decoder(decoder)?;
-        6 => decoder.read_bool()?;
-        7 => decoder.read_repeated(|decoder| { skip_state_mapping_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_top_level_playback_change_from_decoder;
+        2 => one skip_playback_change_keyframe_from_decoder;
+        3 => repeated skip_scroll_mapping_from_decoder;
+        4 => one kiwi_skip_float_value;
+        5 => one skip_vector_from_decoder;
+        6 => one kiwi_skip_bool_value;
+        7 => repeated skip_state_mapping_from_decoder;
     ]
 }
 
@@ -31735,8 +24626,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ChatMessage";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31745,7 +24636,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VoiceMetadata";
     fields [
-        1 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31754,8 +24645,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AprilFunCursor";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31764,8 +24655,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AprilFunFigPal";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31789,9 +24680,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AgentInfo";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31800,52 +24691,52 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "UserChange";
     fields [
-        1 => decoder.read_var_uint()?;
-        44 => decoder.skip_string()?;
-        2 => decoder.read_bool()?;
-        3 => decoder.skip_string()?;
-        4 => skip_color_from_decoder(decoder)?;
-        5 => decoder.skip_string()?;
-        6 => skip_viewport_from_decoder(decoder)?;
-        7 => skip_mouse_from_decoder(decoder)?;
-        8 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
-        9 => decoder.read_repeated(|decoder| { decoder.read_var_uint()?; Ok(()) })?;
-        10 => decoder.skip_string()?;
-        11 => decoder.read_repeated(|decoder| { skip_click_from_decoder(decoder)?; Ok(()) })?;
-        12 => decoder.read_repeated(|decoder| { skip_scroll_position_from_decoder(decoder)?; Ok(()) })?;
-        13 => decoder.read_repeated(|decoder| { skip_triggered_overlay_from_decoder(decoder)?; Ok(()) })?;
-        14 => decoder.skip_string()?;
-        15 => skip_guid_from_decoder(decoder)?;
-        16 => skip_guid_from_decoder(decoder)?;
-        38 => decoder.read_var_uint()?;
-        17 => decoder.read_repeated(|decoder| { skip_triggered_overlay_data_from_decoder(decoder)?; Ok(()) })?;
-        18 => decoder.read_repeated(|decoder| { skip_playback_update_from_decoder(decoder)?; Ok(()) })?;
-        19 => skip_chat_message_from_decoder(decoder)?;
-        20 => skip_voice_metadata_from_decoder(decoder)?;
-        21 => decoder.read_bool()?;
-        22 => decoder.read_bool()?;
-        23 => decoder.read_repeated(|decoder| { skip_instance_state_change_from_decoder(decoder)?; Ok(()) })?;
-        24 => skip_text_cursor_from_decoder(decoder)?;
-        25 => skip_text_selection_from_decoder(decoder)?;
-        26 => decoder.read_var_uint()?;
-        27 => decoder.read_bool()?;
-        28 => skip_heartbeat_from_decoder(decoder)?;
-        29 => decoder.read_repeated(|decoder| { skip_triggered_set_variable_action_data_from_decoder(decoder)?; Ok(()) })?;
-        30 => decoder.read_repeated(|decoder| { skip_video_state_change_data_from_decoder(decoder)?; Ok(()) })?;
-        31 => decoder.skip_string()?;
-        32 => skip_guid_from_decoder(decoder)?;
-        33 => decoder.read_repeated(|decoder| { skip_triggered_set_variable_mode_action_data_from_decoder(decoder)?; Ok(()) })?;
-        34 => skip_april_fun_cursor_from_decoder(decoder)?;
-        35 => decoder.read_repeated(|decoder| { skip_embedded_prototype_data_from_decoder(decoder)?; Ok(()) })?;
-        36 => skip_guid_from_decoder(decoder)?;
-        43 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
-        37 => skip_guid_from_decoder(decoder)?;
-        39 => skip_april_fun_fig_pal_from_decoder(decoder)?;
-        40 => skip_collaborative_text_selection_from_decoder(decoder)?;
-        41 => skip_sites_view_state_from_decoder(decoder)?;
-        42 => decoder.read_repeated(|decoder| { skip_node_chat_exchange_from_decoder(decoder)?; Ok(()) })?;
-        45 => skip_design_full_page_view_state_from_decoder(decoder)?;
-        46 => skip_agent_info_from_decoder(decoder)?;
+        1 => one kiwi_skip_uint_value;
+        44 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_bool_value;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_color_from_decoder;
+        5 => one kiwi_skip_string_value;
+        6 => one skip_viewport_from_decoder;
+        7 => one skip_mouse_from_decoder;
+        8 => repeated skip_guid_from_decoder;
+        9 => repeated kiwi_skip_uint_value;
+        10 => one kiwi_skip_string_value;
+        11 => repeated skip_click_from_decoder;
+        12 => repeated skip_scroll_position_from_decoder;
+        13 => repeated skip_triggered_overlay_from_decoder;
+        14 => one kiwi_skip_string_value;
+        15 => one skip_guid_from_decoder;
+        16 => one skip_guid_from_decoder;
+        38 => one kiwi_skip_uint_value;
+        17 => repeated skip_triggered_overlay_data_from_decoder;
+        18 => repeated skip_playback_update_from_decoder;
+        19 => one skip_chat_message_from_decoder;
+        20 => one skip_voice_metadata_from_decoder;
+        21 => one kiwi_skip_bool_value;
+        22 => one kiwi_skip_bool_value;
+        23 => repeated skip_instance_state_change_from_decoder;
+        24 => one skip_text_cursor_from_decoder;
+        25 => one skip_text_selection_from_decoder;
+        26 => one kiwi_skip_uint_value;
+        27 => one kiwi_skip_bool_value;
+        28 => one skip_heartbeat_from_decoder;
+        29 => repeated skip_triggered_set_variable_action_data_from_decoder;
+        30 => repeated skip_video_state_change_data_from_decoder;
+        31 => one kiwi_skip_string_value;
+        32 => one skip_guid_from_decoder;
+        33 => repeated skip_triggered_set_variable_mode_action_data_from_decoder;
+        34 => one skip_april_fun_cursor_from_decoder;
+        35 => repeated skip_embedded_prototype_data_from_decoder;
+        36 => one skip_guid_from_decoder;
+        43 => repeated skip_guid_from_decoder;
+        37 => one skip_guid_from_decoder;
+        39 => one skip_april_fun_fig_pal_from_decoder;
+        40 => one skip_collaborative_text_selection_from_decoder;
+        41 => one skip_sites_view_state_from_decoder;
+        42 => repeated skip_node_chat_exchange_from_decoder;
+        45 => one skip_design_full_page_view_state_from_decoder;
+        46 => one skip_agent_info_from_decoder;
     ]
 }
 
@@ -31854,10 +24745,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InteractiveSlideElementChange";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one skip_guid_from_decoder;
+        4 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31866,8 +24757,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeStatusChange";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
-        2 => skip_section_status_info_from_decoder(decoder)?;
+        1 => repeated skip_guid_from_decoder;
+        2 => one skip_section_status_info_from_decoder;
     ]
 }
 
@@ -31876,8 +24767,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "BuzzApprovalAssetEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_bool()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31886,9 +24777,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "BuzzApprovalChange";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_buzz_approval_asset_entry_from_decoder(decoder)?; Ok(()) })?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
+        1 => repeated skip_buzz_approval_asset_entry_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31907,9 +24798,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SceneGraphQuery";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        3 => skip_scene_graph_query_behavior_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => one skip_scene_graph_query_behavior_from_decoder;
     ]
 }
 
@@ -31918,7 +24809,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeChangesMetadata";
     fields [
-        1 => decoder.read_var_uint()?;
+        1 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -31927,7 +24818,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CursorReaction";
     fields [
-        1 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31936,14 +24827,14 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TimerInfo";
     fields [
-        1 => decoder.read_bool()?;
-        2 => decoder.read_var_uint()?;
-        3 => decoder.read_var_uint()?;
-        4 => decoder.read_var_uint()?;
-        5 => decoder.skip_string()?;
-        6 => decoder.read_var_uint()?;
-        7 => decoder.read_var_uint()?;
-        8 => decoder.skip_string()?;
+        1 => one kiwi_skip_bool_value;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
+        4 => one kiwi_skip_uint_value;
+        5 => one kiwi_skip_string_value;
+        6 => one kiwi_skip_uint_value;
+        7 => one kiwi_skip_uint_value;
+        8 => one kiwi_skip_string_value;
     ]
 }
 
@@ -31952,11 +24843,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "MusicInfo";
     fields [
-        1 => decoder.read_bool()?;
-        2 => decoder.read_var_uint()?;
-        3 => decoder.skip_string()?;
-        4 => decoder.read_var_uint()?;
-        5 => decoder.read_bool()?;
+        1 => one kiwi_skip_bool_value;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_uint_value;
+        5 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31965,8 +24856,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PresenterNomination";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => decoder.read_bool()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31975,9 +24866,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PresenterInfo";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => skip_presenter_nomination_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one skip_presenter_nomination_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -31986,12 +24877,12 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ClientBroadcast";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => skip_cursor_reaction_from_decoder(decoder)?;
-        3 => skip_timer_info_from_decoder(decoder)?;
-        4 => skip_presenter_info_from_decoder(decoder)?;
-        5 => skip_presenter_info_from_decoder(decoder)?;
-        6 => skip_music_info_from_decoder(decoder)?;
+        1 => one kiwi_skip_uint_value;
+        2 => one skip_cursor_reaction_from_decoder;
+        3 => one skip_timer_info_from_decoder;
+        4 => one skip_presenter_info_from_decoder;
+        5 => one skip_presenter_info_from_decoder;
+        6 => one skip_music_info_from_decoder;
     ]
 }
 
@@ -32005,51 +24896,51 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Message";
     fields [
-        1 => skip_message_type_from_decoder(decoder)?;
-        2 => decoder.read_var_uint()?;
-        42 => decoder.skip_string()?;
-        3 => decoder.read_var_uint()?;
-        37 => decoder.read_bool()?;
-        4 => decoder.read_repeated(|decoder| { skip_node_change_from_decoder(decoder)?; Ok(()) })?;
-        5 => decoder.read_repeated(|decoder| { skip_user_change_from_decoder(decoder)?; Ok(()) })?;
-        32 => skip_interactive_slide_element_change_from_decoder(decoder)?;
-        36 => skip_node_status_change_from_decoder(decoder)?;
-        44 => skip_buzz_approval_change_from_decoder(decoder)?;
-        6 => decoder.read_repeated(|decoder| { skip_blob_from_decoder(decoder)?; Ok(()) })?;
-        30 => decoder.read_var_uint()?;
-        7 => decoder.skip_string()?;
-        8 => skip_access_from_decoder(decoder)?;
-        9 => decoder.skip_string()?;
-        10 => skip_style_set_type_from_decoder(decoder)?;
-        11 => skip_style_set_content_type_from_decoder(decoder)?;
-        12 => decoder.read_var_int()?;
-        13 => skip_vector_from_decoder(decoder)?;
-        14 => decoder.skip_string()?;
-        15 => decoder.skip_string()?;
-        16 => decoder.read_repeated(|decoder| { skip_scene_graph_query_from_decoder(decoder)?; Ok(()) })?;
-        17 => skip_node_changes_metadata_from_decoder(decoder)?;
-        18 => decoder.read_var_uint()?;
-        19 => decoder.read_bool()?;
-        20 => skip_guid_from_decoder(decoder)?;
-        21 => decoder.read_bool()?;
-        22 => decoder.read_repeated(|decoder| { skip_message_from_decoder(decoder)?; Ok(()) })?;
-        23 => decoder.read_repeated(|decoder| { skip_message_from_decoder(decoder)?; Ok(()) })?;
-        24 => decoder.read_repeated(|decoder| { skip_client_broadcast_from_decoder(decoder)?; Ok(()) })?;
-        25 => decoder.read_var_uint()?;
-        26 => decoder.skip_string()?;
-        27 => skip_editor_type_from_decoder(decoder)?;
-        28 => decoder.skip_string()?;
-        29 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
-        31 => decoder.read_bool()?;
-        33 => decoder.read_repeated(|decoder| { skip_clipboard_selection_region_from_decoder(decoder)?; Ok(()) })?;
-        34 => skip_encoded_offsets_index_from_decoder(decoder)?;
-        35 => decoder.read_bool()?;
-        38 => decoder.read_var_uint64()?;
-        39 => decoder.read_repeated(|decoder| { skip_annotation_category_from_decoder(decoder)?; Ok(()) })?;
-        40 => skip_client_rendered_metadata_from_decoder(decoder)?;
-        41 => skip_paste_asset_type_from_decoder(decoder)?;
-        43 => skip_object_animation_list_from_decoder(decoder)?;
-        45 => skip_scene_graph_query_mode_from_decoder(decoder)?;
+        1 => one skip_message_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        42 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_uint_value;
+        37 => one kiwi_skip_bool_value;
+        4 => repeated skip_node_change_from_decoder;
+        5 => repeated skip_user_change_from_decoder;
+        32 => one skip_interactive_slide_element_change_from_decoder;
+        36 => one skip_node_status_change_from_decoder;
+        44 => one skip_buzz_approval_change_from_decoder;
+        6 => repeated skip_blob_from_decoder;
+        30 => one kiwi_skip_uint_value;
+        7 => one kiwi_skip_string_value;
+        8 => one skip_access_from_decoder;
+        9 => one kiwi_skip_string_value;
+        10 => one skip_style_set_type_from_decoder;
+        11 => one skip_style_set_content_type_from_decoder;
+        12 => one kiwi_skip_int_value;
+        13 => one skip_vector_from_decoder;
+        14 => one kiwi_skip_string_value;
+        15 => one kiwi_skip_string_value;
+        16 => repeated skip_scene_graph_query_from_decoder;
+        17 => one skip_node_changes_metadata_from_decoder;
+        18 => one kiwi_skip_uint_value;
+        19 => one kiwi_skip_bool_value;
+        20 => one skip_guid_from_decoder;
+        21 => one kiwi_skip_bool_value;
+        22 => repeated skip_message_from_decoder;
+        23 => repeated skip_message_from_decoder;
+        24 => repeated skip_client_broadcast_from_decoder;
+        25 => one kiwi_skip_uint_value;
+        26 => one kiwi_skip_string_value;
+        27 => one skip_editor_type_from_decoder;
+        28 => one kiwi_skip_string_value;
+        29 => repeated skip_guid_from_decoder;
+        31 => one kiwi_skip_bool_value;
+        33 => repeated skip_clipboard_selection_region_from_decoder;
+        34 => one skip_encoded_offsets_index_from_decoder;
+        35 => one kiwi_skip_bool_value;
+        38 => one kiwi_skip_uint64_value;
+        39 => repeated skip_annotation_category_from_decoder;
+        40 => one skip_client_rendered_metadata_from_decoder;
+        41 => one skip_paste_asset_type_from_decoder;
+        43 => one skip_object_animation_list_from_decoder;
+        45 => one skip_scene_graph_query_mode_from_decoder;
     ]
 }
 
@@ -32058,10 +24949,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EncodedOffsetsIndex";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => decoder.read_var_uint()?;
-        3 => decoder.read_var_uint()?;
-        4 => decoder.read_repeated(|decoder| { skip_guid_and_encoded_offset_from_decoder(decoder)?; Ok(()) })?;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
+        4 => repeated skip_guid_and_encoded_offset_from_decoder;
     ]
 }
 
@@ -32069,8 +24960,8 @@ kiwi_skip_struct_decoder! {
     fn skip_guid_and_encoded_offset_from_decoder;
     decoder decoder;
     fields [
-        skip_guid_from_decoder(decoder)?;
-        decoder.read_var_uint()?;
+        one skip_guid_from_decoder;
+        one kiwi_skip_uint_value;
     ]
 }
 
@@ -32084,8 +24975,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "RichMediaData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_rich_media_type_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_rich_media_type_from_decoder;
     ]
 }
 
@@ -32104,35 +24995,35 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableAnyValue";
     fields [
-        1 => decoder.read_bool()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_var_float_value()?;
-        4 => skip_variable_id_from_decoder(decoder)?;
-        5 => skip_color_from_decoder(decoder)?;
-        6 => skip_expression_from_decoder(decoder)?;
-        7 => skip_variable_map_from_decoder(decoder)?;
-        8 => skip_symbol_id_from_decoder(decoder)?;
-        9 => skip_variable_font_style_from_decoder(decoder)?;
-        10 => skip_text_data_from_decoder(decoder)?;
-        11 => skip_node_field_alias_from_decoder(decoder)?;
-        12 => skip_cms_alias_from_decoder(decoder)?;
-        13 => skip_prop_ref_value_from_decoder(decoder)?;
-        14 => skip_image_parameter_value_from_decoder(decoder)?;
-        15 => skip_managed_string_alias_from_decoder(decoder)?;
-        16 => skip_hyperlink_from_decoder(decoder)?;
-        17 => skip_js_runtime_alias_from_decoder(decoder)?;
-        18 => skip_slot_content_id_from_decoder(decoder)?;
-        19 => skip_keyframe_track_id_from_decoder(decoder)?;
-        20 => skip_keyframe_track_parameter_value_from_decoder(decoder)?;
-        21 => skip_easing_data_from_decoder(decoder)?;
-        22 => skip_vector_from_decoder(decoder)?;
-        23 => skip_color_array_from_decoder(decoder)?;
-        24 => skip_line_from_decoder(decoder)?;
-        25 => skip_circle_from_decoder(decoder)?;
-        26 => skip_rotation3_d_from_decoder(decoder)?;
-        27 => skip_circle_point_from_decoder(decoder)?;
-        28 => skip_gradient_from_decoder(decoder)?;
-        29 => skip_color_point_from_decoder(decoder)?;
+        1 => one kiwi_skip_bool_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_float_value;
+        4 => one skip_variable_id_from_decoder;
+        5 => one skip_color_from_decoder;
+        6 => one skip_expression_from_decoder;
+        7 => one skip_variable_map_from_decoder;
+        8 => one skip_symbol_id_from_decoder;
+        9 => one skip_variable_font_style_from_decoder;
+        10 => one skip_text_data_from_decoder;
+        11 => one skip_node_field_alias_from_decoder;
+        12 => one skip_cms_alias_from_decoder;
+        13 => one skip_prop_ref_value_from_decoder;
+        14 => one skip_image_parameter_value_from_decoder;
+        15 => one skip_managed_string_alias_from_decoder;
+        16 => one skip_hyperlink_from_decoder;
+        17 => one skip_js_runtime_alias_from_decoder;
+        18 => one skip_slot_content_id_from_decoder;
+        19 => one skip_keyframe_track_id_from_decoder;
+        20 => one skip_keyframe_track_parameter_value_from_decoder;
+        21 => one skip_easing_data_from_decoder;
+        22 => one skip_vector_from_decoder;
+        23 => one skip_color_array_from_decoder;
+        24 => one skip_line_from_decoder;
+        25 => one skip_circle_from_decoder;
+        26 => one skip_rotation3_d_from_decoder;
+        27 => one skip_circle_point_from_decoder;
+        28 => one skip_gradient_from_decoder;
+        29 => one skip_color_point_from_decoder;
     ]
 }
 
@@ -32146,8 +25037,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Expression";
     fields [
-        1 => skip_expression_function_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_variable_data_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_expression_function_from_decoder;
+        2 => repeated skip_variable_data_from_decoder;
     ]
 }
 
@@ -32156,9 +25047,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableMapValue";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_variable_data_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_variable_data_from_decoder;
+        3 => one skip_guid_from_decoder;
     ]
 }
 
@@ -32167,7 +25058,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_variable_map_value_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_variable_map_value_from_decoder;
     ]
 }
 
@@ -32176,7 +25067,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ColorArray";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_variable_data_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_variable_data_from_decoder;
     ]
 }
 
@@ -32185,9 +25076,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableFontStyle";
     fields [
-        1 => skip_variable_data_from_decoder(decoder)?;
-        2 => skip_variable_data_from_decoder(decoder)?;
-        3 => skip_variable_data_from_decoder(decoder)?;
+        1 => one skip_variable_data_from_decoder;
+        2 => one skip_variable_data_from_decoder;
+        3 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -32196,13 +25087,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ImageParameterValue";
     fields [
-        1 => skip_image_from_decoder(decoder)?;
-        2 => skip_image_from_decoder(decoder)?;
-        6 => skip_image_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
-        4 => decoder.read_var_uint()?;
-        5 => decoder.read_var_uint()?;
-        7 => decoder.read_var_uint()?;
+        1 => one skip_image_from_decoder;
+        2 => one skip_image_from_decoder;
+        6 => one skip_image_from_decoder;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_uint_value;
+        5 => one kiwi_skip_uint_value;
+        7 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -32211,8 +25102,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ThumbnailInfo";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -32221,9 +25112,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AiCanvasPrompt";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => repeated skip_guid_from_decoder;
     ]
 }
 
@@ -32232,9 +25123,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeFieldAlias";
     fields [
-        1 => skip_guid_path_from_decoder(decoder)?;
-        2 => skip_node_field_alias_type_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
+        1 => one skip_guid_path_from_decoder;
+        2 => one skip_node_field_alias_type_from_decoder;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -32248,10 +25139,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSAlias";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => skip_variable_data_type_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_variable_data_type_from_decoder;
     ]
 }
 
@@ -32260,7 +25151,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "JsRuntimeAlias";
     fields [
-        1 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
     ]
 }
 
@@ -32269,7 +25160,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PropRefValue";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
     ]
 }
 
@@ -32278,8 +25169,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -32288,8 +25179,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringPlaceholderMapEntry";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -32298,7 +25189,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SlotContentId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
     ]
 }
 
@@ -32307,8 +25198,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringAlias";
     fields [
-        1 => skip_managed_string_id_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_managed_string_placeholder_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_managed_string_id_from_decoder;
+        2 => repeated skip_managed_string_placeholder_map_entry_from_decoder;
     ]
 }
 
@@ -32317,8 +25208,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "KeyframeTrackId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -32327,8 +25218,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnimationPresetId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -32337,8 +25228,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ToolId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -32347,8 +25238,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CustomEffectId";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_asset_ref_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_asset_ref_from_decoder;
     ]
 }
 
@@ -32357,10 +25248,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TRSSTransform2D";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => skip_vector_from_decoder(decoder)?;
-        4 => decoder.read_var_float_value()?;
+        1 => one skip_vector_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one skip_vector_from_decoder;
+        4 => one kiwi_skip_float_value;
     ]
 }
 
@@ -32369,9 +25260,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableData";
     fields [
-        1 => skip_variable_any_value_from_decoder(decoder)?;
-        2 => skip_variable_data_type_from_decoder(decoder)?;
-        3 => skip_variable_resolved_data_type_from_decoder(decoder)?;
+        1 => one skip_variable_any_value_from_decoder;
+        2 => one skip_variable_data_type_from_decoder;
+        3 => one skip_variable_resolved_data_type_from_decoder;
     ]
 }
 
@@ -32380,11 +25271,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableSetMode";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
-        4 => skip_variable_set_id_from_decoder(decoder)?;
-        5 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_variable_set_id_from_decoder;
+        5 => one skip_guid_from_decoder;
     ]
 }
 
@@ -32393,7 +25284,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableDataValues";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_variable_data_values_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_variable_data_values_entry_from_decoder;
     ]
 }
 
@@ -32402,8 +25293,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableDataValuesEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_variable_data_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -32417,10 +25308,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "KeyframeAnyValue";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => skip_color_from_decoder(decoder)?;
-        3 => skip_text_data_from_decoder(decoder)?;
-        4 => skip_vector_from_decoder(decoder)?;
+        1 => one kiwi_skip_float_value;
+        2 => one skip_color_from_decoder;
+        3 => one skip_text_data_from_decoder;
+        4 => one skip_vector_from_decoder;
     ]
 }
 
@@ -32434,8 +25325,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "KeyframeValueData";
     fields [
-        1 => skip_keyframe_any_value_from_decoder(decoder)?;
-        2 => skip_keyframe_value_type_from_decoder(decoder)?;
+        1 => one skip_keyframe_any_value_from_decoder;
+        2 => one skip_keyframe_value_type_from_decoder;
     ]
 }
 
@@ -32449,8 +25340,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManualKeyframeTrackParameter";
     fields [
-        1 => skip_keyframe_track_id_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_keyframe_track_id_from_decoder;
+        2 => one skip_guid_from_decoder;
     ]
 }
 
@@ -32459,9 +25350,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnimationPresetKeyframeTrackParameter";
     fields [
-        1 => skip_animation_preset_id_from_decoder(decoder)?;
-        2 => skip_keyframe_track_id_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_animation_preset_id_from_decoder;
+        2 => one skip_keyframe_track_id_from_decoder;
+        3 => one skip_guid_from_decoder;
     ]
 }
 
@@ -32470,9 +25361,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "KeyframeTrackAnyParameter";
     fields [
-        1 => skip_manual_keyframe_track_parameter_from_decoder(decoder)?;
-        2 => skip_animation_preset_keyframe_track_parameter_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_manual_keyframe_track_parameter_from_decoder;
+        2 => one skip_animation_preset_keyframe_track_parameter_from_decoder;
+        3 => one skip_guid_from_decoder;
     ]
 }
 
@@ -32481,8 +25372,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "KeyframeTrackParameter";
     fields [
-        1 => skip_keyframe_track_any_parameter_from_decoder(decoder)?;
-        2 => skip_keyframe_track_parameter_type_from_decoder(decoder)?;
+        1 => one skip_keyframe_track_any_parameter_from_decoder;
+        2 => one skip_keyframe_track_parameter_type_from_decoder;
     ]
 }
 
@@ -32491,7 +25382,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "KeyframeTrackParameterValue";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_keyframe_track_parameter_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_keyframe_track_parameter_from_decoder;
     ]
 }
 
@@ -32500,7 +25391,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnimationPresets";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_animation_preset_data_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_animation_preset_data_from_decoder;
     ]
 }
 
@@ -32509,8 +25400,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnimationPresetData";
     fields [
-        1 => skip_animation_preset_id_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
+        1 => one skip_animation_preset_id_from_decoder;
+        2 => one skip_guid_from_decoder;
     ]
 }
 
@@ -32519,7 +25410,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StyleAnimation";
     fields [
-        1 => skip_animation_preset_id_from_decoder(decoder)?;
+        1 => one skip_animation_preset_id_from_decoder;
     ]
 }
 
@@ -32528,10 +25419,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StyleIdForAnimation";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_style_id_from_decoder(decoder)?;
-        4 => decoder.read_var_int64()?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_style_id_from_decoder;
+        4 => one kiwi_skip_int64_value;
     ]
 }
 
@@ -32540,7 +25431,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Tools";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_tool_data_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_tool_data_from_decoder;
     ]
 }
 
@@ -32549,9 +25440,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ToolData";
     fields [
-        1 => skip_tool_id_from_decoder(decoder)?;
-        2 => skip_code_component_id_from_decoder(decoder)?;
-        3 => decoder.read_repeated(|decoder| { skip_component_prop_assignment_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_tool_id_from_decoder;
+        2 => one skip_code_component_id_from_decoder;
+        3 => repeated skip_component_prop_assignment_from_decoder;
     ]
 }
 
@@ -32560,7 +25451,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CustomEffects";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_custom_effect_data_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_custom_effect_data_from_decoder;
     ]
 }
 
@@ -32569,7 +25460,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CustomEffectData";
     fields [
-        1 => skip_custom_effect_id_from_decoder(decoder)?;
+        1 => one skip_custom_effect_id_from_decoder;
     ]
 }
 
@@ -32578,9 +25469,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SpringParams";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
     ]
 }
 
@@ -32589,8 +25480,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionEasingAnyValue";
     fields [
-        1 => skip_spring_params_from_decoder(decoder)?;
-        2 => skip_bezier_handles_from_decoder(decoder)?;
+        1 => one skip_spring_params_from_decoder;
+        2 => one skip_bezier_handles_from_decoder;
     ]
 }
 
@@ -32599,8 +25490,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EasingData";
     fields [
-        1 => skip_easing_type_from_decoder(decoder)?;
-        2 => skip_transition_easing_any_value_from_decoder(decoder)?;
+        1 => one skip_easing_type_from_decoder;
+        2 => one skip_transition_easing_any_value_from_decoder;
     ]
 }
 
@@ -32609,16 +25500,16 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionOverride";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => skip_variable_data_from_decoder(decoder)?;
-        4 => decoder.read_var_float_value()?;
-        5 => skip_variable_data_from_decoder(decoder)?;
-        6 => skip_easing_data_from_decoder(decoder)?;
-        7 => skip_variable_data_from_decoder(decoder)?;
-        8 => decoder.read_var_uint64()?;
-        9 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
-        10 => decoder.read_bool()?;
+        1 => one skip_guid_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one skip_variable_data_from_decoder;
+        4 => one kiwi_skip_float_value;
+        5 => one skip_variable_data_from_decoder;
+        6 => one skip_easing_data_from_decoder;
+        7 => one skip_variable_data_from_decoder;
+        8 => one kiwi_skip_uint64_value;
+        9 => repeated skip_guid_from_decoder;
+        10 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -32627,8 +25518,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionOverrideData";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_transition_override_from_decoder(decoder)?; Ok(()) })?;
-        2 => skip_transition_override_prop_map_from_decoder(decoder)?;
+        1 => repeated skip_transition_override_from_decoder;
+        2 => one skip_transition_override_prop_map_from_decoder;
     ]
 }
 
@@ -32647,10 +25538,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionOverrideBindingLocation";
     fields [
-        1 => skip_transition_override_binding_top_level_field_from_decoder(decoder)?;
-        2 => decoder.read_var_int()?;
-        3 => decoder.read_var_int()?;
-        4 => decoder.read_var_int()?;
+        1 => one skip_transition_override_binding_top_level_field_from_decoder;
+        2 => one kiwi_skip_int_value;
+        3 => one kiwi_skip_int_value;
+        4 => one kiwi_skip_int_value;
     ]
 }
 
@@ -32664,10 +25555,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeContentsKeyframeBindingLocation";
     fields [
-        1 => skip_transition_override_binding_top_level_field_from_decoder(decoder)?;
-        2 => skip_variable_field_from_decoder(decoder)?;
-        3 => decoder.read_var_int()?;
-        4 => skip_keyframe_binding_effect_parametrized_field_from_decoder(decoder)?;
+        1 => one skip_transition_override_binding_top_level_field_from_decoder;
+        2 => one skip_variable_field_from_decoder;
+        3 => one kiwi_skip_int_value;
+        4 => one skip_keyframe_binding_effect_parametrized_field_from_decoder;
     ]
 }
 
@@ -32676,7 +25567,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionOverridePropMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_transition_override_prop_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_transition_override_prop_map_entry_from_decoder;
     ]
 }
 
@@ -32685,10 +25576,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionOverridePropMapEntry";
     fields [
-        1 => skip_transition_override_prop_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_transition_override_from_decoder(decoder)?; Ok(()) })?;
-        3 => skip_transition_override_binding_location_from_decoder(decoder)?;
-        4 => skip_node_contents_keyframe_binding_location_from_decoder(decoder)?;
+        1 => one skip_transition_override_prop_from_decoder;
+        2 => repeated skip_transition_override_from_decoder;
+        3 => one skip_transition_override_binding_location_from_decoder;
+        4 => one skip_node_contents_keyframe_binding_location_from_decoder;
     ]
 }
 
@@ -32702,7 +25593,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "OptionalVector";
     fields [
-        1 => skip_vector_from_decoder(decoder)?;
+        1 => one skip_vector_from_decoder;
     ]
 }
 
@@ -32721,7 +25612,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "MigrationStatus";
     fields [
-        1 => decoder.read_bool()?;
+        1 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -32745,11 +25636,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ARIAAttributeAnyValue";
     fields [
-        1 => decoder.read_bool()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_int()?;
-        5 => decoder.read_repeated(|decoder| { decoder.skip_string()?; Ok(()) })?;
+        1 => one kiwi_skip_bool_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_int_value;
+        5 => repeated kiwi_skip_string_value;
     ]
 }
 
@@ -32763,8 +25654,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ARIAAttributeData";
     fields [
-        1 => skip_aria_attribute_data_type_from_decoder(decoder)?;
-        2 => skip_aria_attribute_any_value_from_decoder(decoder)?;
+        1 => one skip_aria_attribute_data_type_from_decoder;
+        2 => one skip_aria_attribute_any_value_from_decoder;
     ]
 }
 
@@ -32773,7 +25664,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ARIAAttributesMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_aria_attributes_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_aria_attributes_map_entry_from_decoder;
     ]
 }
 
@@ -32782,8 +25673,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ARIAAttributesMapEntry";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_aria_attribute_data_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_aria_attribute_data_from_decoder;
     ]
 }
 
@@ -32792,8 +25683,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "HandoffStatusMapEntry";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_section_status_info_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_section_status_info_from_decoder;
     ]
 }
 
@@ -32802,7 +25693,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "HandoffStatusMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_handoff_status_map_entry_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_handoff_status_map_entry_from_decoder;
     ]
 }
 
@@ -32811,8 +25702,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EditScopeInfo";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_edit_scope_stack_from_decoder(decoder)?; Ok(()) })?;
-        2 => decoder.read_repeated(|decoder| { skip_edit_scope_snapshot_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_edit_scope_stack_from_decoder;
+        2 => repeated skip_edit_scope_snapshot_from_decoder;
     ]
 }
 
@@ -32821,8 +25712,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EditScopeSnapshot";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_edit_scope_stack_from_decoder(decoder)?; Ok(()) })?;
-        2 => decoder.read_repeated(|decoder| { decoder.read_var_uint()?; Ok(()) })?;
+        1 => repeated skip_edit_scope_stack_from_decoder;
+        2 => repeated kiwi_skip_uint_value;
     ]
 }
 
@@ -32831,7 +25722,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EditScopeStack";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_edit_scope_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_edit_scope_from_decoder;
     ]
 }
 
@@ -32840,9 +25731,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EditScope";
     fields [
-        1 => skip_edit_scope_type_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => skip_editor_type_from_decoder(decoder)?;
+        1 => one skip_edit_scope_type_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one skip_editor_type_from_decoder;
     ]
 }
 
@@ -32871,10 +25762,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SectionPresetInfo";
     fields [
-        1 => decoder.read_var_uint64()?;
-        2 => decoder.read_var_uint64()?;
-        3 => decoder.skip_string()?;
-        4 => skip_section_preset_state_from_decoder(decoder)?;
+        1 => one kiwi_skip_uint64_value;
+        2 => one kiwi_skip_uint64_value;
+        3 => one kiwi_skip_string_value;
+        4 => one skip_section_preset_state_from_decoder;
     ]
 }
 
@@ -32883,11 +25774,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ClipboardSelectionRegion";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_guid_from_decoder(decoder)?; Ok(()) })?;
-        3 => skip_vector_from_decoder(decoder)?;
-        4 => decoder.read_bool()?;
-        5 => skip_selection_region_focus_type_from_decoder(decoder)?;
+        1 => one skip_guid_from_decoder;
+        2 => repeated skip_guid_from_decoder;
+        3 => one skip_vector_from_decoder;
+        4 => one kiwi_skip_bool_value;
+        5 => one skip_selection_region_focus_type_from_decoder;
     ]
 }
 
@@ -32901,8 +25792,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "FirstDraftKit";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_first_draft_kit_type_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_first_draft_kit_type_from_decoder;
     ]
 }
 
@@ -32911,8 +25802,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "FirstDraftData";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_first_draft_kit_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_first_draft_kit_from_decoder;
     ]
 }
 
@@ -32926,7 +25817,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "FirstDraftKitElementData";
     fields [
-        1 => skip_first_draft_kit_element_type_from_decoder(decoder)?;
+        1 => one skip_first_draft_kit_element_type_from_decoder;
     ]
 }
 
@@ -32945,8 +25836,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PlatformShapePropertyMapEntry";
     fields [
-        1 => skip_platform_shape_property_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_guid_path_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_platform_shape_property_from_decoder;
+        2 => repeated skip_guid_path_from_decoder;
     ]
 }
 
@@ -32955,9 +25846,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PlatformShapeDefinition";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_platform_shape_property_map_entry_from_decoder(decoder)?; Ok(()) })?;
-        2 => skip_platform_shape_behavior_type_from_decoder(decoder)?;
-        3 => skip_guid_path_from_decoder(decoder)?;
+        1 => repeated skip_platform_shape_property_map_entry_from_decoder;
+        2 => one skip_platform_shape_behavior_type_from_decoder;
+        3 => one skip_guid_path_from_decoder;
     ]
 }
 
@@ -32966,16 +25857,16 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeBehaviors";
     fields [
-        1 => skip_link_behavior_from_decoder(decoder)?;
-        2 => skip_appear_behavior_from_decoder(decoder)?;
-        3 => skip_hover_behavior_from_decoder(decoder)?;
-        4 => skip_press_behavior_from_decoder(decoder)?;
-        5 => skip_focus_behavior_from_decoder(decoder)?;
-        6 => skip_scroll_parallax_behavior_from_decoder(decoder)?;
-        7 => skip_scroll_transform_behavior_from_decoder(decoder)?;
-        8 => skip_cursor_behavior_from_decoder(decoder)?;
-        9 => skip_marquee_behavior_from_decoder(decoder)?;
-        10 => decoder.read_repeated(|decoder| { skip_code_behavior_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_link_behavior_from_decoder;
+        2 => one skip_appear_behavior_from_decoder;
+        3 => one skip_hover_behavior_from_decoder;
+        4 => one skip_press_behavior_from_decoder;
+        5 => one skip_focus_behavior_from_decoder;
+        6 => one skip_scroll_parallax_behavior_from_decoder;
+        7 => one skip_scroll_transform_behavior_from_decoder;
+        8 => one skip_cursor_behavior_from_decoder;
+        9 => one skip_marquee_behavior_from_decoder;
+        10 => repeated skip_code_behavior_from_decoder;
     ]
 }
 
@@ -32984,12 +25875,12 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "BehaviorTransition";
     fields [
-        1 => skip_easing_type_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { decoder.read_var_float_value()?; Ok(()) })?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_float_value()?;
-        5 => skip_variable_data_from_decoder(decoder)?;
-        6 => skip_variable_data_from_decoder(decoder)?;
+        1 => one skip_easing_type_from_decoder;
+        2 => repeated kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_float_value;
+        5 => one skip_variable_data_from_decoder;
+        6 => one skip_variable_data_from_decoder;
     ]
 }
 
@@ -33008,16 +25899,16 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AppearBehavior";
     fields [
-        1 => skip_appear_behavior_trigger_from_decoder(decoder)?;
-        2 => skip_relative_direction_from_decoder(decoder)?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => skip_behavior_transition_from_decoder(decoder)?;
-        5 => skip_node_change_from_decoder(decoder)?;
-        6 => skip_behavior_transition_from_decoder(decoder)?;
-        7 => skip_node_change_from_decoder(decoder)?;
-        8 => decoder.read_bool()?;
-        9 => skip_variable_data_from_decoder(decoder)?;
-        10 => decoder.read_bool()?;
+        1 => one skip_appear_behavior_trigger_from_decoder;
+        2 => one skip_relative_direction_from_decoder;
+        3 => one skip_guid_from_decoder;
+        4 => one skip_behavior_transition_from_decoder;
+        5 => one skip_node_change_from_decoder;
+        6 => one skip_behavior_transition_from_decoder;
+        7 => one skip_node_change_from_decoder;
+        8 => one kiwi_skip_bool_value;
+        9 => one skip_variable_data_from_decoder;
+        10 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33026,9 +25917,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "HoverBehavior";
     fields [
-        1 => skip_behavior_transition_from_decoder(decoder)?;
-        2 => skip_node_change_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
+        1 => one skip_behavior_transition_from_decoder;
+        2 => one skip_node_change_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33037,9 +25928,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PressBehavior";
     fields [
-        1 => skip_behavior_transition_from_decoder(decoder)?;
-        2 => skip_node_change_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
+        1 => one skip_behavior_transition_from_decoder;
+        2 => one skip_node_change_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33048,9 +25939,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "FocusBehavior";
     fields [
-        1 => skip_behavior_transition_from_decoder(decoder)?;
-        2 => skip_node_change_from_decoder(decoder)?;
-        3 => decoder.read_bool()?;
+        1 => one skip_behavior_transition_from_decoder;
+        2 => one skip_node_change_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33059,11 +25950,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ScrollParallaxBehavior";
     fields [
-        1 => skip_scroll_direction_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_bool()?;
-        4 => skip_variable_data_from_decoder(decoder)?;
-        5 => decoder.read_bool()?;
+        1 => one skip_scroll_direction_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_bool_value;
+        4 => one skip_variable_data_from_decoder;
+        5 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33077,15 +25968,15 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ScrollTransformBehavior";
     fields [
-        1 => skip_scroll_transform_behavior_trigger_from_decoder(decoder)?;
-        2 => skip_guid_from_decoder(decoder)?;
-        3 => skip_behavior_transition_from_decoder(decoder)?;
-        4 => skip_node_change_from_decoder(decoder)?;
-        5 => skip_node_change_from_decoder(decoder)?;
-        6 => decoder.read_bool()?;
-        7 => decoder.read_bool()?;
-        8 => skip_variable_data_from_decoder(decoder)?;
-        9 => decoder.read_bool()?;
+        1 => one skip_scroll_transform_behavior_trigger_from_decoder;
+        2 => one skip_guid_from_decoder;
+        3 => one skip_behavior_transition_from_decoder;
+        4 => one skip_node_change_from_decoder;
+        5 => one skip_node_change_from_decoder;
+        6 => one kiwi_skip_bool_value;
+        7 => one kiwi_skip_bool_value;
+        8 => one skip_variable_data_from_decoder;
+        9 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33094,10 +25985,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CursorBehavior";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => decoder.read_bool()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one skip_guid_from_decoder;
+        4 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33106,13 +25997,13 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "MarqueeBehavior";
     fields [
-        1 => skip_relative_direction_from_decoder(decoder)?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_bool()?;
-        4 => skip_variable_data_from_decoder(decoder)?;
-        5 => skip_variable_data_from_decoder(decoder)?;
-        6 => skip_variable_data_from_decoder(decoder)?;
-        7 => decoder.read_bool()?;
+        1 => one skip_relative_direction_from_decoder;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_bool_value;
+        4 => one skip_variable_data_from_decoder;
+        5 => one skip_variable_data_from_decoder;
+        6 => one skip_variable_data_from_decoder;
+        7 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33121,9 +26012,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeBehavior";
     fields [
-        1 => skip_code_component_id_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_component_prop_assignment_from_decoder(decoder)?; Ok(()) })?;
-        3 => decoder.read_bool()?;
+        1 => one skip_code_component_id_from_decoder;
+        2 => repeated skip_component_prop_assignment_from_decoder;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33132,10 +26023,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ClientRenderedMetadata";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_var_uint()?;
-        4 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_uint_value;
+        4 => one kiwi_skip_string_value;
     ]
 }
 
@@ -33149,10 +26040,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "LinkBehavior";
     fields [
-        1 => skip_link_behavior_type_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
-        3 => skip_guid_from_decoder(decoder)?;
-        4 => decoder.read_bool()?;
+        1 => one skip_link_behavior_type_from_decoder;
+        2 => one kiwi_skip_string_value;
+        3 => one skip_guid_from_decoder;
+        4 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33161,8 +26052,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "VariableIdOrVariableOverrideId";
     fields [
-        1 => skip_variable_id_from_decoder(decoder)?;
-        2 => skip_variable_override_id_from_decoder(decoder)?;
+        1 => one skip_variable_id_from_decoder;
+        2 => one skip_variable_override_id_from_decoder;
     ]
 }
 
@@ -33171,8 +26062,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "SlideThemeData";
     fields [
-        1 => skip_theme_id_from_decoder(decoder)?;
-        2 => decoder.skip_string()?;
+        1 => one skip_theme_id_from_decoder;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -33191,14 +26082,14 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeChatMessage";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => skip_node_chat_message_type_from_decoder(decoder)?;
-        3 => decoder.skip_string()?;
-        4 => decoder.skip_string()?;
-        5 => decoder.read_var_uint()?;
-        6 => decoder.read_repeated(|decoder| { skip_node_chat_tool_call_from_decoder(decoder)?; Ok(()) })?;
-        7 => decoder.read_repeated(|decoder| { skip_node_chat_tool_result_from_decoder(decoder)?; Ok(()) })?;
-        8 => decoder.read_var_uint64()?;
+        1 => one skip_guid_from_decoder;
+        2 => one skip_node_chat_message_type_from_decoder;
+        3 => one kiwi_skip_string_value;
+        4 => one kiwi_skip_string_value;
+        5 => one kiwi_skip_uint_value;
+        6 => repeated skip_node_chat_tool_call_from_decoder;
+        7 => repeated skip_node_chat_tool_result_from_decoder;
+        8 => one kiwi_skip_uint64_value;
     ]
 }
 
@@ -33207,9 +26098,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeChatToolCall";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -33218,9 +26109,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeChatToolResult";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.skip_string()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_string_value;
     ]
 }
 
@@ -33229,10 +26120,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeChatExchange";
     fields [
-        1 => skip_guid_from_decoder(decoder)?;
-        2 => decoder.read_repeated(|decoder| { skip_node_chat_message_from_decoder(decoder)?; Ok(()) })?;
-        3 => decoder.read_bool()?;
-        4 => decoder.read_repeated(|decoder| { skip_file_update_from_decoder(decoder)?; Ok(()) })?;
+        1 => one skip_guid_from_decoder;
+        2 => repeated skip_node_chat_message_from_decoder;
+        3 => one kiwi_skip_bool_value;
+        4 => repeated skip_file_update_from_decoder;
     ]
 }
 
@@ -33241,8 +26132,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeChatCompressionState";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => decoder.skip_string()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_string_value;
     ]
 }
 
@@ -33251,9 +26142,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "FileUpdate";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.skip_string()?;
-        3 => decoder.read_bool()?;
+        1 => one kiwi_skip_string_value;
+        2 => one kiwi_skip_string_value;
+        3 => one kiwi_skip_bool_value;
     ]
 }
 
@@ -33262,8 +26153,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AIChatContentPart";
     fields [
-        1 => skip_ai_chat_content_part_type_from_decoder(decoder)?;
-        2 => skip_ai_chat_content_part_any_value_from_decoder(decoder)?;
+        1 => one skip_ai_chat_content_part_type_from_decoder;
+        2 => one skip_ai_chat_content_part_any_value_from_decoder;
     ]
 }
 
@@ -33277,8 +26168,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AIChatContentPartAnyValue";
     fields [
-        1 => decoder.skip_string()?;
-        2 => decoder.read_repeated(|decoder| { decoder.skip_string()?; Ok(()) })?;
+        1 => one kiwi_skip_string_value;
+        2 => repeated kiwi_skip_string_value;
     ]
 }
 
@@ -33292,11 +26183,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AIChatMessage";
     fields [
-        1 => decoder.read_var_uint()?;
-        2 => skip_ai_chat_message_role_from_decoder(decoder)?;
-        3 => decoder.read_repeated(|decoder| { skip_ai_chat_content_part_from_decoder(decoder)?; Ok(()) })?;
-        4 => decoder.skip_string()?;
-        5 => decoder.read_var_uint64()?;
+        1 => one kiwi_skip_uint_value;
+        2 => one skip_ai_chat_message_role_from_decoder;
+        3 => repeated skip_ai_chat_content_part_from_decoder;
+        4 => one kiwi_skip_string_value;
+        5 => one kiwi_skip_uint64_value;
     ]
 }
 
@@ -33305,7 +26196,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AIChatThread";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_ai_chat_message_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_ai_chat_message_from_decoder;
     ]
 }
 
@@ -33319,7 +26210,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CooperTemplateData";
     fields [
-        1 => skip_cooper_template_type_from_decoder(decoder)?;
+        1 => one skip_cooper_template_type_from_decoder;
     ]
 }
 
@@ -33328,7 +26219,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ImageImportMap";
     fields [
-        1 => decoder.read_repeated(|decoder| { skip_image_import_from_decoder(decoder)?; Ok(()) })?;
+        1 => repeated skip_image_import_from_decoder;
     ]
 }
 
@@ -33337,8 +26228,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ImageImport";
     fields [
-        1 => decoder.skip_string()?;
-        2 => skip_image_from_decoder(decoder)?;
+        1 => one kiwi_skip_string_value;
+        2 => one skip_image_from_decoder;
     ]
 }
 
@@ -33352,10 +26243,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "BezierHandles";
     fields [
-        1 => decoder.read_var_float_value()?;
-        2 => decoder.read_var_float_value()?;
-        3 => decoder.read_var_float_value()?;
-        4 => decoder.read_var_float_value()?;
+        1 => one kiwi_skip_float_value;
+        2 => one kiwi_skip_float_value;
+        3 => one kiwi_skip_float_value;
+        4 => one kiwi_skip_float_value;
     ]
 }
 
@@ -33708,7 +26599,7 @@ fn graph_focus_read_symbol_data(
                 }
             }
             3 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             field => {
                 return Err(
@@ -33734,7 +26625,7 @@ fn graph_focus_read_component_prop_value(
         match decoder.read_var_uint()? {
             0 => break,
             1 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             2 => {
                 skip_text_data_from_decoder(decoder)?;
@@ -33743,7 +26634,7 @@ fn graph_focus_read_component_prop_value(
                 graph_focus_push_guid_ref(decoder, &mut refs)?;
             }
             4 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             5 => {
                 skip_easing_data_from_decoder(decoder)?;
@@ -33833,83 +26724,82 @@ fn graph_focus_index_node_change(
                 guid = Some(graph_focus_read_guid(decoder)?);
             }
             53 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             2 => {
                 skip_node_phase_from_decoder(decoder)?;
             }
             54 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             3 => {
                 parent_guid = Some(graph_focus_read_parent_guid(decoder)?);
             }
             55 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             4 => {
                 skip_node_type_from_decoder(decoder)?;
             }
             56 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             5 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             57 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             174 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             318 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             256 => {
                 skip_library_move_info_from_decoder(decoder)?;
             }
             281 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_library_move_history_item_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_library_move_history_item_from_decoder,
+                )?;
             }
             319 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             383 => {
                 skip_asset_id_map_from_decoder(decoder)?;
             }
             49 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             101 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             157 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             161 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             376 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             163 => {
                 skip_style_type_from_decoder(decoder)?;
             }
             191 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             171 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             399 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             320 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             345 => {
                 skip_shared_style_master_data_from_decoder(decoder)?;
@@ -33918,10 +26808,10 @@ fn graph_focus_index_node_change(
                 skip_shared_style_master_data_from_decoder(decoder)?;
             }
             176 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             177 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             172 => {
                 skip_shared_style_master_data_from_decoder(decoder)?;
@@ -33966,31 +26856,22 @@ fn graph_focus_index_node_change(
                 skip_style_id_from_decoder(decoder)?;
             }
             580 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_style_animation_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_style_animation_from_decoder)?;
             }
             193 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_paint_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
             }
             194 => {
                 skip_guid_from_decoder(decoder)?;
             }
             225 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             238 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_state_group_property_value_order_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_state_group_property_value_order_from_decoder,
+                )?;
             }
             581 => {
                 skip_partial_paste_annotation_from_decoder(decoder)?;
@@ -33999,96 +26880,68 @@ fn graph_focus_index_node_change(
                 skip_shared_symbol_reference_from_decoder(decoder)?;
             }
             123 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             124 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_path_mapping_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
             }
             126 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             152 => {
                 skip_shared_component_master_data_from_decoder(decoder)?;
             }
             144 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             164 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_path_mapping_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
             }
             228 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_path_mapping_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
             }
             214 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             395 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             215 => {
                 skip_guid_from_decoder(decoder)?;
             }
             216 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             217 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             218 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             252 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             266 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_component_prop_def_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_component_prop_def_from_decoder)?;
             }
             267 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_component_prop_ref_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_component_prop_ref_from_decoder)?;
             }
             483 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_variant_prop_spec_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_variant_prop_spec_from_decoder)?;
             }
             113 => {
                 let data = graph_focus_read_symbol_data(decoder)?;
                 symbol_id = graph_focus_extend_symbol_refs(data, &mut refs)?;
             }
             114 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             125 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_node_change_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?;
             }
             394 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             143 => {
                 graph_focus_push_guid_ref(decoder, &mut refs)?;
@@ -34097,120 +26950,115 @@ fn graph_focus_index_node_change(
                 graph_focus_extend_component_prop_assignments(decoder, &mut refs)?;
             }
             305 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             248 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_instance_override_stash_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_instance_override_stash_from_decoder)?;
             }
             250 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_instance_override_stash_v2_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_instance_override_stash_v2_from_decoder,
+                )?;
             }
             111 => {
                 skip_guid_path_from_decoder(decoder)?;
             }
             112 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             321 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             382 => {
                 skip_module_type_from_decoder(decoder)?;
             }
             463 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             495 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             21 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             73 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             22 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             74 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             23 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             75 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             32 => {
                 skip_text_align_horizontal_from_decoder(decoder)?;
             }
             84 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             33 => {
                 skip_text_align_vertical_from_decoder(decoder)?;
             }
             85 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             34 => {
                 skip_text_case_from_decoder(decoder)?;
             }
             86 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             35 => {
                 skip_text_decoration_from_decoder(decoder)?;
             }
             87 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             40 => {
                 skip_number_from_decoder(decoder)?;
             }
             92 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             41 => {
                 skip_font_name_from_decoder(decoder)?;
             }
             93 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             42 => {
                 skip_text_data_from_decoder(decoder)?;
             }
             94 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             359 => {
                 skip_derived_text_data_from_decoder(decoder)?;
             }
             127 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             128 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             129 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             130 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             131 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             132 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             133 => {
                 skip_font_variant_numeric_figure_from_decoder(decoder)?;
@@ -34231,29 +27079,28 @@ fn graph_focus_index_node_change(
                 skip_number_from_decoder(decoder)?;
             }
             202 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             322 => {
                 skip_leading_trim_from_decoder(decoder)?;
             }
             337 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             339 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             550 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             351 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             417 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_responsive_text_style_variant_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_responsive_text_style_variant_from_decoder,
+                )?;
             }
             352 => {
                 skip_section_status_from_decoder(decoder)?;
@@ -34262,24 +27109,16 @@ fn graph_focus_index_node_change(
                 skip_section_status_info_from_decoder(decoder)?;
             }
             203 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             396 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             205 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_open_type_feature_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_open_type_feature_from_decoder)?;
             }
             206 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_open_type_feature_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_open_type_feature_from_decoder)?;
             }
             223 => {
                 skip_hyperlink_from_decoder(decoder)?;
@@ -34288,123 +27127,115 @@ fn graph_focus_index_node_change(
                 skip_mention_from_decoder(decoder)?;
             }
             260 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_font_variation_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_font_variation_from_decoder)?;
             }
             279 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             280 => {
                 skip_text_truncation_from_decoder(decoder)?;
             }
             292 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             391 => {
                 skip_emoji_image_set_from_decoder(decoder)?;
             }
             392 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             6 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             58 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             7 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             59 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             434 => {
                 skip_lock_mode_from_decoder(decoder)?;
             }
             8 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             60 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             9 => {
                 skip_blend_mode_from_decoder(decoder)?;
             }
             61 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             11 => {
                 skip_vector_from_decoder(decoder)?;
             }
             63 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             12 => {
                 skip_matrix_from_decoder(decoder)?;
             }
             64 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             13 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        decoder.read_var_float_value()?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, kiwi_skip_float_value)?;
             }
             65 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             16 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             68 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             424 => {
                 skip_vector_from_decoder(decoder)?;
             }
             18 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             70 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             317 => {
                 skip_mask_type_from_decoder(decoder)?;
             }
             19 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             71 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             20 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             72 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             26 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             78 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             29 => {
                 skip_stroke_align_from_decoder(decoder)?;
             }
             81 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             30 => {
                 skip_stroke_cap_from_decoder(decoder)?;
             }
             82 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             497 => {
                 skip_number_from_decoder(decoder)?;
@@ -34413,80 +27244,52 @@ fn graph_focus_index_node_change(
                 skip_stroke_join_from_decoder(decoder)?;
             }
             83 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             38 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_paint_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
             }
             90 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             39 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_paint_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
             }
             91 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             43 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_effect_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_effect_from_decoder)?;
             }
             95 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             50 => {
                 skip_color_from_decoder(decoder)?;
             }
             102 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             51 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_path_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
             }
             103 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             52 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_path_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
             }
             104 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             564 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_path_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
             }
             411 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_paint_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
             }
             412 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             413 => {
                 skip_number_from_decoder(decoder)?;
@@ -34498,11 +27301,7 @@ fn graph_focus_index_node_change(
                 skip_text_decoration_style_from_decoder(decoder)?;
             }
             455 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_transform_modifier_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_transform_modifier_from_decoder)?;
             }
             570 => {
                 skip_transform3d_from_decoder(decoder)?;
@@ -34517,85 +27316,85 @@ fn graph_focus_index_node_change(
                 skip_transform_origin_from_decoder(decoder)?;
             }
             145 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             146 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             147 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             148 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             149 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             150 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             151 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             423 => {
                 skip_optional_vector_from_decoder(decoder)?;
             }
             258 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             287 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             288 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             289 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             290 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             294 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             295 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             296 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             297 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             298 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             299 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             28 => {
                 skip_constraint_type_from_decoder(decoder)?;
             }
             80 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             105 => {
                 skip_stack_mode_from_decoder(decoder)?;
             }
             106 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             107 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             108 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             109 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             110 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             120 => {
                 skip_stack_counter_align_from_decoder(decoder)?;
@@ -34607,10 +27406,10 @@ fn graph_focus_index_node_change(
                 skip_stack_align_from_decoder(decoder)?;
             }
             209 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             210 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             211 => {
                 skip_stack_size_from_decoder(decoder)?;
@@ -34628,13 +27427,13 @@ fn graph_focus_index_node_change(
                 skip_stack_align_from_decoder(decoder)?;
             }
             232 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             233 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             234 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             236 => {
                 skip_stack_counter_align_from_decoder(decoder)?;
@@ -34643,13 +27442,13 @@ fn graph_focus_index_node_change(
                 skip_stack_positioning_from_decoder(decoder)?;
             }
             271 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             323 => {
                 skip_stack_wrap_from_decoder(decoder)?;
             }
             324 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             325 => {
                 skip_optional_vector_from_decoder(decoder)?;
@@ -34661,14 +27460,10 @@ fn graph_focus_index_node_change(
                 skip_stack_counter_align_content_from_decoder(decoder)?;
             }
             406 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        decoder.read_var_int()?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, kiwi_skip_int_value)?;
             }
             574 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             435 => {
                 skip_guid_position_map_from_decoder(decoder)?;
@@ -34677,10 +27472,10 @@ fn graph_focus_index_node_change(
                 skip_guid_position_map_from_decoder(decoder)?;
             }
             437 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             438 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             439 => {
                 skip_guid_from_decoder(decoder)?;
@@ -34689,10 +27484,10 @@ fn graph_focus_index_node_change(
                 skip_guid_from_decoder(decoder)?;
             }
             441 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             442 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             474 => {
                 skip_guid_grid_track_size_map_from_decoder(decoder)?;
@@ -34710,10 +27505,10 @@ fn graph_focus_index_node_change(
                 skip_grid_auto_tracks_from_decoder(decoder)?;
             }
             556 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             344 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             139 => {
                 skip_guid_from_decoder(decoder)?;
@@ -34731,19 +27526,19 @@ fn graph_focus_index_node_change(
                 skip_transition_type_from_decoder(decoder)?;
             }
             155 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             156 => {
                 skip_easing_type_from_decoder(decoder)?;
             }
             181 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             182 => {
                 skip_connection_type_from_decoder(decoder)?;
             }
             183 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             184 => {
                 skip_prototype_device_from_decoder(decoder)?;
@@ -34752,50 +27547,34 @@ fn graph_focus_index_node_change(
                 skip_interaction_type_from_decoder(decoder)?;
             }
             188 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             189 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             190 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             192 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             207 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             226 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_prototype_interaction_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_prototype_interaction_from_decoder)?;
             }
             426 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_prototype_interaction_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_prototype_interaction_from_decoder)?;
             }
             249 => {
                 skip_prototype_starting_point_from_decoder(decoder)?;
             }
             204 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_plugin_data_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_plugin_data_from_decoder)?;
             }
             219 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_plugin_relaunch_data_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_plugin_relaunch_data_from_decoder)?;
             }
             242 => {
                 skip_connector_endpoint_from_decoder(decoder)?;
@@ -34813,18 +27592,10 @@ fn graph_focus_index_node_change(
                 skip_stroke_cap_from_decoder(decoder)?;
             }
             253 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_connector_control_point_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_connector_control_point_from_decoder)?;
             }
             479 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_connector_control_point_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_connector_control_point_from_decoder)?;
             }
             255 => {
                 skip_connector_text_midpoint_from_decoder(decoder)?;
@@ -34833,21 +27604,13 @@ fn graph_focus_index_node_change(
                 skip_connector_type_from_decoder(decoder)?;
             }
             533 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             369 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_annotation_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_annotation_from_decoder)?;
             }
             384 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_annotation_measurement_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_annotation_measurement_from_decoder)?;
             }
             453 => {
                 skip_annotation_categories_from_decoder(decoder)?;
@@ -34856,10 +27619,10 @@ fn graph_focus_index_node_change(
                 skip_shape_with_text_type_from_decoder(decoder)?;
             }
             247 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             530 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             254 => {
                 skip_derived_immutable_frame_data_from_decoder(decoder)?;
@@ -34877,7 +27640,7 @@ fn graph_focus_index_node_change(
                 skip_derived_jsx_data_from_decoder(decoder)?;
             }
             493 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             259 => {
                 skip_code_block_language_from_decoder(decoder)?;
@@ -34889,10 +27652,10 @@ fn graph_focus_index_node_change(
                 skip_link_preview_data_from_decoder(decoder)?;
             }
             282 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             283 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             300 => {
                 skip_video_playback_from_decoder(decoder)?;
@@ -34910,7 +27673,7 @@ fn graph_focus_index_node_change(
                 skip_multiplayer_map_from_decoder(decoder)?;
             }
             274 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             275 => {
                 skip_widget_derived_subtree_cursor_from_decoder(decoder)?;
@@ -34922,33 +27685,28 @@ fn graph_focus_index_node_change(
                 skip_widget_input_behavior_from_decoder(decoder)?;
             }
             286 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             291 => {
                 skip_widget_hover_style_from_decoder(decoder)?;
             }
             293 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             360 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             262 => {
                 skip_widget_metadata_from_decoder(decoder)?;
             }
             263 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_widget_event_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_widget_event_from_decoder)?;
             }
             265 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_widget_property_menu_item_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_widget_property_menu_item_from_decoder,
+                )?;
             }
             401 => {
                 skip_widget_input_text_node_type_from_decoder(decoder)?;
@@ -34981,13 +27739,13 @@ fn graph_focus_index_node_change(
                 skip_flapp_type_from_decoder(decoder)?;
             }
             486 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             389 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             410 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             573 => {
                 skip_multiplayer_map_from_decoder(decoder)?;
@@ -35002,13 +27760,13 @@ fn graph_focus_index_node_change(
                 skip_slide_theme_map_from_decoder(decoder)?;
             }
             393 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             443 => {
                 skip_slide_number_from_decoder(decoder)?;
             }
             456 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             363 => {
                 skip_guid_from_decoder(decoder)?;
@@ -35017,7 +27775,7 @@ fn graph_focus_index_node_change(
                 skip_guid_from_decoder(decoder)?;
             }
             364 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             366 => {
                 skip_diagram_layout_rule_type_from_decoder(decoder)?;
@@ -35029,7 +27787,7 @@ fn graph_focus_index_node_change(
                 skip_diagram_layout_paused_from_decoder(decoder)?;
             }
             380 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             251 => {
                 skip_internal_enum_for_test_from_decoder(decoder)?;
@@ -35038,102 +27796,94 @@ fn graph_focus_index_node_change(
                 skip_internal_data_for_test_from_decoder(decoder)?;
             }
             14 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             66 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             15 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             67 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             17 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             69 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             25 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             77 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             27 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             79 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             37 => {
                 skip_constraint_type_from_decoder(decoder)?;
             }
             89 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             45 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_export_settings_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_export_settings_from_decoder)?;
             }
             97 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             46 => {
                 skip_text_auto_resize_from_decoder(decoder)?;
             }
             98 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             47 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_layout_grid_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_layout_grid_from_decoder)?;
             }
             99 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             115 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             116 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             117 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             118 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             36 => {
                 skip_boolean_operation_from_decoder(decoder)?;
             }
             88 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             44 => {
                 skip_vector_mirror_from_decoder(decoder)?;
             }
             96 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             10 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             62 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             24 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             76 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             195 => {
                 skip_arc_data_from_decoder(decoder)?;
@@ -35142,38 +27892,34 @@ fn graph_focus_index_node_change(
                 skip_vector_data_from_decoder(decoder)?;
             }
             100 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             425 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             432 => {
                 skip_text_path_start_from_decoder(decoder)?;
             }
             119 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             138 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guide_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guide_from_decoder)?;
             }
             142 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             159 => {
                 skip_scroll_direction_from_decoder(decoder)?;
             }
             160 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             166 => {
                 skip_vector_from_decoder(decoder)?;
             }
             175 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             178 => {
                 skip_scroll_contracted_state_from_decoder(decoder)?;
@@ -35182,13 +27928,13 @@ fn graph_focus_index_node_change(
                 skip_vector_from_decoder(decoder)?;
             }
             180 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             186 => {
                 skip_scroll_behavior_from_decoder(decoder)?;
             }
             196 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             197 => {
                 skip_navigation_type_from_decoder(decoder)?;
@@ -35209,42 +27955,34 @@ fn graph_focus_index_node_change(
                 skip_guid_from_decoder(decoder)?;
             }
             220 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             221 => {
                 skip_stack_size_from_decoder(decoder)?;
             }
             222 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             224 => {
                 skip_key_trigger_from_decoder(decoder)?;
             }
             227 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             235 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_from_decoder)?;
             }
             237 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_symbol_link_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_symbol_link_from_decoder)?;
             }
             239 => {
                 skip_text_list_data_from_decoder(decoder)?;
             }
             261 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             264 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             270 => {
                 skip_embed_data_from_decoder(decoder)?;
@@ -35256,7 +27994,7 @@ fn graph_focus_index_node_change(
                 skip_multiplayer_map_from_decoder(decoder)?;
             }
             284 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             302 => {
                 skip_html_tag_from_decoder(decoder)?;
@@ -35268,10 +28006,10 @@ fn graph_focus_index_node_change(
                 skip_aria_attributes_map_from_decoder(decoder)?;
             }
             304 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             490 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             306 => {
                 skip_variable_data_from_decoder(decoder)?;
@@ -35283,11 +28021,7 @@ fn graph_focus_index_node_change(
                 skip_variable_mode_by_set_map_from_decoder(decoder)?;
             }
             312 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_variable_set_mode_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_variable_set_mode_from_decoder)?;
             }
             313 => {
                 skip_variable_set_id_from_decoder(decoder)?;
@@ -35299,17 +28033,13 @@ fn graph_focus_index_node_change(
                 skip_variable_data_values_from_decoder(decoder)?;
             }
             350 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             566 => {
                 skip_variable_timing_display_unit_from_decoder(decoder)?;
             }
             353 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_variable_scope_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_variable_scope_from_decoder)?;
             }
             445 => {
                 skip_variable_data_map_from_decoder(decoder)?;
@@ -35327,14 +28057,10 @@ fn graph_focus_index_node_change(
                 skip_guid_from_decoder(decoder)?;
             }
             482 => {
-                decoder.read_var_uint64()?;
+                kiwi_skip_uint64_value(decoder)?;
             }
             447 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_variable_width_point_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_variable_width_point_from_decoder)?;
             }
             448 => {
                 skip_dynamic_stroke_settings_from_decoder(decoder)?;
@@ -35346,11 +28072,7 @@ fn graph_focus_index_node_change(
                 skip_stretch_stroke_settings_from_decoder(decoder)?;
             }
             488 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_matrix_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_matrix_from_decoder)?;
             }
             452 => {
                 skip_brush_type_from_decoder(decoder)?;
@@ -35359,7 +28081,7 @@ fn graph_focus_index_node_change(
                 skip_optional_vector_from_decoder(decoder)?;
             }
             554 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             377 => {
                 skip_variable_set_id_from_decoder(decoder)?;
@@ -35371,10 +28093,10 @@ fn graph_focus_index_node_change(
                 skip_variable_id_or_variable_override_id_from_decoder(decoder)?;
             }
             385 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             386 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             517 => {
                 skip_inherited_variables_data_from_decoder(decoder)?;
@@ -35392,7 +28114,7 @@ fn graph_focus_index_node_change(
                 skip_migration_status_from_decoder(decoder)?;
             }
             330 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             331 => {
                 skip_edit_info_from_decoder(decoder)?;
@@ -35407,20 +28129,16 @@ fn graph_focus_index_node_change(
                 skip_child_reading_direction_from_decoder(decoder)?;
             }
             347 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             349 => {
                 skip_document_color_profile_from_decoder(decoder)?;
             }
             354 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_developer_related_link_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_developer_related_link_from_decoder)?;
             }
             356 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             365 => {
                 skip_edit_scope_info_from_decoder(decoder)?;
@@ -35432,10 +28150,10 @@ fn graph_focus_index_node_change(
                 skip_semantic_italic_from_decoder(decoder)?;
             }
             403 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             387 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             500 => {
                 skip_derived_breakpoint_data_from_decoder(decoder)?;
@@ -35444,7 +28162,7 @@ fn graph_focus_index_node_change(
                 skip_guid_from_decoder(decoder)?;
             }
             458 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             457 => {
                 skip_guid_from_decoder(decoder)?;
@@ -35453,10 +28171,10 @@ fn graph_focus_index_node_change(
                 skip_guid_from_decoder(decoder)?;
             }
             501 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             522 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             400 => {
                 skip_responsive_set_settings_from_decoder(decoder)?;
@@ -35465,14 +28183,10 @@ fn graph_focus_index_node_change(
                 skip_node_behaviors_from_decoder(decoder)?;
             }
             414 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             534 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_collaborative_text_op_id_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_collaborative_text_op_id_from_decoder)?;
             }
             444 => {
                 skip_collaborative_plain_text_from_decoder(decoder)?;
@@ -35487,74 +28201,58 @@ fn graph_focus_index_node_change(
                 skip_canvas_node_id_from_decoder(decoder)?;
             }
             498 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             502 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             503 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             504 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             515 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        decoder.skip_string()?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, kiwi_skip_string_value)?;
             }
             524 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_used_make_library_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_used_make_library_from_decoder)?;
             }
             518 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             520 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             551 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             531 => {
                 skip_prototype_device_from_decoder(decoder)?;
             }
             525 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_code_example_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_code_example_from_decoder)?;
             }
             428 => {
                 skip_code_file_id_from_decoder(decoder)?;
             }
             430 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             547 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             429 => {
                 skip_code_component_id_from_decoder(decoder)?;
             }
             487 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             431 => {
                 skip_code_snapshot_state_from_decoder(decoder)?;
             }
             451 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_node_chat_message_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_node_chat_message_from_decoder)?;
             }
             485 => {
                 skip_node_chat_compression_state_from_decoder(decoder)?;
@@ -35563,7 +28261,7 @@ fn graph_focus_index_node_change(
                 skip_ai_chat_thread_from_decoder(decoder)?;
             }
             484 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             459 => {
                 skip_code_snapshot_from_decoder(decoder)?;
@@ -35572,19 +28270,19 @@ fn graph_focus_index_node_change(
                 skip_code_snapshot_layers_from_decoder(decoder)?;
             }
             480 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             465 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             469 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             470 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             471 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             481 => {
                 skip_canvas_node_id_from_decoder(decoder)?;
@@ -35596,31 +28294,31 @@ fn graph_focus_index_node_change(
                 skip_code_object_type_from_decoder(decoder)?;
             }
             472 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             478 => {
                 skip_code_behavior_data_from_decoder(decoder)?;
             }
             519 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             527 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             532 => {
                 skip_code_embed_info_from_decoder(decoder)?;
             }
             546 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             558 => {
                 skip_code_source_info_from_decoder(decoder)?;
             }
             536 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             537 => {
-                decoder.skip_byte_array()?;
+                kiwi_skip_bytes_value(decoder)?;
             }
             419 => {
                 skip_cms_selector_from_decoder(decoder)?;
@@ -35644,14 +28342,10 @@ fn graph_focus_index_node_change(
                 skip_repeater_override_data_from_decoder(decoder)?;
             }
             405 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        decoder.read_var_uint()?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, kiwi_skip_uint_value)?;
             }
             408 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             407 => {
                 skip_first_draft_data_from_decoder(decoder)?;
@@ -35687,13 +28381,13 @@ fn graph_focus_index_node_change(
                 skip_canvas_node_id_from_decoder(decoder)?;
             }
             548 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             523 => {
                 skip_trss_transform2_d_from_decoder(decoder)?;
             }
             506 => {
-                decoder.read_var_int64()?;
+                kiwi_skip_int64_value(decoder)?;
             }
             507 => {
                 skip_keyframe_value_data_from_decoder(decoder)?;
@@ -35717,19 +28411,19 @@ fn graph_focus_index_node_change(
                 skip_timeline_position_type_from_decoder(decoder)?;
             }
             545 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             511 => {
                 skip_guid_from_decoder(decoder)?;
             }
             512 => {
-                decoder.read_var_uint64()?;
+                kiwi_skip_uint64_value(decoder)?;
             }
             513 => {
-                decoder.read_var_int64()?;
+                kiwi_skip_int64_value(decoder)?;
             }
             543 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             514 => {
                 skip_playback_style_from_decoder(decoder)?;
@@ -35744,11 +28438,7 @@ fn graph_focus_index_node_change(
                 skip_animation_presets_from_decoder(decoder)?;
             }
             582 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_style_id_for_animation_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_style_id_for_animation_from_decoder)?;
             }
             583 => {
                 skip_animation_preset_id_from_decoder(decoder)?;
@@ -35763,7 +28453,7 @@ fn graph_focus_index_node_change(
                 skip_transition_override_data_from_decoder(decoder)?;
             }
             544 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             557 => {
                 skip_source_control_config_from_decoder(decoder)?;
@@ -35775,22 +28465,22 @@ fn graph_focus_index_node_change(
                 skip_collaborative_plain_text_from_decoder(decoder)?;
             }
             561 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             562 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             563 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             575 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             576 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             577 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             578 => {
                 skip_table_row_column_size_map_from_decoder(decoder)?;
@@ -35799,19 +28489,19 @@ fn graph_focus_index_node_change(
                 skip_table_row_column_size_map_from_decoder(decoder)?;
             }
             590 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             565 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             584 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             585 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             567 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             588 => {
                 skip_custom_tool_artifact_ref_from_decoder(decoder)?;
@@ -35858,23 +28548,19 @@ fn graph_focus_index_message(
                 skip_message_type_from_decoder(decoder)?;
             }
             2 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             42 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             3 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             37 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             5 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_user_change_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_user_change_from_decoder)?;
             }
             32 => {
                 skip_interactive_slide_element_change_from_decoder(decoder)?;
@@ -35886,23 +28572,19 @@ fn graph_focus_index_message(
                 skip_buzz_approval_change_from_decoder(decoder)?;
             }
             6 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_blob_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_blob_from_decoder)?;
             }
             30 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             7 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             8 => {
                 skip_access_from_decoder(decoder)?;
             }
             9 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             10 => {
                 skip_style_set_type_from_decoder(decoder)?;
@@ -35911,104 +28593,79 @@ fn graph_focus_index_message(
                 skip_style_set_content_type_from_decoder(decoder)?;
             }
             12 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             13 => {
                 skip_vector_from_decoder(decoder)?;
             }
             14 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             15 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             16 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_scene_graph_query_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_scene_graph_query_from_decoder)?;
             }
             17 => {
                 skip_node_changes_metadata_from_decoder(decoder)?;
             }
             18 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             19 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             20 => {
                 skip_guid_from_decoder(decoder)?;
             }
             21 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             22 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_message_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_message_from_decoder)?;
             }
             23 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_message_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_message_from_decoder)?;
             }
             24 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_client_broadcast_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_client_broadcast_from_decoder)?;
             }
             25 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             26 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             27 => {
                 skip_editor_type_from_decoder(decoder)?;
             }
             28 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             29 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_from_decoder)?;
             }
             31 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             33 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_clipboard_selection_region_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_clipboard_selection_region_from_decoder,
+                )?;
             }
             34 => {
                 skip_encoded_offsets_index_from_decoder(decoder)?;
             }
             35 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             38 => {
-                decoder.read_var_uint64()?;
+                kiwi_skip_uint64_value(decoder)?;
             }
             39 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_annotation_category_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_annotation_category_from_decoder)?;
             }
             40 => {
                 skip_client_rendered_metadata_from_decoder(decoder)?;
@@ -36936,110 +29593,61 @@ mod scene_xpath_runtime {
                 0 => break,
                 1 => text = Some(decoder.read_string_value()?),
                 2 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            decoder.read_var_uint()?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, kiwi_skip_uint_value)?;
                 }
                 3 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_node_change_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?;
                 }
                 12 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_text_line_data_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_text_line_data_from_decoder)?;
                 }
                 8 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 10 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_font_name_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_font_name_from_decoder)?;
                 }
                 17 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 4 => {
                     skip_vector_from_decoder(decoder)?;
                 }
                 5 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_baseline_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_baseline_from_decoder)?;
                 }
                 6 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_glyph_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_glyph_from_decoder)?;
                 }
                 7 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_decoration_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_decoration_from_decoder)?;
                 }
                 16 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_blockquote_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_blockquote_from_decoder)?;
                 }
                 9 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_font_meta_data_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_font_meta_data_from_decoder)?;
                 }
                 11 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_hyperlink_box_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_hyperlink_box_from_decoder)?;
                 }
                 13 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 14 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 15 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            decoder.read_var_float_value()?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, kiwi_skip_float_value)?;
                 }
                 18 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_mention_box_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_mention_box_from_decoder)?;
                 }
                 19 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_derived_text_line_data_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_derived_text_line_data_from_decoder,
+                    )?;
                 }
                 field => {
                     return Err(
@@ -37649,23 +30257,19 @@ mod scene_xpath_runtime {
                     skip_message_type_from_decoder(decoder)?;
                 }
                 2 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 42 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 3 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 37 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 5 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_user_change_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_user_change_from_decoder)?;
                 }
                 32 => {
                     skip_interactive_slide_element_change_from_decoder(decoder)?;
@@ -37677,23 +30281,19 @@ mod scene_xpath_runtime {
                     skip_buzz_approval_change_from_decoder(decoder)?;
                 }
                 6 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_blob_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_blob_from_decoder)?;
                 }
                 30 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 7 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 8 => {
                     skip_access_from_decoder(decoder)?;
                 }
                 9 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 10 => {
                     skip_style_set_type_from_decoder(decoder)?;
@@ -37702,104 +30302,79 @@ mod scene_xpath_runtime {
                     skip_style_set_content_type_from_decoder(decoder)?;
                 }
                 12 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 13 => {
                     skip_vector_from_decoder(decoder)?;
                 }
                 14 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 15 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 16 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_scene_graph_query_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_scene_graph_query_from_decoder)?;
                 }
                 17 => {
                     skip_node_changes_metadata_from_decoder(decoder)?;
                 }
                 18 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 19 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 20 => {
                     skip_guid_from_decoder(decoder)?;
                 }
                 21 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 22 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_message_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_message_from_decoder)?;
                 }
                 23 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_message_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_message_from_decoder)?;
                 }
                 24 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_client_broadcast_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_client_broadcast_from_decoder)?;
                 }
                 25 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 26 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 27 => {
                     skip_editor_type_from_decoder(decoder)?;
                 }
                 28 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 29 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_guid_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_guid_from_decoder)?;
                 }
                 31 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 33 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_clipboard_selection_region_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_clipboard_selection_region_from_decoder,
+                    )?;
                 }
                 34 => {
                     skip_encoded_offsets_index_from_decoder(decoder)?;
                 }
                 35 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 38 => {
-                    decoder.read_var_uint64()?;
+                    kiwi_skip_uint64_value(decoder)?;
                 }
                 39 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_annotation_category_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_annotation_category_from_decoder)?;
                 }
                 40 => {
                     skip_client_rendered_metadata_from_decoder(decoder)?;
@@ -37911,74 +30486,73 @@ mod scene_xpath_runtime {
                     )?;
                 }
                 53 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 2 => {
                     skip_node_phase_from_decoder(decoder)?;
                 }
                 54 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 55 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 56 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 57 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 174 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 318 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 256 => {
                     skip_library_move_info_from_decoder(decoder)?;
                 }
                 281 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_library_move_history_item_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_library_move_history_item_from_decoder,
+                    )?;
                 }
                 319 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 383 => {
                     skip_asset_id_map_from_decoder(decoder)?;
                 }
                 49 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 101 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 157 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 161 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 376 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 163 => {
                     skip_style_type_from_decoder(decoder)?;
                 }
                 191 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 171 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 399 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 320 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 345 => {
                     skip_shared_style_master_data_from_decoder(decoder)?;
@@ -37987,10 +30561,10 @@ mod scene_xpath_runtime {
                     skip_shared_style_master_data_from_decoder(decoder)?;
                 }
                 176 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 177 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 172 => {
                     skip_shared_style_master_data_from_decoder(decoder)?;
@@ -38020,31 +30594,22 @@ mod scene_xpath_runtime {
                     skip_guid_from_decoder(decoder)?;
                 }
                 580 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_style_animation_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_style_animation_from_decoder)?;
                 }
                 193 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_paint_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
                 }
                 194 => {
                     skip_guid_from_decoder(decoder)?;
                 }
                 225 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 238 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_state_group_property_value_order_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_state_group_property_value_order_from_decoder,
+                    )?;
                 }
                 581 => {
                     skip_partial_paste_annotation_from_decoder(decoder)?;
@@ -38053,206 +30618,175 @@ mod scene_xpath_runtime {
                     skip_shared_symbol_reference_from_decoder(decoder)?;
                 }
                 123 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 124 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_guid_path_mapping_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
                 }
                 126 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 152 => {
                     skip_shared_component_master_data_from_decoder(decoder)?;
                 }
                 144 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 164 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_guid_path_mapping_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
                 }
                 228 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_guid_path_mapping_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
                 }
                 214 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 395 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 215 => {
                     skip_guid_from_decoder(decoder)?;
                 }
                 217 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 218 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 266 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_component_prop_def_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_component_prop_def_from_decoder)?;
                 }
                 267 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_component_prop_ref_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_component_prop_ref_from_decoder)?;
                 }
                 483 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_variant_prop_spec_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_variant_prop_spec_from_decoder)?;
                 }
                 113 => {
                     skip_symbol_data_from_decoder(decoder)?;
                 }
                 114 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 125 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_node_change_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?;
                 }
                 394 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 143 => {
                     skip_guid_from_decoder(decoder)?;
                 }
                 268 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_component_prop_assignment_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_component_prop_assignment_from_decoder,
+                    )?;
                 }
                 305 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 248 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_instance_override_stash_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_instance_override_stash_from_decoder,
+                    )?;
                 }
                 250 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_instance_override_stash_v2_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_instance_override_stash_v2_from_decoder,
+                    )?;
                 }
                 111 => {
                     skip_guid_path_from_decoder(decoder)?;
                 }
                 112 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 321 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 382 => {
                     skip_module_type_from_decoder(decoder)?;
                 }
                 463 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 495 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 73 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 22 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 74 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 23 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 75 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 32 => {
                     skip_text_align_horizontal_from_decoder(decoder)?;
                 }
                 84 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 33 => {
                     skip_text_align_vertical_from_decoder(decoder)?;
                 }
                 85 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 34 => {
                     skip_text_case_from_decoder(decoder)?;
                 }
                 86 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 35 => {
                     skip_text_decoration_from_decoder(decoder)?;
                 }
                 87 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 40 => {
                     skip_number_from_decoder(decoder)?;
                 }
                 92 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 93 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 94 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 359 => {
                     skip_derived_text_data_from_decoder(decoder)?;
                 }
                 127 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 128 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 129 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 130 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 131 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 132 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 133 => {
                     skip_font_variant_numeric_figure_from_decoder(decoder)?;
@@ -38273,29 +30807,28 @@ mod scene_xpath_runtime {
                     skip_number_from_decoder(decoder)?;
                 }
                 202 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 322 => {
                     skip_leading_trim_from_decoder(decoder)?;
                 }
                 337 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 339 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 550 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 351 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 417 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_responsive_text_style_variant_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_responsive_text_style_variant_from_decoder,
+                    )?;
                 }
                 352 => {
                     skip_section_status_from_decoder(decoder)?;
@@ -38304,24 +30837,16 @@ mod scene_xpath_runtime {
                     skip_section_status_info_from_decoder(decoder)?;
                 }
                 203 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 396 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 205 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_open_type_feature_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_open_type_feature_from_decoder)?;
                 }
                 206 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_open_type_feature_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_open_type_feature_from_decoder)?;
                 }
                 223 => {
                     skip_hyperlink_from_decoder(decoder)?;
@@ -38330,108 +30855,100 @@ mod scene_xpath_runtime {
                     skip_mention_from_decoder(decoder)?;
                 }
                 260 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_font_variation_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_font_variation_from_decoder)?;
                 }
                 279 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 280 => {
                     skip_text_truncation_from_decoder(decoder)?;
                 }
                 292 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 391 => {
                     skip_emoji_image_set_from_decoder(decoder)?;
                 }
                 392 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 58 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 59 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 434 => {
                     skip_lock_mode_from_decoder(decoder)?;
                 }
                 60 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 9 => {
                     skip_blend_mode_from_decoder(decoder)?;
                 }
                 61 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 63 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 64 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 13 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            decoder.read_var_float_value()?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, kiwi_skip_float_value)?;
                 }
                 65 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 16 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 68 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 424 => {
                     skip_vector_from_decoder(decoder)?;
                 }
                 18 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 70 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 317 => {
                     skip_mask_type_from_decoder(decoder)?;
                 }
                 19 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 71 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 20 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 72 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 26 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 78 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 29 => {
                     skip_stroke_align_from_decoder(decoder)?;
                 }
                 81 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 30 => {
                     skip_stroke_cap_from_decoder(decoder)?;
                 }
                 82 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 497 => {
                     skip_number_from_decoder(decoder)?;
@@ -38440,66 +30957,46 @@ mod scene_xpath_runtime {
                     skip_stroke_join_from_decoder(decoder)?;
                 }
                 83 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 90 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 91 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 43 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_effect_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_effect_from_decoder)?;
                 }
                 95 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 50 => {
                     skip_color_from_decoder(decoder)?;
                 }
                 102 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 51 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_path_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
                 }
                 103 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 52 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_path_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
                 }
                 104 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 564 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_path_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
                 }
                 411 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_paint_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
                 }
                 412 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 413 => {
                     skip_number_from_decoder(decoder)?;
@@ -38511,11 +31008,7 @@ mod scene_xpath_runtime {
                     skip_text_decoration_style_from_decoder(decoder)?;
                 }
                 455 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_transform_modifier_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_transform_modifier_from_decoder)?;
                 }
                 570 => {
                     skip_transform3d_from_decoder(decoder)?;
@@ -38530,85 +31023,85 @@ mod scene_xpath_runtime {
                     skip_transform_origin_from_decoder(decoder)?;
                 }
                 145 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 146 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 147 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 148 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 149 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 150 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 151 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 423 => {
                     skip_optional_vector_from_decoder(decoder)?;
                 }
                 258 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 287 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 288 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 289 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 290 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 294 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 295 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 296 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 297 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 298 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 299 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 28 => {
                     skip_constraint_type_from_decoder(decoder)?;
                 }
                 80 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 105 => {
                     skip_stack_mode_from_decoder(decoder)?;
                 }
                 106 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 107 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 108 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 109 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 110 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 120 => {
                     skip_stack_counter_align_from_decoder(decoder)?;
@@ -38620,10 +31113,10 @@ mod scene_xpath_runtime {
                     skip_stack_align_from_decoder(decoder)?;
                 }
                 209 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 210 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 211 => {
                     skip_stack_size_from_decoder(decoder)?;
@@ -38641,13 +31134,13 @@ mod scene_xpath_runtime {
                     skip_stack_align_from_decoder(decoder)?;
                 }
                 232 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 233 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 234 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 236 => {
                     skip_stack_counter_align_from_decoder(decoder)?;
@@ -38656,13 +31149,13 @@ mod scene_xpath_runtime {
                     skip_stack_positioning_from_decoder(decoder)?;
                 }
                 271 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 323 => {
                     skip_stack_wrap_from_decoder(decoder)?;
                 }
                 324 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 325 => {
                     skip_optional_vector_from_decoder(decoder)?;
@@ -38674,14 +31167,10 @@ mod scene_xpath_runtime {
                     skip_stack_counter_align_content_from_decoder(decoder)?;
                 }
                 406 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            decoder.read_var_int()?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, kiwi_skip_int_value)?;
                 }
                 574 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 435 => {
                     skip_guid_position_map_from_decoder(decoder)?;
@@ -38690,10 +31179,10 @@ mod scene_xpath_runtime {
                     skip_guid_position_map_from_decoder(decoder)?;
                 }
                 437 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 438 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 439 => {
                     skip_guid_from_decoder(decoder)?;
@@ -38702,10 +31191,10 @@ mod scene_xpath_runtime {
                     skip_guid_from_decoder(decoder)?;
                 }
                 441 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 442 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 474 => {
                     skip_guid_grid_track_size_map_from_decoder(decoder)?;
@@ -38723,10 +31212,10 @@ mod scene_xpath_runtime {
                     skip_grid_auto_tracks_from_decoder(decoder)?;
                 }
                 556 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 344 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 139 => {
                     skip_guid_from_decoder(decoder)?;
@@ -38744,19 +31233,19 @@ mod scene_xpath_runtime {
                     skip_transition_type_from_decoder(decoder)?;
                 }
                 155 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 156 => {
                     skip_easing_type_from_decoder(decoder)?;
                 }
                 181 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 182 => {
                     skip_connection_type_from_decoder(decoder)?;
                 }
                 183 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 184 => {
                     skip_prototype_device_from_decoder(decoder)?;
@@ -38765,50 +31254,40 @@ mod scene_xpath_runtime {
                     skip_interaction_type_from_decoder(decoder)?;
                 }
                 188 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 189 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 190 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 192 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 207 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 226 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_prototype_interaction_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_prototype_interaction_from_decoder,
+                    )?;
                 }
                 426 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_prototype_interaction_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_prototype_interaction_from_decoder,
+                    )?;
                 }
                 249 => {
                     skip_prototype_starting_point_from_decoder(decoder)?;
                 }
                 204 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_plugin_data_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_plugin_data_from_decoder)?;
                 }
                 219 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_plugin_relaunch_data_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_plugin_relaunch_data_from_decoder)?;
                 }
                 242 => {
                     skip_connector_endpoint_from_decoder(decoder)?;
@@ -38826,18 +31305,16 @@ mod scene_xpath_runtime {
                     skip_stroke_cap_from_decoder(decoder)?;
                 }
                 253 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_connector_control_point_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_connector_control_point_from_decoder,
+                    )?;
                 }
                 479 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_connector_control_point_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_connector_control_point_from_decoder,
+                    )?;
                 }
                 255 => {
                     skip_connector_text_midpoint_from_decoder(decoder)?;
@@ -38846,21 +31323,16 @@ mod scene_xpath_runtime {
                     skip_connector_type_from_decoder(decoder)?;
                 }
                 533 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 369 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_annotation_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_annotation_from_decoder)?;
                 }
                 384 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_annotation_measurement_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_annotation_measurement_from_decoder,
+                    )?;
                 }
                 453 => {
                     skip_annotation_categories_from_decoder(decoder)?;
@@ -38869,10 +31341,10 @@ mod scene_xpath_runtime {
                     skip_shape_with_text_type_from_decoder(decoder)?;
                 }
                 247 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 530 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 254 => {
                     skip_derived_immutable_frame_data_from_decoder(decoder)?;
@@ -38890,7 +31362,7 @@ mod scene_xpath_runtime {
                     skip_derived_jsx_data_from_decoder(decoder)?;
                 }
                 493 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 259 => {
                     skip_code_block_language_from_decoder(decoder)?;
@@ -38902,10 +31374,10 @@ mod scene_xpath_runtime {
                     skip_link_preview_data_from_decoder(decoder)?;
                 }
                 282 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 283 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 300 => {
                     skip_video_playback_from_decoder(decoder)?;
@@ -38923,7 +31395,7 @@ mod scene_xpath_runtime {
                     skip_multiplayer_map_from_decoder(decoder)?;
                 }
                 274 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 275 => {
                     skip_widget_derived_subtree_cursor_from_decoder(decoder)?;
@@ -38935,33 +31407,28 @@ mod scene_xpath_runtime {
                     skip_widget_input_behavior_from_decoder(decoder)?;
                 }
                 286 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 291 => {
                     skip_widget_hover_style_from_decoder(decoder)?;
                 }
                 293 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 360 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 262 => {
                     skip_widget_metadata_from_decoder(decoder)?;
                 }
                 263 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_widget_event_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_widget_event_from_decoder)?;
                 }
                 265 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_widget_property_menu_item_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_widget_property_menu_item_from_decoder,
+                    )?;
                 }
                 401 => {
                     skip_widget_input_text_node_type_from_decoder(decoder)?;
@@ -38994,13 +31461,13 @@ mod scene_xpath_runtime {
                     skip_flapp_type_from_decoder(decoder)?;
                 }
                 486 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 389 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 410 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 573 => {
                     skip_multiplayer_map_from_decoder(decoder)?;
@@ -39015,13 +31482,13 @@ mod scene_xpath_runtime {
                     skip_slide_theme_map_from_decoder(decoder)?;
                 }
                 393 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 443 => {
                     skip_slide_number_from_decoder(decoder)?;
                 }
                 456 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 363 => {
                     skip_guid_from_decoder(decoder)?;
@@ -39030,7 +31497,7 @@ mod scene_xpath_runtime {
                     skip_guid_from_decoder(decoder)?;
                 }
                 364 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 366 => {
                     skip_diagram_layout_rule_type_from_decoder(decoder)?;
@@ -39042,7 +31509,7 @@ mod scene_xpath_runtime {
                     skip_diagram_layout_paused_from_decoder(decoder)?;
                 }
                 380 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 251 => {
                     skip_internal_enum_for_test_from_decoder(decoder)?;
@@ -39051,102 +31518,94 @@ mod scene_xpath_runtime {
                     skip_internal_data_for_test_from_decoder(decoder)?;
                 }
                 14 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 66 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 15 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 67 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 17 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 69 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 25 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 77 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 27 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 79 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 37 => {
                     skip_constraint_type_from_decoder(decoder)?;
                 }
                 89 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 45 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_export_settings_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_export_settings_from_decoder)?;
                 }
                 97 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 46 => {
                     skip_text_auto_resize_from_decoder(decoder)?;
                 }
                 98 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 47 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_layout_grid_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_layout_grid_from_decoder)?;
                 }
                 99 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 115 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 116 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 117 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 118 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 36 => {
                     skip_boolean_operation_from_decoder(decoder)?;
                 }
                 88 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 44 => {
                     skip_vector_mirror_from_decoder(decoder)?;
                 }
                 96 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 10 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 62 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 24 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 76 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 195 => {
                     skip_arc_data_from_decoder(decoder)?;
@@ -39155,38 +31614,34 @@ mod scene_xpath_runtime {
                     skip_vector_data_from_decoder(decoder)?;
                 }
                 100 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 425 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 432 => {
                     skip_text_path_start_from_decoder(decoder)?;
                 }
                 119 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 138 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_guide_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_guide_from_decoder)?;
                 }
                 142 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 159 => {
                     skip_scroll_direction_from_decoder(decoder)?;
                 }
                 160 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 166 => {
                     skip_vector_from_decoder(decoder)?;
                 }
                 175 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 178 => {
                     skip_scroll_contracted_state_from_decoder(decoder)?;
@@ -39195,13 +31650,13 @@ mod scene_xpath_runtime {
                     skip_vector_from_decoder(decoder)?;
                 }
                 180 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 186 => {
                     skip_scroll_behavior_from_decoder(decoder)?;
                 }
                 196 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 197 => {
                     skip_navigation_type_from_decoder(decoder)?;
@@ -39222,42 +31677,34 @@ mod scene_xpath_runtime {
                     skip_guid_from_decoder(decoder)?;
                 }
                 220 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 221 => {
                     skip_stack_size_from_decoder(decoder)?;
                 }
                 222 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 224 => {
                     skip_key_trigger_from_decoder(decoder)?;
                 }
                 227 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 235 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_guid_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_guid_from_decoder)?;
                 }
                 237 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_symbol_link_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_symbol_link_from_decoder)?;
                 }
                 239 => {
                     skip_text_list_data_from_decoder(decoder)?;
                 }
                 261 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 264 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 270 => {
                     skip_embed_data_from_decoder(decoder)?;
@@ -39269,7 +31716,7 @@ mod scene_xpath_runtime {
                     skip_multiplayer_map_from_decoder(decoder)?;
                 }
                 284 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 302 => {
                     skip_html_tag_from_decoder(decoder)?;
@@ -39281,10 +31728,10 @@ mod scene_xpath_runtime {
                     skip_aria_attributes_map_from_decoder(decoder)?;
                 }
                 304 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 490 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 306 => {
                     skip_variable_data_from_decoder(decoder)?;
@@ -39296,11 +31743,7 @@ mod scene_xpath_runtime {
                     skip_variable_mode_by_set_map_from_decoder(decoder)?;
                 }
                 312 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_variable_set_mode_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_variable_set_mode_from_decoder)?;
                 }
                 313 => {
                     skip_variable_set_id_from_decoder(decoder)?;
@@ -39312,17 +31755,13 @@ mod scene_xpath_runtime {
                     skip_variable_data_values_from_decoder(decoder)?;
                 }
                 350 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 566 => {
                     skip_variable_timing_display_unit_from_decoder(decoder)?;
                 }
                 353 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_variable_scope_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_variable_scope_from_decoder)?;
                 }
                 445 => {
                     skip_variable_data_map_from_decoder(decoder)?;
@@ -39340,14 +31779,10 @@ mod scene_xpath_runtime {
                     skip_guid_from_decoder(decoder)?;
                 }
                 482 => {
-                    decoder.read_var_uint64()?;
+                    kiwi_skip_uint64_value(decoder)?;
                 }
                 447 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_variable_width_point_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_variable_width_point_from_decoder)?;
                 }
                 448 => {
                     skip_dynamic_stroke_settings_from_decoder(decoder)?;
@@ -39359,11 +31794,7 @@ mod scene_xpath_runtime {
                     skip_stretch_stroke_settings_from_decoder(decoder)?;
                 }
                 488 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_matrix_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_matrix_from_decoder)?;
                 }
                 452 => {
                     skip_brush_type_from_decoder(decoder)?;
@@ -39372,7 +31803,7 @@ mod scene_xpath_runtime {
                     skip_optional_vector_from_decoder(decoder)?;
                 }
                 554 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 377 => {
                     skip_variable_set_id_from_decoder(decoder)?;
@@ -39384,10 +31815,10 @@ mod scene_xpath_runtime {
                     skip_variable_id_or_variable_override_id_from_decoder(decoder)?;
                 }
                 385 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 386 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 517 => {
                     skip_inherited_variables_data_from_decoder(decoder)?;
@@ -39405,7 +31836,7 @@ mod scene_xpath_runtime {
                     skip_migration_status_from_decoder(decoder)?;
                 }
                 330 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 331 => {
                     skip_edit_info_from_decoder(decoder)?;
@@ -39420,20 +31851,19 @@ mod scene_xpath_runtime {
                     skip_child_reading_direction_from_decoder(decoder)?;
                 }
                 347 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 349 => {
                     skip_document_color_profile_from_decoder(decoder)?;
                 }
                 354 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_developer_related_link_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_developer_related_link_from_decoder,
+                    )?;
                 }
                 356 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 365 => {
                     skip_edit_scope_info_from_decoder(decoder)?;
@@ -39445,10 +31875,10 @@ mod scene_xpath_runtime {
                     skip_semantic_italic_from_decoder(decoder)?;
                 }
                 403 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 387 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 500 => {
                     skip_derived_breakpoint_data_from_decoder(decoder)?;
@@ -39457,7 +31887,7 @@ mod scene_xpath_runtime {
                     skip_guid_from_decoder(decoder)?;
                 }
                 458 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 457 => {
                     skip_guid_from_decoder(decoder)?;
@@ -39466,10 +31896,10 @@ mod scene_xpath_runtime {
                     skip_guid_from_decoder(decoder)?;
                 }
                 501 => {
-                    decoder.read_var_float_value()?;
+                    kiwi_skip_float_value(decoder)?;
                 }
                 522 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 400 => {
                     skip_responsive_set_settings_from_decoder(decoder)?;
@@ -39478,14 +31908,13 @@ mod scene_xpath_runtime {
                     skip_node_behaviors_from_decoder(decoder)?;
                 }
                 414 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 534 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_collaborative_text_op_id_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_collaborative_text_op_id_from_decoder,
+                    )?;
                 }
                 444 => {
                     skip_collaborative_plain_text_from_decoder(decoder)?;
@@ -39500,74 +31929,58 @@ mod scene_xpath_runtime {
                     skip_canvas_node_id_from_decoder(decoder)?;
                 }
                 498 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 502 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 503 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 504 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 515 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            decoder.skip_string()?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, kiwi_skip_string_value)?;
                 }
                 524 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_used_make_library_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_used_make_library_from_decoder)?;
                 }
                 518 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 520 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 551 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 531 => {
                     skip_prototype_device_from_decoder(decoder)?;
                 }
                 525 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_code_example_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_code_example_from_decoder)?;
                 }
                 428 => {
                     skip_code_file_id_from_decoder(decoder)?;
                 }
                 430 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 547 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 429 => {
                     skip_code_component_id_from_decoder(decoder)?;
                 }
                 487 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 431 => {
                     skip_code_snapshot_state_from_decoder(decoder)?;
                 }
                 451 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_node_chat_message_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, skip_node_chat_message_from_decoder)?;
                 }
                 485 => {
                     skip_node_chat_compression_state_from_decoder(decoder)?;
@@ -39576,7 +31989,7 @@ mod scene_xpath_runtime {
                     skip_ai_chat_thread_from_decoder(decoder)?;
                 }
                 484 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 459 => {
                     skip_code_snapshot_from_decoder(decoder)?;
@@ -39585,19 +31998,19 @@ mod scene_xpath_runtime {
                     skip_code_snapshot_layers_from_decoder(decoder)?;
                 }
                 480 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 465 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 469 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 470 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 471 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 481 => {
                     skip_canvas_node_id_from_decoder(decoder)?;
@@ -39609,31 +32022,31 @@ mod scene_xpath_runtime {
                     skip_code_object_type_from_decoder(decoder)?;
                 }
                 472 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 478 => {
                     skip_code_behavior_data_from_decoder(decoder)?;
                 }
                 519 => {
-                    decoder.read_var_uint()?;
+                    kiwi_skip_uint_value(decoder)?;
                 }
                 527 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 532 => {
                     skip_code_embed_info_from_decoder(decoder)?;
                 }
                 546 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 558 => {
                     skip_code_source_info_from_decoder(decoder)?;
                 }
                 536 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 537 => {
-                    decoder.skip_byte_array()?;
+                    kiwi_skip_bytes_value(decoder)?;
                 }
                 419 => {
                     skip_cms_selector_from_decoder(decoder)?;
@@ -39657,14 +32070,10 @@ mod scene_xpath_runtime {
                     skip_repeater_override_data_from_decoder(decoder)?;
                 }
                 405 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            decoder.read_var_uint()?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(decoder, kiwi_skip_uint_value)?;
                 }
                 408 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 407 => {
                     skip_first_draft_data_from_decoder(decoder)?;
@@ -39700,13 +32109,13 @@ mod scene_xpath_runtime {
                     skip_canvas_node_id_from_decoder(decoder)?;
                 }
                 548 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 523 => {
                     skip_trss_transform2_d_from_decoder(decoder)?;
                 }
                 506 => {
-                    decoder.read_var_int64()?;
+                    kiwi_skip_int64_value(decoder)?;
                 }
                 507 => {
                     skip_keyframe_value_data_from_decoder(decoder)?;
@@ -39730,19 +32139,19 @@ mod scene_xpath_runtime {
                     skip_timeline_position_type_from_decoder(decoder)?;
                 }
                 545 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 511 => {
                     skip_guid_from_decoder(decoder)?;
                 }
                 512 => {
-                    decoder.read_var_uint64()?;
+                    kiwi_skip_uint64_value(decoder)?;
                 }
                 513 => {
-                    decoder.read_var_int64()?;
+                    kiwi_skip_int64_value(decoder)?;
                 }
                 543 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 514 => {
                     skip_playback_style_from_decoder(decoder)?;
@@ -39757,11 +32166,10 @@ mod scene_xpath_runtime {
                     skip_animation_presets_from_decoder(decoder)?;
                 }
                 582 => {
-                    decoder
-                        .read_repeated(|decoder| {
-                            skip_style_id_for_animation_from_decoder(decoder)?;
-                            Ok(())
-                        })?;
+                    kiwi_skip_repeated(
+                        decoder,
+                        skip_style_id_for_animation_from_decoder,
+                    )?;
                 }
                 583 => {
                     skip_animation_preset_id_from_decoder(decoder)?;
@@ -39776,7 +32184,7 @@ mod scene_xpath_runtime {
                     skip_transition_override_data_from_decoder(decoder)?;
                 }
                 544 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 557 => {
                     skip_source_control_config_from_decoder(decoder)?;
@@ -39788,22 +32196,22 @@ mod scene_xpath_runtime {
                     skip_collaborative_plain_text_from_decoder(decoder)?;
                 }
                 561 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 562 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 563 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 575 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 576 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 577 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 578 => {
                     skip_table_row_column_size_map_from_decoder(decoder)?;
@@ -39812,19 +32220,19 @@ mod scene_xpath_runtime {
                     skip_table_row_column_size_map_from_decoder(decoder)?;
                 }
                 590 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 565 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 584 => {
-                    decoder.skip_string()?;
+                    kiwi_skip_string_value(decoder)?;
                 }
                 585 => {
-                    decoder.read_var_int()?;
+                    kiwi_skip_int_value(decoder)?;
                 }
                 567 => {
-                    decoder.read_bool()?;
+                    kiwi_skip_bool_value(decoder)?;
                 }
                 588 => {
                     skip_custom_tool_artifact_ref_from_decoder(decoder)?;
@@ -39885,23 +32293,19 @@ fn decode_scene_message_from_decoder(
                 skip_message_type_from_decoder(decoder)?;
             }
             2 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             42 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             3 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             37 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             5 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_user_change_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_user_change_from_decoder)?;
             }
             32 => {
                 skip_interactive_slide_element_change_from_decoder(decoder)?;
@@ -39913,23 +32317,19 @@ fn decode_scene_message_from_decoder(
                 skip_buzz_approval_change_from_decoder(decoder)?;
             }
             6 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_blob_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_blob_from_decoder)?;
             }
             30 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             7 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             8 => {
                 skip_access_from_decoder(decoder)?;
             }
             9 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             10 => {
                 skip_style_set_type_from_decoder(decoder)?;
@@ -39938,104 +32338,79 @@ fn decode_scene_message_from_decoder(
                 skip_style_set_content_type_from_decoder(decoder)?;
             }
             12 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             13 => {
                 skip_vector_from_decoder(decoder)?;
             }
             14 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             15 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             16 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_scene_graph_query_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_scene_graph_query_from_decoder)?;
             }
             17 => {
                 skip_node_changes_metadata_from_decoder(decoder)?;
             }
             18 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             19 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             20 => {
                 skip_guid_from_decoder(decoder)?;
             }
             21 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             22 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_message_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_message_from_decoder)?;
             }
             23 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_message_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_message_from_decoder)?;
             }
             24 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_client_broadcast_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_client_broadcast_from_decoder)?;
             }
             25 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             26 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             27 => {
                 skip_editor_type_from_decoder(decoder)?;
             }
             28 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             29 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_from_decoder)?;
             }
             31 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             33 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_clipboard_selection_region_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_clipboard_selection_region_from_decoder,
+                )?;
             }
             34 => {
                 skip_encoded_offsets_index_from_decoder(decoder)?;
             }
             35 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             38 => {
-                decoder.read_var_uint64()?;
+                kiwi_skip_uint64_value(decoder)?;
             }
             39 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_annotation_category_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_annotation_category_from_decoder)?;
             }
             40 => {
                 skip_client_rendered_metadata_from_decoder(decoder)?;
@@ -40096,7 +32471,7 @@ fn decode_scene_node_change_from_decoder(
                 *type_counts.entry(name).or_insert(0) += 1;
             }
             5 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             332 => {
                 skip_style_id_from_decoder(decoder)?;
@@ -40114,13 +32489,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_style_id_from_decoder(decoder)?;
             }
             216 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             252 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             21 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             41 => {
                 skip_font_name_from_decoder(decoder)?;
@@ -40129,13 +32504,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_text_data_from_decoder(decoder)?;
             }
             6 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             7 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             8 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             11 => {
                 skip_vector_from_decoder(decoder)?;
@@ -40144,88 +32519,79 @@ fn decode_scene_node_change_from_decoder(
                 skip_matrix_from_decoder(decoder)?;
             }
             38 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_paint_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
             }
             39 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_paint_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
             }
             53 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             2 => {
                 skip_node_phase_from_decoder(decoder)?;
             }
             54 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             55 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             56 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             57 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             174 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             318 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             256 => {
                 skip_library_move_info_from_decoder(decoder)?;
             }
             281 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_library_move_history_item_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_library_move_history_item_from_decoder,
+                )?;
             }
             319 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             383 => {
                 skip_asset_id_map_from_decoder(decoder)?;
             }
             49 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             101 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             157 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             161 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             376 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             163 => {
                 skip_style_type_from_decoder(decoder)?;
             }
             191 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             171 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             399 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             320 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             345 => {
                 skip_shared_style_master_data_from_decoder(decoder)?;
@@ -40234,10 +32600,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_shared_style_master_data_from_decoder(decoder)?;
             }
             176 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             177 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             172 => {
                 skip_shared_style_master_data_from_decoder(decoder)?;
@@ -40267,31 +32633,22 @@ fn decode_scene_node_change_from_decoder(
                 skip_guid_from_decoder(decoder)?;
             }
             580 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_style_animation_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_style_animation_from_decoder)?;
             }
             193 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_paint_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
             }
             194 => {
                 skip_guid_from_decoder(decoder)?;
             }
             225 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             238 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_state_group_property_value_order_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_state_group_property_value_order_from_decoder,
+                )?;
             }
             581 => {
                 skip_partial_paste_annotation_from_decoder(decoder)?;
@@ -40300,206 +32657,172 @@ fn decode_scene_node_change_from_decoder(
                 skip_shared_symbol_reference_from_decoder(decoder)?;
             }
             123 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             124 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_path_mapping_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
             }
             126 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             152 => {
                 skip_shared_component_master_data_from_decoder(decoder)?;
             }
             144 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             164 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_path_mapping_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
             }
             228 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_path_mapping_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
             }
             214 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             395 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             215 => {
                 skip_guid_from_decoder(decoder)?;
             }
             217 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             218 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             266 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_component_prop_def_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_component_prop_def_from_decoder)?;
             }
             267 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_component_prop_ref_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_component_prop_ref_from_decoder)?;
             }
             483 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_variant_prop_spec_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_variant_prop_spec_from_decoder)?;
             }
             113 => {
                 skip_symbol_data_from_decoder(decoder)?;
             }
             114 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             125 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_node_change_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?;
             }
             394 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             143 => {
                 skip_guid_from_decoder(decoder)?;
             }
             268 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_component_prop_assignment_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_component_prop_assignment_from_decoder,
+                )?;
             }
             305 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             248 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_instance_override_stash_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_instance_override_stash_from_decoder)?;
             }
             250 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_instance_override_stash_v2_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_instance_override_stash_v2_from_decoder,
+                )?;
             }
             111 => {
                 skip_guid_path_from_decoder(decoder)?;
             }
             112 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             321 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             382 => {
                 skip_module_type_from_decoder(decoder)?;
             }
             463 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             495 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             73 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             22 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             74 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             23 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             75 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             32 => {
                 skip_text_align_horizontal_from_decoder(decoder)?;
             }
             84 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             33 => {
                 skip_text_align_vertical_from_decoder(decoder)?;
             }
             85 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             34 => {
                 skip_text_case_from_decoder(decoder)?;
             }
             86 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             35 => {
                 skip_text_decoration_from_decoder(decoder)?;
             }
             87 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             40 => {
                 skip_number_from_decoder(decoder)?;
             }
             92 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             93 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             94 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             359 => {
                 skip_derived_text_data_from_decoder(decoder)?;
             }
             127 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             128 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             129 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             130 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             131 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             132 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             133 => {
                 skip_font_variant_numeric_figure_from_decoder(decoder)?;
@@ -40520,29 +32843,28 @@ fn decode_scene_node_change_from_decoder(
                 skip_number_from_decoder(decoder)?;
             }
             202 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             322 => {
                 skip_leading_trim_from_decoder(decoder)?;
             }
             337 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             339 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             550 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             351 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             417 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_responsive_text_style_variant_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_responsive_text_style_variant_from_decoder,
+                )?;
             }
             352 => {
                 skip_section_status_from_decoder(decoder)?;
@@ -40551,24 +32873,16 @@ fn decode_scene_node_change_from_decoder(
                 skip_section_status_info_from_decoder(decoder)?;
             }
             203 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             396 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             205 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_open_type_feature_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_open_type_feature_from_decoder)?;
             }
             206 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_open_type_feature_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_open_type_feature_from_decoder)?;
             }
             223 => {
                 skip_hyperlink_from_decoder(decoder)?;
@@ -40577,108 +32891,100 @@ fn decode_scene_node_change_from_decoder(
                 skip_mention_from_decoder(decoder)?;
             }
             260 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_font_variation_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_font_variation_from_decoder)?;
             }
             279 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             280 => {
                 skip_text_truncation_from_decoder(decoder)?;
             }
             292 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             391 => {
                 skip_emoji_image_set_from_decoder(decoder)?;
             }
             392 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             58 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             59 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             434 => {
                 skip_lock_mode_from_decoder(decoder)?;
             }
             60 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             9 => {
                 skip_blend_mode_from_decoder(decoder)?;
             }
             61 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             63 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             64 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             13 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        decoder.read_var_float_value()?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, kiwi_skip_float_value)?;
             }
             65 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             16 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             68 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             424 => {
                 skip_vector_from_decoder(decoder)?;
             }
             18 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             70 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             317 => {
                 skip_mask_type_from_decoder(decoder)?;
             }
             19 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             71 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             20 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             72 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             26 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             78 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             29 => {
                 skip_stroke_align_from_decoder(decoder)?;
             }
             81 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             30 => {
                 skip_stroke_cap_from_decoder(decoder)?;
             }
             82 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             497 => {
                 skip_number_from_decoder(decoder)?;
@@ -40687,66 +32993,46 @@ fn decode_scene_node_change_from_decoder(
                 skip_stroke_join_from_decoder(decoder)?;
             }
             83 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             90 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             91 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             43 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_effect_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_effect_from_decoder)?;
             }
             95 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             50 => {
                 skip_color_from_decoder(decoder)?;
             }
             102 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             51 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_path_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
             }
             103 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             52 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_path_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
             }
             104 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             564 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_path_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
             }
             411 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_paint_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
             }
             412 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             413 => {
                 skip_number_from_decoder(decoder)?;
@@ -40758,11 +33044,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_text_decoration_style_from_decoder(decoder)?;
             }
             455 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_transform_modifier_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_transform_modifier_from_decoder)?;
             }
             570 => {
                 skip_transform3d_from_decoder(decoder)?;
@@ -40777,85 +33059,85 @@ fn decode_scene_node_change_from_decoder(
                 skip_transform_origin_from_decoder(decoder)?;
             }
             145 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             146 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             147 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             148 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             149 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             150 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             151 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             423 => {
                 skip_optional_vector_from_decoder(decoder)?;
             }
             258 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             287 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             288 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             289 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             290 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             294 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             295 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             296 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             297 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             298 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             299 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             28 => {
                 skip_constraint_type_from_decoder(decoder)?;
             }
             80 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             105 => {
                 skip_stack_mode_from_decoder(decoder)?;
             }
             106 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             107 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             108 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             109 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             110 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             120 => {
                 skip_stack_counter_align_from_decoder(decoder)?;
@@ -40867,10 +33149,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_stack_align_from_decoder(decoder)?;
             }
             209 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             210 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             211 => {
                 skip_stack_size_from_decoder(decoder)?;
@@ -40888,13 +33170,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_stack_align_from_decoder(decoder)?;
             }
             232 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             233 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             234 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             236 => {
                 skip_stack_counter_align_from_decoder(decoder)?;
@@ -40903,13 +33185,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_stack_positioning_from_decoder(decoder)?;
             }
             271 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             323 => {
                 skip_stack_wrap_from_decoder(decoder)?;
             }
             324 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             325 => {
                 skip_optional_vector_from_decoder(decoder)?;
@@ -40921,14 +33203,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_stack_counter_align_content_from_decoder(decoder)?;
             }
             406 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        decoder.read_var_int()?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, kiwi_skip_int_value)?;
             }
             574 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             435 => {
                 skip_guid_position_map_from_decoder(decoder)?;
@@ -40937,10 +33215,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_guid_position_map_from_decoder(decoder)?;
             }
             437 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             438 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             439 => {
                 skip_guid_from_decoder(decoder)?;
@@ -40949,10 +33227,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_guid_from_decoder(decoder)?;
             }
             441 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             442 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             474 => {
                 skip_guid_grid_track_size_map_from_decoder(decoder)?;
@@ -40970,10 +33248,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_grid_auto_tracks_from_decoder(decoder)?;
             }
             556 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             344 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             139 => {
                 skip_guid_from_decoder(decoder)?;
@@ -40991,19 +33269,19 @@ fn decode_scene_node_change_from_decoder(
                 skip_transition_type_from_decoder(decoder)?;
             }
             155 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             156 => {
                 skip_easing_type_from_decoder(decoder)?;
             }
             181 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             182 => {
                 skip_connection_type_from_decoder(decoder)?;
             }
             183 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             184 => {
                 skip_prototype_device_from_decoder(decoder)?;
@@ -41012,50 +33290,34 @@ fn decode_scene_node_change_from_decoder(
                 skip_interaction_type_from_decoder(decoder)?;
             }
             188 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             189 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             190 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             192 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             207 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             226 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_prototype_interaction_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_prototype_interaction_from_decoder)?;
             }
             426 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_prototype_interaction_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_prototype_interaction_from_decoder)?;
             }
             249 => {
                 skip_prototype_starting_point_from_decoder(decoder)?;
             }
             204 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_plugin_data_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_plugin_data_from_decoder)?;
             }
             219 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_plugin_relaunch_data_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_plugin_relaunch_data_from_decoder)?;
             }
             242 => {
                 skip_connector_endpoint_from_decoder(decoder)?;
@@ -41073,18 +33335,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_stroke_cap_from_decoder(decoder)?;
             }
             253 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_connector_control_point_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_connector_control_point_from_decoder)?;
             }
             479 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_connector_control_point_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_connector_control_point_from_decoder)?;
             }
             255 => {
                 skip_connector_text_midpoint_from_decoder(decoder)?;
@@ -41093,21 +33347,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_connector_type_from_decoder(decoder)?;
             }
             533 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             369 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_annotation_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_annotation_from_decoder)?;
             }
             384 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_annotation_measurement_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_annotation_measurement_from_decoder)?;
             }
             453 => {
                 skip_annotation_categories_from_decoder(decoder)?;
@@ -41116,10 +33362,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_shape_with_text_type_from_decoder(decoder)?;
             }
             247 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             530 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             254 => {
                 skip_derived_immutable_frame_data_from_decoder(decoder)?;
@@ -41137,7 +33383,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_derived_jsx_data_from_decoder(decoder)?;
             }
             493 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             259 => {
                 skip_code_block_language_from_decoder(decoder)?;
@@ -41149,10 +33395,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_link_preview_data_from_decoder(decoder)?;
             }
             282 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             283 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             300 => {
                 skip_video_playback_from_decoder(decoder)?;
@@ -41170,7 +33416,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_multiplayer_map_from_decoder(decoder)?;
             }
             274 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             275 => {
                 skip_widget_derived_subtree_cursor_from_decoder(decoder)?;
@@ -41182,33 +33428,28 @@ fn decode_scene_node_change_from_decoder(
                 skip_widget_input_behavior_from_decoder(decoder)?;
             }
             286 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             291 => {
                 skip_widget_hover_style_from_decoder(decoder)?;
             }
             293 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             360 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             262 => {
                 skip_widget_metadata_from_decoder(decoder)?;
             }
             263 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_widget_event_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_widget_event_from_decoder)?;
             }
             265 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_widget_property_menu_item_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(
+                    decoder,
+                    skip_widget_property_menu_item_from_decoder,
+                )?;
             }
             401 => {
                 skip_widget_input_text_node_type_from_decoder(decoder)?;
@@ -41241,13 +33482,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_flapp_type_from_decoder(decoder)?;
             }
             486 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             389 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             410 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             573 => {
                 skip_multiplayer_map_from_decoder(decoder)?;
@@ -41262,13 +33503,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_slide_theme_map_from_decoder(decoder)?;
             }
             393 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             443 => {
                 skip_slide_number_from_decoder(decoder)?;
             }
             456 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             363 => {
                 skip_guid_from_decoder(decoder)?;
@@ -41277,7 +33518,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_guid_from_decoder(decoder)?;
             }
             364 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             366 => {
                 skip_diagram_layout_rule_type_from_decoder(decoder)?;
@@ -41289,7 +33530,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_diagram_layout_paused_from_decoder(decoder)?;
             }
             380 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             251 => {
                 skip_internal_enum_for_test_from_decoder(decoder)?;
@@ -41298,102 +33539,94 @@ fn decode_scene_node_change_from_decoder(
                 skip_internal_data_for_test_from_decoder(decoder)?;
             }
             14 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             66 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             15 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             67 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             17 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             69 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             25 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             77 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             27 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             79 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             37 => {
                 skip_constraint_type_from_decoder(decoder)?;
             }
             89 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             45 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_export_settings_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_export_settings_from_decoder)?;
             }
             97 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             46 => {
                 skip_text_auto_resize_from_decoder(decoder)?;
             }
             98 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             47 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_layout_grid_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_layout_grid_from_decoder)?;
             }
             99 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             115 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             116 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             117 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             118 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             36 => {
                 skip_boolean_operation_from_decoder(decoder)?;
             }
             88 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             44 => {
                 skip_vector_mirror_from_decoder(decoder)?;
             }
             96 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             10 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             62 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             24 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             76 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             195 => {
                 skip_arc_data_from_decoder(decoder)?;
@@ -41402,38 +33635,34 @@ fn decode_scene_node_change_from_decoder(
                 skip_vector_data_from_decoder(decoder)?;
             }
             100 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             425 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             432 => {
                 skip_text_path_start_from_decoder(decoder)?;
             }
             119 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             138 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guide_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guide_from_decoder)?;
             }
             142 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             159 => {
                 skip_scroll_direction_from_decoder(decoder)?;
             }
             160 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             166 => {
                 skip_vector_from_decoder(decoder)?;
             }
             175 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             178 => {
                 skip_scroll_contracted_state_from_decoder(decoder)?;
@@ -41442,13 +33671,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_vector_from_decoder(decoder)?;
             }
             180 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             186 => {
                 skip_scroll_behavior_from_decoder(decoder)?;
             }
             196 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             197 => {
                 skip_navigation_type_from_decoder(decoder)?;
@@ -41469,42 +33698,34 @@ fn decode_scene_node_change_from_decoder(
                 skip_guid_from_decoder(decoder)?;
             }
             220 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             221 => {
                 skip_stack_size_from_decoder(decoder)?;
             }
             222 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             224 => {
                 skip_key_trigger_from_decoder(decoder)?;
             }
             227 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             235 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_guid_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_guid_from_decoder)?;
             }
             237 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_symbol_link_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_symbol_link_from_decoder)?;
             }
             239 => {
                 skip_text_list_data_from_decoder(decoder)?;
             }
             261 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             264 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             270 => {
                 skip_embed_data_from_decoder(decoder)?;
@@ -41516,7 +33737,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_multiplayer_map_from_decoder(decoder)?;
             }
             284 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             302 => {
                 skip_html_tag_from_decoder(decoder)?;
@@ -41528,10 +33749,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_aria_attributes_map_from_decoder(decoder)?;
             }
             304 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             490 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             306 => {
                 skip_variable_data_from_decoder(decoder)?;
@@ -41543,11 +33764,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_variable_mode_by_set_map_from_decoder(decoder)?;
             }
             312 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_variable_set_mode_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_variable_set_mode_from_decoder)?;
             }
             313 => {
                 skip_variable_set_id_from_decoder(decoder)?;
@@ -41559,17 +33776,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_variable_data_values_from_decoder(decoder)?;
             }
             350 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             566 => {
                 skip_variable_timing_display_unit_from_decoder(decoder)?;
             }
             353 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_variable_scope_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_variable_scope_from_decoder)?;
             }
             445 => {
                 skip_variable_data_map_from_decoder(decoder)?;
@@ -41587,14 +33800,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_guid_from_decoder(decoder)?;
             }
             482 => {
-                decoder.read_var_uint64()?;
+                kiwi_skip_uint64_value(decoder)?;
             }
             447 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_variable_width_point_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_variable_width_point_from_decoder)?;
             }
             448 => {
                 skip_dynamic_stroke_settings_from_decoder(decoder)?;
@@ -41606,11 +33815,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_stretch_stroke_settings_from_decoder(decoder)?;
             }
             488 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_matrix_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_matrix_from_decoder)?;
             }
             452 => {
                 skip_brush_type_from_decoder(decoder)?;
@@ -41619,7 +33824,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_optional_vector_from_decoder(decoder)?;
             }
             554 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             377 => {
                 skip_variable_set_id_from_decoder(decoder)?;
@@ -41631,10 +33836,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_variable_id_or_variable_override_id_from_decoder(decoder)?;
             }
             385 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             386 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             517 => {
                 skip_inherited_variables_data_from_decoder(decoder)?;
@@ -41652,7 +33857,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_migration_status_from_decoder(decoder)?;
             }
             330 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             331 => {
                 skip_edit_info_from_decoder(decoder)?;
@@ -41667,20 +33872,16 @@ fn decode_scene_node_change_from_decoder(
                 skip_child_reading_direction_from_decoder(decoder)?;
             }
             347 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             349 => {
                 skip_document_color_profile_from_decoder(decoder)?;
             }
             354 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_developer_related_link_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_developer_related_link_from_decoder)?;
             }
             356 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             365 => {
                 skip_edit_scope_info_from_decoder(decoder)?;
@@ -41692,10 +33893,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_semantic_italic_from_decoder(decoder)?;
             }
             403 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             387 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             500 => {
                 skip_derived_breakpoint_data_from_decoder(decoder)?;
@@ -41704,7 +33905,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_guid_from_decoder(decoder)?;
             }
             458 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             457 => {
                 skip_guid_from_decoder(decoder)?;
@@ -41713,10 +33914,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_guid_from_decoder(decoder)?;
             }
             501 => {
-                decoder.read_var_float_value()?;
+                kiwi_skip_float_value(decoder)?;
             }
             522 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             400 => {
                 skip_responsive_set_settings_from_decoder(decoder)?;
@@ -41725,14 +33926,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_node_behaviors_from_decoder(decoder)?;
             }
             414 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             534 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_collaborative_text_op_id_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_collaborative_text_op_id_from_decoder)?;
             }
             444 => {
                 skip_collaborative_plain_text_from_decoder(decoder)?;
@@ -41747,74 +33944,58 @@ fn decode_scene_node_change_from_decoder(
                 skip_canvas_node_id_from_decoder(decoder)?;
             }
             498 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             502 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             503 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             504 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             515 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        decoder.skip_string()?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, kiwi_skip_string_value)?;
             }
             524 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_used_make_library_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_used_make_library_from_decoder)?;
             }
             518 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             520 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             551 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             531 => {
                 skip_prototype_device_from_decoder(decoder)?;
             }
             525 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_code_example_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_code_example_from_decoder)?;
             }
             428 => {
                 skip_code_file_id_from_decoder(decoder)?;
             }
             430 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             547 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             429 => {
                 skip_code_component_id_from_decoder(decoder)?;
             }
             487 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             431 => {
                 skip_code_snapshot_state_from_decoder(decoder)?;
             }
             451 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_node_chat_message_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_node_chat_message_from_decoder)?;
             }
             485 => {
                 skip_node_chat_compression_state_from_decoder(decoder)?;
@@ -41823,7 +34004,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_ai_chat_thread_from_decoder(decoder)?;
             }
             484 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             459 => {
                 skip_code_snapshot_from_decoder(decoder)?;
@@ -41832,19 +34013,19 @@ fn decode_scene_node_change_from_decoder(
                 skip_code_snapshot_layers_from_decoder(decoder)?;
             }
             480 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             465 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             469 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             470 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             471 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             481 => {
                 skip_canvas_node_id_from_decoder(decoder)?;
@@ -41856,31 +34037,31 @@ fn decode_scene_node_change_from_decoder(
                 skip_code_object_type_from_decoder(decoder)?;
             }
             472 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             478 => {
                 skip_code_behavior_data_from_decoder(decoder)?;
             }
             519 => {
-                decoder.read_var_uint()?;
+                kiwi_skip_uint_value(decoder)?;
             }
             527 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             532 => {
                 skip_code_embed_info_from_decoder(decoder)?;
             }
             546 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             558 => {
                 skip_code_source_info_from_decoder(decoder)?;
             }
             536 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             537 => {
-                decoder.skip_byte_array()?;
+                kiwi_skip_bytes_value(decoder)?;
             }
             419 => {
                 skip_cms_selector_from_decoder(decoder)?;
@@ -41904,14 +34085,10 @@ fn decode_scene_node_change_from_decoder(
                 skip_repeater_override_data_from_decoder(decoder)?;
             }
             405 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        decoder.read_var_uint()?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, kiwi_skip_uint_value)?;
             }
             408 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             407 => {
                 skip_first_draft_data_from_decoder(decoder)?;
@@ -41947,13 +34124,13 @@ fn decode_scene_node_change_from_decoder(
                 skip_canvas_node_id_from_decoder(decoder)?;
             }
             548 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             523 => {
                 skip_trss_transform2_d_from_decoder(decoder)?;
             }
             506 => {
-                decoder.read_var_int64()?;
+                kiwi_skip_int64_value(decoder)?;
             }
             507 => {
                 skip_keyframe_value_data_from_decoder(decoder)?;
@@ -41977,19 +34154,19 @@ fn decode_scene_node_change_from_decoder(
                 skip_timeline_position_type_from_decoder(decoder)?;
             }
             545 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             511 => {
                 skip_guid_from_decoder(decoder)?;
             }
             512 => {
-                decoder.read_var_uint64()?;
+                kiwi_skip_uint64_value(decoder)?;
             }
             513 => {
-                decoder.read_var_int64()?;
+                kiwi_skip_int64_value(decoder)?;
             }
             543 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             514 => {
                 skip_playback_style_from_decoder(decoder)?;
@@ -42004,11 +34181,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_animation_presets_from_decoder(decoder)?;
             }
             582 => {
-                decoder
-                    .read_repeated(|decoder| {
-                        skip_style_id_for_animation_from_decoder(decoder)?;
-                        Ok(())
-                    })?;
+                kiwi_skip_repeated(decoder, skip_style_id_for_animation_from_decoder)?;
             }
             583 => {
                 skip_animation_preset_id_from_decoder(decoder)?;
@@ -42023,7 +34196,7 @@ fn decode_scene_node_change_from_decoder(
                 skip_transition_override_data_from_decoder(decoder)?;
             }
             544 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             557 => {
                 skip_source_control_config_from_decoder(decoder)?;
@@ -42035,22 +34208,22 @@ fn decode_scene_node_change_from_decoder(
                 skip_collaborative_plain_text_from_decoder(decoder)?;
             }
             561 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             562 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             563 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             575 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             576 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             577 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             578 => {
                 skip_table_row_column_size_map_from_decoder(decoder)?;
@@ -42059,19 +34232,19 @@ fn decode_scene_node_change_from_decoder(
                 skip_table_row_column_size_map_from_decoder(decoder)?;
             }
             590 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             565 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             584 => {
-                decoder.skip_string()?;
+                kiwi_skip_string_value(decoder)?;
             }
             585 => {
-                decoder.read_var_int()?;
+                kiwi_skip_int_value(decoder)?;
             }
             567 => {
-                decoder.read_bool()?;
+                kiwi_skip_bool_value(decoder)?;
             }
             588 => {
                 skip_custom_tool_artifact_ref_from_decoder(decoder)?;

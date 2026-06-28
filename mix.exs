@@ -175,11 +175,11 @@ defmodule Figler.MixProject do
   end
 
   defp kiwi_codec_dep do
-    {:kiwi_codec, "~> 0.2.1"}
+    {:kiwi_codec, "~> 0.2.2"}
   end
 
   defp rustq_dep do
-    {:rustq, "~> 0.8.1", runtime: false}
+    {:rustq, "~> 0.8.2", runtime: false}
   end
 
   defp json_codec_dep do
