@@ -21,7 +21,8 @@ defmodule Mix.Tasks.Figler.Bench.Fixtures do
 
   use Mix.Task
 
-  alias Figler.Native.{Codec, Scene}
+  alias Figler.Native.CodecNifs, as: Codec
+  alias Figler.Native.SceneNifs, as: Scene
   alias Figler.Scene.Graph
 
   @shortdoc "Benchmarks projected scene operations against .fig fixtures"

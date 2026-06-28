@@ -5,4 +5,4 @@ include!("generated.rs");
 
 mod runtime;
 
-rustler::init!("Elixir.Figler.Native.Nif", load = load);
+rustler::init!("Elixir.Figler.Native.Module", load = load);

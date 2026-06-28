@@ -9,7 +9,7 @@ defmodule Figler.Scene do
   of materializing the full generated schema tree.
   """
 
-  alias Figler.Native.Scene, as: NativeScene
+  alias Figler.Native.SceneNifs, as: NativeScene
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Index

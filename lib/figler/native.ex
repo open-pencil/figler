@@ -7,7 +7,7 @@ defmodule Figler.Native do
   `Figler.Scene` expose higher-level Elixir shapes.
   """
 
-  alias Figler.Native.{Codec, Scene}
+  alias Figler.Native.{CodecNifs, SceneNifs}
 
   @codec_delegates [
     {:decode_guid, [:binary], :decode_guid},
@@ -50,7 +50,7 @@ defmodule Figler.Native do
     args = Enum.map(arg_names, &Macro.var(&1, nil))
 
     def unquote(name)(unquote_splicing(args)) do
-      Codec.unquote(target)(unquote_splicing(args))
+      CodecNifs.unquote(target)(unquote_splicing(args))
     end
   end
 
@@ -58,7 +58,7 @@ defmodule Figler.Native do
     args = Enum.map(arg_names, &Macro.var(&1, nil))
 
     def unquote(name)(unquote_splicing(args)) do
-      Scene.unquote(target)(unquote_splicing(args))
+      SceneNifs.unquote(target)(unquote_splicing(args))
     end
   end
 end

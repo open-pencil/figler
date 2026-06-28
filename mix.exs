@@ -179,7 +179,7 @@ defmodule Figler.MixProject do
   end
 
   defp rustq_dep do
-    {:rustq, "~> 0.8.2", runtime: false}
+    {:rustq, path: "../rustq", runtime: false, override: true}
   end
 
   defp json_codec_dep do
@@ -222,7 +222,7 @@ defmodule Figler.MixProject do
       "Scene graph": [~r/^Figler\.Scene\.Graph/],
       "Scene projection": [~r/^Figler\.Scene(\.|$)/],
       "Native bridge": [~r/^Figler\.Native(\.|$)/],
-      "Code generation": [~r/^Figler\.NativeSceneGenerator/]
+      "Code generation": [~r/^Figler\.Codegen/]
     ]
   end
 end

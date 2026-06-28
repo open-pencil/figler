@@ -10,7 +10,7 @@ defmodule Figler.Scene.Graph.Patch do
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Graph.Nodes
-  alias Figler.Scene.Graph.Swap
+  alias Figler.Scene.Graph.Symbol.Swap
 
   @enforce_keys [:op, :target, :source]
   defstruct [:op, :target, :field, :value, :source, meta: %{}]

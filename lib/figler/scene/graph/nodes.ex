@@ -5,7 +5,7 @@ defmodule Figler.Scene.Graph.Nodes do
 
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
-  alias Figler.Scene.Graph.SeedNode
+  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Node
 
   @doc """

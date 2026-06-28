@@ -12,13 +12,13 @@ defmodule Figler.Scene.Graph do
   stages grow in Elixir where they are easier to inspect and verify.
   """
 
-  alias Figler.Native.Codec
-  alias Figler.Native.Scene, as: NativeScene
+  alias Figler.Native.CodecNifs
+  alias Figler.Native.SceneNifs, as: NativeScene
   alias Figler.Scene
+  alias Figler.Scene.Graph.Build
   alias Figler.Scene.Graph.Diff
   alias Figler.Scene.Graph.GUID
-  alias Figler.Scene.Graph.Resolver
-  alias Figler.Scene.Graph.SeedNode
+  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Index
   alias Figler.Scene.Node
   alias Figler.Scene.Summary
@@ -113,7 +113,7 @@ defmodule Figler.Scene.Graph do
       graph
     else
       %__MODULE__{graph | stages: stages(opts), options: normalize_options(opts)}
-      |> Resolver.resolve()
+      |> Build.resolve()
     end
   end
 
@@ -375,9 +375,14 @@ defmodule Figler.Scene.Graph do
 
   defp sparse_message(payload, opts) do
     case Keyword.get(opts, :focus) do
-      nil -> Codec.decode_sparse_message(payload)
-      [] -> Codec.decode_sparse_message(payload)
-      focus -> Codec.decode_graph_focused_sparse_message(payload, Enum.map(focus, &GUID.format/1))
+      nil ->
+        CodecNifs.decode_sparse_message(payload)
+
+      [] ->
+        CodecNifs.decode_sparse_message(payload)
+
+      focus ->
+        CodecNifs.decode_graph_focused_sparse_message(payload, Enum.map(focus, &GUID.format/1))
     end
   end
 
@@ -403,8 +408,8 @@ defmodule Figler.Scene.Graph do
     seed_nodes = seed_nodes || seed_nodes(index || resource)
 
     seed_nodes
-    |> Resolver.from_seed(resource: resource, source: index, stages: stages, options: options)
-    |> Resolver.resolve()
+    |> Build.from_seed(resource: resource, source: index, stages: stages, options: options)
+    |> Build.resolve()
   end
 
   defp clone_count(graph) do

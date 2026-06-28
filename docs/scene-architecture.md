@@ -15,34 +15,34 @@ Rust field types, copy/clone behavior, and XPath attribute fanout.
 
 ## Seed specs and extraction
 
-`Figler.Scene.Graph.SeedProjection` contains resolver metadata field specs and defaults.
+`Figler.Scene.Graph.Seed.Projection` contains resolver metadata field specs and defaults.
 
-`Figler.Scene.Graph.SeedExtraction` converts generated schema-shaped `NodeChange` values into
+`Figler.Scene.Graph.Seed.Extraction` converts generated schema-shaped `NodeChange` values into
 seed metadata. Conversion submodules keep concerns focused:
 
-- `SeedExtraction.SymbolOverrides`
-- `SeedExtraction.ComponentProps`
-- `SeedExtraction.DerivedData`
+- `Seed.Extraction.SymbolOverrides`
+- `Seed.Extraction.ComponentProps`
+- `Seed.Extraction.DerivedData`
 
 ## Tests
 
 Tests should mirror module boundaries instead of accumulating in one integration file.
-Keep top-level `test/scene_test.exs` for `Figler.Scene` smoke/integration coverage.
+Keep top-level integration-style tests only for scenarios that span modules.
 Module-specific behavior belongs under matching paths, for example:
 
-- `test/scene/projection_test.exs`
-- `test/scene/navigation_test.exs`
-- `test/scene/graph/resolver_test.exs`
-- `test/scene/graph/component_props_test.exs`
-- `test/scene/graph/variables_test.exs`
+- `test/figler/scene_test.exs`
+- `test/figler/scene/graph_test.exs`
+- `test/figler/scene/graph/seed/projection_test.exs`
+- `test/figler/scene/graph/component/properties_test.exs`
+- `test/figler/scene/graph/build/variables_test.exs`
 
 Native generator modules mirror generated Rust concerns:
 
 - `KiwiCodec.RustlerGenerator.Sparse` renders generic sparse schema decoders.
 - `KiwiCodec.RustlerGenerator.Skip` renders generic skip decoders and reusable skip arms.
-- `Figler.NativeSceneGenerator.Focus` renders focused effective-graph seed traversal.
-- `Figler.NativeSceneGenerator.Scene` renders projected scene records, queries, XPath attrs, summaries, and navigation NIFs.
-- `Figler.NativeSceneGenerator` should stay a small facade/orchestrator.
+- `Figler.Codegen.Native.Focus` renders focused effective-graph seed traversal.
+- `Figler.Codegen.Native.Scene` renders projected scene records, queries, XPath attrs, summaries, and navigation NIFs.
+- `Figler.Codegen.Native` should stay a small facade/orchestrator.
 
 Reusable tiny scene fixtures live in `test/support/scene_fixture_test.exs`.
 Graph resolver builders live in `test/support/graph_builder_test.exs`.
@@ -65,6 +65,6 @@ Avoid adding hand-maintained field-number or schema-name lists outside those spe
 
 - New public projected fields: update `Scene.Projection`; native projection should follow via generator splices.
 - Native Rust field rendering policy: update `Scene.Projection.Native`.
-- New graph seed metadata fields: update `Graph.SeedProjection`.
-- NodeChange-to-seed conversion: update the focused `Graph.SeedExtraction.*` module.
-- Figma effective-scene semantics: update the appropriate resolver stage module, not the raw scene index.
+- New graph seed metadata fields: update `Graph.Seed.Projection`.
+- NodeChange-to-seed conversion: update the focused `Graph.Seed.Extraction.*` module.
+- Figma effective-scene semantics: update the appropriate `Graph.Build.*`, `Graph.Component.*`, or `Graph.Symbol.*` module, not the raw scene index.

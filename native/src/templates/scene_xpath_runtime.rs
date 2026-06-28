@@ -505,32 +505,7 @@ mod scene_xpath_runtime {
         let position = decoder.read_string_value()?;
         Ok((guid, position))
     }
-    fn read_scene_size_value(decoder: &mut Decoder<'_>) -> NifResult<SceneSize> {
-        Ok(SceneSize {
-            x: decoder.read_var_float_value()? as f64,
-            y: decoder.read_var_float_value()? as f64,
-        })
-    }
-    fn read_scene_transform_value(
-        decoder: &mut Decoder<'_>,
-    ) -> NifResult<SceneTransform> {
-        Ok(SceneTransform {
-            m00: decoder.read_var_float_value()? as f64,
-            m01: decoder.read_var_float_value()? as f64,
-            m02: decoder.read_var_float_value()? as f64,
-            m10: decoder.read_var_float_value()? as f64,
-            m11: decoder.read_var_float_value()? as f64,
-            m12: decoder.read_var_float_value()? as f64,
-        })
-    }
-    fn read_scene_font_name_value(
-        decoder: &mut Decoder<'_>,
-    ) -> NifResult<(Option<String>, Option<String>, Option<String>)> {
-        let family = Some(decoder.read_string_value()?);
-        let style = Some(decoder.read_string_value()?);
-        let postscript = Some(decoder.read_string_value()?);
-        Ok((family, style, postscript))
-    }
+    __rq_scene_reader_helpers!();
     fn read_scene_counted_array_value(
         decoder: &mut Decoder<'_>,
         mut skip_item: impl FnMut(&mut Decoder<'_>) -> NifResult<()>,

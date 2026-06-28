@@ -7,7 +7,7 @@ defmodule Figler.Scene.Graph.Provenance do
   """
 
   alias Figler.Scene.Graph
-  alias Figler.Scene.Graph.SeedNode
+  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
 
   @doc false
   def initial(seed_nodes) do

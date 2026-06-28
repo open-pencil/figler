@@ -3,7 +3,7 @@ defmodule Figler do
   Figma schema helpers built on `KiwiCodec`.
   """
 
-  alias Figler.Native.Codec
+  alias Figler.Native.CodecNifs
 
   @schema_path :figler |> :code.priv_dir() |> Path.join("schema/fig.kiwi")
 
@@ -40,7 +40,7 @@ defmodule Figler do
   """
   @spec decode_sparse_message(binary()) :: map()
   def decode_sparse_message(binary) when is_binary(binary) do
-    Codec.decode_sparse_message(binary)
+    CodecNifs.decode_sparse_message(binary)
   end
 
   @doc """

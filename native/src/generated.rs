@@ -27666,31 +27666,42 @@ mod scene_xpath_runtime {
         let position = decoder.read_string_value()?;
         Ok((guid, position))
     }
-    fn read_scene_size_value(decoder: &mut Decoder<'_>) -> NifResult<SceneSize> {
-        Ok(SceneSize {
-            x: decoder.read_var_float_value()? as f64,
-            y: decoder.read_var_float_value()? as f64,
-        })
+    fn read_scene_float64_value(decoder: &mut Decoder<'_>) -> NifResult<f64> {
+        let value = decoder.read_var_float_value()?;
+        Ok(value as f64)
     }
+    #[allow(clippy::redundant_field_names)]
+    fn read_scene_size_value(decoder: &mut Decoder<'_>) -> NifResult<SceneSize> {
+        let x = read_scene_float64_value(decoder)?;
+        let y = read_scene_float64_value(decoder)?;
+        Ok(SceneSize { x: x, y: y })
+    }
+    #[allow(clippy::redundant_field_names)]
     fn read_scene_transform_value(
         decoder: &mut Decoder<'_>,
     ) -> NifResult<SceneTransform> {
+        let m00 = read_scene_float64_value(decoder)?;
+        let m01 = read_scene_float64_value(decoder)?;
+        let m02 = read_scene_float64_value(decoder)?;
+        let m10 = read_scene_float64_value(decoder)?;
+        let m11 = read_scene_float64_value(decoder)?;
+        let m12 = read_scene_float64_value(decoder)?;
         Ok(SceneTransform {
-            m00: decoder.read_var_float_value()? as f64,
-            m01: decoder.read_var_float_value()? as f64,
-            m02: decoder.read_var_float_value()? as f64,
-            m10: decoder.read_var_float_value()? as f64,
-            m11: decoder.read_var_float_value()? as f64,
-            m12: decoder.read_var_float_value()? as f64,
+            m00: m00,
+            m01: m01,
+            m02: m02,
+            m10: m10,
+            m11: m11,
+            m12: m12,
         })
     }
     fn read_scene_font_name_value(
         decoder: &mut Decoder<'_>,
     ) -> NifResult<(Option<String>, Option<String>, Option<String>)> {
-        let family = Some(decoder.read_string_value()?);
-        let style = Some(decoder.read_string_value()?);
-        let postscript = Some(decoder.read_string_value()?);
-        Ok((family, style, postscript))
+        let family = decoder.read_string_value()?;
+        let style = decoder.read_string_value()?;
+        let postscript = decoder.read_string_value()?;
+        Ok((Some(family), Some(style), Some(postscript)))
     }
     fn read_scene_counted_array_value(
         decoder: &mut Decoder<'_>,
@@ -28423,29 +28434,57 @@ mod scene_xpath_runtime {
                 4 => {
                     node_type = Some(scene_node_type_name(decoder.read_var_uint()?));
                 }
-                5 => name = Some(decoder.read_string_value()?),
-                11 => size = Some(read_scene_size_value(decoder)?),
-                12 => transform = Some(read_scene_transform_value(decoder)?),
-                6 => visible = Some(decoder.read_bool()?),
-                7 => locked = Some(decoder.read_bool()?),
-                8 => opacity = Some(decoder.read_var_float_value()?),
-                42 => text = read_scene_text_data_value(decoder)?,
-                41 => {
-                    let (family, style, postscript) = read_scene_font_name_value(
-                        decoder,
-                    )?;
-                    font_family = family;
-                    font_style = style;
-                    font_postscript = postscript;
+                5 => {
+                    name = Some(decoder.read_string_value()?);
                 }
-                21 => font_size = Some(decoder.read_var_float_value()?),
-                334 => text_style_guid = read_scene_style_id_value(decoder)?,
-                216 => component_key = Some(decoder.read_string_value()?),
-                252 => origin_component_key = Some(decoder.read_string_value()?),
-                332 => fill_style_guid = read_scene_style_id_value(decoder)?,
-                333 => stroke_style_guid = read_scene_style_id_value(decoder)?,
-                335 => effect_style_guid = read_scene_style_id_value(decoder)?,
-                336 => grid_style_guid = read_scene_style_id_value(decoder)?,
+                11 => {
+                    size = Some(read_scene_size_value(decoder)?);
+                }
+                12 => {
+                    transform = Some(read_scene_transform_value(decoder)?);
+                }
+                6 => {
+                    visible = Some(decoder.read_bool()?);
+                }
+                7 => {
+                    locked = Some(decoder.read_bool()?);
+                }
+                8 => {
+                    opacity = Some(decoder.read_var_float_value()?);
+                }
+                42 => {
+                    text = read_scene_text_data_value(decoder)?;
+                }
+                41 => {
+                    let font_name = read_scene_font_name_value(decoder)?;
+                    font_family = font_name.0;
+                    font_style = font_name.1;
+                    font_postscript = font_name.2;
+                }
+                21 => {
+                    font_size = Some(decoder.read_var_float_value()?);
+                }
+                334 => {
+                    text_style_guid = read_scene_style_id_value(decoder)?;
+                }
+                216 => {
+                    component_key = Some(decoder.read_string_value()?);
+                }
+                252 => {
+                    origin_component_key = Some(decoder.read_string_value()?);
+                }
+                332 => {
+                    fill_style_guid = read_scene_style_id_value(decoder)?;
+                }
+                333 => {
+                    stroke_style_guid = read_scene_style_id_value(decoder)?;
+                }
+                335 => {
+                    effect_style_guid = read_scene_style_id_value(decoder)?;
+                }
+                336 => {
+                    grid_style_guid = read_scene_style_id_value(decoder)?;
+                }
                 38 => {
                     fill_count = read_scene_counted_array_value(
                         decoder,
@@ -28491,1944 +28530,386 @@ mod scene_xpath_runtime {
         })
     }
 }
-fn skip_fig_message_field(decoder: &mut Decoder<'_>, field: u32) -> NifResult<()> {
-    match field {
-        1 => {
-            skip_message_type_from_decoder(decoder)?;
-        }
-        2 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        42 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        3 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        37 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        4 => {
-            kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?;
-        }
-        5 => {
-            kiwi_skip_repeated(decoder, skip_user_change_from_decoder)?;
-        }
-        32 => {
-            skip_interactive_slide_element_change_from_decoder(decoder)?;
-        }
-        36 => {
-            skip_node_status_change_from_decoder(decoder)?;
-        }
-        44 => {
-            skip_buzz_approval_change_from_decoder(decoder)?;
-        }
-        6 => {
-            kiwi_skip_repeated(decoder, skip_blob_from_decoder)?;
-        }
-        30 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        7 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        8 => {
-            skip_access_from_decoder(decoder)?;
-        }
-        9 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        10 => {
-            skip_style_set_type_from_decoder(decoder)?;
-        }
-        11 => {
-            skip_style_set_content_type_from_decoder(decoder)?;
-        }
-        12 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        13 => {
-            skip_vector_from_decoder(decoder)?;
-        }
-        14 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        15 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        16 => {
-            kiwi_skip_repeated(decoder, skip_scene_graph_query_from_decoder)?;
-        }
-        17 => {
-            skip_node_changes_metadata_from_decoder(decoder)?;
-        }
-        18 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        19 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        20 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        21 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        22 => {
-            kiwi_skip_repeated(decoder, skip_message_from_decoder)?;
-        }
-        23 => {
-            kiwi_skip_repeated(decoder, skip_message_from_decoder)?;
-        }
-        24 => {
-            kiwi_skip_repeated(decoder, skip_client_broadcast_from_decoder)?;
-        }
-        25 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        26 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        27 => {
-            skip_editor_type_from_decoder(decoder)?;
-        }
-        28 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        29 => {
-            kiwi_skip_repeated(decoder, skip_guid_from_decoder)?;
-        }
-        31 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        33 => {
-            kiwi_skip_repeated(decoder, skip_clipboard_selection_region_from_decoder)?;
-        }
-        34 => {
-            skip_encoded_offsets_index_from_decoder(decoder)?;
-        }
-        35 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        38 => {
-            kiwi_skip_uint64_value(decoder)?;
-        }
-        39 => {
-            kiwi_skip_repeated(decoder, skip_annotation_category_from_decoder)?;
-        }
-        40 => {
-            skip_client_rendered_metadata_from_decoder(decoder)?;
-        }
-        41 => {
-            skip_paste_asset_type_from_decoder(decoder)?;
-        }
-        43 => {
-            skip_object_animation_list_from_decoder(decoder)?;
-        }
-        45 => {
-            skip_scene_graph_query_mode_from_decoder(decoder)?;
-        }
-        field => {
-            return Err(
-                Error::Term(
-                    Box::new(
-                        format!("unknown field {} while decoding scene summary", field),
-                    ),
-                ),
-            );
-        }
-    }
-    Ok(())
+macro_rules! fig_scene_skip_field_decoder {
+    (
+        fn $name:ident; decoder $decoder:ident; definition $definition_name:literal;
+        fields[$($field_id:literal => $field_mode:ident $field_skip:ident;)*]
+    ) => {
+        fn $name ($decoder : & mut Decoder <'_ >, field : u32) -> NifResult < () > {
+        match field { $($field_id => kiwi_skip_kind($decoder, &
+        kiwi_skip_kind!($field_mode $field_skip)) ?,)* field => { return
+        Err(Error::Term(Box::new(format!("unknown field {} while decoding {}", field,
+        $definition_name)))); } } Ok(()) }
+    };
 }
-fn skip_fig_node_change_field(decoder: &mut Decoder<'_>, field: u32) -> NifResult<()> {
-    match field {
-        1 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        53 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        2 => {
-            skip_node_phase_from_decoder(decoder)?;
-        }
-        54 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        3 => {
-            skip_parent_index_from_decoder(decoder)?;
-        }
-        55 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        4 => {
-            skip_node_type_from_decoder(decoder)?;
-        }
-        56 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        5 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        57 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        174 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        318 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        256 => {
-            skip_library_move_info_from_decoder(decoder)?;
-        }
-        281 => {
-            kiwi_skip_repeated(decoder, skip_library_move_history_item_from_decoder)?;
-        }
-        319 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        383 => {
-            skip_asset_id_map_from_decoder(decoder)?;
-        }
-        49 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        101 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        157 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        161 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        376 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        163 => {
-            skip_style_type_from_decoder(decoder)?;
-        }
-        191 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        171 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        399 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        320 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        345 => {
-            skip_shared_style_master_data_from_decoder(decoder)?;
-        }
-        348 => {
-            skip_shared_style_master_data_from_decoder(decoder)?;
-        }
-        176 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        177 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        172 => {
-            skip_shared_style_master_data_from_decoder(decoder)?;
-        }
-        173 => {
-            skip_shared_style_reference_from_decoder(decoder)?;
-        }
-        158 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        162 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        167 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        168 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        169 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        170 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        185 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        332 => {
-            skip_style_id_from_decoder(decoder)?;
-        }
-        333 => {
-            skip_style_id_from_decoder(decoder)?;
-        }
-        334 => {
-            skip_style_id_from_decoder(decoder)?;
-        }
-        335 => {
-            skip_style_id_from_decoder(decoder)?;
-        }
-        336 => {
-            skip_style_id_from_decoder(decoder)?;
-        }
-        580 => {
-            kiwi_skip_repeated(decoder, skip_style_animation_from_decoder)?;
-        }
-        193 => {
-            kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
-        }
-        194 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        225 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        238 => {
-            kiwi_skip_repeated(
-                decoder,
-                skip_state_group_property_value_order_from_decoder,
-            )?;
-        }
-        581 => {
-            skip_partial_paste_annotation_from_decoder(decoder)?;
-        }
-        122 => {
-            skip_shared_symbol_reference_from_decoder(decoder)?;
-        }
-        123 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        124 => {
-            kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
-        }
-        126 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        152 => {
-            skip_shared_component_master_data_from_decoder(decoder)?;
-        }
-        144 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        164 => {
-            kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
-        }
-        228 => {
-            kiwi_skip_repeated(decoder, skip_guid_path_mapping_from_decoder)?;
-        }
-        214 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        395 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        215 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        216 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        217 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        218 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        252 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        266 => {
-            kiwi_skip_repeated(decoder, skip_component_prop_def_from_decoder)?;
-        }
-        267 => {
-            kiwi_skip_repeated(decoder, skip_component_prop_ref_from_decoder)?;
-        }
-        483 => {
-            kiwi_skip_repeated(decoder, skip_variant_prop_spec_from_decoder)?;
-        }
-        113 => {
-            skip_symbol_data_from_decoder(decoder)?;
-        }
-        114 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        125 => {
-            kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?;
-        }
-        394 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        143 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        268 => {
-            kiwi_skip_repeated(decoder, skip_component_prop_assignment_from_decoder)?;
-        }
-        305 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        248 => {
-            kiwi_skip_repeated(decoder, skip_instance_override_stash_from_decoder)?;
-        }
-        250 => {
-            kiwi_skip_repeated(decoder, skip_instance_override_stash_v2_from_decoder)?;
-        }
-        111 => {
-            skip_guid_path_from_decoder(decoder)?;
-        }
-        112 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        321 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        382 => {
-            skip_module_type_from_decoder(decoder)?;
-        }
-        463 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        495 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        21 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        73 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        22 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        74 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        23 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        75 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        32 => {
-            skip_text_align_horizontal_from_decoder(decoder)?;
-        }
-        84 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        33 => {
-            skip_text_align_vertical_from_decoder(decoder)?;
-        }
-        85 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        34 => {
-            skip_text_case_from_decoder(decoder)?;
-        }
-        86 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        35 => {
-            skip_text_decoration_from_decoder(decoder)?;
-        }
-        87 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        40 => {
-            skip_number_from_decoder(decoder)?;
-        }
-        92 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        41 => {
-            skip_font_name_from_decoder(decoder)?;
-        }
-        93 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        42 => {
-            skip_text_data_from_decoder(decoder)?;
-        }
-        94 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        359 => {
-            skip_derived_text_data_from_decoder(decoder)?;
-        }
-        127 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        128 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        129 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        130 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        131 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        132 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        133 => {
-            skip_font_variant_numeric_figure_from_decoder(decoder)?;
-        }
-        134 => {
-            skip_font_variant_numeric_spacing_from_decoder(decoder)?;
-        }
-        135 => {
-            skip_font_variant_numeric_fraction_from_decoder(decoder)?;
-        }
-        136 => {
-            skip_font_variant_caps_from_decoder(decoder)?;
-        }
-        137 => {
-            skip_font_variant_position_from_decoder(decoder)?;
-        }
-        165 => {
-            skip_number_from_decoder(decoder)?;
-        }
-        202 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        322 => {
-            skip_leading_trim_from_decoder(decoder)?;
-        }
-        337 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        339 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        550 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        351 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        417 => {
-            kiwi_skip_repeated(
-                decoder,
-                skip_responsive_text_style_variant_from_decoder,
-            )?;
-        }
-        352 => {
-            skip_section_status_from_decoder(decoder)?;
-        }
-        355 => {
-            skip_section_status_info_from_decoder(decoder)?;
-        }
-        203 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        396 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        205 => {
-            kiwi_skip_repeated(decoder, skip_open_type_feature_from_decoder)?;
-        }
-        206 => {
-            kiwi_skip_repeated(decoder, skip_open_type_feature_from_decoder)?;
-        }
-        223 => {
-            skip_hyperlink_from_decoder(decoder)?;
-        }
-        340 => {
-            skip_mention_from_decoder(decoder)?;
-        }
-        260 => {
-            kiwi_skip_repeated(decoder, skip_font_variation_from_decoder)?;
-        }
-        279 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        280 => {
-            skip_text_truncation_from_decoder(decoder)?;
-        }
-        292 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        391 => {
-            skip_emoji_image_set_from_decoder(decoder)?;
-        }
-        392 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        6 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        58 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        7 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        59 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        434 => {
-            skip_lock_mode_from_decoder(decoder)?;
-        }
-        8 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        60 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        9 => {
-            skip_blend_mode_from_decoder(decoder)?;
-        }
-        61 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        11 => {
-            skip_vector_from_decoder(decoder)?;
-        }
-        63 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        12 => {
-            skip_matrix_from_decoder(decoder)?;
-        }
-        64 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        13 => {
-            kiwi_skip_repeated(decoder, kiwi_skip_float_value)?;
-        }
-        65 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        16 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        68 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        424 => {
-            skip_vector_from_decoder(decoder)?;
-        }
-        18 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        70 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        317 => {
-            skip_mask_type_from_decoder(decoder)?;
-        }
-        19 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        71 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        20 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        72 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        26 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        78 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        29 => {
-            skip_stroke_align_from_decoder(decoder)?;
-        }
-        81 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        30 => {
-            skip_stroke_cap_from_decoder(decoder)?;
-        }
-        82 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        497 => {
-            skip_number_from_decoder(decoder)?;
-        }
-        31 => {
-            skip_stroke_join_from_decoder(decoder)?;
-        }
-        83 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        38 => {
-            kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
-        }
-        90 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        39 => {
-            kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
-        }
-        91 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        43 => {
-            kiwi_skip_repeated(decoder, skip_effect_from_decoder)?;
-        }
-        95 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        50 => {
-            skip_color_from_decoder(decoder)?;
-        }
-        102 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        51 => {
-            kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
-        }
-        103 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        52 => {
-            kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
-        }
-        104 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        564 => {
-            kiwi_skip_repeated(decoder, skip_path_from_decoder)?;
-        }
-        411 => {
-            kiwi_skip_repeated(decoder, skip_paint_from_decoder)?;
-        }
-        412 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        413 => {
-            skip_number_from_decoder(decoder)?;
-        }
-        415 => {
-            skip_number_from_decoder(decoder)?;
-        }
-        416 => {
-            skip_text_decoration_style_from_decoder(decoder)?;
-        }
-        455 => {
-            kiwi_skip_repeated(decoder, skip_transform_modifier_from_decoder)?;
-        }
-        570 => {
-            skip_transform3d_from_decoder(decoder)?;
-        }
-        571 => {
-            skip_stroke_data_from_decoder(decoder)?;
-        }
-        572 => {
-            skip_scene3d_from_decoder(decoder)?;
-        }
-        587 => {
-            skip_transform_origin_from_decoder(decoder)?;
-        }
-        145 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        146 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        147 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        148 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        149 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        150 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        151 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        423 => {
-            skip_optional_vector_from_decoder(decoder)?;
-        }
-        258 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        287 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        288 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        289 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        290 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        294 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        295 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        296 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        297 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        298 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        299 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        28 => {
-            skip_constraint_type_from_decoder(decoder)?;
-        }
-        80 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        105 => {
-            skip_stack_mode_from_decoder(decoder)?;
-        }
-        106 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        107 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        108 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        109 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        110 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        120 => {
-            skip_stack_counter_align_from_decoder(decoder)?;
-        }
-        121 => {
-            skip_stack_justify_from_decoder(decoder)?;
-        }
-        208 => {
-            skip_stack_align_from_decoder(decoder)?;
-        }
-        209 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        210 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        211 => {
-            skip_stack_size_from_decoder(decoder)?;
-        }
-        212 => {
-            skip_stack_size_from_decoder(decoder)?;
-        }
-        229 => {
-            skip_stack_size_from_decoder(decoder)?;
-        }
-        230 => {
-            skip_stack_justify_from_decoder(decoder)?;
-        }
-        231 => {
-            skip_stack_align_from_decoder(decoder)?;
-        }
-        232 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        233 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        234 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        236 => {
-            skip_stack_counter_align_from_decoder(decoder)?;
-        }
-        269 => {
-            skip_stack_positioning_from_decoder(decoder)?;
-        }
-        271 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        323 => {
-            skip_stack_wrap_from_decoder(decoder)?;
-        }
-        324 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        325 => {
-            skip_optional_vector_from_decoder(decoder)?;
-        }
-        326 => {
-            skip_optional_vector_from_decoder(decoder)?;
-        }
-        343 => {
-            skip_stack_counter_align_content_from_decoder(decoder)?;
-        }
-        406 => {
-            kiwi_skip_repeated(decoder, kiwi_skip_int_value)?;
-        }
-        574 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        435 => {
-            skip_guid_position_map_from_decoder(decoder)?;
-        }
-        436 => {
-            skip_guid_position_map_from_decoder(decoder)?;
-        }
-        437 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        438 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        439 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        440 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        441 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        442 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        474 => {
-            skip_guid_grid_track_size_map_from_decoder(decoder)?;
-        }
-        475 => {
-            skip_guid_grid_track_size_map_from_decoder(decoder)?;
-        }
-        476 => {
-            skip_grid_child_align_from_decoder(decoder)?;
-        }
-        477 => {
-            skip_grid_child_align_from_decoder(decoder)?;
-        }
-        555 => {
-            skip_grid_auto_tracks_from_decoder(decoder)?;
-        }
-        556 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        344 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        139 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        140 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        141 => {
-            skip_color_from_decoder(decoder)?;
-        }
-        153 => {
-            skip_transition_info_from_decoder(decoder)?;
-        }
-        154 => {
-            skip_transition_type_from_decoder(decoder)?;
-        }
-        155 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        156 => {
-            skip_easing_type_from_decoder(decoder)?;
-        }
-        181 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        182 => {
-            skip_connection_type_from_decoder(decoder)?;
-        }
-        183 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        184 => {
-            skip_prototype_device_from_decoder(decoder)?;
-        }
-        187 => {
-            skip_interaction_type_from_decoder(decoder)?;
-        }
-        188 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        189 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        190 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        192 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        207 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        226 => {
-            kiwi_skip_repeated(decoder, skip_prototype_interaction_from_decoder)?;
-        }
-        426 => {
-            kiwi_skip_repeated(decoder, skip_prototype_interaction_from_decoder)?;
-        }
-        249 => {
-            skip_prototype_starting_point_from_decoder(decoder)?;
-        }
-        204 => {
-            kiwi_skip_repeated(decoder, skip_plugin_data_from_decoder)?;
-        }
-        219 => {
-            kiwi_skip_repeated(decoder, skip_plugin_relaunch_data_from_decoder)?;
-        }
-        242 => {
-            skip_connector_endpoint_from_decoder(decoder)?;
-        }
-        243 => {
-            skip_connector_endpoint_from_decoder(decoder)?;
-        }
-        244 => {
-            skip_connector_line_style_from_decoder(decoder)?;
-        }
-        245 => {
-            skip_stroke_cap_from_decoder(decoder)?;
-        }
-        246 => {
-            skip_stroke_cap_from_decoder(decoder)?;
-        }
-        253 => {
-            kiwi_skip_repeated(decoder, skip_connector_control_point_from_decoder)?;
-        }
-        479 => {
-            kiwi_skip_repeated(decoder, skip_connector_control_point_from_decoder)?;
-        }
-        255 => {
-            skip_connector_text_midpoint_from_decoder(decoder)?;
-        }
-        373 => {
-            skip_connector_type_from_decoder(decoder)?;
-        }
-        533 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        369 => {
-            kiwi_skip_repeated(decoder, skip_annotation_from_decoder)?;
-        }
-        384 => {
-            kiwi_skip_repeated(decoder, skip_annotation_measurement_from_decoder)?;
-        }
-        453 => {
-            skip_annotation_categories_from_decoder(decoder)?;
-        }
-        241 => {
-            skip_shape_with_text_type_from_decoder(decoder)?;
-        }
-        247 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        530 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        254 => {
-            skip_derived_immutable_frame_data_from_decoder(decoder)?;
-        }
-        338 => {
-            skip_multiplayer_field_version_from_decoder(decoder)?;
-        }
-        240 => {
-            skip_node_generation_data_from_decoder(decoder)?;
-        }
-        491 => {
-            skip_jsx_data_from_decoder(decoder)?;
-        }
-        492 => {
-            skip_derived_jsx_data_from_decoder(decoder)?;
-        }
-        493 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        259 => {
-            skip_code_block_language_from_decoder(decoder)?;
-        }
-        433 => {
-            skip_code_block_theme_from_decoder(decoder)?;
-        }
-        278 => {
-            skip_link_preview_data_from_decoder(decoder)?;
-        }
-        282 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        283 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        300 => {
-            skip_video_playback_from_decoder(decoder)?;
-        }
-        301 => {
-            skip_stamp_data_from_decoder(decoder)?;
-        }
-        370 => {
-            skip_section_preset_info_from_decoder(decoder)?;
-        }
-        409 => {
-            skip_platform_shape_definition_from_decoder(decoder)?;
-        }
-        273 => {
-            skip_multiplayer_map_from_decoder(decoder)?;
-        }
-        274 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        275 => {
-            skip_widget_derived_subtree_cursor_from_decoder(decoder)?;
-        }
-        276 => {
-            skip_widget_pointer_from_decoder(decoder)?;
-        }
-        285 => {
-            skip_widget_input_behavior_from_decoder(decoder)?;
-        }
-        286 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        291 => {
-            skip_widget_hover_style_from_decoder(decoder)?;
-        }
-        293 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        360 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        262 => {
-            skip_widget_metadata_from_decoder(decoder)?;
-        }
-        263 => {
-            kiwi_skip_repeated(decoder, skip_widget_event_from_decoder)?;
-        }
-        265 => {
-            kiwi_skip_repeated(decoder, skip_widget_property_menu_item_from_decoder)?;
-        }
-        401 => {
-            skip_widget_input_text_node_type_from_decoder(decoder)?;
-        }
-        489 => {
-            skip_multiplayer_map_from_decoder(decoder)?;
-        }
-        308 => {
-            skip_table_row_column_position_map_from_decoder(decoder)?;
-        }
-        309 => {
-            skip_table_row_column_position_map_from_decoder(decoder)?;
-        }
-        310 => {
-            skip_table_row_column_size_map_from_decoder(decoder)?;
-        }
-        311 => {
-            skip_table_row_column_size_map_from_decoder(decoder)?;
-        }
-        538 => {
-            skip_table_merged_cell_map_from_decoder(decoder)?;
-        }
-        371 => {
-            skip_multiplayer_map_from_decoder(decoder)?;
-        }
-        372 => {
-            skip_multiplayer_map_from_decoder(decoder)?;
-        }
-        402 => {
-            skip_flapp_type_from_decoder(decoder)?;
-        }
-        486 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        389 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        410 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        573 => {
-            skip_multiplayer_map_from_decoder(decoder)?;
-        }
-        379 => {
-            skip_theme_id_from_decoder(decoder)?;
-        }
-        381 => {
-            skip_slide_theme_data_from_decoder(decoder)?;
-        }
-        390 => {
-            skip_slide_theme_map_from_decoder(decoder)?;
-        }
-        393 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        443 => {
-            skip_slide_number_from_decoder(decoder)?;
-        }
-        456 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        363 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        362 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        364 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        366 => {
-            skip_diagram_layout_rule_type_from_decoder(decoder)?;
-        }
-        367 => {
-            skip_diagram_parent_index_from_decoder(decoder)?;
-        }
-        368 => {
-            skip_diagram_layout_paused_from_decoder(decoder)?;
-        }
-        380 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        251 => {
-            skip_internal_enum_for_test_from_decoder(decoder)?;
-        }
-        257 => {
-            skip_internal_data_for_test_from_decoder(decoder)?;
-        }
-        14 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        66 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        15 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        67 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        17 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        69 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        25 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        77 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        27 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        79 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        37 => {
-            skip_constraint_type_from_decoder(decoder)?;
-        }
-        89 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        45 => {
-            kiwi_skip_repeated(decoder, skip_export_settings_from_decoder)?;
-        }
-        97 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        46 => {
-            skip_text_auto_resize_from_decoder(decoder)?;
-        }
-        98 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        47 => {
-            kiwi_skip_repeated(decoder, skip_layout_grid_from_decoder)?;
-        }
-        99 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        115 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        116 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        117 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        118 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        36 => {
-            skip_boolean_operation_from_decoder(decoder)?;
-        }
-        88 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        44 => {
-            skip_vector_mirror_from_decoder(decoder)?;
-        }
-        96 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        10 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        62 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        24 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        76 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        195 => {
-            skip_arc_data_from_decoder(decoder)?;
-        }
-        48 => {
-            skip_vector_data_from_decoder(decoder)?;
-        }
-        100 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        425 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        432 => {
-            skip_text_path_start_from_decoder(decoder)?;
-        }
-        119 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        138 => {
-            kiwi_skip_repeated(decoder, skip_guide_from_decoder)?;
-        }
-        142 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        159 => {
-            skip_scroll_direction_from_decoder(decoder)?;
-        }
-        160 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        166 => {
-            skip_vector_from_decoder(decoder)?;
-        }
-        175 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        178 => {
-            skip_scroll_contracted_state_from_decoder(decoder)?;
-        }
-        179 => {
-            skip_vector_from_decoder(decoder)?;
-        }
-        180 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        186 => {
-            skip_scroll_behavior_from_decoder(decoder)?;
-        }
-        196 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        197 => {
-            skip_navigation_type_from_decoder(decoder)?;
-        }
-        198 => {
-            skip_overlay_position_type_from_decoder(decoder)?;
-        }
-        199 => {
-            skip_vector_from_decoder(decoder)?;
-        }
-        200 => {
-            skip_overlay_background_interaction_from_decoder(decoder)?;
-        }
-        201 => {
-            skip_overlay_background_appearance_from_decoder(decoder)?;
-        }
-        213 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        220 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        221 => {
-            skip_stack_size_from_decoder(decoder)?;
-        }
-        222 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        224 => {
-            skip_key_trigger_from_decoder(decoder)?;
-        }
-        227 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        235 => {
-            kiwi_skip_repeated(decoder, skip_guid_from_decoder)?;
-        }
-        237 => {
-            kiwi_skip_repeated(decoder, skip_symbol_link_from_decoder)?;
-        }
-        239 => {
-            skip_text_list_data_from_decoder(decoder)?;
-        }
-        261 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        264 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        270 => {
-            skip_embed_data_from_decoder(decoder)?;
-        }
-        272 => {
-            skip_rich_media_data_from_decoder(decoder)?;
-        }
-        277 => {
-            skip_multiplayer_map_from_decoder(decoder)?;
-        }
-        284 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        302 => {
-            skip_html_tag_from_decoder(decoder)?;
-        }
-        303 => {
-            skip_aria_role_from_decoder(decoder)?;
-        }
-        357 => {
-            skip_aria_attributes_map_from_decoder(decoder)?;
-        }
-        304 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        490 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        306 => {
-            skip_variable_data_from_decoder(decoder)?;
-        }
-        307 => {
-            skip_variable_data_map_from_decoder(decoder)?;
-        }
-        316 => {
-            skip_variable_mode_by_set_map_from_decoder(decoder)?;
-        }
-        312 => {
-            kiwi_skip_repeated(decoder, skip_variable_set_mode_from_decoder)?;
-        }
-        313 => {
-            skip_variable_set_id_from_decoder(decoder)?;
-        }
-        314 => {
-            skip_variable_resolved_data_type_from_decoder(decoder)?;
-        }
-        315 => {
-            skip_variable_data_values_from_decoder(decoder)?;
-        }
-        350 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        566 => {
-            skip_variable_timing_display_unit_from_decoder(decoder)?;
-        }
-        353 => {
-            kiwi_skip_repeated(decoder, skip_variable_scope_from_decoder)?;
-        }
-        445 => {
-            skip_variable_data_map_from_decoder(decoder)?;
-        }
-        358 => {
-            skip_code_syntax_map_from_decoder(decoder)?;
-        }
-        388 => {
-            skip_paste_source_from_decoder(decoder)?;
-        }
-        397 => {
-            skip_editor_type_from_decoder(decoder)?;
-        }
-        446 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        482 => {
-            kiwi_skip_uint64_value(decoder)?;
-        }
-        447 => {
-            kiwi_skip_repeated(decoder, skip_variable_width_point_from_decoder)?;
-        }
-        448 => {
-            skip_dynamic_stroke_settings_from_decoder(decoder)?;
-        }
-        449 => {
-            skip_scatter_stroke_settings_from_decoder(decoder)?;
-        }
-        450 => {
-            skip_stretch_stroke_settings_from_decoder(decoder)?;
-        }
-        488 => {
-            kiwi_skip_repeated(decoder, skip_matrix_from_decoder)?;
-        }
-        452 => {
-            skip_brush_type_from_decoder(decoder)?;
-        }
-        542 => {
-            skip_optional_vector_from_decoder(decoder)?;
-        }
-        554 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        377 => {
-            skip_variable_set_id_from_decoder(decoder)?;
-        }
-        464 => {
-            skip_variable_id_from_decoder(decoder)?;
-        }
-        378 => {
-            skip_variable_id_or_variable_override_id_from_decoder(decoder)?;
-        }
-        385 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        386 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        517 => {
-            skip_inherited_variables_data_from_decoder(decoder)?;
-        }
-        361 => {
-            skip_handoff_status_map_from_decoder(decoder)?;
-        }
-        327 => {
-            skip_agenda_position_map_from_decoder(decoder)?;
-        }
-        328 => {
-            skip_agenda_metadata_map_from_decoder(decoder)?;
-        }
-        329 => {
-            skip_migration_status_from_decoder(decoder)?;
-        }
-        330 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        331 => {
-            skip_edit_info_from_decoder(decoder)?;
-        }
-        341 => {
-            skip_color_profile_from_decoder(decoder)?;
-        }
-        342 => {
-            skip_symbol_id_from_decoder(decoder)?;
-        }
-        346 => {
-            skip_child_reading_direction_from_decoder(decoder)?;
-        }
-        347 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        349 => {
-            skip_document_color_profile_from_decoder(decoder)?;
-        }
-        354 => {
-            kiwi_skip_repeated(decoder, skip_developer_related_link_from_decoder)?;
-        }
-        356 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        365 => {
-            skip_edit_scope_info_from_decoder(decoder)?;
-        }
-        374 => {
-            skip_semantic_weight_from_decoder(decoder)?;
-        }
-        375 => {
-            skip_semantic_italic_from_decoder(decoder)?;
-        }
-        403 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        387 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        500 => {
-            skip_derived_breakpoint_data_from_decoder(decoder)?;
-        }
-        398 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        458 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        457 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        462 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        501 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        522 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        400 => {
-            skip_responsive_set_settings_from_decoder(decoder)?;
-        }
-        404 => {
-            skip_node_behaviors_from_decoder(decoder)?;
-        }
-        414 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        534 => {
-            kiwi_skip_repeated(decoder, skip_collaborative_text_op_id_from_decoder)?;
-        }
-        444 => {
-            skip_collaborative_plain_text_from_decoder(decoder)?;
-        }
-        427 => {
-            skip_code_library_id_from_decoder(decoder)?;
-        }
-        467 => {
-            skip_imported_code_files_from_decoder(decoder)?;
-        }
-        468 => {
-            skip_canvas_node_id_from_decoder(decoder)?;
-        }
-        498 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        502 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        503 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        504 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        515 => {
-            kiwi_skip_repeated(decoder, kiwi_skip_string_value)?;
-        }
-        524 => {
-            kiwi_skip_repeated(decoder, skip_used_make_library_from_decoder)?;
-        }
-        518 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        520 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        551 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        531 => {
-            skip_prototype_device_from_decoder(decoder)?;
-        }
-        525 => {
-            kiwi_skip_repeated(decoder, skip_code_example_from_decoder)?;
-        }
-        428 => {
-            skip_code_file_id_from_decoder(decoder)?;
-        }
-        430 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        547 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        429 => {
-            skip_code_component_id_from_decoder(decoder)?;
-        }
-        487 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        431 => {
-            skip_code_snapshot_state_from_decoder(decoder)?;
-        }
-        451 => {
-            kiwi_skip_repeated(decoder, skip_node_chat_message_from_decoder)?;
-        }
-        485 => {
-            skip_node_chat_compression_state_from_decoder(decoder)?;
-        }
-        496 => {
-            skip_ai_chat_thread_from_decoder(decoder)?;
-        }
-        484 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        459 => {
-            skip_code_snapshot_from_decoder(decoder)?;
-        }
-        589 => {
-            skip_code_snapshot_layers_from_decoder(decoder)?;
-        }
-        480 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        465 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        469 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        470 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        471 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        481 => {
-            skip_canvas_node_id_from_decoder(decoder)?;
-        }
-        473 => {
-            skip_image_import_map_from_decoder(decoder)?;
-        }
-        516 => {
-            skip_code_object_type_from_decoder(decoder)?;
-        }
-        472 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        478 => {
-            skip_code_behavior_data_from_decoder(decoder)?;
-        }
-        519 => {
-            kiwi_skip_uint_value(decoder)?;
-        }
-        527 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        532 => {
-            skip_code_embed_info_from_decoder(decoder)?;
-        }
-        546 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        558 => {
-            skip_code_source_info_from_decoder(decoder)?;
-        }
-        536 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        537 => {
-            kiwi_skip_bytes_value(decoder)?;
-        }
-        419 => {
-            skip_cms_selector_from_decoder(decoder)?;
-        }
-        420 => {
-            skip_cms_consumption_map_from_decoder(decoder)?;
-        }
-        460 => {
-            skip_cms_rich_text_style_map_from_decoder(decoder)?;
-        }
-        539 => {
-            skip_symbol_id_from_decoder(decoder)?;
-        }
-        540 => {
-            skip_repeater_cms_override_data_from_decoder(decoder)?;
-        }
-        549 => {
-            skip_repeater_symbol_override_data_from_decoder(decoder)?;
-        }
-        541 => {
-            skip_repeater_override_data_from_decoder(decoder)?;
-        }
-        405 => {
-            kiwi_skip_repeated(decoder, kiwi_skip_uint_value)?;
-        }
-        408 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        407 => {
-            skip_first_draft_data_from_decoder(decoder)?;
-        }
-        418 => {
-            skip_first_draft_kit_element_data_from_decoder(decoder)?;
-        }
-        421 => {
-            skip_cooper_revert_data_from_decoder(decoder)?;
-        }
-        461 => {
-            skip_cooper_template_data_from_decoder(decoder)?;
-        }
-        528 => {
-            skip_buzz_approval_requests_from_decoder(decoder)?;
-        }
-        529 => {
-            skip_buzz_approval_node_status_info_from_decoder(decoder)?;
-        }
-        422 => {
-            skip_hub_file_attribution_from_decoder(decoder)?;
-        }
-        454 => {
-            skip_managed_string_data_from_decoder(decoder)?;
-        }
-        466 => {
-            skip_thumbnail_info_from_decoder(decoder)?;
-        }
-        494 => {
-            skip_ai_canvas_prompt_from_decoder(decoder)?;
-        }
-        499 => {
-            skip_canvas_node_id_from_decoder(decoder)?;
-        }
-        548 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        523 => {
-            skip_trss_transform2_d_from_decoder(decoder)?;
-        }
-        506 => {
-            kiwi_skip_int64_value(decoder)?;
-        }
-        507 => {
-            skip_keyframe_value_data_from_decoder(decoder)?;
-        }
-        586 => {
-            skip_variable_data_from_decoder(decoder)?;
-        }
-        505 => {
-            skip_interpolation_type_from_decoder(decoder)?;
-        }
-        508 => {
-            skip_bezier_handles_from_decoder(decoder)?;
-        }
-        535 => {
-            skip_easing_data_from_decoder(decoder)?;
-        }
-        509 => {
-            skip_keyframe_operation_from_decoder(decoder)?;
-        }
-        510 => {
-            skip_timeline_position_type_from_decoder(decoder)?;
-        }
-        545 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        511 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        512 => {
-            kiwi_skip_uint64_value(decoder)?;
-        }
-        513 => {
-            kiwi_skip_int64_value(decoder)?;
-        }
-        543 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        514 => {
-            skip_playback_style_from_decoder(decoder)?;
-        }
-        552 => {
-            skip_timeline_definitions_map_from_decoder(decoder)?;
-        }
-        553 => {
-            skip_timeline_assignments_map_from_decoder(decoder)?;
-        }
-        521 => {
-            skip_animation_presets_from_decoder(decoder)?;
-        }
-        582 => {
-            kiwi_skip_repeated(decoder, skip_style_id_for_animation_from_decoder)?;
-        }
-        583 => {
-            skip_animation_preset_id_from_decoder(decoder)?;
-        }
-        568 => {
-            skip_tools_from_decoder(decoder)?;
-        }
-        569 => {
-            skip_custom_effects_from_decoder(decoder)?;
-        }
-        526 => {
-            skip_transition_override_data_from_decoder(decoder)?;
-        }
-        544 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        557 => {
-            skip_source_control_config_from_decoder(decoder)?;
-        }
-        559 => {
-            skip_spec_block_type_from_decoder(decoder)?;
-        }
-        560 => {
-            skip_collaborative_plain_text_from_decoder(decoder)?;
-        }
-        561 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        562 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        563 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        575 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        576 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        577 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        578 => {
-            skip_table_row_column_size_map_from_decoder(decoder)?;
-        }
-        579 => {
-            skip_table_row_column_size_map_from_decoder(decoder)?;
-        }
-        590 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        565 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        584 => {
-            kiwi_skip_string_value(decoder)?;
-        }
-        585 => {
-            kiwi_skip_int_value(decoder)?;
-        }
-        567 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        588 => {
-            skip_custom_tool_artifact_ref_from_decoder(decoder)?;
-        }
-        field => {
-            return Err(
-                Error::Term(
-                    Box::new(
-                        format!("unknown field {} while decoding scene node", field),
-                    ),
-                ),
-            );
-        }
-    }
-    Ok(())
+fig_scene_skip_field_decoder! {
+    fn skip_fig_message_field; decoder decoder; definition "scene summary"; fields[1 =>
+    one skip_message_type_from_decoder; 2 => one kiwi_skip_uint_value; 42 => one
+    kiwi_skip_string_value; 3 => one kiwi_skip_uint_value; 37 => one
+    kiwi_skip_bool_value; 4 => repeated skip_node_change_from_decoder; 5 => repeated
+    skip_user_change_from_decoder; 32 => one
+    skip_interactive_slide_element_change_from_decoder; 36 => one
+    skip_node_status_change_from_decoder; 44 => one
+    skip_buzz_approval_change_from_decoder; 6 => repeated skip_blob_from_decoder; 30 =>
+    one kiwi_skip_uint_value; 7 => one kiwi_skip_string_value; 8 => one
+    skip_access_from_decoder; 9 => one kiwi_skip_string_value; 10 => one
+    skip_style_set_type_from_decoder; 11 => one skip_style_set_content_type_from_decoder;
+    12 => one kiwi_skip_int_value; 13 => one skip_vector_from_decoder; 14 => one
+    kiwi_skip_string_value; 15 => one kiwi_skip_string_value; 16 => repeated
+    skip_scene_graph_query_from_decoder; 17 => one
+    skip_node_changes_metadata_from_decoder; 18 => one kiwi_skip_uint_value; 19 => one
+    kiwi_skip_bool_value; 20 => one skip_guid_from_decoder; 21 => one
+    kiwi_skip_bool_value; 22 => repeated skip_message_from_decoder; 23 => repeated
+    skip_message_from_decoder; 24 => repeated skip_client_broadcast_from_decoder; 25 =>
+    one kiwi_skip_uint_value; 26 => one kiwi_skip_string_value; 27 => one
+    skip_editor_type_from_decoder; 28 => one kiwi_skip_string_value; 29 => repeated
+    skip_guid_from_decoder; 31 => one kiwi_skip_bool_value; 33 => repeated
+    skip_clipboard_selection_region_from_decoder; 34 => one
+    skip_encoded_offsets_index_from_decoder; 35 => one kiwi_skip_bool_value; 38 => one
+    kiwi_skip_uint64_value; 39 => repeated skip_annotation_category_from_decoder; 40 =>
+    one skip_client_rendered_metadata_from_decoder; 41 => one
+    skip_paste_asset_type_from_decoder; 43 => one
+    skip_object_animation_list_from_decoder; 45 => one
+    skip_scene_graph_query_mode_from_decoder;]
+}
+fig_scene_skip_field_decoder! {
+    fn skip_fig_node_change_field; decoder decoder; definition "scene node"; fields[1 =>
+    one skip_guid_from_decoder; 53 => one kiwi_skip_uint_value; 2 => one
+    skip_node_phase_from_decoder; 54 => one kiwi_skip_uint_value; 3 => one
+    skip_parent_index_from_decoder; 55 => one kiwi_skip_uint_value; 4 => one
+    skip_node_type_from_decoder; 56 => one kiwi_skip_uint_value; 5 => one
+    kiwi_skip_string_value; 57 => one kiwi_skip_uint_value; 174 => one
+    kiwi_skip_bool_value; 318 => one kiwi_skip_string_value; 256 => one
+    skip_library_move_info_from_decoder; 281 => repeated
+    skip_library_move_history_item_from_decoder; 319 => one kiwi_skip_string_value; 383
+    => one skip_asset_id_map_from_decoder; 49 => one kiwi_skip_uint_value; 101 => one
+    kiwi_skip_uint_value; 157 => one kiwi_skip_bool_value; 161 => one
+    kiwi_skip_bool_value; 376 => one kiwi_skip_bool_value; 163 => one
+    skip_style_type_from_decoder; 191 => one kiwi_skip_string_value; 171 => one
+    kiwi_skip_string_value; 399 => one kiwi_skip_string_value; 320 => one
+    kiwi_skip_string_value; 345 => one skip_shared_style_master_data_from_decoder; 348 =>
+    one skip_shared_style_master_data_from_decoder; 176 => one kiwi_skip_bool_value; 177
+    => one kiwi_skip_bool_value; 172 => one skip_shared_style_master_data_from_decoder;
+    173 => one skip_shared_style_reference_from_decoder; 158 => one
+    skip_guid_from_decoder; 162 => one skip_guid_from_decoder; 167 => one
+    skip_guid_from_decoder; 168 => one skip_guid_from_decoder; 169 => one
+    skip_guid_from_decoder; 170 => one skip_guid_from_decoder; 185 => one
+    skip_guid_from_decoder; 332 => one skip_style_id_from_decoder; 333 => one
+    skip_style_id_from_decoder; 334 => one skip_style_id_from_decoder; 335 => one
+    skip_style_id_from_decoder; 336 => one skip_style_id_from_decoder; 580 => repeated
+    skip_style_animation_from_decoder; 193 => repeated skip_paint_from_decoder; 194 =>
+    one skip_guid_from_decoder; 225 => one kiwi_skip_bool_value; 238 => repeated
+    skip_state_group_property_value_order_from_decoder; 581 => one
+    skip_partial_paste_annotation_from_decoder; 122 => one
+    skip_shared_symbol_reference_from_decoder; 123 => one kiwi_skip_bool_value; 124 =>
+    repeated skip_guid_path_mapping_from_decoder; 126 => one kiwi_skip_string_value; 152
+    => one skip_shared_component_master_data_from_decoder; 144 => one
+    kiwi_skip_string_value; 164 => repeated skip_guid_path_mapping_from_decoder; 228 =>
+    repeated skip_guid_path_mapping_from_decoder; 214 => one kiwi_skip_string_value; 395
+    => one kiwi_skip_string_value; 215 => one skip_guid_from_decoder; 216 => one
+    kiwi_skip_string_value; 217 => one kiwi_skip_bool_value; 218 => one
+    kiwi_skip_string_value; 252 => one kiwi_skip_string_value; 266 => repeated
+    skip_component_prop_def_from_decoder; 267 => repeated
+    skip_component_prop_ref_from_decoder; 483 => repeated
+    skip_variant_prop_spec_from_decoder; 113 => one skip_symbol_data_from_decoder; 114 =>
+    one kiwi_skip_uint_value; 125 => repeated skip_node_change_from_decoder; 394 => one
+    kiwi_skip_bool_value; 143 => one skip_guid_from_decoder; 268 => repeated
+    skip_component_prop_assignment_from_decoder; 305 => one kiwi_skip_bool_value; 248 =>
+    repeated skip_instance_override_stash_from_decoder; 250 => repeated
+    skip_instance_override_stash_v2_from_decoder; 111 => one skip_guid_path_from_decoder;
+    112 => one kiwi_skip_uint_value; 321 => one kiwi_skip_int_value; 382 => one
+    skip_module_type_from_decoder; 463 => one kiwi_skip_bool_value; 495 => one
+    kiwi_skip_bool_value; 21 => one kiwi_skip_float_value; 73 => one
+    kiwi_skip_uint_value; 22 => one kiwi_skip_float_value; 74 => one
+    kiwi_skip_uint_value; 23 => one kiwi_skip_float_value; 75 => one
+    kiwi_skip_uint_value; 32 => one skip_text_align_horizontal_from_decoder; 84 => one
+    kiwi_skip_uint_value; 33 => one skip_text_align_vertical_from_decoder; 85 => one
+    kiwi_skip_uint_value; 34 => one skip_text_case_from_decoder; 86 => one
+    kiwi_skip_uint_value; 35 => one skip_text_decoration_from_decoder; 87 => one
+    kiwi_skip_uint_value; 40 => one skip_number_from_decoder; 92 => one
+    kiwi_skip_uint_value; 41 => one skip_font_name_from_decoder; 93 => one
+    kiwi_skip_uint_value; 42 => one skip_text_data_from_decoder; 94 => one
+    kiwi_skip_uint_value; 359 => one skip_derived_text_data_from_decoder; 127 => one
+    kiwi_skip_bool_value; 128 => one kiwi_skip_bool_value; 129 => one
+    kiwi_skip_bool_value; 130 => one kiwi_skip_bool_value; 131 => one
+    kiwi_skip_bool_value; 132 => one kiwi_skip_bool_value; 133 => one
+    skip_font_variant_numeric_figure_from_decoder; 134 => one
+    skip_font_variant_numeric_spacing_from_decoder; 135 => one
+    skip_font_variant_numeric_fraction_from_decoder; 136 => one
+    skip_font_variant_caps_from_decoder; 137 => one
+    skip_font_variant_position_from_decoder; 165 => one skip_number_from_decoder; 202 =>
+    one kiwi_skip_string_value; 322 => one skip_leading_trim_from_decoder; 337 => one
+    kiwi_skip_bool_value; 339 => one kiwi_skip_bool_value; 550 => one
+    kiwi_skip_bool_value; 351 => one kiwi_skip_int_value; 417 => repeated
+    skip_responsive_text_style_variant_from_decoder; 352 => one
+    skip_section_status_from_decoder; 355 => one skip_section_status_info_from_decoder;
+    203 => one kiwi_skip_uint_value; 396 => one kiwi_skip_uint_value; 205 => repeated
+    skip_open_type_feature_from_decoder; 206 => repeated
+    skip_open_type_feature_from_decoder; 223 => one skip_hyperlink_from_decoder; 340 =>
+    one skip_mention_from_decoder; 260 => repeated skip_font_variation_from_decoder; 279
+    => one kiwi_skip_uint_value; 280 => one skip_text_truncation_from_decoder; 292 => one
+    kiwi_skip_bool_value; 391 => one skip_emoji_image_set_from_decoder; 392 => one
+    kiwi_skip_string_value; 6 => one kiwi_skip_bool_value; 58 => one
+    kiwi_skip_uint_value; 7 => one kiwi_skip_bool_value; 59 => one kiwi_skip_uint_value;
+    434 => one skip_lock_mode_from_decoder; 8 => one kiwi_skip_float_value; 60 => one
+    kiwi_skip_uint_value; 9 => one skip_blend_mode_from_decoder; 61 => one
+    kiwi_skip_uint_value; 11 => one skip_vector_from_decoder; 63 => one
+    kiwi_skip_uint_value; 12 => one skip_matrix_from_decoder; 64 => one
+    kiwi_skip_uint_value; 13 => repeated kiwi_skip_float_value; 65 => one
+    kiwi_skip_uint_value; 16 => one kiwi_skip_bool_value; 68 => one kiwi_skip_uint_value;
+    424 => one skip_vector_from_decoder; 18 => one kiwi_skip_bool_value; 70 => one
+    kiwi_skip_uint_value; 317 => one skip_mask_type_from_decoder; 19 => one
+    kiwi_skip_float_value; 71 => one kiwi_skip_uint_value; 20 => one
+    kiwi_skip_float_value; 72 => one kiwi_skip_uint_value; 26 => one
+    kiwi_skip_float_value; 78 => one kiwi_skip_uint_value; 29 => one
+    skip_stroke_align_from_decoder; 81 => one kiwi_skip_uint_value; 30 => one
+    skip_stroke_cap_from_decoder; 82 => one kiwi_skip_uint_value; 497 => one
+    skip_number_from_decoder; 31 => one skip_stroke_join_from_decoder; 83 => one
+    kiwi_skip_uint_value; 38 => repeated skip_paint_from_decoder; 90 => one
+    kiwi_skip_uint_value; 39 => repeated skip_paint_from_decoder; 91 => one
+    kiwi_skip_uint_value; 43 => repeated skip_effect_from_decoder; 95 => one
+    kiwi_skip_uint_value; 50 => one skip_color_from_decoder; 102 => one
+    kiwi_skip_uint_value; 51 => repeated skip_path_from_decoder; 103 => one
+    kiwi_skip_uint_value; 52 => repeated skip_path_from_decoder; 104 => one
+    kiwi_skip_uint_value; 564 => repeated skip_path_from_decoder; 411 => repeated
+    skip_paint_from_decoder; 412 => one kiwi_skip_bool_value; 413 => one
+    skip_number_from_decoder; 415 => one skip_number_from_decoder; 416 => one
+    skip_text_decoration_style_from_decoder; 455 => repeated
+    skip_transform_modifier_from_decoder; 570 => one skip_transform3d_from_decoder; 571
+    => one skip_stroke_data_from_decoder; 572 => one skip_scene3d_from_decoder; 587 =>
+    one skip_transform_origin_from_decoder; 145 => one kiwi_skip_float_value; 146 => one
+    kiwi_skip_float_value; 147 => one kiwi_skip_float_value; 148 => one
+    kiwi_skip_float_value; 149 => one kiwi_skip_bool_value; 150 => one
+    kiwi_skip_bool_value; 151 => one kiwi_skip_bool_value; 423 => one
+    skip_optional_vector_from_decoder; 258 => one kiwi_skip_bool_value; 287 => one
+    kiwi_skip_bool_value; 288 => one kiwi_skip_bool_value; 289 => one
+    kiwi_skip_bool_value; 290 => one kiwi_skip_bool_value; 294 => one
+    kiwi_skip_bool_value; 295 => one kiwi_skip_float_value; 296 => one
+    kiwi_skip_float_value; 297 => one kiwi_skip_float_value; 298 => one
+    kiwi_skip_float_value; 299 => one kiwi_skip_bool_value; 28 => one
+    skip_constraint_type_from_decoder; 80 => one kiwi_skip_uint_value; 105 => one
+    skip_stack_mode_from_decoder; 106 => one kiwi_skip_uint_value; 107 => one
+    kiwi_skip_float_value; 108 => one kiwi_skip_uint_value; 109 => one
+    kiwi_skip_float_value; 110 => one kiwi_skip_uint_value; 120 => one
+    skip_stack_counter_align_from_decoder; 121 => one skip_stack_justify_from_decoder;
+    208 => one skip_stack_align_from_decoder; 209 => one kiwi_skip_float_value; 210 =>
+    one kiwi_skip_float_value; 211 => one skip_stack_size_from_decoder; 212 => one
+    skip_stack_size_from_decoder; 229 => one skip_stack_size_from_decoder; 230 => one
+    skip_stack_justify_from_decoder; 231 => one skip_stack_align_from_decoder; 232 => one
+    kiwi_skip_float_value; 233 => one kiwi_skip_float_value; 234 => one
+    kiwi_skip_float_value; 236 => one skip_stack_counter_align_from_decoder; 269 => one
+    skip_stack_positioning_from_decoder; 271 => one kiwi_skip_bool_value; 323 => one
+    skip_stack_wrap_from_decoder; 324 => one kiwi_skip_float_value; 325 => one
+    skip_optional_vector_from_decoder; 326 => one skip_optional_vector_from_decoder; 343
+    => one skip_stack_counter_align_content_from_decoder; 406 => repeated
+    kiwi_skip_int_value; 574 => one kiwi_skip_uint_value; 435 => one
+    skip_guid_position_map_from_decoder; 436 => one skip_guid_position_map_from_decoder;
+    437 => one kiwi_skip_float_value; 438 => one kiwi_skip_float_value; 439 => one
+    skip_guid_from_decoder; 440 => one skip_guid_from_decoder; 441 => one
+    kiwi_skip_uint_value; 442 => one kiwi_skip_uint_value; 474 => one
+    skip_guid_grid_track_size_map_from_decoder; 475 => one
+    skip_guid_grid_track_size_map_from_decoder; 476 => one
+    skip_grid_child_align_from_decoder; 477 => one skip_grid_child_align_from_decoder;
+    555 => one skip_grid_auto_tracks_from_decoder; 556 => one kiwi_skip_bool_value; 344
+    => one kiwi_skip_bool_value; 139 => one skip_guid_from_decoder; 140 => one
+    skip_guid_from_decoder; 141 => one skip_color_from_decoder; 153 => one
+    skip_transition_info_from_decoder; 154 => one skip_transition_type_from_decoder; 155
+    => one kiwi_skip_float_value; 156 => one skip_easing_type_from_decoder; 181 => one
+    kiwi_skip_bool_value; 182 => one skip_connection_type_from_decoder; 183 => one
+    kiwi_skip_string_value; 184 => one skip_prototype_device_from_decoder; 187 => one
+    skip_interaction_type_from_decoder; 188 => one kiwi_skip_float_value; 189 => one
+    kiwi_skip_bool_value; 190 => one kiwi_skip_float_value; 192 => one
+    kiwi_skip_bool_value; 207 => one kiwi_skip_bool_value; 226 => repeated
+    skip_prototype_interaction_from_decoder; 426 => repeated
+    skip_prototype_interaction_from_decoder; 249 => one
+    skip_prototype_starting_point_from_decoder; 204 => repeated
+    skip_plugin_data_from_decoder; 219 => repeated
+    skip_plugin_relaunch_data_from_decoder; 242 => one
+    skip_connector_endpoint_from_decoder; 243 => one
+    skip_connector_endpoint_from_decoder; 244 => one
+    skip_connector_line_style_from_decoder; 245 => one skip_stroke_cap_from_decoder; 246
+    => one skip_stroke_cap_from_decoder; 253 => repeated
+    skip_connector_control_point_from_decoder; 479 => repeated
+    skip_connector_control_point_from_decoder; 255 => one
+    skip_connector_text_midpoint_from_decoder; 373 => one
+    skip_connector_type_from_decoder; 533 => one kiwi_skip_int_value; 369 => repeated
+    skip_annotation_from_decoder; 384 => repeated
+    skip_annotation_measurement_from_decoder; 453 => one
+    skip_annotation_categories_from_decoder; 241 => one
+    skip_shape_with_text_type_from_decoder; 247 => one kiwi_skip_float_value; 530 => one
+    kiwi_skip_bool_value; 254 => one skip_derived_immutable_frame_data_from_decoder; 338
+    => one skip_multiplayer_field_version_from_decoder; 240 => one
+    skip_node_generation_data_from_decoder; 491 => one skip_jsx_data_from_decoder; 492 =>
+    one skip_derived_jsx_data_from_decoder; 493 => one kiwi_skip_string_value; 259 => one
+    skip_code_block_language_from_decoder; 433 => one skip_code_block_theme_from_decoder;
+    278 => one skip_link_preview_data_from_decoder; 282 => one kiwi_skip_bool_value; 283
+    => one kiwi_skip_bool_value; 300 => one skip_video_playback_from_decoder; 301 => one
+    skip_stamp_data_from_decoder; 370 => one skip_section_preset_info_from_decoder; 409
+    => one skip_platform_shape_definition_from_decoder; 273 => one
+    skip_multiplayer_map_from_decoder; 274 => one kiwi_skip_uint_value; 275 => one
+    skip_widget_derived_subtree_cursor_from_decoder; 276 => one
+    skip_widget_pointer_from_decoder; 285 => one skip_widget_input_behavior_from_decoder;
+    286 => one kiwi_skip_string_value; 291 => one skip_widget_hover_style_from_decoder;
+    293 => one kiwi_skip_bool_value; 360 => one kiwi_skip_bool_value; 262 => one
+    skip_widget_metadata_from_decoder; 263 => repeated skip_widget_event_from_decoder;
+    265 => repeated skip_widget_property_menu_item_from_decoder; 401 => one
+    skip_widget_input_text_node_type_from_decoder; 489 => one
+    skip_multiplayer_map_from_decoder; 308 => one
+    skip_table_row_column_position_map_from_decoder; 309 => one
+    skip_table_row_column_position_map_from_decoder; 310 => one
+    skip_table_row_column_size_map_from_decoder; 311 => one
+    skip_table_row_column_size_map_from_decoder; 538 => one
+    skip_table_merged_cell_map_from_decoder; 371 => one
+    skip_multiplayer_map_from_decoder; 372 => one skip_multiplayer_map_from_decoder; 402
+    => one skip_flapp_type_from_decoder; 486 => one kiwi_skip_bool_value; 389 => one
+    kiwi_skip_string_value; 410 => one kiwi_skip_bool_value; 573 => one
+    skip_multiplayer_map_from_decoder; 379 => one skip_theme_id_from_decoder; 381 => one
+    skip_slide_theme_data_from_decoder; 390 => one skip_slide_theme_map_from_decoder; 393
+    => one kiwi_skip_string_value; 443 => one skip_slide_number_from_decoder; 456 => one
+    kiwi_skip_string_value; 363 => one skip_guid_from_decoder; 362 => one
+    skip_guid_from_decoder; 364 => one kiwi_skip_string_value; 366 => one
+    skip_diagram_layout_rule_type_from_decoder; 367 => one
+    skip_diagram_parent_index_from_decoder; 368 => one
+    skip_diagram_layout_paused_from_decoder; 380 => one kiwi_skip_bool_value; 251 => one
+    skip_internal_enum_for_test_from_decoder; 257 => one
+    skip_internal_data_for_test_from_decoder; 14 => one kiwi_skip_bool_value; 66 => one
+    kiwi_skip_uint_value; 15 => one kiwi_skip_bool_value; 67 => one kiwi_skip_uint_value;
+    17 => one kiwi_skip_bool_value; 69 => one kiwi_skip_uint_value; 25 => one
+    kiwi_skip_float_value; 77 => one kiwi_skip_uint_value; 27 => one
+    kiwi_skip_float_value; 79 => one kiwi_skip_uint_value; 37 => one
+    skip_constraint_type_from_decoder; 89 => one kiwi_skip_uint_value; 45 => repeated
+    skip_export_settings_from_decoder; 97 => one kiwi_skip_uint_value; 46 => one
+    skip_text_auto_resize_from_decoder; 98 => one kiwi_skip_uint_value; 47 => repeated
+    skip_layout_grid_from_decoder; 99 => one kiwi_skip_uint_value; 115 => one
+    kiwi_skip_bool_value; 116 => one kiwi_skip_uint_value; 117 => one
+    kiwi_skip_bool_value; 118 => one kiwi_skip_uint_value; 36 => one
+    skip_boolean_operation_from_decoder; 88 => one kiwi_skip_uint_value; 44 => one
+    skip_vector_mirror_from_decoder; 96 => one kiwi_skip_uint_value; 10 => one
+    kiwi_skip_uint_value; 62 => one kiwi_skip_uint_value; 24 => one
+    kiwi_skip_float_value; 76 => one kiwi_skip_uint_value; 195 => one
+    skip_arc_data_from_decoder; 48 => one skip_vector_data_from_decoder; 100 => one
+    kiwi_skip_uint_value; 425 => one kiwi_skip_uint_value; 432 => one
+    skip_text_path_start_from_decoder; 119 => one kiwi_skip_bool_value; 138 => repeated
+    skip_guide_from_decoder; 142 => one kiwi_skip_bool_value; 159 => one
+    skip_scroll_direction_from_decoder; 160 => one kiwi_skip_float_value; 166 => one
+    skip_vector_from_decoder; 175 => one kiwi_skip_bool_value; 178 => one
+    skip_scroll_contracted_state_from_decoder; 179 => one skip_vector_from_decoder; 180
+    => one kiwi_skip_string_value; 186 => one skip_scroll_behavior_from_decoder; 196 =>
+    one kiwi_skip_int_value; 197 => one skip_navigation_type_from_decoder; 198 => one
+    skip_overlay_position_type_from_decoder; 199 => one skip_vector_from_decoder; 200 =>
+    one skip_overlay_background_interaction_from_decoder; 201 => one
+    skip_overlay_background_appearance_from_decoder; 213 => one skip_guid_from_decoder;
+    220 => one kiwi_skip_bool_value; 221 => one skip_stack_size_from_decoder; 222 => one
+    kiwi_skip_bool_value; 224 => one skip_key_trigger_from_decoder; 227 => one
+    kiwi_skip_string_value; 235 => repeated skip_guid_from_decoder; 237 => repeated
+    skip_symbol_link_from_decoder; 239 => one skip_text_list_data_from_decoder; 261 =>
+    one kiwi_skip_bool_value; 264 => one kiwi_skip_float_value; 270 => one
+    skip_embed_data_from_decoder; 272 => one skip_rich_media_data_from_decoder; 277 =>
+    one skip_multiplayer_map_from_decoder; 284 => one kiwi_skip_bool_value; 302 => one
+    skip_html_tag_from_decoder; 303 => one skip_aria_role_from_decoder; 357 => one
+    skip_aria_attributes_map_from_decoder; 304 => one kiwi_skip_string_value; 490 => one
+    kiwi_skip_bool_value; 306 => one skip_variable_data_from_decoder; 307 => one
+    skip_variable_data_map_from_decoder; 316 => one
+    skip_variable_mode_by_set_map_from_decoder; 312 => repeated
+    skip_variable_set_mode_from_decoder; 313 => one skip_variable_set_id_from_decoder;
+    314 => one skip_variable_resolved_data_type_from_decoder; 315 => one
+    skip_variable_data_values_from_decoder; 350 => one kiwi_skip_string_value; 566 => one
+    skip_variable_timing_display_unit_from_decoder; 353 => repeated
+    skip_variable_scope_from_decoder; 445 => one skip_variable_data_map_from_decoder; 358
+    => one skip_code_syntax_map_from_decoder; 388 => one skip_paste_source_from_decoder;
+    397 => one skip_editor_type_from_decoder; 446 => one skip_guid_from_decoder; 482 =>
+    one kiwi_skip_uint64_value; 447 => repeated skip_variable_width_point_from_decoder;
+    448 => one skip_dynamic_stroke_settings_from_decoder; 449 => one
+    skip_scatter_stroke_settings_from_decoder; 450 => one
+    skip_stretch_stroke_settings_from_decoder; 488 => repeated skip_matrix_from_decoder;
+    452 => one skip_brush_type_from_decoder; 542 => one
+    skip_optional_vector_from_decoder; 554 => one kiwi_skip_float_value; 377 => one
+    skip_variable_set_id_from_decoder; 464 => one skip_variable_id_from_decoder; 378 =>
+    one skip_variable_id_or_variable_override_id_from_decoder; 385 => one
+    kiwi_skip_bool_value; 386 => one kiwi_skip_string_value; 517 => one
+    skip_inherited_variables_data_from_decoder; 361 => one
+    skip_handoff_status_map_from_decoder; 327 => one
+    skip_agenda_position_map_from_decoder; 328 => one
+    skip_agenda_metadata_map_from_decoder; 329 => one skip_migration_status_from_decoder;
+    330 => one kiwi_skip_bool_value; 331 => one skip_edit_info_from_decoder; 341 => one
+    skip_color_profile_from_decoder; 342 => one skip_symbol_id_from_decoder; 346 => one
+    skip_child_reading_direction_from_decoder; 347 => one kiwi_skip_string_value; 349 =>
+    one skip_document_color_profile_from_decoder; 354 => repeated
+    skip_developer_related_link_from_decoder; 356 => one kiwi_skip_string_value; 365 =>
+    one skip_edit_scope_info_from_decoder; 374 => one skip_semantic_weight_from_decoder;
+    375 => one skip_semantic_italic_from_decoder; 403 => one kiwi_skip_bool_value; 387 =>
+    one kiwi_skip_bool_value; 500 => one skip_derived_breakpoint_data_from_decoder; 398
+    => one skip_guid_from_decoder; 458 => one kiwi_skip_bool_value; 457 => one
+    skip_guid_from_decoder; 462 => one skip_guid_from_decoder; 501 => one
+    kiwi_skip_float_value; 522 => one kiwi_skip_bool_value; 400 => one
+    skip_responsive_set_settings_from_decoder; 404 => one
+    skip_node_behaviors_from_decoder; 414 => one kiwi_skip_string_value; 534 => repeated
+    skip_collaborative_text_op_id_from_decoder; 444 => one
+    skip_collaborative_plain_text_from_decoder; 427 => one
+    skip_code_library_id_from_decoder; 467 => one skip_imported_code_files_from_decoder;
+    468 => one skip_canvas_node_id_from_decoder; 498 => one kiwi_skip_bool_value; 502 =>
+    one kiwi_skip_string_value; 503 => one kiwi_skip_uint_value; 504 => one
+    kiwi_skip_string_value; 515 => repeated kiwi_skip_string_value; 524 => repeated
+    skip_used_make_library_from_decoder; 518 => one kiwi_skip_string_value; 520 => one
+    kiwi_skip_bool_value; 551 => one kiwi_skip_bool_value; 531 => one
+    skip_prototype_device_from_decoder; 525 => repeated skip_code_example_from_decoder;
+    428 => one skip_code_file_id_from_decoder; 430 => one kiwi_skip_string_value; 547 =>
+    one kiwi_skip_string_value; 429 => one skip_code_component_id_from_decoder; 487 =>
+    one kiwi_skip_bool_value; 431 => one skip_code_snapshot_state_from_decoder; 451 =>
+    repeated skip_node_chat_message_from_decoder; 485 => one
+    skip_node_chat_compression_state_from_decoder; 496 => one
+    skip_ai_chat_thread_from_decoder; 484 => one kiwi_skip_string_value; 459 => one
+    skip_code_snapshot_from_decoder; 589 => one skip_code_snapshot_layers_from_decoder;
+    480 => one kiwi_skip_uint_value; 465 => one kiwi_skip_bool_value; 469 => one
+    kiwi_skip_bool_value; 470 => one kiwi_skip_bool_value; 471 => one
+    kiwi_skip_bool_value; 481 => one skip_canvas_node_id_from_decoder; 473 => one
+    skip_image_import_map_from_decoder; 516 => one skip_code_object_type_from_decoder;
+    472 => one kiwi_skip_string_value; 478 => one skip_code_behavior_data_from_decoder;
+    519 => one kiwi_skip_uint_value; 527 => one kiwi_skip_bool_value; 532 => one
+    skip_code_embed_info_from_decoder; 546 => one kiwi_skip_bool_value; 558 => one
+    skip_code_source_info_from_decoder; 536 => one kiwi_skip_string_value; 537 => bytes
+    kiwi_skip_bytes_value; 419 => one skip_cms_selector_from_decoder; 420 => one
+    skip_cms_consumption_map_from_decoder; 460 => one
+    skip_cms_rich_text_style_map_from_decoder; 539 => one skip_symbol_id_from_decoder;
+    540 => one skip_repeater_cms_override_data_from_decoder; 549 => one
+    skip_repeater_symbol_override_data_from_decoder; 541 => one
+    skip_repeater_override_data_from_decoder; 405 => repeated kiwi_skip_uint_value; 408
+    => one kiwi_skip_string_value; 407 => one skip_first_draft_data_from_decoder; 418 =>
+    one skip_first_draft_kit_element_data_from_decoder; 421 => one
+    skip_cooper_revert_data_from_decoder; 461 => one
+    skip_cooper_template_data_from_decoder; 528 => one
+    skip_buzz_approval_requests_from_decoder; 529 => one
+    skip_buzz_approval_node_status_info_from_decoder; 422 => one
+    skip_hub_file_attribution_from_decoder; 454 => one
+    skip_managed_string_data_from_decoder; 466 => one skip_thumbnail_info_from_decoder;
+    494 => one skip_ai_canvas_prompt_from_decoder; 499 => one
+    skip_canvas_node_id_from_decoder; 548 => one kiwi_skip_string_value; 523 => one
+    skip_trss_transform2_d_from_decoder; 506 => one kiwi_skip_int64_value; 507 => one
+    skip_keyframe_value_data_from_decoder; 586 => one skip_variable_data_from_decoder;
+    505 => one skip_interpolation_type_from_decoder; 508 => one
+    skip_bezier_handles_from_decoder; 535 => one skip_easing_data_from_decoder; 509 =>
+    one skip_keyframe_operation_from_decoder; 510 => one
+    skip_timeline_position_type_from_decoder; 545 => one kiwi_skip_bool_value; 511 => one
+    skip_guid_from_decoder; 512 => one kiwi_skip_uint64_value; 513 => one
+    kiwi_skip_int64_value; 543 => one kiwi_skip_bool_value; 514 => one
+    skip_playback_style_from_decoder; 552 => one
+    skip_timeline_definitions_map_from_decoder; 553 => one
+    skip_timeline_assignments_map_from_decoder; 521 => one
+    skip_animation_presets_from_decoder; 582 => repeated
+    skip_style_id_for_animation_from_decoder; 583 => one
+    skip_animation_preset_id_from_decoder; 568 => one skip_tools_from_decoder; 569 => one
+    skip_custom_effects_from_decoder; 526 => one
+    skip_transition_override_data_from_decoder; 544 => one kiwi_skip_bool_value; 557 =>
+    one skip_source_control_config_from_decoder; 559 => one
+    skip_spec_block_type_from_decoder; 560 => one
+    skip_collaborative_plain_text_from_decoder; 561 => one kiwi_skip_string_value; 562 =>
+    one kiwi_skip_string_value; 563 => one kiwi_skip_int_value; 575 => one
+    kiwi_skip_string_value; 576 => one kiwi_skip_int_value; 577 => one
+    kiwi_skip_int_value; 578 => one skip_table_row_column_size_map_from_decoder; 579 =>
+    one skip_table_row_column_size_map_from_decoder; 590 => one kiwi_skip_string_value;
+    565 => one kiwi_skip_bool_value; 584 => one kiwi_skip_string_value; 585 => one
+    kiwi_skip_int_value; 567 => one kiwi_skip_bool_value; 588 => one
+    skip_custom_tool_artifact_ref_from_decoder;]
 }
 fn decode_scene_message_from_decoder(
     decoder: &mut Decoder<'_>,

@@ -7,12 +7,12 @@ defmodule Figler.Test.GraphBuilder do
   structs used by production code.
   """
 
-  alias Figler.Scene.Graph.ComponentPropAssignment
-  alias Figler.Scene.Graph.ComponentPropRef
-  alias Figler.Scene.Graph.DerivedSymbolData
-  alias Figler.Scene.Graph.Resolver
-  alias Figler.Scene.Graph.SeedNode
-  alias Figler.Scene.Graph.SymbolOverride
+  alias Figler.Scene.Graph.Build
+  alias Figler.Scene.Graph.Component.PropertyAssignment
+  alias Figler.Scene.Graph.Component.PropertyRef
+  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
+  alias Figler.Scene.Graph.Symbol.DerivedData, as: DerivedSymbolData
+  alias Figler.Scene.Graph.Symbol.Override, as: SymbolOverride
 
   def node(guid, type, attrs \\ []) do
     struct!(SeedNode, Keyword.merge([guid: guid, node_type: Atom.to_string(type)], attrs))
@@ -37,8 +37,8 @@ defmodule Figler.Test.GraphBuilder do
     )
   end
 
-  def prop_ref(def_id, field), do: %ComponentPropRef{def_id: def_id, field: field}
-  def prop_assignment(def_id, value), do: %ComponentPropAssignment{def_id: def_id, value: value}
+  def prop_ref(def_id, field), do: %PropertyRef{def_id: def_id, field: field}
+  def prop_assignment(def_id, value), do: %PropertyAssignment{def_id: def_id, value: value}
 
   def derived_symbol_data(guid_path, attrs \\ []) do
     struct!(DerivedSymbolData, Keyword.put(attrs, :guid_path, guid_path))
@@ -61,7 +61,7 @@ defmodule Figler.Test.GraphBuilder do
     opts = Keyword.put_new(opts, :resource, make_ref())
 
     seed_nodes
-    |> Resolver.from_seed(Keyword.put(opts, :stages, stages))
-    |> Resolver.resolve()
+    |> Build.from_seed(Keyword.put(opts, :stages, stages))
+    |> Build.resolve()
   end
 end
