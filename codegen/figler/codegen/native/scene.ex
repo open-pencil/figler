@@ -6,6 +6,7 @@ defmodule Figler.Codegen.Native.Scene do
   into the Rust fragments inserted into the scene NIF templates.
   """
 
+  alias Figler.Codegen.Native.AtomCache
   alias Figler.Codegen.Native.SupportFunction
   alias Figler.Codegen.Native.Scene.Attrs
   alias Figler.Codegen.Native.Scene.Decode
@@ -49,8 +50,9 @@ defmodule Figler.Codegen.Native.Scene do
       scene_decode_arms: scene_decode_arms(definition_map),
       scene_attr_lookup: Attrs.xpath_lookup(),
       scene_attr_count: Attrs.xpath_count(),
-      scene_query_field_atoms: Attrs.query_field_atoms(),
-      scene_query_field_encoders: Attrs.query_field_encoders(),
+      scene_query_atom_statics:
+        [AtomCache.static("GUID_ATOM"), AtomCache.static("NODE_TYPE_ATOM")] ++
+          Attrs.query_field_atoms(),
       scene_reader_helpers: SupportFunction.scene_reader_items(),
       scene_navigation_nifs: scene_navigation_nifs()
     ]

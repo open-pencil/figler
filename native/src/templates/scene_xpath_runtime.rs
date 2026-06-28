@@ -84,6 +84,9 @@ mod scene_xpath_runtime {
     }
     impl Resource for SceneIndexResource {}
     struct SceneDom;
+
+    __rq_scene_query_atom_statics!();
+
     impl SceneNodeRecord {
         fn attr(&self, index: usize) -> Option<(&'static str, String)> {
             let mut cursor = 0;
@@ -562,30 +565,6 @@ mod scene_xpath_runtime {
 
     fn wants_field(fields: &[String], field: &str) -> bool {
         fields.iter().any(|selected| selected == field)
-    }
-
-    fn scene_query_node_term<'a>(
-        env: Env<'a>,
-        index: &SceneIndex,
-        node_index: usize,
-        fields: &[String],
-    ) -> NifResult<Term<'a>> {
-        static GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static NODE_TYPE_ATOM: OnceLock<Atom> = OnceLock::new();
-        __rq_scene_query_field_atoms!();
-
-        let node = &index.nodes[node_index];
-        let mut keys = Vec::with_capacity(fields.len().max(2));
-        let mut values = Vec::with_capacity(fields.len().max(2));
-
-        keys.push(cached_atom(env, &GUID_ATOM, "guid").encode(env));
-        values.push(node.guid.to_string().encode(env));
-        keys.push(cached_atom(env, &NODE_TYPE_ATOM, "node_type").encode(env));
-        values.push(node.node_type.encode(env));
-
-        __rq_scene_query_field_encoders!();
-
-        Term::map_from_term_arrays(env, &keys, &values)
     }
     pub fn build_scene_index_value(
         bytes: Binary<'_>,

@@ -10,6 +10,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
   rendering belongs in the neighboring codegen modules.
   """
 
+  alias Figler.Scene.Projection
   alias RustQ.Meta.AST, as: MetaAST
   alias RustQ.Type, as: R
 
@@ -17,6 +18,31 @@ defmodule Figler.Codegen.Native.SupportFunction do
   @type graph_focus_guid :: term()
   @type scene_size :: R.path(:SceneSize)
   @type scene_transform :: R.path(:SceneTransform)
+
+  @scene_query_atom_vars %{
+    name: :NAME_ATOM,
+    parent_guid: :PARENT_GUID_ATOM,
+    position: :POSITION_ATOM,
+    size: :SIZE_ATOM,
+    transform: :TRANSFORM_ATOM,
+    visible: :VISIBLE_ATOM,
+    locked: :LOCKED_ATOM,
+    opacity: :OPACITY_ATOM,
+    text: :TEXT_ATOM,
+    font_family: :FONT_FAMILY_ATOM,
+    font_style: :FONT_STYLE_ATOM,
+    font_postscript: :FONT_POSTSCRIPT_ATOM,
+    font_size: :FONT_SIZE_ATOM,
+    text_style_guid: :TEXT_STYLE_GUID_ATOM,
+    component_key: :COMPONENT_KEY_ATOM,
+    origin_component_key: :ORIGIN_COMPONENT_KEY_ATOM,
+    fill_style_guid: :FILL_STYLE_GUID_ATOM,
+    stroke_style_guid: :STROKE_STYLE_GUID_ATOM,
+    effect_style_guid: :EFFECT_STYLE_GUID_ATOM,
+    grid_style_guid: :GRID_STYLE_GUID_ATOM,
+    fill_count: :FILL_COUNT_ATOM,
+    stroke_count: :STROKE_COUNT_ATOM
+  }
 
   @doc """
   Returns graph-focus helper items authored with `defrust`.
@@ -41,7 +67,8 @@ defmodule Figler.Codegen.Native.SupportFunction do
       :read_scene_float64_value,
       :read_scene_size_value,
       :read_scene_transform_value,
-      :read_scene_font_name_value
+      :read_scene_font_name_value,
+      :scene_query_node_term
     ])
   end
 
@@ -95,6 +122,59 @@ defmodule Figler.Codegen.Native.SupportFunction do
     style = decoder.read_string_value()
     postscript = decoder.read_string_value()
     {:ok, {some(family), some(style), some(postscript)}}
+  end
+
+  defmacro push_optional_scene_query_fields do
+    fields = Projection.field_names() -- Projection.required_field_names()
+
+    {:__block__, [], Enum.map(fields, &push_optional_scene_query_field/1)}
+  end
+
+  @spec scene_query_node_term(
+          R.path(:Env, R.lifetime(:a)),
+          R.ref(R.raw(:SceneIndex)),
+          R.usize(),
+          R.slice(R.path(:String))
+        ) :: R.nif_result(term())
+  defrust scene_query_node_term(env, scene, node_index, fields) do
+    node = ref(index(scene.nodes, node_index))
+    keys = Vec.with_capacity(fields.len().max(2))
+    values = Vec.with_capacity(fields.len().max(2))
+
+    keys.push(cached_atom(env, ref(GUID_ATOM), "guid").encode(env))
+    values.push(node.guid.to_string().encode(env))
+    keys.push(cached_atom(env, ref(NODE_TYPE_ATOM), "node_type").encode(env))
+    values.push(node.node_type.encode(env))
+
+    push_optional_scene_query_fields()
+
+    Term.map_from_term_arrays(env, ref(keys), ref(values))
+  end
+
+  defp push_optional_scene_query_field(:parent_guid) do
+    quote do
+      if wants_field(fields, "parent_guid") do
+        keys.push(cached_atom(env, ref(PARENT_GUID_ATOM), "parent_guid").encode(env))
+        values.push(node.parent_guid.map(fn guid -> guid.to_string() end).encode(env))
+      end
+    end
+  end
+
+  defp push_optional_scene_query_field(field) do
+    field_name = Atom.to_string(field)
+    atom_name = Map.fetch!(@scene_query_atom_vars, field)
+
+    quote do
+      if wants_field(fields, unquote(field_name)) do
+        keys.push(
+          cached_atom(env, ref(unquote(Macro.var(atom_name, nil))), unquote(field_name)).encode(
+            env
+          )
+        )
+
+        values.push(node.unquote(field).encode(env))
+      end
+    end
   end
 
   @spec graph_focus_push_guid_ref(

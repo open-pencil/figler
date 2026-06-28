@@ -33,29 +33,6 @@ defmodule Figler.Codegen.Native.Scene.Attrs do
           }
   end
 
-  defmodule QueryValue do
-    @moduledoc """
-    Semantic description of how to encode a scene query result field value.
-    """
-
-    @enforce_keys [:kind]
-    defstruct [:kind, :field]
-
-    @type kind :: :encoded_node_field | :encoded_parent_guid_string
-    @type t :: %__MODULE__{kind: kind(), field: atom() | nil}
-  end
-
-  defmodule QueryField do
-    @moduledoc """
-    One optional field that can be encoded for scene query results.
-    """
-
-    @enforce_keys [:field, :atom_static, :value]
-    defstruct [:field, :atom_static, :value]
-
-    @type t :: %__MODULE__{field: atom(), atom_static: String.t(), value: QueryValue.t()}
-  end
-
   @spec xpath_lookup([atom()]) :: [RustQ.Rust.Fragment.t()]
   def xpath_lookup(fields \\ optional_field_names()) do
     fields
@@ -73,16 +50,7 @@ defmodule Figler.Codegen.Native.Scene.Attrs do
 
   @spec query_field_atoms([atom()]) :: [RustQ.Rust.Fragment.t()]
   def query_field_atoms(fields \\ query_field_names()) do
-    fields
-    |> Enum.map(&query_field/1)
-    |> Enum.map(&query_field_atom/1)
-  end
-
-  @spec query_field_encoders([atom()]) :: [RustQ.Rust.Fragment.t()]
-  def query_field_encoders(fields \\ query_field_names()) do
-    fields
-    |> Enum.map(&query_field/1)
-    |> Enum.map(&query_field_encoder/1)
+    Enum.map(fields, &AtomCache.static(query_field_atom_name(&1)))
   end
 
   defp optional_field_names do
@@ -125,46 +93,8 @@ defmodule Figler.Codegen.Native.Scene.Attrs do
     "format!(\"{},{},{},{},{},{}\", value.m00, value.m01, value.m02, value.m10, value.m11, value.m12)"
   end
 
-  defp query_field(:parent_guid) do
-    %QueryField{
-      field: :parent_guid,
-      atom_static: query_field_atom_name(:parent_guid),
-      value: %QueryValue{kind: :encoded_parent_guid_string}
-    }
-  end
-
-  defp query_field(field) do
-    name = field_name(field)
-
-    %QueryField{
-      field: field,
-      atom_static: query_field_atom_name(name),
-      value: %QueryValue{kind: :encoded_node_field, field: field}
-    }
-  end
-
-  defp query_field_atom(%QueryField{} = field), do: AtomCache.static(field.atom_static)
-
   defp query_field_atom_name(field),
     do: field |> to_string() |> String.upcase() |> Kernel.<>("_ATOM")
-
-  defp query_field_encoder(%QueryField{} = field) do
-    name = field_name(field.field)
-    literal_name = Rust.literal(name)
-
-    Rust.if_("wants_field(fields, #{literal_name})", [
-      Rust.call_stmt("keys", :push, [AtomCache.encoded(field.atom_static, name)]),
-      Rust.call_stmt("values", :push, [query_value_expr(field.value)])
-    ])
-  end
-
-  defp query_value_expr(%QueryValue{kind: :encoded_parent_guid_string}) do
-    "node.parent_guid.map(|guid| guid.to_string()).encode(env)"
-  end
-
-  defp query_value_expr(%QueryValue{kind: :encoded_node_field, field: field}) do
-    ["node.", Atom.to_string(field), ".encode(env)"]
-  end
 
   defp attr_lookup(accessor, attr, value_expr, opts) do
     lines = [return_attr_if_cursor(attr, value_expr)]
@@ -182,6 +112,4 @@ defmodule Figler.Codegen.Native.Scene.Attrs do
   defp attr_count(field, count) do
     Rust.if_("self.#{field}.is_some()", [Rust.stmt("count += #{count}")])
   end
-
-  defp field_name(field), do: Atom.to_string(field)
 end

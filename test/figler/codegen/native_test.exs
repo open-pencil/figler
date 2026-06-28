@@ -67,6 +67,16 @@ defmodule Figler.Codegen.NativeTest do
     assert helper_source =~ "fn graph_focus_extend_component_prop_value"
   end
 
+  test "scene query field encoding is authored as a support function" do
+    helper_source =
+      SupportFunction.scene_reader_items() |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
+
+    assert helper_source =~ "fn scene_query_node_term"
+    assert helper_source =~ "let node = &scene.nodes[node_index]"
+    assert helper_source =~ "if wants_field(fields, \"name\")"
+    assert helper_source =~ "Term::map_from_term_arrays(env, &keys, &values)"
+  end
+
   test "scene navigation NIF generation stays aligned with native stubs" do
     schema = Figler.schema()
     rendered = Native.render_splices(schema)

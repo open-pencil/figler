@@ -27023,6 +27023,30 @@ mod scene_xpath_runtime {
     }
     impl Resource for SceneIndexResource {}
     struct SceneDom;
+    static GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+    static NODE_TYPE_ATOM: OnceLock<Atom> = OnceLock::new();
+    static NAME_ATOM: OnceLock<Atom> = OnceLock::new();
+    static PARENT_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+    static POSITION_ATOM: OnceLock<Atom> = OnceLock::new();
+    static SIZE_ATOM: OnceLock<Atom> = OnceLock::new();
+    static TRANSFORM_ATOM: OnceLock<Atom> = OnceLock::new();
+    static VISIBLE_ATOM: OnceLock<Atom> = OnceLock::new();
+    static LOCKED_ATOM: OnceLock<Atom> = OnceLock::new();
+    static OPACITY_ATOM: OnceLock<Atom> = OnceLock::new();
+    static TEXT_ATOM: OnceLock<Atom> = OnceLock::new();
+    static FONT_FAMILY_ATOM: OnceLock<Atom> = OnceLock::new();
+    static FONT_STYLE_ATOM: OnceLock<Atom> = OnceLock::new();
+    static FONT_POSTSCRIPT_ATOM: OnceLock<Atom> = OnceLock::new();
+    static FONT_SIZE_ATOM: OnceLock<Atom> = OnceLock::new();
+    static TEXT_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+    static COMPONENT_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
+    static ORIGIN_COMPONENT_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
+    static FILL_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+    static STROKE_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+    static EFFECT_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+    static GRID_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
+    static FILL_COUNT_ATOM: OnceLock<Atom> = OnceLock::new();
+    static STROKE_COUNT_ATOM: OnceLock<Atom> = OnceLock::new();
     impl SceneNodeRecord {
         fn attr(&self, index: usize) -> Option<(&'static str, String)> {
             let mut cursor = 0;
@@ -27703,6 +27727,128 @@ mod scene_xpath_runtime {
         let postscript = decoder.read_string_value()?;
         Ok((Some(family), Some(style), Some(postscript)))
     }
+    fn scene_query_node_term<'a>(
+        env: Env<'a>,
+        scene: &SceneIndex,
+        node_index: usize,
+        fields: &[String],
+    ) -> NifResult<Term<'a>> {
+        let node = &scene.nodes[node_index];
+        let mut keys = Vec::with_capacity(fields.len().max(2));
+        let mut values = Vec::with_capacity(fields.len().max(2));
+        keys.push(cached_atom(env, &GUID_ATOM, "guid").encode(env));
+        values.push(node.guid.to_string().encode(env));
+        keys.push(cached_atom(env, &NODE_TYPE_ATOM, "node_type").encode(env));
+        values.push(node.node_type.encode(env));
+        if wants_field(fields, "name") {
+            keys.push(cached_atom(env, &NAME_ATOM, "name").encode(env));
+            values.push(node.name.encode(env));
+        }
+        if wants_field(fields, "parent_guid") {
+            keys.push(cached_atom(env, &PARENT_GUID_ATOM, "parent_guid").encode(env));
+            values.push(node.parent_guid.map(|guid| guid.to_string()).encode(env));
+        }
+        if wants_field(fields, "position") {
+            keys.push(cached_atom(env, &POSITION_ATOM, "position").encode(env));
+            values.push(node.position.encode(env));
+        }
+        if wants_field(fields, "size") {
+            keys.push(cached_atom(env, &SIZE_ATOM, "size").encode(env));
+            values.push(node.size.encode(env));
+        }
+        if wants_field(fields, "transform") {
+            keys.push(cached_atom(env, &TRANSFORM_ATOM, "transform").encode(env));
+            values.push(node.transform.encode(env));
+        }
+        if wants_field(fields, "visible") {
+            keys.push(cached_atom(env, &VISIBLE_ATOM, "visible").encode(env));
+            values.push(node.visible.encode(env));
+        }
+        if wants_field(fields, "locked") {
+            keys.push(cached_atom(env, &LOCKED_ATOM, "locked").encode(env));
+            values.push(node.locked.encode(env));
+        }
+        if wants_field(fields, "opacity") {
+            keys.push(cached_atom(env, &OPACITY_ATOM, "opacity").encode(env));
+            values.push(node.opacity.encode(env));
+        }
+        if wants_field(fields, "text") {
+            keys.push(cached_atom(env, &TEXT_ATOM, "text").encode(env));
+            values.push(node.text.encode(env));
+        }
+        if wants_field(fields, "font_family") {
+            keys.push(cached_atom(env, &FONT_FAMILY_ATOM, "font_family").encode(env));
+            values.push(node.font_family.encode(env));
+        }
+        if wants_field(fields, "font_style") {
+            keys.push(cached_atom(env, &FONT_STYLE_ATOM, "font_style").encode(env));
+            values.push(node.font_style.encode(env));
+        }
+        if wants_field(fields, "font_postscript") {
+            keys.push(
+                cached_atom(env, &FONT_POSTSCRIPT_ATOM, "font_postscript").encode(env),
+            );
+            values.push(node.font_postscript.encode(env));
+        }
+        if wants_field(fields, "font_size") {
+            keys.push(cached_atom(env, &FONT_SIZE_ATOM, "font_size").encode(env));
+            values.push(node.font_size.encode(env));
+        }
+        if wants_field(fields, "text_style_guid") {
+            keys.push(
+                cached_atom(env, &TEXT_STYLE_GUID_ATOM, "text_style_guid").encode(env),
+            );
+            values.push(node.text_style_guid.encode(env));
+        }
+        if wants_field(fields, "component_key") {
+            keys.push(
+                cached_atom(env, &COMPONENT_KEY_ATOM, "component_key").encode(env),
+            );
+            values.push(node.component_key.encode(env));
+        }
+        if wants_field(fields, "origin_component_key") {
+            keys.push(
+                cached_atom(env, &ORIGIN_COMPONENT_KEY_ATOM, "origin_component_key")
+                    .encode(env),
+            );
+            values.push(node.origin_component_key.encode(env));
+        }
+        if wants_field(fields, "fill_style_guid") {
+            keys.push(
+                cached_atom(env, &FILL_STYLE_GUID_ATOM, "fill_style_guid").encode(env),
+            );
+            values.push(node.fill_style_guid.encode(env));
+        }
+        if wants_field(fields, "stroke_style_guid") {
+            keys.push(
+                cached_atom(env, &STROKE_STYLE_GUID_ATOM, "stroke_style_guid")
+                    .encode(env),
+            );
+            values.push(node.stroke_style_guid.encode(env));
+        }
+        if wants_field(fields, "effect_style_guid") {
+            keys.push(
+                cached_atom(env, &EFFECT_STYLE_GUID_ATOM, "effect_style_guid")
+                    .encode(env),
+            );
+            values.push(node.effect_style_guid.encode(env));
+        }
+        if wants_field(fields, "grid_style_guid") {
+            keys.push(
+                cached_atom(env, &GRID_STYLE_GUID_ATOM, "grid_style_guid").encode(env),
+            );
+            values.push(node.grid_style_guid.encode(env));
+        }
+        if wants_field(fields, "fill_count") {
+            keys.push(cached_atom(env, &FILL_COUNT_ATOM, "fill_count").encode(env));
+            values.push(node.fill_count.encode(env));
+        }
+        if wants_field(fields, "stroke_count") {
+            keys.push(cached_atom(env, &STROKE_COUNT_ATOM, "stroke_count").encode(env));
+            values.push(node.stroke_count.encode(env));
+        }
+        Term::map_from_term_arrays(env, &keys, &values)
+    }
     fn read_scene_counted_array_value(
         decoder: &mut Decoder<'_>,
         mut skip_item: impl FnMut(&mut Decoder<'_>) -> NifResult<()>,
@@ -27850,152 +27996,6 @@ mod scene_xpath_runtime {
     }
     fn wants_field(fields: &[String], field: &str) -> bool {
         fields.iter().any(|selected| selected == field)
-    }
-    fn scene_query_node_term<'a>(
-        env: Env<'a>,
-        index: &SceneIndex,
-        node_index: usize,
-        fields: &[String],
-    ) -> NifResult<Term<'a>> {
-        static GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static NODE_TYPE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static NAME_ATOM: OnceLock<Atom> = OnceLock::new();
-        static PARENT_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static POSITION_ATOM: OnceLock<Atom> = OnceLock::new();
-        static SIZE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static TRANSFORM_ATOM: OnceLock<Atom> = OnceLock::new();
-        static VISIBLE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static LOCKED_ATOM: OnceLock<Atom> = OnceLock::new();
-        static OPACITY_ATOM: OnceLock<Atom> = OnceLock::new();
-        static TEXT_ATOM: OnceLock<Atom> = OnceLock::new();
-        static FONT_FAMILY_ATOM: OnceLock<Atom> = OnceLock::new();
-        static FONT_STYLE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static FONT_POSTSCRIPT_ATOM: OnceLock<Atom> = OnceLock::new();
-        static FONT_SIZE_ATOM: OnceLock<Atom> = OnceLock::new();
-        static TEXT_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static COMPONENT_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-        static ORIGIN_COMPONENT_KEY_ATOM: OnceLock<Atom> = OnceLock::new();
-        static FILL_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static STROKE_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static EFFECT_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static GRID_STYLE_GUID_ATOM: OnceLock<Atom> = OnceLock::new();
-        static FILL_COUNT_ATOM: OnceLock<Atom> = OnceLock::new();
-        static STROKE_COUNT_ATOM: OnceLock<Atom> = OnceLock::new();
-        let node = &index.nodes[node_index];
-        let mut keys = Vec::with_capacity(fields.len().max(2));
-        let mut values = Vec::with_capacity(fields.len().max(2));
-        keys.push(cached_atom(env, &GUID_ATOM, "guid").encode(env));
-        values.push(node.guid.to_string().encode(env));
-        keys.push(cached_atom(env, &NODE_TYPE_ATOM, "node_type").encode(env));
-        values.push(node.node_type.encode(env));
-        if wants_field(fields, "name") {
-            keys.push(cached_atom(env, &NAME_ATOM, "name").encode(env));
-            values.push(node.name.encode(env));
-        }
-        if wants_field(fields, "parent_guid") {
-            keys.push(cached_atom(env, &PARENT_GUID_ATOM, "parent_guid").encode(env));
-            values.push(node.parent_guid.map(|guid| guid.to_string()).encode(env));
-        }
-        if wants_field(fields, "position") {
-            keys.push(cached_atom(env, &POSITION_ATOM, "position").encode(env));
-            values.push(node.position.encode(env));
-        }
-        if wants_field(fields, "size") {
-            keys.push(cached_atom(env, &SIZE_ATOM, "size").encode(env));
-            values.push(node.size.encode(env));
-        }
-        if wants_field(fields, "transform") {
-            keys.push(cached_atom(env, &TRANSFORM_ATOM, "transform").encode(env));
-            values.push(node.transform.encode(env));
-        }
-        if wants_field(fields, "visible") {
-            keys.push(cached_atom(env, &VISIBLE_ATOM, "visible").encode(env));
-            values.push(node.visible.encode(env));
-        }
-        if wants_field(fields, "locked") {
-            keys.push(cached_atom(env, &LOCKED_ATOM, "locked").encode(env));
-            values.push(node.locked.encode(env));
-        }
-        if wants_field(fields, "opacity") {
-            keys.push(cached_atom(env, &OPACITY_ATOM, "opacity").encode(env));
-            values.push(node.opacity.encode(env));
-        }
-        if wants_field(fields, "text") {
-            keys.push(cached_atom(env, &TEXT_ATOM, "text").encode(env));
-            values.push(node.text.encode(env));
-        }
-        if wants_field(fields, "font_family") {
-            keys.push(cached_atom(env, &FONT_FAMILY_ATOM, "font_family").encode(env));
-            values.push(node.font_family.encode(env));
-        }
-        if wants_field(fields, "font_style") {
-            keys.push(cached_atom(env, &FONT_STYLE_ATOM, "font_style").encode(env));
-            values.push(node.font_style.encode(env));
-        }
-        if wants_field(fields, "font_postscript") {
-            keys.push(
-                cached_atom(env, &FONT_POSTSCRIPT_ATOM, "font_postscript").encode(env),
-            );
-            values.push(node.font_postscript.encode(env));
-        }
-        if wants_field(fields, "font_size") {
-            keys.push(cached_atom(env, &FONT_SIZE_ATOM, "font_size").encode(env));
-            values.push(node.font_size.encode(env));
-        }
-        if wants_field(fields, "text_style_guid") {
-            keys.push(
-                cached_atom(env, &TEXT_STYLE_GUID_ATOM, "text_style_guid").encode(env),
-            );
-            values.push(node.text_style_guid.encode(env));
-        }
-        if wants_field(fields, "component_key") {
-            keys.push(
-                cached_atom(env, &COMPONENT_KEY_ATOM, "component_key").encode(env),
-            );
-            values.push(node.component_key.encode(env));
-        }
-        if wants_field(fields, "origin_component_key") {
-            keys.push(
-                cached_atom(env, &ORIGIN_COMPONENT_KEY_ATOM, "origin_component_key")
-                    .encode(env),
-            );
-            values.push(node.origin_component_key.encode(env));
-        }
-        if wants_field(fields, "fill_style_guid") {
-            keys.push(
-                cached_atom(env, &FILL_STYLE_GUID_ATOM, "fill_style_guid").encode(env),
-            );
-            values.push(node.fill_style_guid.encode(env));
-        }
-        if wants_field(fields, "stroke_style_guid") {
-            keys.push(
-                cached_atom(env, &STROKE_STYLE_GUID_ATOM, "stroke_style_guid")
-                    .encode(env),
-            );
-            values.push(node.stroke_style_guid.encode(env));
-        }
-        if wants_field(fields, "effect_style_guid") {
-            keys.push(
-                cached_atom(env, &EFFECT_STYLE_GUID_ATOM, "effect_style_guid")
-                    .encode(env),
-            );
-            values.push(node.effect_style_guid.encode(env));
-        }
-        if wants_field(fields, "grid_style_guid") {
-            keys.push(
-                cached_atom(env, &GRID_STYLE_GUID_ATOM, "grid_style_guid").encode(env),
-            );
-            values.push(node.grid_style_guid.encode(env));
-        }
-        if wants_field(fields, "fill_count") {
-            keys.push(cached_atom(env, &FILL_COUNT_ATOM, "fill_count").encode(env));
-            values.push(node.fill_count.encode(env));
-        }
-        if wants_field(fields, "stroke_count") {
-            keys.push(cached_atom(env, &STROKE_COUNT_ATOM, "stroke_count").encode(env));
-            values.push(node.stroke_count.encode(env));
-        }
-        Term::map_from_term_arrays(env, &keys, &values)
     }
     pub fn build_scene_index_value(
         bytes: Binary<'_>,
