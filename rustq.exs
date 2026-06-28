@@ -16,12 +16,8 @@ unless Code.ensure_loaded?(Figler.Codegen.Native.AtomCache) do
   Code.require_file("codegen/figler/codegen/native/atom_cache.ex")
 end
 
-unless Code.ensure_loaded?(Figler.Codegen.Native.Fragment) do
-  Code.require_file("codegen/figler/codegen/native/fragment.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.Defrust) do
-  Code.require_file("codegen/figler/codegen/native/defrust.ex")
+unless Code.ensure_loaded?(Figler.Codegen.Native.SupportFunction) do
+  Code.require_file("codegen/figler/codegen/native/support_function.ex")
 end
 
 unless Code.ensure_loaded?(Figler.Codegen.Native.Focus.Decode) do

@@ -1,13 +1,13 @@
-defmodule Figler.Codegen.Native.Defrust do
+defmodule Figler.Codegen.Native.SupportFunction do
   use RustQ.Meta,
     rust_sources: ["native/src/runtime.rs"]
 
   @moduledoc """
-  Rust helper items authored with RustQ `defrust` for Figler native codegen.
+  Generated Rust support functions for Figler native codegen.
 
   These helpers become ordinary Rust functions in the generated native module.
-  Keep semantic Rusty-Elixir here; schema/template splice rendering belongs in
-  the neighboring codegen modules.
+  They are authored with semantic Rusty-Elixir/`defrust`; schema/template splice
+  rendering belongs in the neighboring codegen modules.
   """
 
   alias RustQ.Meta.AST, as: MetaAST

@@ -6,14 +6,14 @@ defmodule Figler.Codegen.Native.Scene do
   into the Rust fragments inserted into the scene NIF templates.
   """
 
-  alias Figler.Codegen.Native.Defrust
-  alias Figler.Codegen.Native.Fragment
+  alias Figler.Codegen.Native.SupportFunction
   alias Figler.Codegen.Native.Scene.Attrs
   alias Figler.Codegen.Native.Scene.Decode
   alias Figler.Codegen.Native.Scene.FieldSkip
   alias Figler.Codegen.Native.Scene.Record
   alias KiwiCodec.RustlerGenerator.Skip
   alias Figler.Scene.Projection
+  alias RustQ.Rust
 
   def render(definition_map) do
     [
@@ -51,7 +51,7 @@ defmodule Figler.Codegen.Native.Scene do
       scene_attr_count: Attrs.xpath_count(),
       scene_query_field_atoms: Attrs.query_field_atoms(),
       scene_query_field_encoders: Attrs.query_field_encoders(),
-      scene_reader_helpers: Defrust.scene_reader_items(),
+      scene_reader_helpers: SupportFunction.scene_reader_items(),
       scene_navigation_nifs: scene_navigation_nifs()
     ]
   end
@@ -66,7 +66,7 @@ defmodule Figler.Codegen.Native.Scene do
   defp scene_optional_fields, do: Enum.map(Record.optional_fields(), & &1.name)
 
   defp scene_decode_locals do
-    Enum.map(scene_optional_fields(), &Fragment.let_none/1)
+    Enum.map(scene_optional_fields(), &Rust.let_mut(to_string(&1), "None"))
   end
 
   defp scene_decode_arms(definition_map) do

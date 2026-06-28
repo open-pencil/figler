@@ -4,7 +4,7 @@ defmodule Figler.Codegen.Native do
   generic Kiwi Rustler decoder source.
   """
 
-  alias Figler.Codegen.Native.Defrust
+  alias Figler.Codegen.Native.SupportFunction
   alias Figler.Codegen.Native.Focus
   alias Figler.Codegen.Native.Scene
   alias KiwiCodec.RustlerGenerator.Skip
@@ -15,7 +15,7 @@ defmodule Figler.Codegen.Native do
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
     [
-      graph_focus_helpers: Defrust.focus_helper_items(),
+      graph_focus_helpers: SupportFunction.focus_helper_items(),
       node_type_name_arms: node_type_name_arms(definition_map),
       graph_focus_decoders:
         Focus.render(definition_map, &Skip.message_arm/2, &Scene.render_template/2)

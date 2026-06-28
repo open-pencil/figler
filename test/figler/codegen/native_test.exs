@@ -2,9 +2,9 @@ defmodule Figler.Codegen.NativeTest do
   use ExUnit.Case, async: true
 
   alias Figler.Codegen.Native
-  alias Figler.Codegen.Native.Defrust
   alias Figler.Codegen.Native.Focus
   alias Figler.Codegen.Native.Scene
+  alias Figler.Codegen.Native.SupportFunction
   alias KiwiCodec.RustlerGenerator.{Skip, Sparse}
 
   test "root generator exposes expected splice groups" do
@@ -50,7 +50,9 @@ defmodule Figler.Codegen.NativeTest do
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
     focus_source = Focus.render(definition_map, &Skip.message_arm/2, &Scene.render_template/2)
-    helper_source = Defrust.focus_helper_items() |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
+
+    helper_source =
+      SupportFunction.focus_helper_items() |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
 
     assert focus_source =~ "graph_focus_read_symbol_data(decoder)?"
     assert focus_source =~ "graph_focus_extend_symbol_refs(data, &mut refs)?"
