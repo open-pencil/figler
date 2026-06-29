@@ -29085,7 +29085,7 @@ pub fn query_scene_index_fields<'a>(
     scene_xpath_runtime::query_scene_index_fields_value(env, resource, xpath, fields)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_node<'a>(
+fn scene_index_node<'a>(
     env: Env<'a>,
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     guid: String,
@@ -29093,7 +29093,7 @@ pub fn scene_index_node<'a>(
     scene_xpath_runtime::scene_index_node_value(env, resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_parent<'a>(
+fn scene_index_parent<'a>(
     env: Env<'a>,
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     guid: String,
@@ -29101,118 +29101,123 @@ pub fn scene_index_parent<'a>(
     scene_xpath_runtime::scene_index_parent_value(env, resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_roots(
+fn scene_index_roots(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_roots_value(resource)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_children(
+fn scene_index_children(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     guid: String,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_children_value(resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_siblings(
+fn scene_index_siblings(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     guid: String,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_siblings_value(resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_by_type(
+fn scene_index_by_type(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-    guid: String,
+    node_type: String,
 ) -> Vec<SceneQueryNode> {
-    scene_xpath_runtime::scene_index_by_type_value(resource, guid)
+    scene_xpath_runtime::scene_index_by_type_value(resource, node_type)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_named(
+fn scene_index_named(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-    guid: String,
+    name: String,
 ) -> Vec<SceneQueryNode> {
-    scene_xpath_runtime::scene_index_named_value(resource, guid)
+    scene_xpath_runtime::scene_index_named_value(resource, name)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_name_contains(
+fn scene_index_name_contains(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-    guid: String,
+    needle: String,
 ) -> Vec<SceneQueryNode> {
-    scene_xpath_runtime::scene_index_name_contains_value(resource, guid)
+    scene_xpath_runtime::scene_index_name_contains_value(resource, needle)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_text_contains(
+fn scene_index_text_contains(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-    guid: String,
+    needle: String,
 ) -> Vec<SceneQueryNode> {
-    scene_xpath_runtime::scene_index_text_contains_value(resource, guid)
+    scene_xpath_runtime::scene_index_text_contains_value(resource, needle)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_ancestors(
+fn scene_index_ancestors(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     guid: String,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_ancestors_value(resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_descendants(
+fn scene_index_descendants(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     guid: String,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_descendants_value(resource, guid)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_by_type_fields<'a>(
+fn scene_index_by_type_fields<'a>(
     env: Env<'a>,
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-    value: String,
+    node_type: String,
     fields: Vec<String>,
 ) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::scene_index_by_type_fields_value(env, resource, value, fields)
+    scene_xpath_runtime::scene_index_by_type_fields_value(
+        env,
+        resource,
+        node_type,
+        fields,
+    )
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_name_contains_fields<'a>(
+fn scene_index_name_contains_fields<'a>(
     env: Env<'a>,
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-    value: String,
+    needle: String,
     fields: Vec<String>,
 ) -> NifResult<Term<'a>> {
     scene_xpath_runtime::scene_index_name_contains_fields_value(
         env,
         resource,
-        value,
+        needle,
         fields,
     )
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_text_contains_fields<'a>(
+fn scene_index_text_contains_fields<'a>(
     env: Env<'a>,
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
-    value: String,
+    needle: String,
     fields: Vec<String>,
 ) -> NifResult<Term<'a>> {
     scene_xpath_runtime::scene_index_text_contains_fields_value(
         env,
         resource,
-        value,
+        needle,
         fields,
     )
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_components(
+fn scene_index_components(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_components_value(resource)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_with_fills(
+fn scene_index_with_fills(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_with_fills_value(resource)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn scene_index_with_strokes(
+fn scene_index_with_strokes(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
 ) -> Vec<SceneQueryNode> {
     scene_xpath_runtime::scene_index_with_strokes_value(resource)

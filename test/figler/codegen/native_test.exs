@@ -80,15 +80,26 @@ defmodule Figler.Codegen.NativeTest do
     assert helper_source =~ "Term::map_from_term_arrays(env, &keys, &values)"
   end
 
-  test "scene navigation NIF generation stays aligned with native stubs" do
+  test "scene navigation NIF wrappers are authored as support functions" do
     schema = Figler.schema()
     rendered = Native.render_splices(schema)
 
-    navigation_source = rendered[:scene_navigation_nifs] |> List.flatten() |> Enum.join("\n")
+    navigation_source =
+      rendered[:scene_navigation_nifs]
+      |> List.flatten()
+      |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
+
     nifs_source = File.read!("native/src/templates/scene_nifs.rs")
 
-    assert navigation_source =~ "pub fn scene_index_node"
-    assert navigation_source =~ "pub fn scene_index_text_contains_fields"
+    assert navigation_source =~ ~s|#[rustler::nif(schedule = "DirtyCpu")]|
+    assert navigation_source =~ "fn scene_index_node"
+    assert navigation_source =~ "scene_xpath_runtime::scene_index_node_value(env, resource, guid)"
+    assert navigation_source =~ "fn scene_index_text_contains_fields"
+
+    assert navigation_source =~ "scene_xpath_runtime::scene_index_text_contains_fields_value("
+    assert navigation_source =~ "needle,"
+    assert navigation_source =~ "fields,"
+
     assert nifs_source =~ "__rq_scene_navigation_nifs!();"
   end
 end

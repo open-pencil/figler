@@ -17,8 +17,11 @@ defmodule Figler.Codegen.Native.SupportFunction do
   alias RustQ.Meta.AST, as: MetaAST
   alias RustQ.Type, as: R
 
+  defrustmod(SceneXpathRuntime, as: :scene_xpath_runtime)
+
   @type decoder :: R.mut_ref(R.path(:Decoder, R.lifetime(:_)))
   @type graph_focus_guid :: term()
+  @type scene_query_node :: R.path(:SceneQueryNode)
   @type scene_size :: R.path(:SceneSize)
   @type scene_transform :: R.path(:SceneTransform)
 
@@ -75,6 +78,32 @@ defmodule Figler.Codegen.Native.SupportFunction do
       :scene_node_record_attr,
       :scene_node_record_attr_count,
       :scene_query_node_term
+    ])
+  end
+
+  @doc """
+  Returns root-level scene navigation NIF wrappers authored with `defrust`.
+  """
+  @spec scene_navigation_nif_items() :: [RustQ.Rust.Fragment.t()]
+  def scene_navigation_nif_items do
+    MetaAST.items(__MODULE__, [
+      :scene_index_node,
+      :scene_index_parent,
+      :scene_index_roots,
+      :scene_index_children,
+      :scene_index_siblings,
+      :scene_index_by_type,
+      :scene_index_named,
+      :scene_index_name_contains,
+      :scene_index_text_contains,
+      :scene_index_ancestors,
+      :scene_index_descendants,
+      :scene_index_by_type_fields,
+      :scene_index_name_contains_fields,
+      :scene_index_text_contains_fields,
+      :scene_index_components,
+      :scene_index_with_fills,
+      :scene_index_with_strokes
     ])
   end
 
@@ -203,6 +232,159 @@ defmodule Figler.Codegen.Native.SupportFunction do
     push_optional_scene_query_fields()
 
     Term.map_from_term_arrays(env, ref(keys), ref(values))
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_node(
+          R.path(:Env, R.lifetime(:a)),
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.nif_result(term())
+  defrust scene_index_node(env, resource, guid) do
+    SceneXpathRuntime.scene_index_node_value(env, resource, guid)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_parent(
+          R.path(:Env, R.lifetime(:a)),
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.nif_result(term())
+  defrust scene_index_parent(env, resource, guid) do
+    SceneXpathRuntime.scene_index_parent_value(env, resource, guid)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_roots(Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t())) ::
+          R.vec(scene_query_node())
+  defrust scene_index_roots(resource) do
+    SceneXpathRuntime.scene_index_roots_value(resource)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_children(
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.vec(scene_query_node())
+  defrust scene_index_children(resource, guid) do
+    SceneXpathRuntime.scene_index_children_value(resource, guid)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_siblings(
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.vec(scene_query_node())
+  defrust scene_index_siblings(resource, guid) do
+    SceneXpathRuntime.scene_index_siblings_value(resource, guid)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_by_type(
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.vec(scene_query_node())
+  defrust scene_index_by_type(resource, node_type) do
+    SceneXpathRuntime.scene_index_by_type_value(resource, node_type)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_named(
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.vec(scene_query_node())
+  defrust scene_index_named(resource, name) do
+    SceneXpathRuntime.scene_index_named_value(resource, name)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_name_contains(
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.vec(scene_query_node())
+  defrust scene_index_name_contains(resource, needle) do
+    SceneXpathRuntime.scene_index_name_contains_value(resource, needle)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_text_contains(
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.vec(scene_query_node())
+  defrust scene_index_text_contains(resource, needle) do
+    SceneXpathRuntime.scene_index_text_contains_value(resource, needle)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_ancestors(
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.vec(scene_query_node())
+  defrust scene_index_ancestors(resource, guid) do
+    SceneXpathRuntime.scene_index_ancestors_value(resource, guid)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_descendants(
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String)
+        ) :: R.vec(scene_query_node())
+  defrust scene_index_descendants(resource, guid) do
+    SceneXpathRuntime.scene_index_descendants_value(resource, guid)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_by_type_fields(
+          R.path(:Env, R.lifetime(:a)),
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String),
+          R.vec(R.path(:String))
+        ) :: R.nif_result(term())
+  defrust scene_index_by_type_fields(env, resource, node_type, fields) do
+    SceneXpathRuntime.scene_index_by_type_fields_value(env, resource, node_type, fields)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_name_contains_fields(
+          R.path(:Env, R.lifetime(:a)),
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String),
+          R.vec(R.path(:String))
+        ) :: R.nif_result(term())
+  defrust scene_index_name_contains_fields(env, resource, needle, fields) do
+    SceneXpathRuntime.scene_index_name_contains_fields_value(env, resource, needle, fields)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_text_contains_fields(
+          R.path(:Env, R.lifetime(:a)),
+          Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t()),
+          R.path(:String),
+          R.vec(R.path(:String))
+        ) :: R.nif_result(term())
+  defrust scene_index_text_contains_fields(env, resource, needle, fields) do
+    SceneXpathRuntime.scene_index_text_contains_fields_value(env, resource, needle, fields)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_components(Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t())) ::
+          R.vec(scene_query_node())
+  defrust scene_index_components(resource) do
+    SceneXpathRuntime.scene_index_components_value(resource)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_with_fills(Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t())) ::
+          R.vec(scene_query_node())
+  defrust scene_index_with_fills(resource) do
+    SceneXpathRuntime.scene_index_with_fills_value(resource)
+  end
+
+  @nif schedule: "DirtyCpu"
+  @spec scene_index_with_strokes(Rustler.ResourceArc.t(SceneXpathRuntime.SceneIndexResource.t())) ::
+          R.vec(scene_query_node())
+  defrust scene_index_with_strokes(resource) do
+    SceneXpathRuntime.scene_index_with_strokes_value(resource)
   end
 
   defp optional_field_names do
