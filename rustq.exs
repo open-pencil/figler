@@ -32,6 +32,10 @@ unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.FieldSkip) do
   Code.require_file("codegen/figler/codegen/native/scene/field_skip.ex")
 end
 
+unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.SkipFieldHelpers) do
+  Code.require_file("codegen/figler/codegen/native/scene/skip_field_helpers.ex")
+end
+
 unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.Decode) do
   Code.require_file("codegen/figler/codegen/native/scene/decode.ex")
 end

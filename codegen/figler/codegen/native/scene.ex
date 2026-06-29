@@ -11,12 +11,14 @@ defmodule Figler.Codegen.Native.Scene do
   alias Figler.Codegen.Native.Scene.Decode
   alias Figler.Codegen.Native.Scene.FieldSkip
   alias Figler.Codegen.Native.Scene.Record
+  alias Figler.Codegen.Native.Scene.SkipFieldHelpers
   alias KiwiCodec.RustlerGenerator.Skip
   alias Figler.Scene.Projection
   alias RustQ.Rust
 
   def render(definition_map) do
     [
+      scene_skip_field_helpers: SkipFieldHelpers.fragments(),
       scene_message_skip_field_decoder:
         FieldSkip.decoder(definition_map, %FieldSkip.Decoder{
           definition: "Message",

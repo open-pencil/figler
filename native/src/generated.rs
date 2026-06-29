@@ -12748,412 +12748,442 @@ mod scene_xpath_runtime {
         })
     }
 }
+#[derive(Clone, Debug)]
+pub struct FigSceneSkipField {
+    pub id: u32,
+    pub repeated: bool,
+    pub bytes: bool,
+    pub skip: KiwiSkipFn,
+}
 macro_rules! fig_scene_skip_field_decoder {
     (
-        fn $name:ident; decoder $decoder:ident; definition $definition_name:literal;
-        fields[$($field_id:literal => $field_repeated:literal $field_bytes:literal
-        $field_skip:ident;)*]
+        fn $name:ident; decoder $decoder:ident; field $field:ident; definition
+        $definition_name:literal; skip_fields[$($field_id:literal =>
+        $field_repeated:literal $field_bytes:literal $field_skip:ident;)*]
     ) => {
-        fn $name ($decoder : & mut Decoder <'_ >, field : u32) -> NifResult < () > {
-        match field { $($field_id => kiwi_skip_kind($decoder, &
-        kiwi_skip_descriptor_kind($field_repeated, $field_bytes, $field_skip)) ?,)* field
-        => { return
-        Err(Error::Term(Box::new(format!("unknown field {} while decoding {}", field,
-        $definition_name)))); } } Ok(()) }
+        fn $name ($decoder : & mut Decoder <'_ >, $field : u32) -> NifResult < () > {
+        fig_scene_skip_field($decoder, $field, $definition_name, & [$(FigSceneSkipField {
+        id : $field_id, repeated : $field_repeated, bytes : $field_bytes, skip :
+        $field_skip },)*],) }
     };
 }
+fn fig_scene_skip_field(
+    decoder: &mut Decoder<'_>,
+    field_id: u32,
+    _definition_name: &str,
+    fields: &[FigSceneSkipField],
+) -> NifResult<()> {
+    match fields.binary_search_by_key(&field_id, |field| field.id) {
+        Ok(index) => {
+            let field = fields.get(index).unwrap();
+            let kind = kiwi_skip_descriptor_kind(
+                field.repeated,
+                field.bytes,
+                field.skip,
+            );
+            kiwi_skip_kind(decoder, &kind)?;
+            Ok(())
+        }
+        Err(_index) => Err(rustler::Error::BadArg),
+    }
+}
 fig_scene_skip_field_decoder! {
-    fn skip_fig_message_field; decoder decoder; definition "scene summary"; fields[1 =>
-    false false kiwi_skip_uint_value; 2 => false false kiwi_skip_uint_value; 42 => false
-    false kiwi_skip_string_value; 3 => false false kiwi_skip_uint_value; 37 => false
-    false kiwi_skip_bool_value; 4 => true false skip_node_change_from_decoder; 5 => true
-    false skip_user_change_from_decoder; 32 => false false
-    skip_interactive_slide_element_change_from_decoder; 36 => false false
-    skip_node_status_change_from_decoder; 44 => false false
-    skip_buzz_approval_change_from_decoder; 6 => true false skip_blob_from_decoder; 30 =>
-    false false kiwi_skip_uint_value; 7 => false false kiwi_skip_string_value; 8 => false
-    false kiwi_skip_uint_value; 9 => false false kiwi_skip_string_value; 10 => false
-    false kiwi_skip_uint_value; 11 => false false kiwi_skip_uint_value; 12 => false false
-    kiwi_skip_int_value; 13 => false false skip_vector_from_decoder; 14 => false false
-    kiwi_skip_string_value; 15 => false false kiwi_skip_string_value; 16 => true false
-    skip_scene_graph_query_from_decoder; 17 => false false
+    fn skip_fig_message_field; decoder decoder; field field; definition "scene summary";
+    skip_fields[1 => false false kiwi_skip_uint_value; 2 => false false
+    kiwi_skip_uint_value; 3 => false false kiwi_skip_uint_value; 4 => true false
+    skip_node_change_from_decoder; 5 => true false skip_user_change_from_decoder; 6 =>
+    true false skip_blob_from_decoder; 7 => false false kiwi_skip_string_value; 8 =>
+    false false kiwi_skip_uint_value; 9 => false false kiwi_skip_string_value; 10 =>
+    false false kiwi_skip_uint_value; 11 => false false kiwi_skip_uint_value; 12 => false
+    false kiwi_skip_int_value; 13 => false false skip_vector_from_decoder; 14 => false
+    false kiwi_skip_string_value; 15 => false false kiwi_skip_string_value; 16 => true
+    false skip_scene_graph_query_from_decoder; 17 => false false
     skip_node_changes_metadata_from_decoder; 18 => false false kiwi_skip_uint_value; 19
     => false false kiwi_skip_bool_value; 20 => false false skip_guid_from_decoder; 21 =>
     false false kiwi_skip_bool_value; 22 => true false skip_message_from_decoder; 23 =>
     true false skip_message_from_decoder; 24 => true false
     skip_client_broadcast_from_decoder; 25 => false false kiwi_skip_uint_value; 26 =>
     false false kiwi_skip_string_value; 27 => false false kiwi_skip_uint_value; 28 =>
-    false false kiwi_skip_string_value; 29 => true false skip_guid_from_decoder; 31 =>
-    false false kiwi_skip_bool_value; 33 => true false
+    false false kiwi_skip_string_value; 29 => true false skip_guid_from_decoder; 30 =>
+    false false kiwi_skip_uint_value; 31 => false false kiwi_skip_bool_value; 32 => false
+    false skip_interactive_slide_element_change_from_decoder; 33 => true false
     skip_clipboard_selection_region_from_decoder; 34 => false false
-    skip_encoded_offsets_index_from_decoder; 35 => false false kiwi_skip_bool_value; 38
-    => false false kiwi_skip_uint64_value; 39 => true false
+    skip_encoded_offsets_index_from_decoder; 35 => false false kiwi_skip_bool_value; 36
+    => false false skip_node_status_change_from_decoder; 37 => false false
+    kiwi_skip_bool_value; 38 => false false kiwi_skip_uint64_value; 39 => true false
     skip_annotation_category_from_decoder; 40 => false false
     skip_client_rendered_metadata_from_decoder; 41 => false false kiwi_skip_uint_value;
-    43 => false false skip_object_animation_list_from_decoder; 45 => false false
-    kiwi_skip_uint_value;]
+    42 => false false kiwi_skip_string_value; 43 => false false
+    skip_object_animation_list_from_decoder; 44 => false false
+    skip_buzz_approval_change_from_decoder; 45 => false false kiwi_skip_uint_value;]
 }
 fig_scene_skip_field_decoder! {
-    fn skip_fig_node_change_field; decoder decoder; definition "scene node"; fields[1 =>
-    false false skip_guid_from_decoder; 53 => false false kiwi_skip_uint_value; 2 =>
-    false false kiwi_skip_uint_value; 54 => false false kiwi_skip_uint_value; 3 => false
-    false skip_parent_index_from_decoder; 55 => false false kiwi_skip_uint_value; 4 =>
-    false false kiwi_skip_uint_value; 56 => false false kiwi_skip_uint_value; 5 => false
-    false kiwi_skip_string_value; 57 => false false kiwi_skip_uint_value; 174 => false
-    false kiwi_skip_bool_value; 318 => false false kiwi_skip_string_value; 256 => false
-    false skip_library_move_info_from_decoder; 281 => true false
-    skip_library_move_history_item_from_decoder; 319 => false false
-    kiwi_skip_string_value; 383 => false false skip_asset_id_map_from_decoder; 49 =>
-    false false kiwi_skip_uint_value; 101 => false false kiwi_skip_uint_value; 157 =>
-    false false kiwi_skip_bool_value; 161 => false false kiwi_skip_bool_value; 376 =>
-    false false kiwi_skip_bool_value; 163 => false false kiwi_skip_uint_value; 191 =>
-    false false kiwi_skip_string_value; 171 => false false kiwi_skip_string_value; 399 =>
-    false false kiwi_skip_string_value; 320 => false false kiwi_skip_string_value; 345 =>
-    false false skip_shared_style_master_data_from_decoder; 348 => false false
-    skip_shared_style_master_data_from_decoder; 176 => false false kiwi_skip_bool_value;
-    177 => false false kiwi_skip_bool_value; 172 => false false
-    skip_shared_style_master_data_from_decoder; 173 => false false
-    skip_shared_style_reference_from_decoder; 158 => false false skip_guid_from_decoder;
-    162 => false false skip_guid_from_decoder; 167 => false false skip_guid_from_decoder;
-    168 => false false skip_guid_from_decoder; 169 => false false skip_guid_from_decoder;
-    170 => false false skip_guid_from_decoder; 185 => false false skip_guid_from_decoder;
-    332 => false false skip_style_id_from_decoder; 333 => false false
-    skip_style_id_from_decoder; 334 => false false skip_style_id_from_decoder; 335 =>
-    false false skip_style_id_from_decoder; 336 => false false
-    skip_style_id_from_decoder; 580 => true false skip_style_animation_from_decoder; 193
-    => true false skip_paint_from_decoder; 194 => false false skip_guid_from_decoder; 225
-    => false false kiwi_skip_bool_value; 238 => true false
-    skip_state_group_property_value_order_from_decoder; 581 => false false
-    skip_partial_paste_annotation_from_decoder; 122 => false false
+    fn skip_fig_node_change_field; decoder decoder; field field; definition "scene node";
+    skip_fields[1 => false false skip_guid_from_decoder; 2 => false false
+    kiwi_skip_uint_value; 3 => false false skip_parent_index_from_decoder; 4 => false
+    false kiwi_skip_uint_value; 5 => false false kiwi_skip_string_value; 6 => false false
+    kiwi_skip_bool_value; 7 => false false kiwi_skip_bool_value; 8 => false false
+    kiwi_skip_float_value; 9 => false false kiwi_skip_uint_value; 10 => false false
+    kiwi_skip_uint_value; 11 => false false skip_vector_from_decoder; 12 => false false
+    skip_matrix_from_decoder; 13 => true false kiwi_skip_float_value; 14 => false false
+    kiwi_skip_bool_value; 15 => false false kiwi_skip_bool_value; 16 => false false
+    kiwi_skip_bool_value; 17 => false false kiwi_skip_bool_value; 18 => false false
+    kiwi_skip_bool_value; 19 => false false kiwi_skip_float_value; 20 => false false
+    kiwi_skip_float_value; 21 => false false kiwi_skip_float_value; 22 => false false
+    kiwi_skip_float_value; 23 => false false kiwi_skip_float_value; 24 => false false
+    kiwi_skip_float_value; 25 => false false kiwi_skip_float_value; 26 => false false
+    kiwi_skip_float_value; 27 => false false kiwi_skip_float_value; 28 => false false
+    kiwi_skip_uint_value; 29 => false false kiwi_skip_uint_value; 30 => false false
+    kiwi_skip_uint_value; 31 => false false kiwi_skip_uint_value; 32 => false false
+    kiwi_skip_uint_value; 33 => false false kiwi_skip_uint_value; 34 => false false
+    kiwi_skip_uint_value; 35 => false false kiwi_skip_uint_value; 36 => false false
+    kiwi_skip_uint_value; 37 => false false kiwi_skip_uint_value; 38 => true false
+    skip_paint_from_decoder; 39 => true false skip_paint_from_decoder; 40 => false false
+    skip_number_from_decoder; 41 => false false skip_font_name_from_decoder; 42 => false
+    false skip_text_data_from_decoder; 43 => true false skip_effect_from_decoder; 44 =>
+    false false kiwi_skip_uint_value; 45 => true false skip_export_settings_from_decoder;
+    46 => false false kiwi_skip_uint_value; 47 => true false
+    skip_layout_grid_from_decoder; 48 => false false skip_vector_data_from_decoder; 49 =>
+    false false kiwi_skip_uint_value; 50 => false false skip_color_from_decoder; 51 =>
+    true false skip_path_from_decoder; 52 => true false skip_path_from_decoder; 53 =>
+    false false kiwi_skip_uint_value; 54 => false false kiwi_skip_uint_value; 55 => false
+    false kiwi_skip_uint_value; 56 => false false kiwi_skip_uint_value; 57 => false false
+    kiwi_skip_uint_value; 58 => false false kiwi_skip_uint_value; 59 => false false
+    kiwi_skip_uint_value; 60 => false false kiwi_skip_uint_value; 61 => false false
+    kiwi_skip_uint_value; 62 => false false kiwi_skip_uint_value; 63 => false false
+    kiwi_skip_uint_value; 64 => false false kiwi_skip_uint_value; 65 => false false
+    kiwi_skip_uint_value; 66 => false false kiwi_skip_uint_value; 67 => false false
+    kiwi_skip_uint_value; 68 => false false kiwi_skip_uint_value; 69 => false false
+    kiwi_skip_uint_value; 70 => false false kiwi_skip_uint_value; 71 => false false
+    kiwi_skip_uint_value; 72 => false false kiwi_skip_uint_value; 73 => false false
+    kiwi_skip_uint_value; 74 => false false kiwi_skip_uint_value; 75 => false false
+    kiwi_skip_uint_value; 76 => false false kiwi_skip_uint_value; 77 => false false
+    kiwi_skip_uint_value; 78 => false false kiwi_skip_uint_value; 79 => false false
+    kiwi_skip_uint_value; 80 => false false kiwi_skip_uint_value; 81 => false false
+    kiwi_skip_uint_value; 82 => false false kiwi_skip_uint_value; 83 => false false
+    kiwi_skip_uint_value; 84 => false false kiwi_skip_uint_value; 85 => false false
+    kiwi_skip_uint_value; 86 => false false kiwi_skip_uint_value; 87 => false false
+    kiwi_skip_uint_value; 88 => false false kiwi_skip_uint_value; 89 => false false
+    kiwi_skip_uint_value; 90 => false false kiwi_skip_uint_value; 91 => false false
+    kiwi_skip_uint_value; 92 => false false kiwi_skip_uint_value; 93 => false false
+    kiwi_skip_uint_value; 94 => false false kiwi_skip_uint_value; 95 => false false
+    kiwi_skip_uint_value; 96 => false false kiwi_skip_uint_value; 97 => false false
+    kiwi_skip_uint_value; 98 => false false kiwi_skip_uint_value; 99 => false false
+    kiwi_skip_uint_value; 100 => false false kiwi_skip_uint_value; 101 => false false
+    kiwi_skip_uint_value; 102 => false false kiwi_skip_uint_value; 103 => false false
+    kiwi_skip_uint_value; 104 => false false kiwi_skip_uint_value; 105 => false false
+    kiwi_skip_uint_value; 106 => false false kiwi_skip_uint_value; 107 => false false
+    kiwi_skip_float_value; 108 => false false kiwi_skip_uint_value; 109 => false false
+    kiwi_skip_float_value; 110 => false false kiwi_skip_uint_value; 111 => false false
+    skip_guid_path_from_decoder; 112 => false false kiwi_skip_uint_value; 113 => false
+    false skip_symbol_data_from_decoder; 114 => false false kiwi_skip_uint_value; 115 =>
+    false false kiwi_skip_bool_value; 116 => false false kiwi_skip_uint_value; 117 =>
+    false false kiwi_skip_bool_value; 118 => false false kiwi_skip_uint_value; 119 =>
+    false false kiwi_skip_bool_value; 120 => false false kiwi_skip_uint_value; 121 =>
+    false false kiwi_skip_uint_value; 122 => false false
     skip_shared_symbol_reference_from_decoder; 123 => false false kiwi_skip_bool_value;
-    124 => true false skip_guid_path_mapping_from_decoder; 126 => false false
-    kiwi_skip_string_value; 152 => false false
-    skip_shared_component_master_data_from_decoder; 144 => false false
-    kiwi_skip_string_value; 164 => true false skip_guid_path_mapping_from_decoder; 228 =>
-    true false skip_guid_path_mapping_from_decoder; 214 => false false
-    kiwi_skip_string_value; 395 => false false kiwi_skip_string_value; 215 => false false
-    skip_guid_from_decoder; 216 => false false kiwi_skip_string_value; 217 => false false
-    kiwi_skip_bool_value; 218 => false false kiwi_skip_string_value; 252 => false false
-    kiwi_skip_string_value; 266 => true false skip_component_prop_def_from_decoder; 267
-    => true false skip_component_prop_ref_from_decoder; 483 => true false
-    skip_variant_prop_spec_from_decoder; 113 => false false
-    skip_symbol_data_from_decoder; 114 => false false kiwi_skip_uint_value; 125 => true
-    false skip_node_change_from_decoder; 394 => false false kiwi_skip_bool_value; 143 =>
-    false false skip_guid_from_decoder; 268 => true false
-    skip_component_prop_assignment_from_decoder; 305 => false false kiwi_skip_bool_value;
-    248 => true false skip_instance_override_stash_from_decoder; 250 => true false
-    skip_instance_override_stash_v2_from_decoder; 111 => false false
-    skip_guid_path_from_decoder; 112 => false false kiwi_skip_uint_value; 321 => false
-    false kiwi_skip_int_value; 382 => false false kiwi_skip_uint_value; 463 => false
-    false kiwi_skip_bool_value; 495 => false false kiwi_skip_bool_value; 21 => false
-    false kiwi_skip_float_value; 73 => false false kiwi_skip_uint_value; 22 => false
-    false kiwi_skip_float_value; 74 => false false kiwi_skip_uint_value; 23 => false
-    false kiwi_skip_float_value; 75 => false false kiwi_skip_uint_value; 32 => false
-    false kiwi_skip_uint_value; 84 => false false kiwi_skip_uint_value; 33 => false false
-    kiwi_skip_uint_value; 85 => false false kiwi_skip_uint_value; 34 => false false
-    kiwi_skip_uint_value; 86 => false false kiwi_skip_uint_value; 35 => false false
-    kiwi_skip_uint_value; 87 => false false kiwi_skip_uint_value; 40 => false false
-    skip_number_from_decoder; 92 => false false kiwi_skip_uint_value; 41 => false false
-    skip_font_name_from_decoder; 93 => false false kiwi_skip_uint_value; 42 => false
-    false skip_text_data_from_decoder; 94 => false false kiwi_skip_uint_value; 359 =>
-    false false skip_derived_text_data_from_decoder; 127 => false false
-    kiwi_skip_bool_value; 128 => false false kiwi_skip_bool_value; 129 => false false
-    kiwi_skip_bool_value; 130 => false false kiwi_skip_bool_value; 131 => false false
-    kiwi_skip_bool_value; 132 => false false kiwi_skip_bool_value; 133 => false false
-    kiwi_skip_uint_value; 134 => false false kiwi_skip_uint_value; 135 => false false
-    kiwi_skip_uint_value; 136 => false false kiwi_skip_uint_value; 137 => false false
-    kiwi_skip_uint_value; 165 => false false skip_number_from_decoder; 202 => false false
-    kiwi_skip_string_value; 322 => false false kiwi_skip_uint_value; 337 => false false
-    kiwi_skip_bool_value; 339 => false false kiwi_skip_bool_value; 550 => false false
-    kiwi_skip_bool_value; 351 => false false kiwi_skip_int_value; 417 => true false
-    skip_responsive_text_style_variant_from_decoder; 352 => false false
-    kiwi_skip_uint_value; 355 => false false skip_section_status_info_from_decoder; 203
-    => false false kiwi_skip_uint_value; 396 => false false kiwi_skip_uint_value; 205 =>
-    true false kiwi_skip_uint_value; 206 => true false kiwi_skip_uint_value; 223 => false
-    false skip_hyperlink_from_decoder; 340 => false false skip_mention_from_decoder; 260
-    => true false skip_font_variation_from_decoder; 279 => false false
-    kiwi_skip_uint_value; 280 => false false kiwi_skip_uint_value; 292 => false false
-    kiwi_skip_bool_value; 391 => false false kiwi_skip_uint_value; 392 => false false
-    kiwi_skip_string_value; 6 => false false kiwi_skip_bool_value; 58 => false false
-    kiwi_skip_uint_value; 7 => false false kiwi_skip_bool_value; 59 => false false
-    kiwi_skip_uint_value; 434 => false false kiwi_skip_uint_value; 8 => false false
-    kiwi_skip_float_value; 60 => false false kiwi_skip_uint_value; 9 => false false
-    kiwi_skip_uint_value; 61 => false false kiwi_skip_uint_value; 11 => false false
-    skip_vector_from_decoder; 63 => false false kiwi_skip_uint_value; 12 => false false
-    skip_matrix_from_decoder; 64 => false false kiwi_skip_uint_value; 13 => true false
-    kiwi_skip_float_value; 65 => false false kiwi_skip_uint_value; 16 => false false
-    kiwi_skip_bool_value; 68 => false false kiwi_skip_uint_value; 424 => false false
-    skip_vector_from_decoder; 18 => false false kiwi_skip_bool_value; 70 => false false
-    kiwi_skip_uint_value; 317 => false false kiwi_skip_uint_value; 19 => false false
-    kiwi_skip_float_value; 71 => false false kiwi_skip_uint_value; 20 => false false
-    kiwi_skip_float_value; 72 => false false kiwi_skip_uint_value; 26 => false false
-    kiwi_skip_float_value; 78 => false false kiwi_skip_uint_value; 29 => false false
-    kiwi_skip_uint_value; 81 => false false kiwi_skip_uint_value; 30 => false false
-    kiwi_skip_uint_value; 82 => false false kiwi_skip_uint_value; 497 => false false
-    skip_number_from_decoder; 31 => false false kiwi_skip_uint_value; 83 => false false
-    kiwi_skip_uint_value; 38 => true false skip_paint_from_decoder; 90 => false false
-    kiwi_skip_uint_value; 39 => true false skip_paint_from_decoder; 91 => false false
-    kiwi_skip_uint_value; 43 => true false skip_effect_from_decoder; 95 => false false
-    kiwi_skip_uint_value; 50 => false false skip_color_from_decoder; 102 => false false
-    kiwi_skip_uint_value; 51 => true false skip_path_from_decoder; 103 => false false
-    kiwi_skip_uint_value; 52 => true false skip_path_from_decoder; 104 => false false
-    kiwi_skip_uint_value; 564 => true false skip_path_from_decoder; 411 => true false
-    skip_paint_from_decoder; 412 => false false kiwi_skip_bool_value; 413 => false false
-    skip_number_from_decoder; 415 => false false skip_number_from_decoder; 416 => false
-    false kiwi_skip_uint_value; 455 => true false skip_transform_modifier_from_decoder;
-    570 => false false skip_transform3d_from_decoder; 571 => false false
-    skip_stroke_data_from_decoder; 572 => false false skip_scene3d_from_decoder; 587 =>
-    false false skip_transform_origin_from_decoder; 145 => false false
-    kiwi_skip_float_value; 146 => false false kiwi_skip_float_value; 147 => false false
-    kiwi_skip_float_value; 148 => false false kiwi_skip_float_value; 149 => false false
-    kiwi_skip_bool_value; 150 => false false kiwi_skip_bool_value; 151 => false false
-    kiwi_skip_bool_value; 423 => false false skip_optional_vector_from_decoder; 258 =>
-    false false kiwi_skip_bool_value; 287 => false false kiwi_skip_bool_value; 288 =>
-    false false kiwi_skip_bool_value; 289 => false false kiwi_skip_bool_value; 290 =>
-    false false kiwi_skip_bool_value; 294 => false false kiwi_skip_bool_value; 295 =>
-    false false kiwi_skip_float_value; 296 => false false kiwi_skip_float_value; 297 =>
-    false false kiwi_skip_float_value; 298 => false false kiwi_skip_float_value; 299 =>
-    false false kiwi_skip_bool_value; 28 => false false kiwi_skip_uint_value; 80 => false
-    false kiwi_skip_uint_value; 105 => false false kiwi_skip_uint_value; 106 => false
-    false kiwi_skip_uint_value; 107 => false false kiwi_skip_float_value; 108 => false
-    false kiwi_skip_uint_value; 109 => false false kiwi_skip_float_value; 110 => false
-    false kiwi_skip_uint_value; 120 => false false kiwi_skip_uint_value; 121 => false
-    false kiwi_skip_uint_value; 208 => false false kiwi_skip_uint_value; 209 => false
-    false kiwi_skip_float_value; 210 => false false kiwi_skip_float_value; 211 => false
-    false kiwi_skip_uint_value; 212 => false false kiwi_skip_uint_value; 229 => false
-    false kiwi_skip_uint_value; 230 => false false kiwi_skip_uint_value; 231 => false
-    false kiwi_skip_uint_value; 232 => false false kiwi_skip_float_value; 233 => false
-    false kiwi_skip_float_value; 234 => false false kiwi_skip_float_value; 236 => false
-    false kiwi_skip_uint_value; 269 => false false kiwi_skip_uint_value; 271 => false
-    false kiwi_skip_bool_value; 323 => false false kiwi_skip_uint_value; 324 => false
-    false kiwi_skip_float_value; 325 => false false skip_optional_vector_from_decoder;
-    326 => false false skip_optional_vector_from_decoder; 343 => false false
-    kiwi_skip_uint_value; 406 => true false kiwi_skip_int_value; 574 => false false
-    kiwi_skip_uint_value; 435 => false false skip_guid_position_map_from_decoder; 436 =>
-    false false skip_guid_position_map_from_decoder; 437 => false false
-    kiwi_skip_float_value; 438 => false false kiwi_skip_float_value; 439 => false false
-    skip_guid_from_decoder; 440 => false false skip_guid_from_decoder; 441 => false false
-    kiwi_skip_uint_value; 442 => false false kiwi_skip_uint_value; 474 => false false
-    skip_guid_grid_track_size_map_from_decoder; 475 => false false
-    skip_guid_grid_track_size_map_from_decoder; 476 => false false kiwi_skip_uint_value;
-    477 => false false kiwi_skip_uint_value; 555 => false false kiwi_skip_uint_value; 556
-    => false false kiwi_skip_bool_value; 344 => false false kiwi_skip_bool_value; 139 =>
+    124 => true false skip_guid_path_mapping_from_decoder; 125 => true false
+    skip_node_change_from_decoder; 126 => false false kiwi_skip_string_value; 127 =>
+    false false kiwi_skip_bool_value; 128 => false false kiwi_skip_bool_value; 129 =>
+    false false kiwi_skip_bool_value; 130 => false false kiwi_skip_bool_value; 131 =>
+    false false kiwi_skip_bool_value; 132 => false false kiwi_skip_bool_value; 133 =>
+    false false kiwi_skip_uint_value; 134 => false false kiwi_skip_uint_value; 135 =>
+    false false kiwi_skip_uint_value; 136 => false false kiwi_skip_uint_value; 137 =>
+    false false kiwi_skip_uint_value; 138 => true false skip_guide_from_decoder; 139 =>
     false false skip_guid_from_decoder; 140 => false false skip_guid_from_decoder; 141 =>
-    false false skip_color_from_decoder; 153 => false false
+    false false skip_color_from_decoder; 142 => false false kiwi_skip_bool_value; 143 =>
+    false false skip_guid_from_decoder; 144 => false false kiwi_skip_string_value; 145 =>
+    false false kiwi_skip_float_value; 146 => false false kiwi_skip_float_value; 147 =>
+    false false kiwi_skip_float_value; 148 => false false kiwi_skip_float_value; 149 =>
+    false false kiwi_skip_bool_value; 150 => false false kiwi_skip_bool_value; 151 =>
+    false false kiwi_skip_bool_value; 152 => false false
+    skip_shared_component_master_data_from_decoder; 153 => false false
     skip_transition_info_from_decoder; 154 => false false kiwi_skip_uint_value; 155 =>
-    false false kiwi_skip_float_value; 156 => false false kiwi_skip_uint_value; 181 =>
-    false false kiwi_skip_bool_value; 182 => false false kiwi_skip_uint_value; 183 =>
+    false false kiwi_skip_float_value; 156 => false false kiwi_skip_uint_value; 157 =>
+    false false kiwi_skip_bool_value; 158 => false false skip_guid_from_decoder; 159 =>
+    false false kiwi_skip_uint_value; 160 => false false kiwi_skip_float_value; 161 =>
+    false false kiwi_skip_bool_value; 162 => false false skip_guid_from_decoder; 163 =>
+    false false kiwi_skip_uint_value; 164 => true false
+    skip_guid_path_mapping_from_decoder; 165 => false false skip_number_from_decoder; 166
+    => false false skip_vector_from_decoder; 167 => false false skip_guid_from_decoder;
+    168 => false false skip_guid_from_decoder; 169 => false false skip_guid_from_decoder;
+    170 => false false skip_guid_from_decoder; 171 => false false kiwi_skip_string_value;
+    172 => false false skip_shared_style_master_data_from_decoder; 173 => false false
+    skip_shared_style_reference_from_decoder; 174 => false false kiwi_skip_bool_value;
+    175 => false false kiwi_skip_bool_value; 176 => false false kiwi_skip_bool_value; 177
+    => false false kiwi_skip_bool_value; 178 => false false kiwi_skip_uint_value; 179 =>
+    false false skip_vector_from_decoder; 180 => false false kiwi_skip_string_value; 181
+    => false false kiwi_skip_bool_value; 182 => false false kiwi_skip_uint_value; 183 =>
     false false kiwi_skip_string_value; 184 => false false
-    skip_prototype_device_from_decoder; 187 => false false kiwi_skip_uint_value; 188 =>
+    skip_prototype_device_from_decoder; 185 => false false skip_guid_from_decoder; 186 =>
+    false false kiwi_skip_uint_value; 187 => false false kiwi_skip_uint_value; 188 =>
     false false kiwi_skip_float_value; 189 => false false kiwi_skip_bool_value; 190 =>
-    false false kiwi_skip_float_value; 192 => false false kiwi_skip_bool_value; 207 =>
-    false false kiwi_skip_bool_value; 226 => true false
-    skip_prototype_interaction_from_decoder; 426 => true false
-    skip_prototype_interaction_from_decoder; 249 => false false
-    skip_prototype_starting_point_from_decoder; 204 => true false
-    skip_plugin_data_from_decoder; 219 => true false
-    skip_plugin_relaunch_data_from_decoder; 242 => false false
-    skip_connector_endpoint_from_decoder; 243 => false false
+    false false kiwi_skip_float_value; 191 => false false kiwi_skip_string_value; 192 =>
+    false false kiwi_skip_bool_value; 193 => true false skip_paint_from_decoder; 194 =>
+    false false skip_guid_from_decoder; 195 => false false skip_arc_data_from_decoder;
+    196 => false false kiwi_skip_int_value; 197 => false false kiwi_skip_uint_value; 198
+    => false false kiwi_skip_uint_value; 199 => false false skip_vector_from_decoder; 200
+    => false false kiwi_skip_uint_value; 201 => false false
+    skip_overlay_background_appearance_from_decoder; 202 => false false
+    kiwi_skip_string_value; 203 => false false kiwi_skip_uint_value; 204 => true false
+    skip_plugin_data_from_decoder; 205 => true false kiwi_skip_uint_value; 206 => true
+    false kiwi_skip_uint_value; 207 => false false kiwi_skip_bool_value; 208 => false
+    false kiwi_skip_uint_value; 209 => false false kiwi_skip_float_value; 210 => false
+    false kiwi_skip_float_value; 211 => false false kiwi_skip_uint_value; 212 => false
+    false kiwi_skip_uint_value; 213 => false false skip_guid_from_decoder; 214 => false
+    false kiwi_skip_string_value; 215 => false false skip_guid_from_decoder; 216 => false
+    false kiwi_skip_string_value; 217 => false false kiwi_skip_bool_value; 218 => false
+    false kiwi_skip_string_value; 219 => true false
+    skip_plugin_relaunch_data_from_decoder; 220 => false false kiwi_skip_bool_value; 221
+    => false false kiwi_skip_uint_value; 222 => false false kiwi_skip_bool_value; 223 =>
+    false false skip_hyperlink_from_decoder; 224 => false false
+    skip_key_trigger_from_decoder; 225 => false false kiwi_skip_bool_value; 226 => true
+    false skip_prototype_interaction_from_decoder; 227 => false false
+    kiwi_skip_string_value; 228 => true false skip_guid_path_mapping_from_decoder; 229 =>
+    false false kiwi_skip_uint_value; 230 => false false kiwi_skip_uint_value; 231 =>
+    false false kiwi_skip_uint_value; 232 => false false kiwi_skip_float_value; 233 =>
+    false false kiwi_skip_float_value; 234 => false false kiwi_skip_float_value; 235 =>
+    true false skip_guid_from_decoder; 236 => false false kiwi_skip_uint_value; 237 =>
+    true false skip_symbol_link_from_decoder; 238 => true false
+    skip_state_group_property_value_order_from_decoder; 239 => false false
+    skip_text_list_data_from_decoder; 240 => false false
+    skip_node_generation_data_from_decoder; 241 => false false kiwi_skip_uint_value; 242
+    => false false skip_connector_endpoint_from_decoder; 243 => false false
     skip_connector_endpoint_from_decoder; 244 => false false kiwi_skip_uint_value; 245 =>
-    false false kiwi_skip_uint_value; 246 => false false kiwi_skip_uint_value; 253 =>
-    true false skip_connector_control_point_from_decoder; 479 => true false
-    skip_connector_control_point_from_decoder; 255 => false false
-    skip_connector_text_midpoint_from_decoder; 373 => false false kiwi_skip_uint_value;
-    533 => false false kiwi_skip_int_value; 369 => true false
-    skip_annotation_from_decoder; 384 => true false
-    skip_annotation_measurement_from_decoder; 453 => false false
-    skip_annotation_categories_from_decoder; 241 => false false kiwi_skip_uint_value; 247
-    => false false kiwi_skip_float_value; 530 => false false kiwi_skip_bool_value; 254 =>
-    false false skip_derived_immutable_frame_data_from_decoder; 338 => false false
-    skip_multiplayer_field_version_from_decoder; 240 => false false
-    skip_node_generation_data_from_decoder; 491 => false false
-    skip_jsx_data_from_decoder; 492 => false false skip_derived_jsx_data_from_decoder;
-    493 => false false kiwi_skip_string_value; 259 => false false kiwi_skip_uint_value;
-    433 => false false kiwi_skip_uint_value; 278 => false false
-    skip_link_preview_data_from_decoder; 282 => false false kiwi_skip_bool_value; 283 =>
-    false false kiwi_skip_bool_value; 300 => false false
+    false false kiwi_skip_uint_value; 246 => false false kiwi_skip_uint_value; 247 =>
+    false false kiwi_skip_float_value; 248 => true false
+    skip_instance_override_stash_from_decoder; 249 => false false
+    skip_prototype_starting_point_from_decoder; 250 => true false
+    skip_instance_override_stash_v2_from_decoder; 251 => false false
+    kiwi_skip_uint_value; 252 => false false kiwi_skip_string_value; 253 => true false
+    skip_connector_control_point_from_decoder; 254 => false false
+    skip_derived_immutable_frame_data_from_decoder; 255 => false false
+    skip_connector_text_midpoint_from_decoder; 256 => false false
+    skip_library_move_info_from_decoder; 257 => false false
+    skip_internal_data_for_test_from_decoder; 258 => false false kiwi_skip_bool_value;
+    259 => false false kiwi_skip_uint_value; 260 => true false
+    skip_font_variation_from_decoder; 261 => false false kiwi_skip_bool_value; 262 =>
+    false false skip_widget_metadata_from_decoder; 263 => true false
+    kiwi_skip_uint_value; 264 => false false kiwi_skip_float_value; 265 => true false
+    skip_widget_property_menu_item_from_decoder; 266 => true false
+    skip_component_prop_def_from_decoder; 267 => true false
+    skip_component_prop_ref_from_decoder; 268 => true false
+    skip_component_prop_assignment_from_decoder; 269 => false false kiwi_skip_uint_value;
+    270 => false false skip_embed_data_from_decoder; 271 => false false
+    kiwi_skip_bool_value; 272 => false false skip_rich_media_data_from_decoder; 273 =>
+    false false skip_multiplayer_map_from_decoder; 274 => false false
+    kiwi_skip_uint_value; 275 => false false
+    skip_widget_derived_subtree_cursor_from_decoder; 276 => false false
+    skip_widget_pointer_from_decoder; 277 => false false
+    skip_multiplayer_map_from_decoder; 278 => false false
+    skip_link_preview_data_from_decoder; 279 => false false kiwi_skip_uint_value; 280 =>
+    false false kiwi_skip_uint_value; 281 => true false
+    skip_library_move_history_item_from_decoder; 282 => false false kiwi_skip_bool_value;
+    283 => false false kiwi_skip_bool_value; 284 => false false kiwi_skip_bool_value; 285
+    => false false kiwi_skip_uint_value; 286 => false false kiwi_skip_string_value; 287
+    => false false kiwi_skip_bool_value; 288 => false false kiwi_skip_bool_value; 289 =>
+    false false kiwi_skip_bool_value; 290 => false false kiwi_skip_bool_value; 291 =>
+    false false skip_widget_hover_style_from_decoder; 292 => false false
+    kiwi_skip_bool_value; 293 => false false kiwi_skip_bool_value; 294 => false false
+    kiwi_skip_bool_value; 295 => false false kiwi_skip_float_value; 296 => false false
+    kiwi_skip_float_value; 297 => false false kiwi_skip_float_value; 298 => false false
+    kiwi_skip_float_value; 299 => false false kiwi_skip_bool_value; 300 => false false
     skip_video_playback_from_decoder; 301 => false false skip_stamp_data_from_decoder;
-    370 => false false skip_section_preset_info_from_decoder; 409 => false false
-    skip_platform_shape_definition_from_decoder; 273 => false false
-    skip_multiplayer_map_from_decoder; 274 => false false kiwi_skip_uint_value; 275 =>
-    false false skip_widget_derived_subtree_cursor_from_decoder; 276 => false false
-    skip_widget_pointer_from_decoder; 285 => false false kiwi_skip_uint_value; 286 =>
-    false false kiwi_skip_string_value; 291 => false false
-    skip_widget_hover_style_from_decoder; 293 => false false kiwi_skip_bool_value; 360 =>
-    false false kiwi_skip_bool_value; 262 => false false
-    skip_widget_metadata_from_decoder; 263 => true false kiwi_skip_uint_value; 265 =>
-    true false skip_widget_property_menu_item_from_decoder; 401 => false false
-    kiwi_skip_uint_value; 489 => false false skip_multiplayer_map_from_decoder; 308 =>
-    false false skip_table_row_column_position_map_from_decoder; 309 => false false
+    302 => false false kiwi_skip_uint_value; 303 => false false kiwi_skip_uint_value; 304
+    => false false kiwi_skip_string_value; 305 => false false kiwi_skip_bool_value; 306
+    => false false skip_variable_data_from_decoder; 307 => false false
+    skip_variable_data_map_from_decoder; 308 => false false
+    skip_table_row_column_position_map_from_decoder; 309 => false false
     skip_table_row_column_position_map_from_decoder; 310 => false false
     skip_table_row_column_size_map_from_decoder; 311 => false false
-    skip_table_row_column_size_map_from_decoder; 538 => false false
-    skip_table_merged_cell_map_from_decoder; 371 => false false
-    skip_multiplayer_map_from_decoder; 372 => false false
-    skip_multiplayer_map_from_decoder; 402 => false false kiwi_skip_uint_value; 486 =>
-    false false kiwi_skip_bool_value; 389 => false false kiwi_skip_string_value; 410 =>
-    false false kiwi_skip_bool_value; 573 => false false
-    skip_multiplayer_map_from_decoder; 379 => false false skip_theme_id_from_decoder; 381
-    => false false skip_slide_theme_data_from_decoder; 390 => false false
-    skip_slide_theme_map_from_decoder; 393 => false false kiwi_skip_string_value; 443 =>
-    false false kiwi_skip_uint_value; 456 => false false kiwi_skip_string_value; 363 =>
-    false false skip_guid_from_decoder; 362 => false false skip_guid_from_decoder; 364 =>
-    false false kiwi_skip_string_value; 366 => false false kiwi_skip_uint_value; 367 =>
-    false false skip_diagram_parent_index_from_decoder; 368 => false false
-    kiwi_skip_uint_value; 380 => false false kiwi_skip_bool_value; 251 => false false
-    kiwi_skip_uint_value; 257 => false false skip_internal_data_for_test_from_decoder; 14
-    => false false kiwi_skip_bool_value; 66 => false false kiwi_skip_uint_value; 15 =>
-    false false kiwi_skip_bool_value; 67 => false false kiwi_skip_uint_value; 17 => false
-    false kiwi_skip_bool_value; 69 => false false kiwi_skip_uint_value; 25 => false false
-    kiwi_skip_float_value; 77 => false false kiwi_skip_uint_value; 27 => false false
-    kiwi_skip_float_value; 79 => false false kiwi_skip_uint_value; 37 => false false
-    kiwi_skip_uint_value; 89 => false false kiwi_skip_uint_value; 45 => true false
-    skip_export_settings_from_decoder; 97 => false false kiwi_skip_uint_value; 46 =>
-    false false kiwi_skip_uint_value; 98 => false false kiwi_skip_uint_value; 47 => true
-    false skip_layout_grid_from_decoder; 99 => false false kiwi_skip_uint_value; 115 =>
-    false false kiwi_skip_bool_value; 116 => false false kiwi_skip_uint_value; 117 =>
-    false false kiwi_skip_bool_value; 118 => false false kiwi_skip_uint_value; 36 =>
-    false false kiwi_skip_uint_value; 88 => false false kiwi_skip_uint_value; 44 => false
-    false kiwi_skip_uint_value; 96 => false false kiwi_skip_uint_value; 10 => false false
-    kiwi_skip_uint_value; 62 => false false kiwi_skip_uint_value; 24 => false false
-    kiwi_skip_float_value; 76 => false false kiwi_skip_uint_value; 195 => false false
-    skip_arc_data_from_decoder; 48 => false false skip_vector_data_from_decoder; 100 =>
-    false false kiwi_skip_uint_value; 425 => false false kiwi_skip_uint_value; 432 =>
-    false false skip_text_path_start_from_decoder; 119 => false false
-    kiwi_skip_bool_value; 138 => true false skip_guide_from_decoder; 142 => false false
-    kiwi_skip_bool_value; 159 => false false kiwi_skip_uint_value; 160 => false false
-    kiwi_skip_float_value; 166 => false false skip_vector_from_decoder; 175 => false
-    false kiwi_skip_bool_value; 178 => false false kiwi_skip_uint_value; 179 => false
-    false skip_vector_from_decoder; 180 => false false kiwi_skip_string_value; 186 =>
-    false false kiwi_skip_uint_value; 196 => false false kiwi_skip_int_value; 197 =>
-    false false kiwi_skip_uint_value; 198 => false false kiwi_skip_uint_value; 199 =>
-    false false skip_vector_from_decoder; 200 => false false kiwi_skip_uint_value; 201 =>
-    false false skip_overlay_background_appearance_from_decoder; 213 => false false
-    skip_guid_from_decoder; 220 => false false kiwi_skip_bool_value; 221 => false false
-    kiwi_skip_uint_value; 222 => false false kiwi_skip_bool_value; 224 => false false
-    skip_key_trigger_from_decoder; 227 => false false kiwi_skip_string_value; 235 => true
-    false skip_guid_from_decoder; 237 => true false skip_symbol_link_from_decoder; 239 =>
-    false false skip_text_list_data_from_decoder; 261 => false false
-    kiwi_skip_bool_value; 264 => false false kiwi_skip_float_value; 270 => false false
-    skip_embed_data_from_decoder; 272 => false false skip_rich_media_data_from_decoder;
-    277 => false false skip_multiplayer_map_from_decoder; 284 => false false
-    kiwi_skip_bool_value; 302 => false false kiwi_skip_uint_value; 303 => false false
-    kiwi_skip_uint_value; 357 => false false skip_aria_attributes_map_from_decoder; 304
-    => false false kiwi_skip_string_value; 490 => false false kiwi_skip_bool_value; 306
-    => false false skip_variable_data_from_decoder; 307 => false false
-    skip_variable_data_map_from_decoder; 316 => false false
-    skip_variable_mode_by_set_map_from_decoder; 312 => true false
+    skip_table_row_column_size_map_from_decoder; 312 => true false
     skip_variable_set_mode_from_decoder; 313 => false false
     skip_variable_set_id_from_decoder; 314 => false false kiwi_skip_uint_value; 315 =>
-    false false skip_variable_data_values_from_decoder; 350 => false false
-    kiwi_skip_string_value; 566 => false false kiwi_skip_uint_value; 353 => true false
-    kiwi_skip_uint_value; 445 => false false skip_variable_data_map_from_decoder; 358 =>
-    false false skip_code_syntax_map_from_decoder; 388 => false false
-    skip_paste_source_from_decoder; 397 => false false kiwi_skip_uint_value; 446 => false
-    false skip_guid_from_decoder; 482 => false false kiwi_skip_uint64_value; 447 => true
-    false skip_variable_width_point_from_decoder; 448 => false false
-    skip_dynamic_stroke_settings_from_decoder; 449 => false false
-    skip_scatter_stroke_settings_from_decoder; 450 => false false
-    skip_stretch_stroke_settings_from_decoder; 488 => true false
-    skip_matrix_from_decoder; 452 => false false kiwi_skip_uint_value; 542 => false false
-    skip_optional_vector_from_decoder; 554 => false false kiwi_skip_float_value; 377 =>
-    false false skip_variable_set_id_from_decoder; 464 => false false
-    skip_variable_id_from_decoder; 378 => false false
-    skip_variable_id_or_variable_override_id_from_decoder; 385 => false false
-    kiwi_skip_bool_value; 386 => false false kiwi_skip_string_value; 517 => false false
-    skip_inherited_variables_data_from_decoder; 361 => false false
-    skip_handoff_status_map_from_decoder; 327 => false false
+    false false skip_variable_data_values_from_decoder; 316 => false false
+    skip_variable_mode_by_set_map_from_decoder; 317 => false false kiwi_skip_uint_value;
+    318 => false false kiwi_skip_string_value; 319 => false false kiwi_skip_string_value;
+    320 => false false kiwi_skip_string_value; 321 => false false kiwi_skip_int_value;
+    322 => false false kiwi_skip_uint_value; 323 => false false kiwi_skip_uint_value; 324
+    => false false kiwi_skip_float_value; 325 => false false
+    skip_optional_vector_from_decoder; 326 => false false
+    skip_optional_vector_from_decoder; 327 => false false
     skip_agenda_position_map_from_decoder; 328 => false false
     skip_agenda_metadata_map_from_decoder; 329 => false false
     skip_migration_status_from_decoder; 330 => false false kiwi_skip_bool_value; 331 =>
-    false false skip_edit_info_from_decoder; 341 => false false kiwi_skip_uint_value; 342
-    => false false skip_symbol_id_from_decoder; 346 => false false kiwi_skip_uint_value;
-    347 => false false kiwi_skip_string_value; 349 => false false kiwi_skip_uint_value;
-    354 => true false skip_developer_related_link_from_decoder; 356 => false false
-    kiwi_skip_string_value; 365 => false false skip_edit_scope_info_from_decoder; 374 =>
-    false false kiwi_skip_uint_value; 375 => false false kiwi_skip_uint_value; 403 =>
-    false false kiwi_skip_bool_value; 387 => false false kiwi_skip_bool_value; 500 =>
-    false false skip_derived_breakpoint_data_from_decoder; 398 => false false
-    skip_guid_from_decoder; 458 => false false kiwi_skip_bool_value; 457 => false false
-    skip_guid_from_decoder; 462 => false false skip_guid_from_decoder; 501 => false false
-    kiwi_skip_float_value; 522 => false false kiwi_skip_bool_value; 400 => false false
-    skip_responsive_set_settings_from_decoder; 404 => false false
-    skip_node_behaviors_from_decoder; 414 => false false kiwi_skip_string_value; 534 =>
-    true false skip_collaborative_text_op_id_from_decoder; 444 => false false
-    skip_collaborative_plain_text_from_decoder; 427 => false false
-    skip_code_library_id_from_decoder; 467 => false false
-    skip_imported_code_files_from_decoder; 468 => false false
-    skip_canvas_node_id_from_decoder; 498 => false false kiwi_skip_bool_value; 502 =>
-    false false kiwi_skip_string_value; 503 => false false kiwi_skip_uint_value; 504 =>
-    false false kiwi_skip_string_value; 515 => true false kiwi_skip_string_value; 524 =>
-    true false skip_used_make_library_from_decoder; 518 => false false
-    kiwi_skip_string_value; 520 => false false kiwi_skip_bool_value; 551 => false false
-    kiwi_skip_bool_value; 531 => false false skip_prototype_device_from_decoder; 525 =>
-    true false skip_code_example_from_decoder; 428 => false false
-    skip_code_file_id_from_decoder; 430 => false false kiwi_skip_string_value; 547 =>
-    false false kiwi_skip_string_value; 429 => false false
-    skip_code_component_id_from_decoder; 487 => false false kiwi_skip_bool_value; 431 =>
-    false false kiwi_skip_uint_value; 451 => true false
-    skip_node_chat_message_from_decoder; 485 => false false
-    skip_node_chat_compression_state_from_decoder; 496 => false false
-    skip_ai_chat_thread_from_decoder; 484 => false false kiwi_skip_string_value; 459 =>
-    false false skip_code_snapshot_from_decoder; 589 => false false
-    skip_code_snapshot_layers_from_decoder; 480 => false false kiwi_skip_uint_value; 465
-    => false false kiwi_skip_bool_value; 469 => false false kiwi_skip_bool_value; 470 =>
-    false false kiwi_skip_bool_value; 471 => false false kiwi_skip_bool_value; 481 =>
-    false false skip_canvas_node_id_from_decoder; 473 => false false
-    skip_image_import_map_from_decoder; 516 => false false kiwi_skip_uint_value; 472 =>
-    false false kiwi_skip_string_value; 478 => false false
-    skip_code_behavior_data_from_decoder; 519 => false false kiwi_skip_uint_value; 527 =>
-    false false kiwi_skip_bool_value; 532 => false false
-    skip_code_embed_info_from_decoder; 546 => false false kiwi_skip_bool_value; 558 =>
-    false false skip_code_source_info_from_decoder; 536 => false false
-    kiwi_skip_string_value; 537 => false true kiwi_skip_bytes_value; 419 => false false
+    false false skip_edit_info_from_decoder; 332 => false false
+    skip_style_id_from_decoder; 333 => false false skip_style_id_from_decoder; 334 =>
+    false false skip_style_id_from_decoder; 335 => false false
+    skip_style_id_from_decoder; 336 => false false skip_style_id_from_decoder; 337 =>
+    false false kiwi_skip_bool_value; 338 => false false
+    skip_multiplayer_field_version_from_decoder; 339 => false false kiwi_skip_bool_value;
+    340 => false false skip_mention_from_decoder; 341 => false false
+    kiwi_skip_uint_value; 342 => false false skip_symbol_id_from_decoder; 343 => false
+    false kiwi_skip_uint_value; 344 => false false kiwi_skip_bool_value; 345 => false
+    false skip_shared_style_master_data_from_decoder; 346 => false false
+    kiwi_skip_uint_value; 347 => false false kiwi_skip_string_value; 348 => false false
+    skip_shared_style_master_data_from_decoder; 349 => false false kiwi_skip_uint_value;
+    350 => false false kiwi_skip_string_value; 351 => false false kiwi_skip_int_value;
+    352 => false false kiwi_skip_uint_value; 353 => true false kiwi_skip_uint_value; 354
+    => true false skip_developer_related_link_from_decoder; 355 => false false
+    skip_section_status_info_from_decoder; 356 => false false kiwi_skip_string_value; 357
+    => false false skip_aria_attributes_map_from_decoder; 358 => false false
+    skip_code_syntax_map_from_decoder; 359 => false false
+    skip_derived_text_data_from_decoder; 360 => false false kiwi_skip_bool_value; 361 =>
+    false false skip_handoff_status_map_from_decoder; 362 => false false
+    skip_guid_from_decoder; 363 => false false skip_guid_from_decoder; 364 => false false
+    kiwi_skip_string_value; 365 => false false skip_edit_scope_info_from_decoder; 366 =>
+    false false kiwi_skip_uint_value; 367 => false false
+    skip_diagram_parent_index_from_decoder; 368 => false false kiwi_skip_uint_value; 369
+    => true false skip_annotation_from_decoder; 370 => false false
+    skip_section_preset_info_from_decoder; 371 => false false
+    skip_multiplayer_map_from_decoder; 372 => false false
+    skip_multiplayer_map_from_decoder; 373 => false false kiwi_skip_uint_value; 374 =>
+    false false kiwi_skip_uint_value; 375 => false false kiwi_skip_uint_value; 376 =>
+    false false kiwi_skip_bool_value; 377 => false false
+    skip_variable_set_id_from_decoder; 378 => false false
+    skip_variable_id_or_variable_override_id_from_decoder; 379 => false false
+    skip_theme_id_from_decoder; 380 => false false kiwi_skip_bool_value; 381 => false
+    false skip_slide_theme_data_from_decoder; 382 => false false kiwi_skip_uint_value;
+    383 => false false skip_asset_id_map_from_decoder; 384 => true false
+    skip_annotation_measurement_from_decoder; 385 => false false kiwi_skip_bool_value;
+    386 => false false kiwi_skip_string_value; 387 => false false kiwi_skip_bool_value;
+    388 => false false skip_paste_source_from_decoder; 389 => false false
+    kiwi_skip_string_value; 390 => false false skip_slide_theme_map_from_decoder; 391 =>
+    false false kiwi_skip_uint_value; 392 => false false kiwi_skip_string_value; 393 =>
+    false false kiwi_skip_string_value; 394 => false false kiwi_skip_bool_value; 395 =>
+    false false kiwi_skip_string_value; 396 => false false kiwi_skip_uint_value; 397 =>
+    false false kiwi_skip_uint_value; 398 => false false skip_guid_from_decoder; 399 =>
+    false false kiwi_skip_string_value; 400 => false false
+    skip_responsive_set_settings_from_decoder; 401 => false false kiwi_skip_uint_value;
+    402 => false false kiwi_skip_uint_value; 403 => false false kiwi_skip_bool_value; 404
+    => false false skip_node_behaviors_from_decoder; 405 => true false
+    kiwi_skip_uint_value; 406 => true false kiwi_skip_int_value; 407 => false false
+    skip_first_draft_data_from_decoder; 408 => false false kiwi_skip_string_value; 409 =>
+    false false skip_platform_shape_definition_from_decoder; 410 => false false
+    kiwi_skip_bool_value; 411 => true false skip_paint_from_decoder; 412 => false false
+    kiwi_skip_bool_value; 413 => false false skip_number_from_decoder; 414 => false false
+    kiwi_skip_string_value; 415 => false false skip_number_from_decoder; 416 => false
+    false kiwi_skip_uint_value; 417 => true false
+    skip_responsive_text_style_variant_from_decoder; 418 => false false
+    skip_first_draft_kit_element_data_from_decoder; 419 => false false
     skip_cms_selector_from_decoder; 420 => false false
-    skip_cms_consumption_map_from_decoder; 460 => false false
-    skip_cms_rich_text_style_map_from_decoder; 539 => false false
+    skip_cms_consumption_map_from_decoder; 421 => false false
+    skip_cooper_revert_data_from_decoder; 422 => false false
+    skip_hub_file_attribution_from_decoder; 423 => false false
+    skip_optional_vector_from_decoder; 424 => false false skip_vector_from_decoder; 425
+    => false false kiwi_skip_uint_value; 426 => true false
+    skip_prototype_interaction_from_decoder; 427 => false false
+    skip_code_library_id_from_decoder; 428 => false false skip_code_file_id_from_decoder;
+    429 => false false skip_code_component_id_from_decoder; 430 => false false
+    kiwi_skip_string_value; 431 => false false kiwi_skip_uint_value; 432 => false false
+    skip_text_path_start_from_decoder; 433 => false false kiwi_skip_uint_value; 434 =>
+    false false kiwi_skip_uint_value; 435 => false false
+    skip_guid_position_map_from_decoder; 436 => false false
+    skip_guid_position_map_from_decoder; 437 => false false kiwi_skip_float_value; 438 =>
+    false false kiwi_skip_float_value; 439 => false false skip_guid_from_decoder; 440 =>
+    false false skip_guid_from_decoder; 441 => false false kiwi_skip_uint_value; 442 =>
+    false false kiwi_skip_uint_value; 443 => false false kiwi_skip_uint_value; 444 =>
+    false false skip_collaborative_plain_text_from_decoder; 445 => false false
+    skip_variable_data_map_from_decoder; 446 => false false skip_guid_from_decoder; 447
+    => true false skip_variable_width_point_from_decoder; 448 => false false
+    skip_dynamic_stroke_settings_from_decoder; 449 => false false
+    skip_scatter_stroke_settings_from_decoder; 450 => false false
+    skip_stretch_stroke_settings_from_decoder; 451 => true false
+    skip_node_chat_message_from_decoder; 452 => false false kiwi_skip_uint_value; 453 =>
+    false false skip_annotation_categories_from_decoder; 454 => false false
+    skip_managed_string_data_from_decoder; 455 => true false
+    skip_transform_modifier_from_decoder; 456 => false false kiwi_skip_string_value; 457
+    => false false skip_guid_from_decoder; 458 => false false kiwi_skip_bool_value; 459
+    => false false skip_code_snapshot_from_decoder; 460 => false false
+    skip_cms_rich_text_style_map_from_decoder; 461 => false false
+    skip_cooper_template_data_from_decoder; 462 => false false skip_guid_from_decoder;
+    463 => false false kiwi_skip_bool_value; 464 => false false
+    skip_variable_id_from_decoder; 465 => false false kiwi_skip_bool_value; 466 => false
+    false skip_thumbnail_info_from_decoder; 467 => false false
+    skip_imported_code_files_from_decoder; 468 => false false
+    skip_canvas_node_id_from_decoder; 469 => false false kiwi_skip_bool_value; 470 =>
+    false false kiwi_skip_bool_value; 471 => false false kiwi_skip_bool_value; 472 =>
+    false false kiwi_skip_string_value; 473 => false false
+    skip_image_import_map_from_decoder; 474 => false false
+    skip_guid_grid_track_size_map_from_decoder; 475 => false false
+    skip_guid_grid_track_size_map_from_decoder; 476 => false false kiwi_skip_uint_value;
+    477 => false false kiwi_skip_uint_value; 478 => false false
+    skip_code_behavior_data_from_decoder; 479 => true false
+    skip_connector_control_point_from_decoder; 480 => false false kiwi_skip_uint_value;
+    481 => false false skip_canvas_node_id_from_decoder; 482 => false false
+    kiwi_skip_uint64_value; 483 => true false skip_variant_prop_spec_from_decoder; 484 =>
+    false false kiwi_skip_string_value; 485 => false false
+    skip_node_chat_compression_state_from_decoder; 486 => false false
+    kiwi_skip_bool_value; 487 => false false kiwi_skip_bool_value; 488 => true false
+    skip_matrix_from_decoder; 489 => false false skip_multiplayer_map_from_decoder; 490
+    => false false kiwi_skip_bool_value; 491 => false false skip_jsx_data_from_decoder;
+    492 => false false skip_derived_jsx_data_from_decoder; 493 => false false
+    kiwi_skip_string_value; 494 => false false skip_ai_canvas_prompt_from_decoder; 495 =>
+    false false kiwi_skip_bool_value; 496 => false false
+    skip_ai_chat_thread_from_decoder; 497 => false false skip_number_from_decoder; 498 =>
+    false false kiwi_skip_bool_value; 499 => false false
+    skip_canvas_node_id_from_decoder; 500 => false false
+    skip_derived_breakpoint_data_from_decoder; 501 => false false kiwi_skip_float_value;
+    502 => false false kiwi_skip_string_value; 503 => false false kiwi_skip_uint_value;
+    504 => false false kiwi_skip_string_value; 505 => false false kiwi_skip_uint_value;
+    506 => false false kiwi_skip_int64_value; 507 => false false
+    skip_keyframe_value_data_from_decoder; 508 => false false
+    skip_bezier_handles_from_decoder; 509 => false false kiwi_skip_uint_value; 510 =>
+    false false kiwi_skip_uint_value; 511 => false false skip_guid_from_decoder; 512 =>
+    false false kiwi_skip_uint64_value; 513 => false false kiwi_skip_int64_value; 514 =>
+    false false kiwi_skip_uint_value; 515 => true false kiwi_skip_string_value; 516 =>
+    false false kiwi_skip_uint_value; 517 => false false
+    skip_inherited_variables_data_from_decoder; 518 => false false
+    kiwi_skip_string_value; 519 => false false kiwi_skip_uint_value; 520 => false false
+    kiwi_skip_bool_value; 521 => false false skip_animation_presets_from_decoder; 522 =>
+    false false kiwi_skip_bool_value; 523 => false false
+    skip_trss_transform2_d_from_decoder; 524 => true false
+    skip_used_make_library_from_decoder; 525 => true false
+    skip_code_example_from_decoder; 526 => false false
+    skip_transition_override_data_from_decoder; 527 => false false kiwi_skip_bool_value;
+    528 => false false skip_buzz_approval_requests_from_decoder; 529 => false false
+    skip_buzz_approval_node_status_info_from_decoder; 530 => false false
+    kiwi_skip_bool_value; 531 => false false skip_prototype_device_from_decoder; 532 =>
+    false false skip_code_embed_info_from_decoder; 533 => false false
+    kiwi_skip_int_value; 534 => true false skip_collaborative_text_op_id_from_decoder;
+    535 => false false skip_easing_data_from_decoder; 536 => false false
+    kiwi_skip_string_value; 537 => false true kiwi_skip_bytes_value; 538 => false false
+    skip_table_merged_cell_map_from_decoder; 539 => false false
     skip_symbol_id_from_decoder; 540 => false false
-    skip_repeater_cms_override_data_from_decoder; 549 => false false
-    skip_repeater_symbol_override_data_from_decoder; 541 => false false
-    skip_repeater_override_data_from_decoder; 405 => true false kiwi_skip_uint_value; 408
-    => false false kiwi_skip_string_value; 407 => false false
-    skip_first_draft_data_from_decoder; 418 => false false
-    skip_first_draft_kit_element_data_from_decoder; 421 => false false
-    skip_cooper_revert_data_from_decoder; 461 => false false
-    skip_cooper_template_data_from_decoder; 528 => false false
-    skip_buzz_approval_requests_from_decoder; 529 => false false
-    skip_buzz_approval_node_status_info_from_decoder; 422 => false false
-    skip_hub_file_attribution_from_decoder; 454 => false false
-    skip_managed_string_data_from_decoder; 466 => false false
-    skip_thumbnail_info_from_decoder; 494 => false false
-    skip_ai_canvas_prompt_from_decoder; 499 => false false
-    skip_canvas_node_id_from_decoder; 548 => false false kiwi_skip_string_value; 523 =>
-    false false skip_trss_transform2_d_from_decoder; 506 => false false
-    kiwi_skip_int64_value; 507 => false false skip_keyframe_value_data_from_decoder; 586
-    => false false skip_variable_data_from_decoder; 505 => false false
-    kiwi_skip_uint_value; 508 => false false skip_bezier_handles_from_decoder; 535 =>
-    false false skip_easing_data_from_decoder; 509 => false false kiwi_skip_uint_value;
-    510 => false false kiwi_skip_uint_value; 545 => false false kiwi_skip_bool_value; 511
-    => false false skip_guid_from_decoder; 512 => false false kiwi_skip_uint64_value; 513
-    => false false kiwi_skip_int64_value; 543 => false false kiwi_skip_bool_value; 514 =>
-    false false kiwi_skip_uint_value; 552 => false false
+    skip_repeater_cms_override_data_from_decoder; 541 => false false
+    skip_repeater_override_data_from_decoder; 542 => false false
+    skip_optional_vector_from_decoder; 543 => false false kiwi_skip_bool_value; 544 =>
+    false false kiwi_skip_bool_value; 545 => false false kiwi_skip_bool_value; 546 =>
+    false false kiwi_skip_bool_value; 547 => false false kiwi_skip_string_value; 548 =>
+    false false kiwi_skip_string_value; 549 => false false
+    skip_repeater_symbol_override_data_from_decoder; 550 => false false
+    kiwi_skip_bool_value; 551 => false false kiwi_skip_bool_value; 552 => false false
     skip_timeline_definitions_map_from_decoder; 553 => false false
-    skip_timeline_assignments_map_from_decoder; 521 => false false
-    skip_animation_presets_from_decoder; 582 => true false
+    skip_timeline_assignments_map_from_decoder; 554 => false false kiwi_skip_float_value;
+    555 => false false kiwi_skip_uint_value; 556 => false false kiwi_skip_bool_value; 557
+    => false false skip_source_control_config_from_decoder; 558 => false false
+    skip_code_source_info_from_decoder; 559 => false false kiwi_skip_uint_value; 560 =>
+    false false skip_collaborative_plain_text_from_decoder; 561 => false false
+    kiwi_skip_string_value; 562 => false false kiwi_skip_string_value; 563 => false false
+    kiwi_skip_int_value; 564 => true false skip_path_from_decoder; 565 => false false
+    kiwi_skip_bool_value; 566 => false false kiwi_skip_uint_value; 567 => false false
+    kiwi_skip_bool_value; 568 => false false skip_tools_from_decoder; 569 => false false
+    skip_custom_effects_from_decoder; 570 => false false skip_transform3d_from_decoder;
+    571 => false false skip_stroke_data_from_decoder; 572 => false false
+    skip_scene3d_from_decoder; 573 => false false skip_multiplayer_map_from_decoder; 574
+    => false false kiwi_skip_uint_value; 575 => false false kiwi_skip_string_value; 576
+    => false false kiwi_skip_int_value; 577 => false false kiwi_skip_int_value; 578 =>
+    false false skip_table_row_column_size_map_from_decoder; 579 => false false
+    skip_table_row_column_size_map_from_decoder; 580 => true false
+    skip_style_animation_from_decoder; 581 => false false
+    skip_partial_paste_annotation_from_decoder; 582 => true false
     skip_style_id_for_animation_from_decoder; 583 => false false
-    skip_animation_preset_id_from_decoder; 568 => false false skip_tools_from_decoder;
-    569 => false false skip_custom_effects_from_decoder; 526 => false false
-    skip_transition_override_data_from_decoder; 544 => false false kiwi_skip_bool_value;
-    557 => false false skip_source_control_config_from_decoder; 559 => false false
-    kiwi_skip_uint_value; 560 => false false skip_collaborative_plain_text_from_decoder;
-    561 => false false kiwi_skip_string_value; 562 => false false kiwi_skip_string_value;
-    563 => false false kiwi_skip_int_value; 575 => false false kiwi_skip_string_value;
-    576 => false false kiwi_skip_int_value; 577 => false false kiwi_skip_int_value; 578
-    => false false skip_table_row_column_size_map_from_decoder; 579 => false false
-    skip_table_row_column_size_map_from_decoder; 590 => false false
-    kiwi_skip_string_value; 565 => false false kiwi_skip_bool_value; 584 => false false
-    kiwi_skip_string_value; 585 => false false kiwi_skip_int_value; 567 => false false
-    kiwi_skip_bool_value; 588 => false false skip_custom_tool_artifact_ref_from_decoder;]
+    skip_animation_preset_id_from_decoder; 584 => false false kiwi_skip_string_value; 585
+    => false false kiwi_skip_int_value; 586 => false false
+    skip_variable_data_from_decoder; 587 => false false
+    skip_transform_origin_from_decoder; 588 => false false
+    skip_custom_tool_artifact_ref_from_decoder; 589 => false false
+    skip_code_snapshot_layers_from_decoder; 590 => false false kiwi_skip_string_value;]
 }
 fn decode_scene_message_from_decoder(
     decoder: &mut Decoder<'_>,

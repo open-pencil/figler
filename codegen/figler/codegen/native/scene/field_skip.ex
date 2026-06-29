@@ -54,6 +54,7 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
       |> Map.fetch!(definition)
       |> then(& &1.fields)
       |> Enum.map(&field(&1, definition_map))
+      |> Enum.sort_by(& &1.id)
       |> Enum.map(&field_entry/1)
       |> Enum.intersperse("\n")
 
@@ -63,10 +64,11 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
       Atom.to_string(function),
       ";\n",
       "    decoder decoder;\n",
+      "    field field;\n",
       "    definition ",
       inspect(error),
       ";\n",
-      "    fields [\n",
+      "    skip_fields [\n",
       RustExpr.indent(fields, 8),
       "\n    ]\n",
       "}"
