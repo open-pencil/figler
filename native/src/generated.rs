@@ -490,48 +490,6 @@ fn kiwi_sparse_message_fields_remaining<'a>(
 }
 
 
-#[allow(unused_macros)]
-macro_rules! kiwi_sparse_message_decoder {
-    (
-        fn $name:ident;
-        env $env:ident;
-        decoder $decoder:ident;
-        module $module_name:literal;
-        definition $definition_name:literal;
-        capacity $capacity:literal;
-        fields [$($field_id:literal => $field_name:literal: $field_expr:expr;)*]
-    ) => {
-        fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-            let module_atom = Atom::from_str($env, $module_name).unwrap();
-            let module_key_atom = Atom::from_str($env, "__kiwi_module__").unwrap();
-            let mut keys = Vec::with_capacity($capacity);
-            let mut values = Vec::with_capacity($capacity);
-            keys.push(module_key_atom.encode($env));
-            values.push(module_atom.encode($env));
-            loop {
-                match $decoder.read_var_uint()? {
-                    0 => break,
-                    $(
-                        $field_id => {
-                            keys.push(Atom::from_str($env, $field_name).unwrap().encode($env));
-                            values.push($field_expr);
-                        }
-                    )*
-                    field => {
-                        return Err(Error::Term(Box::new(format!(
-                            "unknown field {} while decoding sparse {}",
-                            field,
-                            $definition_name
-                        ))));
-                    }
-                }
-            }
-            Term::map_from_term_arrays($env, &keys, &values)
-        }
-    };
-}
-
-
 fn cached_atom(env: Env, cell: &OnceLock<Atom>, name: &str) -> Atom {
     *cell.get_or_init(|| Atom::from_str(env, name).unwrap())
 }
