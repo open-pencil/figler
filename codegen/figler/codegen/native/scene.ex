@@ -8,7 +8,6 @@ defmodule Figler.Codegen.Native.Scene do
 
   alias Figler.Codegen.Native.AtomCache
   alias Figler.Codegen.Native.SupportFunction
-  alias Figler.Codegen.Native.Scene.Attrs
   alias Figler.Codegen.Native.Scene.Decode
   alias Figler.Codegen.Native.Scene.FieldSkip
   alias Figler.Codegen.Native.Scene.Record
@@ -48,11 +47,7 @@ defmodule Figler.Codegen.Native.Scene do
       scene_record_build_fields: Record.record_build_fields(),
       scene_decode_locals: scene_decode_locals(),
       scene_decode_arms: scene_decode_arms(definition_map),
-      scene_attr_lookup: Attrs.xpath_lookup(),
-      scene_attr_count: Attrs.xpath_count(),
-      scene_query_atom_statics:
-        [AtomCache.static("GUID_ATOM"), AtomCache.static("NODE_TYPE_ATOM")] ++
-          Attrs.query_field_atoms(),
+      scene_query_atom_statics: scene_query_atom_statics(),
       scene_reader_helpers: SupportFunction.scene_reader_items(),
       scene_navigation_nifs: scene_navigation_nifs()
     ]
@@ -133,6 +128,19 @@ defmodule Figler.Codegen.Native.Scene do
   defp scene_decode_expr(name, _field), do: Decode.string(name)
 
   defp scene_decode_arm(id, %Decode.Operation{} = operation), do: Decode.arm(id, operation)
+
+  defp scene_query_atom_statics do
+    (["GUID_ATOM", "NODE_TYPE_ATOM"] ++
+       Enum.map(scene_optional_fields(), &query_field_atom_name/1))
+    |> Enum.map(&AtomCache.static/1)
+  end
+
+  defp query_field_atom_name(field) do
+    field
+    |> to_string()
+    |> String.upcase()
+    |> Kernel.<>("_ATOM")
+  end
 
   defp scene_navigation_nifs do
     [

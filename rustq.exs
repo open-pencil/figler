@@ -36,10 +36,6 @@ unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.Decode) do
   Code.require_file("codegen/figler/codegen/native/scene/decode.ex")
 end
 
-unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.Attrs) do
-  Code.require_file("codegen/figler/codegen/native/scene/attrs.ex")
-end
-
 unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.Record) do
   Code.require_file("codegen/figler/codegen/native/scene/record.ex")
 end

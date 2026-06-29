@@ -67,10 +67,13 @@ defmodule Figler.Codegen.NativeTest do
     assert helper_source =~ "fn graph_focus_extend_component_prop_value"
   end
 
-  test "scene query field encoding is authored as a support function" do
+  test "scene XPath attrs and query fields are authored as support functions" do
     helper_source =
       SupportFunction.scene_reader_items() |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
 
+    assert helper_source =~ "fn scene_node_record_attr"
+    assert helper_source =~ "return Some((\"guid\", record.guid.to_string()))"
+    assert helper_source =~ "fn scene_node_record_attr_count"
     assert helper_source =~ "fn scene_query_node_term"
     assert helper_source =~ "let node = &scene.nodes[node_index]"
     assert helper_source =~ "if wants_field(fields, \"name\")"

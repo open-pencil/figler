@@ -11,6 +11,9 @@ defmodule Figler.Codegen.Native.SupportFunction do
   """
 
   alias Figler.Scene.Projection
+  alias Figler.Scene.Projection.Native, as: ProjectionNative
+  alias Figler.Scene.Projection.Native.XPathAttr
+  alias Figler.Scene.Projection.Native.XPathValue
   alias RustQ.Meta.AST, as: MetaAST
   alias RustQ.Type, as: R
 
@@ -68,6 +71,9 @@ defmodule Figler.Codegen.Native.SupportFunction do
       :read_scene_size_value,
       :read_scene_transform_value,
       :read_scene_font_name_value,
+      :scene_node_record_base_attr_count,
+      :scene_node_record_attr,
+      :scene_node_record_attr_count,
       :scene_query_node_term
     ])
   end
@@ -130,6 +136,54 @@ defmodule Figler.Codegen.Native.SupportFunction do
     {:__block__, [], Enum.map(fields, &push_optional_scene_query_field/1)}
   end
 
+  defmacro lookup_optional_scene_node_record_attrs do
+    optional_xpath_attrs()
+    |> Enum.map(&lookup_optional_scene_node_record_attr/1)
+    |> block()
+  end
+
+  defmacro count_optional_scene_node_record_attrs do
+    optional_field_names()
+    |> Enum.map(&count_optional_scene_node_record_attr/1)
+    |> block()
+  end
+
+  @spec scene_node_record_base_attr_count() :: R.usize()
+  defrust scene_node_record_base_attr_count() do
+    2
+  end
+
+  @spec scene_node_record_attr(R.ref(R.raw(:SceneNodeRecord)), R.usize()) ::
+          R.raw(:"Option<(&'static str, String)>")
+  defrust scene_node_record_attr(record, index) do
+    cursor = 0
+
+    if index == cursor do
+      return!(some({"guid", record.guid.to_string()}))
+    end
+
+    assign!(cursor, cursor.saturating_add(1))
+
+    if index == cursor do
+      return!(some({"type", record.node_type.to_string()}))
+    end
+
+    assign!(cursor, cursor.saturating_add(1))
+
+    lookup_optional_scene_node_record_attrs()
+
+    nil
+  end
+
+  @spec scene_node_record_attr_count(R.ref(R.raw(:SceneNodeRecord))) :: R.usize()
+  defrust scene_node_record_attr_count(record) do
+    count = scene_node_record_base_attr_count()
+
+    count_optional_scene_node_record_attrs()
+
+    count
+  end
+
   @spec scene_query_node_term(
           R.path(:Env, R.lifetime(:a)),
           R.ref(R.raw(:SceneIndex)),
@@ -150,6 +204,103 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
     Term.map_from_term_arrays(env, ref(keys), ref(values))
   end
+
+  defp optional_field_names do
+    Projection.field_names() -- Projection.required_field_names()
+  end
+
+  defp optional_xpath_attrs do
+    attrs = Enum.flat_map(optional_field_names(), &ProjectionNative.xpath_attr_entries/1)
+
+    attrs
+    |> Enum.with_index()
+    |> Enum.map(fn {%XPathAttr{} = attr, index} ->
+      {attr, index == length(attrs) - 1}
+    end)
+  end
+
+  defp lookup_optional_scene_node_record_attr({%XPathAttr{} = attr, last?}) do
+    accessor = xpath_accessor(attr)
+    value = xpath_value(attr.value)
+
+    cursor_advance =
+      if last?,
+        do: quote(do: :ok),
+        else: quote(do: assign!(cursor, cursor.saturating_add(1)))
+
+    quote do
+      case unquote(accessor) do
+        {:some, value} when index == cursor ->
+          return!(some({unquote(attr.attr), unquote(value)}))
+
+        {:some, _value} ->
+          unquote(cursor_advance)
+
+        :none ->
+          :ok
+      end
+    end
+  end
+
+  defp xpath_accessor(%XPathAttr{by_ref?: true, field: field}) do
+    quote do
+      record.unquote(field).as_ref()
+    end
+  end
+
+  defp xpath_accessor(%XPathAttr{by_ref?: false, field: field}) do
+    quote do
+      record.unquote(field)
+    end
+  end
+
+  defp xpath_value(%XPathValue{kind: :field_to_string, field: field}) do
+    quote do
+      value.unquote(field).to_string()
+    end
+  end
+
+  defp xpath_value(%XPathValue{kind: :value_to_string}) do
+    quote do
+      value.to_string()
+    end
+  end
+
+  defp xpath_value(%XPathValue{kind: :value_clone}) do
+    quote do
+      value.clone()
+    end
+  end
+
+  defp xpath_value(%XPathValue{kind: :transform_string}) do
+    quote do
+      format!(
+        "{},{},{},{},{},{}",
+        value.m00,
+        value.m01,
+        value.m02,
+        value.m10,
+        value.m11,
+        value.m12
+      )
+    end
+  end
+
+  defp count_optional_scene_node_record_attr(:size),
+    do: count_optional_scene_node_record_attr(:size, 4)
+
+  defp count_optional_scene_node_record_attr(field),
+    do: count_optional_scene_node_record_attr(field, 1)
+
+  defp count_optional_scene_node_record_attr(field, count) do
+    quote do
+      if record.unquote(field).is_some() do
+        assign!(count, count.saturating_add(unquote(count)))
+      end
+    end
+  end
+
+  defp block(statements), do: {:__block__, [], statements}
 
   defp push_optional_scene_query_field(:parent_guid) do
     quote do

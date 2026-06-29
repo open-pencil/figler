@@ -89,22 +89,10 @@ mod scene_xpath_runtime {
 
     impl SceneNodeRecord {
         fn attr(&self, index: usize) -> Option<(&'static str, String)> {
-            let mut cursor = 0;
-            if index == cursor {
-                return Some(("guid", self.guid.to_string()));
-            }
-            cursor += 1;
-            if index == cursor {
-                return Some(("type", self.node_type.to_string()));
-            }
-            cursor += 1;
-            __rq_scene_attr_lookup!();
-            None
+            scene_node_record_attr(self, index)
         }
         fn attr_count(&self) -> usize {
-            let mut count = 2;
-            __rq_scene_attr_count!();
-            count
+            scene_node_record_attr_count(self)
         }
     }
     impl SceneIndex {
