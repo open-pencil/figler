@@ -234,7 +234,16 @@ macro_rules! kiwi_sparse_message_descriptor_decoder {
         capacity $capacity:literal;
         fields [$($field_id:literal => $field_name:literal: $field_mode:ident $field_decode:ident;)*]) => {
                 fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-                        kiwi_sparse_message_fields($env, $decoder, $module_name, $definition_name, $capacity, &[$(KiwiSparseField { id: $field_id, name: $field_name, repeated: kiwi_sparse_repeated!($field_mode), decode: $field_decode},)*])
+                        kiwi_sparse_message_fields(
+                            $env,
+                            $decoder,
+                            $module_name,
+                            $definition_name,
+                            $capacity,
+                            &[
+                                $(KiwiSparseField { id: $field_id, name: $field_name, repeated: kiwi_sparse_repeated!($field_mode), decode: $field_decode},)*
+                            ],
+                        )
                 }
         };
 }
