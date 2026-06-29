@@ -355,7 +355,6 @@ fn kiwi_sparse_message_fields_remaining<'a>(
 macro_rules! kiwi_sparse_repeated {
     (one) => { false };
     (repeated) => { true };
-    (bytes) => { false };
 }
 
 #[allow(unused_macros)]
@@ -1835,7 +1834,7 @@ kiwi_sparse_message_descriptor_decoder! {
     definition "Image";
     capacity 4;
     fields [
-        1 => "hash": bytes kiwi_sparse_bytes_value;
+        1 => "hash": one kiwi_sparse_bytes_value;
         2 => "name": one kiwi_sparse_string_value;
         3 => "data_blob": one kiwi_sparse_uint_value;
     ]
@@ -1849,7 +1848,7 @@ kiwi_sparse_message_descriptor_decoder! {
     definition "Video";
     capacity 3;
     fields [
-        1 => "hash": bytes kiwi_sparse_bytes_value;
+        1 => "hash": one kiwi_sparse_bytes_value;
         2 => "s3_url": one kiwi_sparse_string_value;
     ]
 }
@@ -1938,7 +1937,7 @@ kiwi_sparse_message_descriptor_decoder! {
         22 => "image_should_color_manage": one kiwi_sparse_bool_value;
         23 => "stops_var": repeated decode_sparse_color_stop_var_from_decoder;
         24 => "thumb_hash_base64": one kiwi_sparse_string_value;
-        25 => "thumb_hash": bytes kiwi_sparse_bytes_value;
+        25 => "thumb_hash": one kiwi_sparse_bytes_value;
         26 => "source_node_id": one decode_sparse_guid_from_decoder;
         27 => "spacing": one kiwi_sparse_float_value;
         28 => "pattern_tile_type": one decode_sparse_pattern_tile_type_from_decoder;
@@ -2027,7 +2026,7 @@ kiwi_sparse_message_descriptor_decoder! {
     fields [
         1 => "key": one decode_sparse_font_name_from_decoder;
         2 => "font_line_height": one kiwi_sparse_float_value;
-        3 => "font_digest": bytes kiwi_sparse_bytes_value;
+        3 => "font_digest": one kiwi_sparse_bytes_value;
         4 => "font_style": one decode_sparse_font_style_from_decoder;
         5 => "font_weight": one kiwi_sparse_int_value;
     ]
@@ -2622,7 +2621,7 @@ kiwi_sparse_message_descriptor_decoder! {
     fields [
         1 => "history_ops_with_ids": repeated decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
         2 => "history_ops_with_loc": repeated decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder;
-        3 => "history_string_content_buffer": bytes kiwi_sparse_bytes_value;
+        3 => "history_string_content_buffer": one kiwi_sparse_bytes_value;
         4 => "changes_to_append": repeated decode_sparse_collaborative_text_op_run_from_decoder;
     ]
 }
@@ -2730,7 +2729,7 @@ kiwi_sparse_message_descriptor_decoder! {
         2 => "symbol_id": one decode_sparse_guid_from_decoder;
         3 => "version_hash": one kiwi_sparse_string_value;
         4 => "guid_path_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
-        5 => "bytes": bytes kiwi_sparse_bytes_value;
+        5 => "bytes": one kiwi_sparse_bytes_value;
         6 => "library_guid_to_subscribing_guid": repeated decode_sparse_guid_mapping_from_decoder;
         7 => "component_key": one kiwi_sparse_string_value;
         8 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
@@ -4611,7 +4610,7 @@ kiwi_sparse_message_descriptor_decoder! {
         534 => "source_code_collaborative_text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder;
         535 => "easing_data": one decode_sparse_easing_data_from_decoder;
         536 => "mime_type": one kiwi_sparse_string_value;
-        537 => "blob_ref": bytes kiwi_sparse_bytes_value;
+        537 => "blob_ref": one kiwi_sparse_bytes_value;
         538 => "table_merged_cells": one decode_sparse_table_merged_cell_map_from_decoder;
         539 => "repeater_symbol_id": one decode_sparse_symbol_id_from_decoder;
         540 => "repeater_cms_override_data": one decode_sparse_repeater_cms_override_data_from_decoder;
