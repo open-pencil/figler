@@ -9,6 +9,7 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
   """
 
   alias KiwiCodec.RustlerGenerator.RustExpr
+  alias KiwiCodec.Schema.Enum, as: SchemaEnum
   alias RustQ.Rust
 
   defmodule Decoder do
@@ -95,6 +96,9 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
     cond do
       KiwiCodec.PrimitiveType.name?(type) ->
         "kiwi_skip_#{Macro.underscore(type)}_value"
+
+      match?(%SchemaEnum{}, Map.get(definition_map, type)) ->
+        "kiwi_skip_uint_value"
 
       Map.has_key?(definition_map, type) ->
         "skip_#{Macro.underscore(type)}_from_decoder"

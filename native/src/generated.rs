@@ -111,14 +111,6 @@ fn kiwi_skip_message_fields(
     Ok(())
 }
 
-macro_rules! kiwi_skip_enum_decoder {
-    (fn $name:ident; decoder $decoder:ident;) => {
-        fn $name($decoder: &mut Decoder<'_>) -> NifResult<()> {
-            kiwi_skip_uint_value($decoder)
-        }
-    };
-}
-
 macro_rules! kiwi_skip_kind {
     (one $skip:ident) => { KiwiSkipKind::One($skip) };
     (repeated $skip:ident) => { KiwiSkipKind::Repeated($skip) };
@@ -9884,251 +9876,6 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_message_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_axis_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_access_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_node_phase_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_winding_rule_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_node_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_shape_with_text_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_blend_mode_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_paint_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_image_scale_mode_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_effect_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_text_case_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_text_decoration_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_text_decoration_style_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_leading_trim_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_number_units_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_constraint_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stroke_align_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stroke_cap_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stroke_join_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_boolean_operation_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_text_align_horizontal_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_text_align_vertical_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_mouse_cursor_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_vector_mirror_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_image_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_export_constraint_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_layout_grid_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_layout_grid_pattern_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_text_auto_resize_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_text_truncation_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_style_set_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_style_set_content_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stack_mode_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stack_align_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stack_counter_align_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stack_justify_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_grid_child_align_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_grid_auto_tracks_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stack_size_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stack_positioning_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stack_wrap_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_stack_counter_align_content_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_connection_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_interaction_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_transition_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_easing_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_scroll_direction_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_scroll_contracted_state_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_guid_from_decoder;
     decoder decoder;
@@ -10216,7 +9963,7 @@ kiwi_skip_struct_decoder! {
     decoder decoder;
     fields [
         one kiwi_skip_float_value;
-        one skip_number_units_from_decoder;
+        one kiwi_skip_uint_value;
     ]
 }
 
@@ -10230,56 +9977,6 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_font_variant_numeric_figure_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_font_variant_numeric_spacing_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_font_variant_numeric_fraction_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_font_variant_caps_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_font_variant_position_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_font_style_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_semantic_weight_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_semantic_italic_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_code_snapshot_state_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_snapshot_capture_mode_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_code_source_info_from_decoder;
     decoder decoder;
@@ -10288,15 +9985,10 @@ kiwi_skip_message_decoder! {
         1 => one kiwi_skip_string_value;
         2 => one skip_guid_from_decoder;
         3 => one skip_guid_from_decoder;
-        4 => one skip_snapshot_capture_mode_from_decoder;
+        4 => one kiwi_skip_uint_value;
         5 => one kiwi_skip_string_value;
         6 => one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_code_object_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -10311,21 +10003,11 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_lock_mode_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_open_type_feature_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_export_constraint_from_decoder;
     decoder decoder;
     fields [
-        one skip_export_constraint_type_from_decoder;
+        one kiwi_skip_uint_value;
         one kiwi_skip_float_value;
     ]
 }
@@ -10416,18 +10098,18 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Paint";
     fields [
-        1 => one skip_paint_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_color_from_decoder;
         3 => one kiwi_skip_float_value;
         4 => one kiwi_skip_bool_value;
-        5 => one skip_blend_mode_from_decoder;
+        5 => one kiwi_skip_uint_value;
         6 => repeated skip_color_stop_from_decoder;
         7 => one skip_matrix_from_decoder;
         8 => one skip_image_from_decoder;
         9 => one skip_image_from_decoder;
         16 => one skip_image_from_decoder;
         17 => one kiwi_skip_uint_value;
-        10 => one skip_image_scale_mode_from_decoder;
+        10 => one kiwi_skip_uint_value;
         22 => one kiwi_skip_bool_value;
         11 => one kiwi_skip_float_value;
         12 => one kiwi_skip_float_value;
@@ -10446,44 +10128,19 @@ kiwi_skip_message_decoder! {
         26 => one skip_guid_from_decoder;
         27 => one kiwi_skip_float_value;
         37 => one skip_vector_from_decoder;
-        28 => one skip_pattern_tile_type_from_decoder;
-        29 => one skip_pattern_alignment_from_decoder;
-        30 => one skip_pattern_alignment_from_decoder;
+        28 => one kiwi_skip_uint_value;
+        29 => one kiwi_skip_uint_value;
+        30 => one kiwi_skip_uint_value;
         32 => one skip_guid_from_decoder;
         33 => one kiwi_skip_string_value;
-        34 => one skip_noise_type_from_decoder;
+        34 => one kiwi_skip_uint_value;
         35 => one kiwi_skip_float_value;
         36 => one skip_vector_from_decoder;
         39 => one skip_code_component_id_from_decoder;
         40 => repeated skip_component_prop_assignment_from_decoder;
-        41 => one skip_interpolation_color_space_from_decoder;
-        42 => one skip_interpolation_hue_method_from_decoder;
+        41 => one kiwi_skip_uint_value;
+        42 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_noise_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_pattern_tile_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_pattern_alignment_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_interpolation_color_space_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_interpolation_hue_method_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -10494,7 +10151,7 @@ kiwi_skip_message_decoder! {
         1 => one skip_font_name_from_decoder;
         2 => one kiwi_skip_float_value;
         3 => bytes kiwi_skip_bytes_value;
-        4 => one skip_font_style_from_decoder;
+        4 => one kiwi_skip_uint_value;
         5 => one kiwi_skip_int_value;
     ]
 }
@@ -10612,7 +10269,7 @@ kiwi_skip_message_decoder! {
         5 => one kiwi_skip_uint_value;
         6 => one kiwi_skip_float_value;
         7 => repeated kiwi_skip_uint_value;
-        8 => one skip_emoji_image_set_from_decoder;
+        8 => one kiwi_skip_uint_value;
         9 => one kiwi_skip_float_value;
     ]
 }
@@ -10910,11 +10567,6 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_collaborative_text_op_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
     decoder decoder;
@@ -10932,7 +10584,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CollaborativeTextStrippedOpRunWithLoc";
     fields [
-        1 => one skip_collaborative_text_op_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_index_range_from_decoder;
         3 => one kiwi_skip_bool_value;
         4 => one skip_index_range_from_decoder;
@@ -10947,7 +10599,7 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one skip_collaborative_text_op_id_from_decoder;
         2 => repeated skip_collaborative_text_op_id_from_decoder;
-        3 => one skip_collaborative_text_op_type_from_decoder;
+        3 => one kiwi_skip_uint_value;
         4 => one skip_index_range_from_decoder;
         5 => one kiwi_skip_bool_value;
         6 => one kiwi_skip_string_value;
@@ -10994,11 +10646,6 @@ kiwi_skip_message_decoder! {
         6 => one skip_variable_data_from_decoder;
         7 => one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_flapp_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11104,41 +10751,16 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_blur_op_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_repeat_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_unit_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_repeat_order_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_effect_axis_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_effect_from_decoder;
     decoder decoder;
     definition "Effect";
     fields [
-        1 => one skip_effect_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         3 => one skip_vector_from_decoder;
         4 => one kiwi_skip_float_value;
         5 => one kiwi_skip_bool_value;
-        6 => one skip_blend_mode_from_decoder;
+        6 => one kiwi_skip_uint_value;
         7 => one kiwi_skip_float_value;
         8 => one kiwi_skip_bool_value;
         9 => one skip_variable_data_from_decoder;
@@ -11147,11 +10769,11 @@ kiwi_skip_message_decoder! {
         12 => one skip_variable_data_from_decoder;
         13 => one skip_variable_data_from_decoder;
         14 => one kiwi_skip_uint_value;
-        15 => one skip_repeat_type_from_decoder;
-        16 => one skip_effect_axis_from_decoder;
-        17 => one skip_unit_type_from_decoder;
-        18 => one skip_repeat_order_from_decoder;
-        19 => one skip_blur_op_type_from_decoder;
+        15 => one kiwi_skip_uint_value;
+        16 => one kiwi_skip_uint_value;
+        17 => one kiwi_skip_uint_value;
+        18 => one kiwi_skip_uint_value;
+        19 => one kiwi_skip_uint_value;
         20 => one skip_vector_from_decoder;
         28 => one skip_vector_from_decoder;
         21 => one kiwi_skip_float_value;
@@ -11161,7 +10783,7 @@ kiwi_skip_message_decoder! {
         29 => one kiwi_skip_uint_value;
         23 => one kiwi_skip_bool_value;
         25 => one kiwi_skip_float_value;
-        26 => one skip_noise_type_from_decoder;
+        26 => one kiwi_skip_uint_value;
         27 => one kiwi_skip_float_value;
         30 => one kiwi_skip_float_value;
         31 => one kiwi_skip_float_value;
@@ -11192,32 +10814,22 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_transform_modifier_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_transform_modifier_from_decoder;
     decoder decoder;
     definition "TransformModifier";
     fields [
-        1 => one skip_transform_modifier_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_vector_from_decoder;
         3 => one kiwi_skip_bool_value;
         4 => one kiwi_skip_uint_value;
-        5 => one skip_repeat_type_from_decoder;
-        6 => one skip_effect_axis_from_decoder;
-        7 => one skip_unit_type_from_decoder;
-        8 => one skip_repeat_order_from_decoder;
+        5 => one kiwi_skip_uint_value;
+        6 => one kiwi_skip_uint_value;
+        7 => one kiwi_skip_uint_value;
+        8 => one kiwi_skip_uint_value;
         9 => one kiwi_skip_float_value;
         10 => one kiwi_skip_float_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_transform_schema_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_struct_decoder! {
@@ -11256,11 +10868,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_transform_fn_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_transform_fn_value_from_decoder;
     decoder decoder;
@@ -11278,7 +10885,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransformFn";
     fields [
-        1 => one skip_transform_fn_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_transform_fn_value_from_decoder;
     ]
 }
@@ -11298,7 +10905,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Transform3d";
     fields [
-        1 => one skip_transform_schema_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_transform_schema_value_from_decoder;
         3 => one kiwi_skip_bool_value;
     ]
@@ -11339,19 +10946,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionInfo";
     fields [
-        1 => one skip_transition_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_float_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_prototype_device_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_device_rotation_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11359,26 +10956,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PrototypeDevice";
     fields [
-        1 => one skip_prototype_device_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_vector_from_decoder;
         3 => one kiwi_skip_string_value;
-        4 => one skip_device_rotation_from_decoder;
+        4 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_overlay_position_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_overlay_background_interaction_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_overlay_background_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11386,24 +10968,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "OverlayBackgroundAppearance";
     fields [
-        1 => one skip_overlay_background_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_color_from_decoder;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_navigation_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_export_color_profile_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_export_background_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11412,26 +10979,21 @@ kiwi_skip_message_decoder! {
     definition "ExportSettings";
     fields [
         1 => one kiwi_skip_string_value;
-        2 => one skip_image_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one skip_export_constraint_from_decoder;
         4 => one kiwi_skip_bool_value;
-        5 => one skip_export_svgid_mode_from_decoder;
+        5 => one kiwi_skip_uint_value;
         6 => one kiwi_skip_bool_value;
         7 => one kiwi_skip_bool_value;
         8 => one kiwi_skip_bool_value;
         9 => one kiwi_skip_bool_value;
-        10 => one skip_export_color_profile_from_decoder;
+        10 => one kiwi_skip_uint_value;
         11 => one kiwi_skip_float_value;
         12 => one kiwi_skip_bool_value;
         13 => one kiwi_skip_int_value;
         14 => one kiwi_skip_int_value;
-        15 => one skip_export_background_type_from_decoder;
+        15 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_export_svgid_mode_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11439,15 +11001,15 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "LayoutGrid";
     fields [
-        1 => one skip_layout_grid_type_from_decoder;
-        2 => one skip_axis_from_decoder;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_bool_value;
         4 => one kiwi_skip_int_value;
         5 => one kiwi_skip_float_value;
         6 => one kiwi_skip_float_value;
         7 => one kiwi_skip_float_value;
         8 => one skip_color_from_decoder;
-        9 => one skip_layout_grid_pattern_from_decoder;
+        9 => one kiwi_skip_uint_value;
         10 => one skip_variable_data_from_decoder;
         11 => one skip_variable_data_from_decoder;
         12 => one skip_variable_data_from_decoder;
@@ -11460,7 +11022,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Guide";
     fields [
-        1 => one skip_axis_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_float_value;
         3 => one skip_guid_from_decoder;
     ]
@@ -11471,25 +11033,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Path";
     fields [
-        1 => one skip_winding_rule_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_style_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_brush_orientation_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_brush_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11521,7 +11068,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "StretchStrokeSettings";
     fields [
-        1 => one skip_brush_orientation_from_decoder;
+        1 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -11545,10 +11092,10 @@ kiwi_skip_message_decoder! {
         3 => one skip_variable_data_from_decoder;
         4 => repeated skip_paint_from_decoder;
         5 => one skip_style_id_from_decoder;
-        6 => one skip_stroke_align_from_decoder;
-        7 => one skip_stroke_cap_from_decoder;
+        6 => one kiwi_skip_uint_value;
+        7 => one kiwi_skip_uint_value;
         8 => one skip_number_from_decoder;
-        9 => one skip_stroke_join_from_decoder;
+        9 => one kiwi_skip_uint_value;
         10 => one kiwi_skip_float_value;
         11 => repeated kiwi_skip_float_value;
         12 => one skip_optional_vector_from_decoder;
@@ -11588,11 +11135,6 @@ kiwi_skip_message_decoder! {
         2 => one kiwi_skip_string_value;
         3 => one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_scroll_behavior_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11651,11 +11193,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_connector_magnet_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_connector_endpoint_from_decoder;
     decoder decoder;
@@ -11663,7 +11200,7 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one skip_guid_from_decoder;
         2 => one skip_vector_from_decoder;
-        3 => one skip_connector_magnet_from_decoder;
+        3 => one kiwi_skip_uint_value;
         4 => one skip_vector_from_decoder;
     ]
 }
@@ -11678,40 +11215,15 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_connector_text_section_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_connector_off_axis_offset_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_connector_text_midpoint_from_decoder;
     decoder decoder;
     definition "ConnectorTextMidpoint";
     fields [
-        1 => one skip_connector_text_section_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_float_value;
-        3 => one skip_connector_off_axis_offset_from_decoder;
+        3 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_connector_line_style_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_connector_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_annotation_property_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11719,18 +11231,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnnotationProperty";
     fields [
-        1 => one skip_annotation_property_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_annotation_category_preset_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_annotation_category_color_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -11738,7 +11240,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AnnotationCategoryCustom";
     fields [
-        1 => one skip_annotation_category_color_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_color_from_decoder;
         3 => one kiwi_skip_string_value;
     ]
@@ -11750,7 +11252,7 @@ kiwi_skip_message_decoder! {
     definition "AnnotationCategory";
     fields [
         1 => one skip_guid_from_decoder;
-        2 => one skip_annotation_category_preset_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one skip_annotation_category_custom_from_decoder;
     ]
 }
@@ -11777,11 +11279,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_annotation_measurement_node_side_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_annotation_measurement_from_decoder;
     decoder decoder;
@@ -11790,7 +11287,7 @@ kiwi_skip_message_decoder! {
         1 => one skip_guid_from_decoder;
         2 => one skip_guid_from_decoder;
         3 => one skip_guid_from_decoder;
-        4 => one skip_annotation_measurement_node_side_from_decoder;
+        4 => one kiwi_skip_uint_value;
         5 => one kiwi_skip_bool_value;
         6 => one kiwi_skip_float_value;
         7 => one kiwi_skip_float_value;
@@ -11852,36 +11349,16 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_editor_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_mask_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_module_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_section_status_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_section_status_info_from_decoder;
     decoder decoder;
     definition "SectionStatusInfo";
     fields [
-        1 => one skip_section_status_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_string_value;
         4 => one kiwi_skip_string_value;
-        5 => one skip_section_status_from_decoder;
+        5 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -11909,17 +11386,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_buzz_approval_node_status_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_buzz_approval_node_status_info_from_decoder;
     decoder decoder;
     definition "BuzzApprovalNodeStatusInfo";
     fields [
-        1 => one skip_buzz_approval_node_status_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_bool_value;
         3 => repeated kiwi_skip_uint_value;
     ]
@@ -11938,11 +11410,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_variable_timing_display_unit_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_node_change_from_decoder;
     decoder decoder;
@@ -11950,11 +11417,11 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one skip_guid_from_decoder;
         53 => one kiwi_skip_uint_value;
-        2 => one skip_node_phase_from_decoder;
+        2 => one kiwi_skip_uint_value;
         54 => one kiwi_skip_uint_value;
         3 => one skip_parent_index_from_decoder;
         55 => one kiwi_skip_uint_value;
-        4 => one skip_node_type_from_decoder;
+        4 => one kiwi_skip_uint_value;
         56 => one kiwi_skip_uint_value;
         5 => one kiwi_skip_string_value;
         57 => one kiwi_skip_uint_value;
@@ -11969,7 +11436,7 @@ kiwi_skip_message_decoder! {
         157 => one kiwi_skip_bool_value;
         161 => one kiwi_skip_bool_value;
         376 => one kiwi_skip_bool_value;
-        163 => one skip_style_type_from_decoder;
+        163 => one kiwi_skip_uint_value;
         191 => one kiwi_skip_string_value;
         171 => one kiwi_skip_string_value;
         399 => one kiwi_skip_string_value;
@@ -12028,7 +11495,7 @@ kiwi_skip_message_decoder! {
         111 => one skip_guid_path_from_decoder;
         112 => one kiwi_skip_uint_value;
         321 => one kiwi_skip_int_value;
-        382 => one skip_module_type_from_decoder;
+        382 => one kiwi_skip_uint_value;
         463 => one kiwi_skip_bool_value;
         495 => one kiwi_skip_bool_value;
         21 => one kiwi_skip_float_value;
@@ -12037,13 +11504,13 @@ kiwi_skip_message_decoder! {
         74 => one kiwi_skip_uint_value;
         23 => one kiwi_skip_float_value;
         75 => one kiwi_skip_uint_value;
-        32 => one skip_text_align_horizontal_from_decoder;
+        32 => one kiwi_skip_uint_value;
         84 => one kiwi_skip_uint_value;
-        33 => one skip_text_align_vertical_from_decoder;
+        33 => one kiwi_skip_uint_value;
         85 => one kiwi_skip_uint_value;
-        34 => one skip_text_case_from_decoder;
+        34 => one kiwi_skip_uint_value;
         86 => one kiwi_skip_uint_value;
-        35 => one skip_text_decoration_from_decoder;
+        35 => one kiwi_skip_uint_value;
         87 => one kiwi_skip_uint_value;
         40 => one skip_number_from_decoder;
         92 => one kiwi_skip_uint_value;
@@ -12058,41 +11525,41 @@ kiwi_skip_message_decoder! {
         130 => one kiwi_skip_bool_value;
         131 => one kiwi_skip_bool_value;
         132 => one kiwi_skip_bool_value;
-        133 => one skip_font_variant_numeric_figure_from_decoder;
-        134 => one skip_font_variant_numeric_spacing_from_decoder;
-        135 => one skip_font_variant_numeric_fraction_from_decoder;
-        136 => one skip_font_variant_caps_from_decoder;
-        137 => one skip_font_variant_position_from_decoder;
+        133 => one kiwi_skip_uint_value;
+        134 => one kiwi_skip_uint_value;
+        135 => one kiwi_skip_uint_value;
+        136 => one kiwi_skip_uint_value;
+        137 => one kiwi_skip_uint_value;
         165 => one skip_number_from_decoder;
         202 => one kiwi_skip_string_value;
-        322 => one skip_leading_trim_from_decoder;
+        322 => one kiwi_skip_uint_value;
         337 => one kiwi_skip_bool_value;
         339 => one kiwi_skip_bool_value;
         550 => one kiwi_skip_bool_value;
         351 => one kiwi_skip_int_value;
         417 => repeated skip_responsive_text_style_variant_from_decoder;
-        352 => one skip_section_status_from_decoder;
+        352 => one kiwi_skip_uint_value;
         355 => one skip_section_status_info_from_decoder;
         203 => one kiwi_skip_uint_value;
         396 => one kiwi_skip_uint_value;
-        205 => repeated skip_open_type_feature_from_decoder;
-        206 => repeated skip_open_type_feature_from_decoder;
+        205 => repeated kiwi_skip_uint_value;
+        206 => repeated kiwi_skip_uint_value;
         223 => one skip_hyperlink_from_decoder;
         340 => one skip_mention_from_decoder;
         260 => repeated skip_font_variation_from_decoder;
         279 => one kiwi_skip_uint_value;
-        280 => one skip_text_truncation_from_decoder;
+        280 => one kiwi_skip_uint_value;
         292 => one kiwi_skip_bool_value;
-        391 => one skip_emoji_image_set_from_decoder;
+        391 => one kiwi_skip_uint_value;
         392 => one kiwi_skip_string_value;
         6 => one kiwi_skip_bool_value;
         58 => one kiwi_skip_uint_value;
         7 => one kiwi_skip_bool_value;
         59 => one kiwi_skip_uint_value;
-        434 => one skip_lock_mode_from_decoder;
+        434 => one kiwi_skip_uint_value;
         8 => one kiwi_skip_float_value;
         60 => one kiwi_skip_uint_value;
-        9 => one skip_blend_mode_from_decoder;
+        9 => one kiwi_skip_uint_value;
         61 => one kiwi_skip_uint_value;
         11 => one skip_vector_from_decoder;
         63 => one kiwi_skip_uint_value;
@@ -12105,19 +11572,19 @@ kiwi_skip_message_decoder! {
         424 => one skip_vector_from_decoder;
         18 => one kiwi_skip_bool_value;
         70 => one kiwi_skip_uint_value;
-        317 => one skip_mask_type_from_decoder;
+        317 => one kiwi_skip_uint_value;
         19 => one kiwi_skip_float_value;
         71 => one kiwi_skip_uint_value;
         20 => one kiwi_skip_float_value;
         72 => one kiwi_skip_uint_value;
         26 => one kiwi_skip_float_value;
         78 => one kiwi_skip_uint_value;
-        29 => one skip_stroke_align_from_decoder;
+        29 => one kiwi_skip_uint_value;
         81 => one kiwi_skip_uint_value;
-        30 => one skip_stroke_cap_from_decoder;
+        30 => one kiwi_skip_uint_value;
         82 => one kiwi_skip_uint_value;
         497 => one skip_number_from_decoder;
-        31 => one skip_stroke_join_from_decoder;
+        31 => one kiwi_skip_uint_value;
         83 => one kiwi_skip_uint_value;
         38 => repeated skip_paint_from_decoder;
         90 => one kiwi_skip_uint_value;
@@ -12136,7 +11603,7 @@ kiwi_skip_message_decoder! {
         412 => one kiwi_skip_bool_value;
         413 => one skip_number_from_decoder;
         415 => one skip_number_from_decoder;
-        416 => one skip_text_decoration_style_from_decoder;
+        416 => one kiwi_skip_uint_value;
         455 => repeated skip_transform_modifier_from_decoder;
         570 => one skip_transform3d_from_decoder;
         571 => one skip_stroke_data_from_decoder;
@@ -12161,35 +11628,35 @@ kiwi_skip_message_decoder! {
         297 => one kiwi_skip_float_value;
         298 => one kiwi_skip_float_value;
         299 => one kiwi_skip_bool_value;
-        28 => one skip_constraint_type_from_decoder;
+        28 => one kiwi_skip_uint_value;
         80 => one kiwi_skip_uint_value;
-        105 => one skip_stack_mode_from_decoder;
+        105 => one kiwi_skip_uint_value;
         106 => one kiwi_skip_uint_value;
         107 => one kiwi_skip_float_value;
         108 => one kiwi_skip_uint_value;
         109 => one kiwi_skip_float_value;
         110 => one kiwi_skip_uint_value;
-        120 => one skip_stack_counter_align_from_decoder;
-        121 => one skip_stack_justify_from_decoder;
-        208 => one skip_stack_align_from_decoder;
+        120 => one kiwi_skip_uint_value;
+        121 => one kiwi_skip_uint_value;
+        208 => one kiwi_skip_uint_value;
         209 => one kiwi_skip_float_value;
         210 => one kiwi_skip_float_value;
-        211 => one skip_stack_size_from_decoder;
-        212 => one skip_stack_size_from_decoder;
-        229 => one skip_stack_size_from_decoder;
-        230 => one skip_stack_justify_from_decoder;
-        231 => one skip_stack_align_from_decoder;
+        211 => one kiwi_skip_uint_value;
+        212 => one kiwi_skip_uint_value;
+        229 => one kiwi_skip_uint_value;
+        230 => one kiwi_skip_uint_value;
+        231 => one kiwi_skip_uint_value;
         232 => one kiwi_skip_float_value;
         233 => one kiwi_skip_float_value;
         234 => one kiwi_skip_float_value;
-        236 => one skip_stack_counter_align_from_decoder;
-        269 => one skip_stack_positioning_from_decoder;
+        236 => one kiwi_skip_uint_value;
+        269 => one kiwi_skip_uint_value;
         271 => one kiwi_skip_bool_value;
-        323 => one skip_stack_wrap_from_decoder;
+        323 => one kiwi_skip_uint_value;
         324 => one kiwi_skip_float_value;
         325 => one skip_optional_vector_from_decoder;
         326 => one skip_optional_vector_from_decoder;
-        343 => one skip_stack_counter_align_content_from_decoder;
+        343 => one kiwi_skip_uint_value;
         406 => repeated kiwi_skip_int_value;
         574 => one kiwi_skip_uint_value;
         435 => one skip_guid_position_map_from_decoder;
@@ -12202,23 +11669,23 @@ kiwi_skip_message_decoder! {
         442 => one kiwi_skip_uint_value;
         474 => one skip_guid_grid_track_size_map_from_decoder;
         475 => one skip_guid_grid_track_size_map_from_decoder;
-        476 => one skip_grid_child_align_from_decoder;
-        477 => one skip_grid_child_align_from_decoder;
-        555 => one skip_grid_auto_tracks_from_decoder;
+        476 => one kiwi_skip_uint_value;
+        477 => one kiwi_skip_uint_value;
+        555 => one kiwi_skip_uint_value;
         556 => one kiwi_skip_bool_value;
         344 => one kiwi_skip_bool_value;
         139 => one skip_guid_from_decoder;
         140 => one skip_guid_from_decoder;
         141 => one skip_color_from_decoder;
         153 => one skip_transition_info_from_decoder;
-        154 => one skip_transition_type_from_decoder;
+        154 => one kiwi_skip_uint_value;
         155 => one kiwi_skip_float_value;
-        156 => one skip_easing_type_from_decoder;
+        156 => one kiwi_skip_uint_value;
         181 => one kiwi_skip_bool_value;
-        182 => one skip_connection_type_from_decoder;
+        182 => one kiwi_skip_uint_value;
         183 => one kiwi_skip_string_value;
         184 => one skip_prototype_device_from_decoder;
-        187 => one skip_interaction_type_from_decoder;
+        187 => one kiwi_skip_uint_value;
         188 => one kiwi_skip_float_value;
         189 => one kiwi_skip_bool_value;
         190 => one kiwi_skip_float_value;
@@ -12231,18 +11698,18 @@ kiwi_skip_message_decoder! {
         219 => repeated skip_plugin_relaunch_data_from_decoder;
         242 => one skip_connector_endpoint_from_decoder;
         243 => one skip_connector_endpoint_from_decoder;
-        244 => one skip_connector_line_style_from_decoder;
-        245 => one skip_stroke_cap_from_decoder;
-        246 => one skip_stroke_cap_from_decoder;
+        244 => one kiwi_skip_uint_value;
+        245 => one kiwi_skip_uint_value;
+        246 => one kiwi_skip_uint_value;
         253 => repeated skip_connector_control_point_from_decoder;
         479 => repeated skip_connector_control_point_from_decoder;
         255 => one skip_connector_text_midpoint_from_decoder;
-        373 => one skip_connector_type_from_decoder;
+        373 => one kiwi_skip_uint_value;
         533 => one kiwi_skip_int_value;
         369 => repeated skip_annotation_from_decoder;
         384 => repeated skip_annotation_measurement_from_decoder;
         453 => one skip_annotation_categories_from_decoder;
-        241 => one skip_shape_with_text_type_from_decoder;
+        241 => one kiwi_skip_uint_value;
         247 => one kiwi_skip_float_value;
         530 => one kiwi_skip_bool_value;
         254 => one skip_derived_immutable_frame_data_from_decoder;
@@ -12251,8 +11718,8 @@ kiwi_skip_message_decoder! {
         491 => one skip_jsx_data_from_decoder;
         492 => one skip_derived_jsx_data_from_decoder;
         493 => one kiwi_skip_string_value;
-        259 => one skip_code_block_language_from_decoder;
-        433 => one skip_code_block_theme_from_decoder;
+        259 => one kiwi_skip_uint_value;
+        433 => one kiwi_skip_uint_value;
         278 => one skip_link_preview_data_from_decoder;
         282 => one kiwi_skip_bool_value;
         283 => one kiwi_skip_bool_value;
@@ -12264,15 +11731,15 @@ kiwi_skip_message_decoder! {
         274 => one kiwi_skip_uint_value;
         275 => one skip_widget_derived_subtree_cursor_from_decoder;
         276 => one skip_widget_pointer_from_decoder;
-        285 => one skip_widget_input_behavior_from_decoder;
+        285 => one kiwi_skip_uint_value;
         286 => one kiwi_skip_string_value;
         291 => one skip_widget_hover_style_from_decoder;
         293 => one kiwi_skip_bool_value;
         360 => one kiwi_skip_bool_value;
         262 => one skip_widget_metadata_from_decoder;
-        263 => repeated skip_widget_event_from_decoder;
+        263 => repeated kiwi_skip_uint_value;
         265 => repeated skip_widget_property_menu_item_from_decoder;
-        401 => one skip_widget_input_text_node_type_from_decoder;
+        401 => one kiwi_skip_uint_value;
         489 => one skip_multiplayer_map_from_decoder;
         308 => one skip_table_row_column_position_map_from_decoder;
         309 => one skip_table_row_column_position_map_from_decoder;
@@ -12281,7 +11748,7 @@ kiwi_skip_message_decoder! {
         538 => one skip_table_merged_cell_map_from_decoder;
         371 => one skip_multiplayer_map_from_decoder;
         372 => one skip_multiplayer_map_from_decoder;
-        402 => one skip_flapp_type_from_decoder;
+        402 => one kiwi_skip_uint_value;
         486 => one kiwi_skip_bool_value;
         389 => one kiwi_skip_string_value;
         410 => one kiwi_skip_bool_value;
@@ -12290,16 +11757,16 @@ kiwi_skip_message_decoder! {
         381 => one skip_slide_theme_data_from_decoder;
         390 => one skip_slide_theme_map_from_decoder;
         393 => one kiwi_skip_string_value;
-        443 => one skip_slide_number_from_decoder;
+        443 => one kiwi_skip_uint_value;
         456 => one kiwi_skip_string_value;
         363 => one skip_guid_from_decoder;
         362 => one skip_guid_from_decoder;
         364 => one kiwi_skip_string_value;
-        366 => one skip_diagram_layout_rule_type_from_decoder;
+        366 => one kiwi_skip_uint_value;
         367 => one skip_diagram_parent_index_from_decoder;
-        368 => one skip_diagram_layout_paused_from_decoder;
+        368 => one kiwi_skip_uint_value;
         380 => one kiwi_skip_bool_value;
-        251 => one skip_internal_enum_for_test_from_decoder;
+        251 => one kiwi_skip_uint_value;
         257 => one skip_internal_data_for_test_from_decoder;
         14 => one kiwi_skip_bool_value;
         66 => one kiwi_skip_uint_value;
@@ -12311,11 +11778,11 @@ kiwi_skip_message_decoder! {
         77 => one kiwi_skip_uint_value;
         27 => one kiwi_skip_float_value;
         79 => one kiwi_skip_uint_value;
-        37 => one skip_constraint_type_from_decoder;
+        37 => one kiwi_skip_uint_value;
         89 => one kiwi_skip_uint_value;
         45 => repeated skip_export_settings_from_decoder;
         97 => one kiwi_skip_uint_value;
-        46 => one skip_text_auto_resize_from_decoder;
+        46 => one kiwi_skip_uint_value;
         98 => one kiwi_skip_uint_value;
         47 => repeated skip_layout_grid_from_decoder;
         99 => one kiwi_skip_uint_value;
@@ -12323,9 +11790,9 @@ kiwi_skip_message_decoder! {
         116 => one kiwi_skip_uint_value;
         117 => one kiwi_skip_bool_value;
         118 => one kiwi_skip_uint_value;
-        36 => one skip_boolean_operation_from_decoder;
+        36 => one kiwi_skip_uint_value;
         88 => one kiwi_skip_uint_value;
-        44 => one skip_vector_mirror_from_decoder;
+        44 => one kiwi_skip_uint_value;
         96 => one kiwi_skip_uint_value;
         10 => one kiwi_skip_uint_value;
         62 => one kiwi_skip_uint_value;
@@ -12339,23 +11806,23 @@ kiwi_skip_message_decoder! {
         119 => one kiwi_skip_bool_value;
         138 => repeated skip_guide_from_decoder;
         142 => one kiwi_skip_bool_value;
-        159 => one skip_scroll_direction_from_decoder;
+        159 => one kiwi_skip_uint_value;
         160 => one kiwi_skip_float_value;
         166 => one skip_vector_from_decoder;
         175 => one kiwi_skip_bool_value;
-        178 => one skip_scroll_contracted_state_from_decoder;
+        178 => one kiwi_skip_uint_value;
         179 => one skip_vector_from_decoder;
         180 => one kiwi_skip_string_value;
-        186 => one skip_scroll_behavior_from_decoder;
+        186 => one kiwi_skip_uint_value;
         196 => one kiwi_skip_int_value;
-        197 => one skip_navigation_type_from_decoder;
-        198 => one skip_overlay_position_type_from_decoder;
+        197 => one kiwi_skip_uint_value;
+        198 => one kiwi_skip_uint_value;
         199 => one skip_vector_from_decoder;
-        200 => one skip_overlay_background_interaction_from_decoder;
+        200 => one kiwi_skip_uint_value;
         201 => one skip_overlay_background_appearance_from_decoder;
         213 => one skip_guid_from_decoder;
         220 => one kiwi_skip_bool_value;
-        221 => one skip_stack_size_from_decoder;
+        221 => one kiwi_skip_uint_value;
         222 => one kiwi_skip_bool_value;
         224 => one skip_key_trigger_from_decoder;
         227 => one kiwi_skip_string_value;
@@ -12368,8 +11835,8 @@ kiwi_skip_message_decoder! {
         272 => one skip_rich_media_data_from_decoder;
         277 => one skip_multiplayer_map_from_decoder;
         284 => one kiwi_skip_bool_value;
-        302 => one skip_html_tag_from_decoder;
-        303 => one skip_aria_role_from_decoder;
+        302 => one kiwi_skip_uint_value;
+        303 => one kiwi_skip_uint_value;
         357 => one skip_aria_attributes_map_from_decoder;
         304 => one kiwi_skip_string_value;
         490 => one kiwi_skip_bool_value;
@@ -12378,15 +11845,15 @@ kiwi_skip_message_decoder! {
         316 => one skip_variable_mode_by_set_map_from_decoder;
         312 => repeated skip_variable_set_mode_from_decoder;
         313 => one skip_variable_set_id_from_decoder;
-        314 => one skip_variable_resolved_data_type_from_decoder;
+        314 => one kiwi_skip_uint_value;
         315 => one skip_variable_data_values_from_decoder;
         350 => one kiwi_skip_string_value;
-        566 => one skip_variable_timing_display_unit_from_decoder;
-        353 => repeated skip_variable_scope_from_decoder;
+        566 => one kiwi_skip_uint_value;
+        353 => repeated kiwi_skip_uint_value;
         445 => one skip_variable_data_map_from_decoder;
         358 => one skip_code_syntax_map_from_decoder;
         388 => one skip_paste_source_from_decoder;
-        397 => one skip_editor_type_from_decoder;
+        397 => one kiwi_skip_uint_value;
         446 => one skip_guid_from_decoder;
         482 => one kiwi_skip_uint64_value;
         447 => repeated skip_variable_width_point_from_decoder;
@@ -12394,7 +11861,7 @@ kiwi_skip_message_decoder! {
         449 => one skip_scatter_stroke_settings_from_decoder;
         450 => one skip_stretch_stroke_settings_from_decoder;
         488 => repeated skip_matrix_from_decoder;
-        452 => one skip_brush_type_from_decoder;
+        452 => one kiwi_skip_uint_value;
         542 => one skip_optional_vector_from_decoder;
         554 => one kiwi_skip_float_value;
         377 => one skip_variable_set_id_from_decoder;
@@ -12409,16 +11876,16 @@ kiwi_skip_message_decoder! {
         329 => one skip_migration_status_from_decoder;
         330 => one kiwi_skip_bool_value;
         331 => one skip_edit_info_from_decoder;
-        341 => one skip_color_profile_from_decoder;
+        341 => one kiwi_skip_uint_value;
         342 => one skip_symbol_id_from_decoder;
-        346 => one skip_child_reading_direction_from_decoder;
+        346 => one kiwi_skip_uint_value;
         347 => one kiwi_skip_string_value;
-        349 => one skip_document_color_profile_from_decoder;
+        349 => one kiwi_skip_uint_value;
         354 => repeated skip_developer_related_link_from_decoder;
         356 => one kiwi_skip_string_value;
         365 => one skip_edit_scope_info_from_decoder;
-        374 => one skip_semantic_weight_from_decoder;
-        375 => one skip_semantic_italic_from_decoder;
+        374 => one kiwi_skip_uint_value;
+        375 => one kiwi_skip_uint_value;
         403 => one kiwi_skip_bool_value;
         387 => one kiwi_skip_bool_value;
         500 => one skip_derived_breakpoint_data_from_decoder;
@@ -12452,7 +11919,7 @@ kiwi_skip_message_decoder! {
         547 => one kiwi_skip_string_value;
         429 => one skip_code_component_id_from_decoder;
         487 => one kiwi_skip_bool_value;
-        431 => one skip_code_snapshot_state_from_decoder;
+        431 => one kiwi_skip_uint_value;
         451 => repeated skip_node_chat_message_from_decoder;
         485 => one skip_node_chat_compression_state_from_decoder;
         496 => one skip_ai_chat_thread_from_decoder;
@@ -12466,7 +11933,7 @@ kiwi_skip_message_decoder! {
         471 => one kiwi_skip_bool_value;
         481 => one skip_canvas_node_id_from_decoder;
         473 => one skip_image_import_map_from_decoder;
-        516 => one skip_code_object_type_from_decoder;
+        516 => one kiwi_skip_uint_value;
         472 => one kiwi_skip_string_value;
         478 => one skip_code_behavior_data_from_decoder;
         519 => one kiwi_skip_uint_value;
@@ -12501,17 +11968,17 @@ kiwi_skip_message_decoder! {
         506 => one kiwi_skip_int64_value;
         507 => one skip_keyframe_value_data_from_decoder;
         586 => one skip_variable_data_from_decoder;
-        505 => one skip_interpolation_type_from_decoder;
+        505 => one kiwi_skip_uint_value;
         508 => one skip_bezier_handles_from_decoder;
         535 => one skip_easing_data_from_decoder;
-        509 => one skip_keyframe_operation_from_decoder;
-        510 => one skip_timeline_position_type_from_decoder;
+        509 => one kiwi_skip_uint_value;
+        510 => one kiwi_skip_uint_value;
         545 => one kiwi_skip_bool_value;
         511 => one skip_guid_from_decoder;
         512 => one kiwi_skip_uint64_value;
         513 => one kiwi_skip_int64_value;
         543 => one kiwi_skip_bool_value;
-        514 => one skip_playback_style_from_decoder;
+        514 => one kiwi_skip_uint_value;
         552 => one skip_timeline_definitions_map_from_decoder;
         553 => one skip_timeline_assignments_map_from_decoder;
         521 => one skip_animation_presets_from_decoder;
@@ -12522,7 +11989,7 @@ kiwi_skip_message_decoder! {
         526 => one skip_transition_override_data_from_decoder;
         544 => one kiwi_skip_bool_value;
         557 => one skip_source_control_config_from_decoder;
-        559 => one skip_spec_block_type_from_decoder;
+        559 => one kiwi_skip_uint_value;
         560 => one skip_collaborative_plain_text_from_decoder;
         561 => one kiwi_skip_string_value;
         562 => one kiwi_skip_string_value;
@@ -12541,17 +12008,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_git_repo_ref_provider_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_git_repo_ref_from_decoder;
     decoder decoder;
     definition "GitRepoRef";
     fields [
-        1 => one skip_git_repo_ref_provider_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_string_value;
         3 => one kiwi_skip_string_value;
     ]
@@ -12572,7 +12034,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeSnapshot";
     fields [
-        6 => one skip_code_snapshot_state_from_decoder;
+        6 => one kiwi_skip_uint_value;
         7 => one kiwi_skip_uint_value;
         1 => repeated skip_paint_from_decoder;
         2 => one skip_vector_from_decoder;
@@ -12596,7 +12058,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeSnapshotLayers";
     fields [
-        1 => one skip_code_snapshot_state_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_uint_value;
         3 => repeated skip_code_output_layer_from_decoder;
     ]
@@ -12666,37 +12128,17 @@ kiwi_skip_message_decoder! {
     definition "CookieBannerSettings";
     fields [
         1 => one kiwi_skip_bool_value;
-        2 => one skip_cookie_banner_component_type_from_decoder;
-        3 => one skip_cookie_x_alignment_from_decoder;
-        4 => one skip_cookie_y_alignment_from_decoder;
-        5 => one skip_cookie_x_alignment_from_decoder;
-        6 => one skip_cookie_y_alignment_from_decoder;
-        7 => one skip_trigger_component_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
+        4 => one kiwi_skip_uint_value;
+        5 => one kiwi_skip_uint_value;
+        6 => one kiwi_skip_uint_value;
+        7 => one kiwi_skip_uint_value;
         8 => one kiwi_skip_string_value;
         9 => one skip_cookie_banner_text_from_decoder;
         10 => one skip_guid_from_decoder;
         11 => one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_cookie_banner_component_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_trigger_component_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_cookie_x_alignment_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_cookie_y_alignment_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -12706,7 +12148,7 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one kiwi_skip_string_value;
         2 => one kiwi_skip_string_value;
-        3 => one skip_responsive_scaling_mode_from_decoder;
+        3 => one kiwi_skip_uint_value;
         4 => one kiwi_skip_float_value;
         5 => one kiwi_skip_float_value;
         6 => one kiwi_skip_float_value;
@@ -12728,11 +12170,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_responsive_scaling_mode_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_cms_selector_from_decoder;
     decoder decoder;
@@ -12750,14 +12187,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSFilterCritera";
     fields [
-        1 => one skip_cms_filter_criteria_match_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => repeated skip_cms_selector_filter_from_decoder;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_cms_filter_criteria_match_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -12766,14 +12198,9 @@ kiwi_skip_message_decoder! {
     definition "CMSSelectorFilter";
     fields [
         1 => one kiwi_skip_string_value;
-        2 => one skip_cms_selector_filter_operator_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_cms_selector_filter_operator_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -12782,13 +12209,8 @@ kiwi_skip_message_decoder! {
     definition "CMSSelectorSort";
     fields [
         1 => one kiwi_skip_string_value;
-        2 => one skip_cms_field_order_by_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_cms_field_order_by_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -12805,14 +12227,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSConsumptionMapEntry";
     fields [
-        1 => one skip_cms_consumption_field_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_cms_consumption_field_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -12829,14 +12246,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CMSRichTextStyleEntry";
     fields [
-        1 => one skip_cms_rich_text_style_class_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_cms_rich_text_descriptor_from_decoder;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_cms_rich_text_style_class_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -12923,18 +12335,8 @@ kiwi_skip_message_decoder! {
         2 => one kiwi_skip_string_value;
         3 => one kiwi_skip_string_value;
         4 => one skip_managed_string_node_from_decoder;
-        5 => one skip_managed_string_content_schema_from_decoder;
+        5 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_managed_string_content_schema_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_managed_string_node_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -12942,7 +12344,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringNode";
     fields [
-        1 => one skip_managed_string_node_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_managed_string_text_node_data_from_decoder;
         3 => one skip_managed_string_concatenate_ast_node_data_from_decoder;
         4 => one skip_managed_string_plural_ast_node_data_from_decoder;
@@ -12968,11 +12370,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_managed_string_plural_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_managed_string_plural_ast_node_data_from_decoder;
     decoder decoder;
@@ -12988,14 +12385,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ManagedStringPluralTypeMapEntry";
     fields [
-        1 => one skip_managed_string_plural_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_managed_string_node_from_decoder;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_managed_string_format_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13004,7 +12396,7 @@ kiwi_skip_message_decoder! {
     definition "ManagedStringPlaceholderAstNodeData";
     fields [
         1 => one kiwi_skip_string_value;
-        2 => one skip_managed_string_format_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_string_value;
     ]
 }
@@ -13030,16 +12422,6 @@ kiwi_skip_message_decoder! {
         5 => one kiwi_skip_uint_value;
         6 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_media_action_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_animation_timeline_action_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13101,13 +12483,8 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one kiwi_skip_uint_value;
         2 => one skip_variable_data_from_decoder;
-        3 => one skip_variable_field_from_decoder;
+        3 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_variable_field_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13144,7 +12521,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CodeSyntaxMapEntry";
     fields [
-        1 => one skip_code_syntax_platform_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_string_value;
     ]
 }
@@ -13261,14 +12638,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "GridTrackSizingFunction";
     fields [
-        1 => one skip_grid_track_sizing_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_float_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_grid_track_sizing_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13309,11 +12681,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_agenda_item_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_agenda_metadata_map_from_decoder;
     decoder decoder;
@@ -13339,7 +12706,7 @@ kiwi_skip_message_decoder! {
     definition "AgendaMetadata";
     fields [
         1 => one kiwi_skip_string_value;
-        2 => one skip_agenda_item_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one skip_guid_from_decoder;
         4 => one skip_agenda_timer_info_from_decoder;
         5 => one skip_agenda_vote_info_from_decoder;
@@ -13375,11 +12742,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_diagram_layout_rule_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_diagram_parent_index_from_decoder;
     decoder decoder;
@@ -13387,11 +12749,6 @@ kiwi_skip_struct_decoder! {
         one skip_guid_from_decoder;
         one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_diagram_layout_paused_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13402,14 +12759,9 @@ kiwi_skip_message_decoder! {
         1 => one kiwi_skip_uint_value;
         2 => one skip_guid_from_decoder;
         3 => one kiwi_skip_string_value;
-        4 => one skip_component_prop_node_field_from_decoder;
+        4 => one kiwi_skip_uint_value;
         5 => one kiwi_skip_bool_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_component_prop_node_field_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13434,7 +12786,7 @@ kiwi_skip_message_decoder! {
         3 => one skip_component_prop_value_from_decoder;
         4 => one kiwi_skip_string_value;
         5 => one skip_guid_from_decoder;
-        6 => one skip_component_prop_type_from_decoder;
+        6 => one kiwi_skip_uint_value;
         7 => one kiwi_skip_bool_value;
         8 => one skip_component_prop_preferred_values_from_decoder;
         9 => one skip_variable_data_from_decoder;
@@ -13473,7 +12825,7 @@ kiwi_skip_message_decoder! {
         1 => one kiwi_skip_uint64_value;
         2 => one kiwi_skip_bool_value;
         3 => one skip_guid_from_decoder;
-        4 => one skip_playback_style_from_decoder;
+        4 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -13535,11 +12887,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_component_prop_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_component_prop_preferred_values_from_decoder;
     decoder decoder;
@@ -13556,7 +12903,7 @@ kiwi_skip_message_decoder! {
     definition "ParameterConfig";
     fields [
         1 => one skip_number_prop_config_from_decoder;
-        2 => one skip_parameter_config_control_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one skip_slider_config_from_decoder;
         4 => one skip_variable_data_from_decoder;
         5 => one skip_input_config_from_decoder;
@@ -13569,11 +12916,6 @@ kiwi_skip_message_decoder! {
         12 => one skip_color_point_config_from_decoder;
         13 => one kiwi_skip_bool_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_parameter_config_control_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13599,18 +12941,13 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_point_mode_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_point_config_from_decoder;
     decoder decoder;
     definition "PointConfig";
     fields [
-        1 => one skip_point_mode_from_decoder;
-        2 => one skip_number_units_from_decoder;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -13629,8 +12966,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "LineConfig";
     fields [
-        1 => one skip_point_mode_from_decoder;
-        2 => one skip_number_units_from_decoder;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -13649,9 +12986,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PointRadiusConfig";
     fields [
-        1 => one skip_point_mode_from_decoder;
-        2 => one skip_number_units_from_decoder;
-        3 => one skip_number_units_from_decoder;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
         4 => one kiwi_skip_float_value;
         5 => one kiwi_skip_float_value;
     ]
@@ -13674,7 +13011,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Rotation3DConfig";
     fields [
-        1 => one skip_point_mode_from_decoder;
+        1 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -13694,9 +13031,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "CirclePointConfig";
     fields [
-        1 => one skip_point_mode_from_decoder;
-        2 => one skip_number_units_from_decoder;
-        3 => one skip_number_units_from_decoder;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
         4 => one kiwi_skip_float_value;
         5 => one kiwi_skip_float_value;
     ]
@@ -13717,8 +13054,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ColorPointConfig";
     fields [
-        1 => one skip_point_mode_from_decoder;
-        2 => one skip_number_units_from_decoder;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -13788,7 +13125,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NumberPropConfig";
     fields [
-        1 => one skip_parameter_config_control_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_variable_data_from_decoder;
         3 => one skip_variable_data_from_decoder;
         4 => one skip_variable_data_from_decoder;
@@ -13800,24 +13137,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "InstanceSwapPreferredValue";
     fields [
-        1 => one skip_instance_swap_preferred_value_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_instance_swap_preferred_value_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_widget_event_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_widget_input_behavior_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13833,11 +13155,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_widget_property_menu_item_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_widget_property_menu_selector_option_from_decoder;
     decoder decoder;
@@ -13848,11 +13165,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_widget_input_text_node_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_widget_property_menu_item_from_decoder;
     decoder decoder;
@@ -13860,7 +13172,7 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one kiwi_skip_string_value;
         2 => one kiwi_skip_string_value;
-        3 => one skip_widget_property_menu_item_type_from_decoder;
+        3 => one kiwi_skip_uint_value;
         4 => one kiwi_skip_string_value;
         5 => repeated skip_widget_property_menu_selector_option_from_decoder;
         6 => one kiwi_skip_string_value;
@@ -13868,26 +13180,6 @@ kiwi_skip_message_decoder! {
         8 => one kiwi_skip_string_value;
         9 => one kiwi_skip_bool_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_code_block_language_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_code_block_theme_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_spec_block_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_internal_enum_for_test_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13909,11 +13201,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_backfill_error_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_partial_paste_annotation_from_decoder;
     decoder decoder;
@@ -13921,7 +13208,7 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one kiwi_skip_bool_value;
         2 => one kiwi_skip_uint64_value;
-        3 => one skip_backfill_error_from_decoder;
+        3 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -13941,15 +13228,10 @@ kiwi_skip_message_decoder! {
     definition "TextListData";
     fields [
         1 => one kiwi_skip_int_value;
-        2 => one skip_bullet_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_int_value;
         4 => one kiwi_skip_int_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_bullet_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -13957,12 +13239,12 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TextLineData";
     fields [
-        1 => one skip_line_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         10 => one kiwi_skip_int_value;
         2 => one kiwi_skip_int_value;
-        9 => one skip_source_directionality_from_decoder;
-        3 => one skip_directionality_from_decoder;
-        4 => one skip_directionality_intent_from_decoder;
+        9 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
+        4 => one kiwi_skip_uint_value;
         5 => one kiwi_skip_int_value;
         6 => one kiwi_skip_int_value;
         7 => one kiwi_skip_int_value;
@@ -13975,28 +13257,8 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "DerivedTextLineData";
     fields [
-        1 => one skip_directionality_from_decoder;
+        1 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_line_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_source_directionality_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_directionality_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_directionality_intent_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -14017,7 +13279,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PrototypeEvent";
     fields [
-        1 => one skip_interaction_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_bool_value;
         3 => one kiwi_skip_float_value;
         4 => one skip_key_trigger_from_decoder;
@@ -14053,14 +13315,14 @@ kiwi_skip_message_decoder! {
     definition "PrototypeAction";
     fields [
         1 => one skip_guid_from_decoder;
-        2 => one skip_transition_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_float_value;
-        4 => one skip_easing_type_from_decoder;
+        4 => one kiwi_skip_uint_value;
         5 => one kiwi_skip_float_value;
         6 => one kiwi_skip_bool_value;
-        7 => one skip_connection_type_from_decoder;
+        7 => one kiwi_skip_uint_value;
         9 => one skip_vector_from_decoder;
-        10 => one skip_navigation_type_from_decoder;
+        10 => one kiwi_skip_uint_value;
         11 => one kiwi_skip_bool_value;
         12 => repeated kiwi_skip_float_value;
         13 => one skip_vector_from_decoder;
@@ -14075,7 +13337,7 @@ kiwi_skip_message_decoder! {
         15 => one skip_variable_any_value_from_decoder;
         19 => one skip_prototype_variable_target_from_decoder;
         20 => one skip_variable_data_from_decoder;
-        16 => one skip_media_action_from_decoder;
+        16 => one kiwi_skip_uint_value;
         17 => one kiwi_skip_bool_value;
         21 => one kiwi_skip_float_value;
         22 => one kiwi_skip_float_value;
@@ -14086,25 +13348,15 @@ kiwi_skip_message_decoder! {
         28 => one skip_guid_from_decoder;
         29 => one kiwi_skip_string_value;
         38 => one skip_variable_set_id_from_decoder;
-        30 => one skip_animation_type_from_decoder;
+        30 => one kiwi_skip_uint_value;
         31 => one skip_guid_from_decoder;
-        32 => one skip_animation_phase_from_decoder;
+        32 => one kiwi_skip_uint_value;
         33 => one skip_animation_state_from_decoder;
         37 => one kiwi_skip_bool_value;
-        39 => one skip_animation_timeline_action_from_decoder;
+        39 => one kiwi_skip_uint_value;
         41 => one skip_guid_from_decoder;
         40 => one kiwi_skip_float_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_animation_phase_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_animation_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -14128,18 +13380,13 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_trigger_device_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_key_trigger_from_decoder;
     decoder decoder;
     definition "KeyTrigger";
     fields [
         1 => repeated kiwi_skip_int_value;
-        2 => one skip_trigger_device_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -14166,11 +13413,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_mention_source_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_mention_from_decoder;
     decoder decoder;
@@ -14180,7 +13422,7 @@ kiwi_skip_message_decoder! {
         2 => one kiwi_skip_string_value;
         3 => one kiwi_skip_string_value;
         4 => one kiwi_skip_string_value;
-        5 => one skip_mention_source_from_decoder;
+        5 => one kiwi_skip_uint_value;
         6 => one kiwi_skip_uint64_value;
         7 => one kiwi_skip_uint64_value;
         8 => one kiwi_skip_string_value;
@@ -14253,7 +13495,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "Mouse";
     fields [
-        1 => one skip_mouse_cursor_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_vector_from_decoder;
         3 => one skip_rect_from_decoder;
         4 => one skip_guid_from_decoder;
@@ -14359,11 +13601,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_transition_direction_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_top_level_playback_change_from_decoder;
     decoder decoder;
@@ -14374,7 +13611,7 @@ kiwi_skip_message_decoder! {
         3 => one skip_guid_path_from_decoder;
         4 => one skip_guid_from_decoder;
         5 => one kiwi_skip_bool_value;
-        6 => one skip_transition_direction_from_decoder;
+        6 => one kiwi_skip_uint_value;
         7 => one skip_guid_path_from_decoder;
     ]
 }
@@ -14388,7 +13625,7 @@ kiwi_skip_message_decoder! {
         2 => one skip_guid_from_decoder;
         3 => one skip_guid_path_from_decoder;
         4 => one skip_guid_path_from_decoder;
-        5 => one skip_playback_change_phase_from_decoder;
+        5 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -14418,17 +13655,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_playback_change_phase_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_playback_change_keyframe_from_decoder;
     decoder decoder;
     definition "PlaybackChangeKeyframe";
     fields [
-        1 => one skip_playback_change_phase_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_float_value;
         3 => one kiwi_skip_float_value;
     ]
@@ -14511,21 +13743,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_heartbeat_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_sites_view_state_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_design_full_page_view_state_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_agent_info_from_decoder;
     decoder decoder;
@@ -14571,7 +13788,7 @@ kiwi_skip_message_decoder! {
         25 => one skip_text_selection_from_decoder;
         26 => one kiwi_skip_uint_value;
         27 => one kiwi_skip_bool_value;
-        28 => one skip_heartbeat_from_decoder;
+        28 => one kiwi_skip_uint_value;
         29 => repeated skip_triggered_set_variable_action_data_from_decoder;
         30 => repeated skip_video_state_change_data_from_decoder;
         31 => one kiwi_skip_string_value;
@@ -14584,9 +13801,9 @@ kiwi_skip_message_decoder! {
         37 => one skip_guid_from_decoder;
         39 => one skip_april_fun_fig_pal_from_decoder;
         40 => one skip_collaborative_text_selection_from_decoder;
-        41 => one skip_sites_view_state_from_decoder;
+        41 => one kiwi_skip_uint_value;
         42 => repeated skip_node_chat_exchange_from_decoder;
-        45 => one skip_design_full_page_view_state_from_decoder;
+        45 => one kiwi_skip_uint_value;
         46 => one skip_agent_info_from_decoder;
     ]
 }
@@ -14634,16 +13851,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_scene_graph_query_behavior_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_scene_graph_query_mode_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_scene_graph_query_from_decoder;
     decoder decoder;
@@ -14651,7 +13858,7 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one skip_guid_from_decoder;
         2 => one kiwi_skip_uint_value;
-        3 => one skip_scene_graph_query_behavior_from_decoder;
+        3 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -14737,17 +13944,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_paste_asset_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_message_from_decoder;
     decoder decoder;
     definition "Message";
     fields [
-        1 => one skip_message_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_uint_value;
         42 => one kiwi_skip_string_value;
         3 => one kiwi_skip_uint_value;
@@ -14760,10 +13962,10 @@ kiwi_skip_message_decoder! {
         6 => repeated skip_blob_from_decoder;
         30 => one kiwi_skip_uint_value;
         7 => one kiwi_skip_string_value;
-        8 => one skip_access_from_decoder;
+        8 => one kiwi_skip_uint_value;
         9 => one kiwi_skip_string_value;
-        10 => one skip_style_set_type_from_decoder;
-        11 => one skip_style_set_content_type_from_decoder;
+        10 => one kiwi_skip_uint_value;
+        11 => one kiwi_skip_uint_value;
         12 => one kiwi_skip_int_value;
         13 => one skip_vector_from_decoder;
         14 => one kiwi_skip_string_value;
@@ -14779,7 +13981,7 @@ kiwi_skip_message_decoder! {
         24 => repeated skip_client_broadcast_from_decoder;
         25 => one kiwi_skip_uint_value;
         26 => one kiwi_skip_string_value;
-        27 => one skip_editor_type_from_decoder;
+        27 => one kiwi_skip_uint_value;
         28 => one kiwi_skip_string_value;
         29 => repeated skip_guid_from_decoder;
         31 => one kiwi_skip_bool_value;
@@ -14789,9 +13991,9 @@ kiwi_skip_message_decoder! {
         38 => one kiwi_skip_uint64_value;
         39 => repeated skip_annotation_category_from_decoder;
         40 => one skip_client_rendered_metadata_from_decoder;
-        41 => one skip_paste_asset_type_from_decoder;
+        41 => one kiwi_skip_uint_value;
         43 => one skip_object_animation_list_from_decoder;
-        45 => one skip_scene_graph_query_mode_from_decoder;
+        45 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -14816,29 +14018,14 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_rich_media_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_rich_media_data_from_decoder;
     decoder decoder;
     definition "RichMediaData";
     fields [
         1 => one kiwi_skip_string_value;
-        2 => one skip_rich_media_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_variable_data_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_variable_resolved_data_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -14878,17 +14065,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_expression_function_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_expression_from_decoder;
     decoder decoder;
     definition "Expression";
     fields [
-        1 => one skip_expression_function_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => repeated skip_variable_data_from_decoder;
     ]
 }
@@ -14975,14 +14157,9 @@ kiwi_skip_message_decoder! {
     definition "NodeFieldAlias";
     fields [
         1 => one skip_guid_path_from_decoder;
-        2 => one skip_node_field_alias_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_string_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_node_field_alias_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -14993,7 +14170,7 @@ kiwi_skip_message_decoder! {
         1 => one kiwi_skip_string_value;
         2 => one kiwi_skip_string_value;
         3 => one kiwi_skip_string_value;
-        4 => one skip_variable_data_type_from_decoder;
+        4 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -15112,8 +14289,8 @@ kiwi_skip_message_decoder! {
     definition "VariableData";
     fields [
         1 => one skip_variable_any_value_from_decoder;
-        2 => one skip_variable_data_type_from_decoder;
-        3 => one skip_variable_resolved_data_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
+        3 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -15149,11 +14326,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_variable_scope_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_keyframe_any_value_from_decoder;
     decoder decoder;
@@ -15166,24 +14338,14 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_keyframe_value_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_keyframe_value_data_from_decoder;
     decoder decoder;
     definition "KeyframeValueData";
     fields [
         1 => one skip_keyframe_any_value_from_decoder;
-        2 => one skip_keyframe_value_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_keyframe_track_parameter_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -15224,7 +14386,7 @@ kiwi_skip_message_decoder! {
     definition "KeyframeTrackParameter";
     fields [
         1 => one skip_keyframe_track_any_parameter_from_decoder;
-        2 => one skip_keyframe_track_parameter_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -15341,7 +14503,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EasingData";
     fields [
-        1 => one skip_easing_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_transition_easing_any_value_from_decoder;
     ]
 }
@@ -15374,31 +14536,16 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_transition_override_prop_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_transition_override_binding_top_level_field_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_transition_override_binding_location_from_decoder;
     decoder decoder;
     definition "TransitionOverrideBindingLocation";
     fields [
-        1 => one skip_transition_override_binding_top_level_field_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_int_value;
         3 => one kiwi_skip_int_value;
         4 => one kiwi_skip_int_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_keyframe_binding_effect_parametrized_field_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -15406,10 +14553,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "NodeContentsKeyframeBindingLocation";
     fields [
-        1 => one skip_transition_override_binding_top_level_field_from_decoder;
-        2 => one skip_variable_field_from_decoder;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_int_value;
-        4 => one skip_keyframe_binding_effect_parametrized_field_from_decoder;
+        4 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -15427,16 +14574,11 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "TransitionOverridePropMapEntry";
     fields [
-        1 => one skip_transition_override_prop_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => repeated skip_transition_override_from_decoder;
         3 => one skip_transition_override_binding_location_from_decoder;
         4 => one skip_node_contents_keyframe_binding_location_from_decoder;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_code_syntax_platform_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -15448,16 +14590,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_html_tag_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_aria_role_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_migration_status_from_decoder;
     decoder decoder;
@@ -15465,21 +14597,6 @@ kiwi_skip_message_decoder! {
     fields [
         1 => one kiwi_skip_bool_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_color_profile_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_document_color_profile_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_child_reading_direction_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -15495,17 +14612,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_aria_attribute_data_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_aria_attribute_data_from_decoder;
     decoder decoder;
     definition "ARIAAttributeData";
     fields [
-        1 => one skip_aria_attribute_data_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_aria_attribute_any_value_from_decoder;
     ]
 }
@@ -15582,30 +14694,10 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "EditScope";
     fields [
-        1 => one skip_edit_scope_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_string_value;
-        3 => one skip_editor_type_from_decoder;
+        3 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_edit_scope_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_section_preset_state_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_emoji_image_set_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_selection_region_focus_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -15616,7 +14708,7 @@ kiwi_skip_message_decoder! {
         1 => one kiwi_skip_uint64_value;
         2 => one kiwi_skip_uint64_value;
         3 => one kiwi_skip_string_value;
-        4 => one skip_section_preset_state_from_decoder;
+        4 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -15629,13 +14721,8 @@ kiwi_skip_message_decoder! {
         2 => repeated skip_guid_from_decoder;
         3 => one skip_vector_from_decoder;
         4 => one kiwi_skip_bool_value;
-        5 => one skip_selection_region_focus_type_from_decoder;
+        5 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_first_draft_kit_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -15644,7 +14731,7 @@ kiwi_skip_message_decoder! {
     definition "FirstDraftKit";
     fields [
         1 => one kiwi_skip_string_value;
-        2 => one skip_first_draft_kit_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -15658,28 +14745,13 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_first_draft_kit_element_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_first_draft_kit_element_data_from_decoder;
     decoder decoder;
     definition "FirstDraftKitElementData";
     fields [
-        1 => one skip_first_draft_kit_element_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_platform_shape_property_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_platform_shape_behavior_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -15687,7 +14759,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "PlatformShapePropertyMapEntry";
     fields [
-        1 => one skip_platform_shape_property_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => repeated skip_guid_path_from_decoder;
     ]
 }
@@ -15698,7 +14770,7 @@ kiwi_skip_message_decoder! {
     definition "PlatformShapeDefinition";
     fields [
         1 => repeated skip_platform_shape_property_map_entry_from_decoder;
-        2 => one skip_platform_shape_behavior_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one skip_guid_path_from_decoder;
     ]
 }
@@ -15726,7 +14798,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "BehaviorTransition";
     fields [
-        1 => one skip_easing_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => repeated kiwi_skip_float_value;
         3 => one kiwi_skip_float_value;
         4 => one kiwi_skip_float_value;
@@ -15735,23 +14807,13 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_appear_behavior_trigger_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_relative_direction_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_appear_behavior_from_decoder;
     decoder decoder;
     definition "AppearBehavior";
     fields [
-        1 => one skip_appear_behavior_trigger_from_decoder;
-        2 => one skip_relative_direction_from_decoder;
+        1 => one kiwi_skip_uint_value;
+        2 => one kiwi_skip_uint_value;
         3 => one skip_guid_from_decoder;
         4 => one skip_behavior_transition_from_decoder;
         5 => one skip_node_change_from_decoder;
@@ -15801,7 +14863,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "ScrollParallaxBehavior";
     fields [
-        1 => one skip_scroll_direction_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_float_value;
         3 => one kiwi_skip_bool_value;
         4 => one skip_variable_data_from_decoder;
@@ -15809,17 +14871,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_scroll_transform_behavior_trigger_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_scroll_transform_behavior_from_decoder;
     decoder decoder;
     definition "ScrollTransformBehavior";
     fields [
-        1 => one skip_scroll_transform_behavior_trigger_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_guid_from_decoder;
         3 => one skip_behavior_transition_from_decoder;
         4 => one skip_node_change_from_decoder;
@@ -15848,7 +14905,7 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "MarqueeBehavior";
     fields [
-        1 => one skip_relative_direction_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_float_value;
         3 => one kiwi_skip_bool_value;
         4 => one skip_variable_data_from_decoder;
@@ -15881,17 +14938,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_link_behavior_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_link_behavior_from_decoder;
     decoder decoder;
     definition "LinkBehavior";
     fields [
-        1 => one skip_link_behavior_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one kiwi_skip_string_value;
         3 => one skip_guid_from_decoder;
         4 => one kiwi_skip_bool_value;
@@ -15918,23 +14970,13 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_slide_number_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_node_chat_message_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_node_chat_message_from_decoder;
     decoder decoder;
     definition "NodeChatMessage";
     fields [
         1 => one skip_guid_from_decoder;
-        2 => one skip_node_chat_message_type_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => one kiwi_skip_string_value;
         4 => one kiwi_skip_string_value;
         5 => one kiwi_skip_uint_value;
@@ -16004,14 +15046,9 @@ kiwi_skip_message_decoder! {
     decoder decoder;
     definition "AIChatContentPart";
     fields [
-        1 => one skip_ai_chat_content_part_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
         2 => one skip_ai_chat_content_part_any_value_from_decoder;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_ai_chat_content_part_type_from_decoder;
-    decoder decoder;
 }
 
 kiwi_skip_message_decoder! {
@@ -16024,18 +15061,13 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_ai_chat_message_role_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_ai_chat_message_from_decoder;
     decoder decoder;
     definition "AIChatMessage";
     fields [
         1 => one kiwi_skip_uint_value;
-        2 => one skip_ai_chat_message_role_from_decoder;
+        2 => one kiwi_skip_uint_value;
         3 => repeated skip_ai_chat_content_part_from_decoder;
         4 => one kiwi_skip_string_value;
         5 => one kiwi_skip_uint64_value;
@@ -16051,17 +15083,12 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_cooper_template_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_cooper_template_data_from_decoder;
     decoder decoder;
     definition "CooperTemplateData";
     fields [
-        1 => one skip_cooper_template_type_from_decoder;
+        1 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -16084,11 +15111,6 @@ kiwi_skip_message_decoder! {
     ]
 }
 
-kiwi_skip_enum_decoder! {
-    fn skip_interpolation_type_from_decoder;
-    decoder decoder;
-}
-
 kiwi_skip_message_decoder! {
     fn skip_bezier_handles_from_decoder;
     decoder decoder;
@@ -16099,21 +15121,6 @@ kiwi_skip_message_decoder! {
         3 => one kiwi_skip_float_value;
         4 => one kiwi_skip_float_value;
     ]
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_keyframe_operation_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_timeline_position_type_from_decoder;
-    decoder decoder;
-}
-
-kiwi_skip_enum_decoder! {
-    fn skip_playback_style_from_decoder;
-    decoder decoder;
 }
 #[derive(rustler::NifMap)]
 pub struct SceneSummary {
@@ -18128,7 +17135,7 @@ macro_rules! fig_scene_skip_field_decoder {
 }
 fig_scene_skip_field_decoder! {
     fn skip_fig_message_field; decoder decoder; definition "scene summary"; fields[1 =>
-    one skip_message_type_from_decoder; 2 => one kiwi_skip_uint_value; 42 => one
+    one kiwi_skip_uint_value; 2 => one kiwi_skip_uint_value; 42 => one
     kiwi_skip_string_value; 3 => one kiwi_skip_uint_value; 37 => one
     kiwi_skip_bool_value; 4 => repeated skip_node_change_from_decoder; 5 => repeated
     skip_user_change_from_decoder; 32 => one
@@ -18136,32 +17143,29 @@ fig_scene_skip_field_decoder! {
     skip_node_status_change_from_decoder; 44 => one
     skip_buzz_approval_change_from_decoder; 6 => repeated skip_blob_from_decoder; 30 =>
     one kiwi_skip_uint_value; 7 => one kiwi_skip_string_value; 8 => one
-    skip_access_from_decoder; 9 => one kiwi_skip_string_value; 10 => one
-    skip_style_set_type_from_decoder; 11 => one skip_style_set_content_type_from_decoder;
-    12 => one kiwi_skip_int_value; 13 => one skip_vector_from_decoder; 14 => one
-    kiwi_skip_string_value; 15 => one kiwi_skip_string_value; 16 => repeated
-    skip_scene_graph_query_from_decoder; 17 => one
+    kiwi_skip_uint_value; 9 => one kiwi_skip_string_value; 10 => one
+    kiwi_skip_uint_value; 11 => one kiwi_skip_uint_value; 12 => one kiwi_skip_int_value;
+    13 => one skip_vector_from_decoder; 14 => one kiwi_skip_string_value; 15 => one
+    kiwi_skip_string_value; 16 => repeated skip_scene_graph_query_from_decoder; 17 => one
     skip_node_changes_metadata_from_decoder; 18 => one kiwi_skip_uint_value; 19 => one
     kiwi_skip_bool_value; 20 => one skip_guid_from_decoder; 21 => one
     kiwi_skip_bool_value; 22 => repeated skip_message_from_decoder; 23 => repeated
     skip_message_from_decoder; 24 => repeated skip_client_broadcast_from_decoder; 25 =>
     one kiwi_skip_uint_value; 26 => one kiwi_skip_string_value; 27 => one
-    skip_editor_type_from_decoder; 28 => one kiwi_skip_string_value; 29 => repeated
+    kiwi_skip_uint_value; 28 => one kiwi_skip_string_value; 29 => repeated
     skip_guid_from_decoder; 31 => one kiwi_skip_bool_value; 33 => repeated
     skip_clipboard_selection_region_from_decoder; 34 => one
     skip_encoded_offsets_index_from_decoder; 35 => one kiwi_skip_bool_value; 38 => one
     kiwi_skip_uint64_value; 39 => repeated skip_annotation_category_from_decoder; 40 =>
-    one skip_client_rendered_metadata_from_decoder; 41 => one
-    skip_paste_asset_type_from_decoder; 43 => one
-    skip_object_animation_list_from_decoder; 45 => one
-    skip_scene_graph_query_mode_from_decoder;]
+    one skip_client_rendered_metadata_from_decoder; 41 => one kiwi_skip_uint_value; 43 =>
+    one skip_object_animation_list_from_decoder; 45 => one kiwi_skip_uint_value;]
 }
 fig_scene_skip_field_decoder! {
     fn skip_fig_node_change_field; decoder decoder; definition "scene node"; fields[1 =>
     one skip_guid_from_decoder; 53 => one kiwi_skip_uint_value; 2 => one
-    skip_node_phase_from_decoder; 54 => one kiwi_skip_uint_value; 3 => one
+    kiwi_skip_uint_value; 54 => one kiwi_skip_uint_value; 3 => one
     skip_parent_index_from_decoder; 55 => one kiwi_skip_uint_value; 4 => one
-    skip_node_type_from_decoder; 56 => one kiwi_skip_uint_value; 5 => one
+    kiwi_skip_uint_value; 56 => one kiwi_skip_uint_value; 5 => one
     kiwi_skip_string_value; 57 => one kiwi_skip_uint_value; 174 => one
     kiwi_skip_bool_value; 318 => one kiwi_skip_string_value; 256 => one
     skip_library_move_info_from_decoder; 281 => repeated
@@ -18169,7 +17173,7 @@ fig_scene_skip_field_decoder! {
     => one skip_asset_id_map_from_decoder; 49 => one kiwi_skip_uint_value; 101 => one
     kiwi_skip_uint_value; 157 => one kiwi_skip_bool_value; 161 => one
     kiwi_skip_bool_value; 376 => one kiwi_skip_bool_value; 163 => one
-    skip_style_type_from_decoder; 191 => one kiwi_skip_string_value; 171 => one
+    kiwi_skip_uint_value; 191 => one kiwi_skip_string_value; 171 => one
     kiwi_skip_string_value; 399 => one kiwi_skip_string_value; 320 => one
     kiwi_skip_string_value; 345 => one skip_shared_style_master_data_from_decoder; 348 =>
     one skip_shared_style_master_data_from_decoder; 176 => one kiwi_skip_bool_value; 177
@@ -18202,63 +17206,58 @@ fig_scene_skip_field_decoder! {
     repeated skip_instance_override_stash_from_decoder; 250 => repeated
     skip_instance_override_stash_v2_from_decoder; 111 => one skip_guid_path_from_decoder;
     112 => one kiwi_skip_uint_value; 321 => one kiwi_skip_int_value; 382 => one
-    skip_module_type_from_decoder; 463 => one kiwi_skip_bool_value; 495 => one
+    kiwi_skip_uint_value; 463 => one kiwi_skip_bool_value; 495 => one
     kiwi_skip_bool_value; 21 => one kiwi_skip_float_value; 73 => one
     kiwi_skip_uint_value; 22 => one kiwi_skip_float_value; 74 => one
     kiwi_skip_uint_value; 23 => one kiwi_skip_float_value; 75 => one
-    kiwi_skip_uint_value; 32 => one skip_text_align_horizontal_from_decoder; 84 => one
-    kiwi_skip_uint_value; 33 => one skip_text_align_vertical_from_decoder; 85 => one
-    kiwi_skip_uint_value; 34 => one skip_text_case_from_decoder; 86 => one
-    kiwi_skip_uint_value; 35 => one skip_text_decoration_from_decoder; 87 => one
-    kiwi_skip_uint_value; 40 => one skip_number_from_decoder; 92 => one
+    kiwi_skip_uint_value; 32 => one kiwi_skip_uint_value; 84 => one kiwi_skip_uint_value;
+    33 => one kiwi_skip_uint_value; 85 => one kiwi_skip_uint_value; 34 => one
+    kiwi_skip_uint_value; 86 => one kiwi_skip_uint_value; 35 => one kiwi_skip_uint_value;
+    87 => one kiwi_skip_uint_value; 40 => one skip_number_from_decoder; 92 => one
     kiwi_skip_uint_value; 41 => one skip_font_name_from_decoder; 93 => one
     kiwi_skip_uint_value; 42 => one skip_text_data_from_decoder; 94 => one
     kiwi_skip_uint_value; 359 => one skip_derived_text_data_from_decoder; 127 => one
     kiwi_skip_bool_value; 128 => one kiwi_skip_bool_value; 129 => one
     kiwi_skip_bool_value; 130 => one kiwi_skip_bool_value; 131 => one
     kiwi_skip_bool_value; 132 => one kiwi_skip_bool_value; 133 => one
-    skip_font_variant_numeric_figure_from_decoder; 134 => one
-    skip_font_variant_numeric_spacing_from_decoder; 135 => one
-    skip_font_variant_numeric_fraction_from_decoder; 136 => one
-    skip_font_variant_caps_from_decoder; 137 => one
-    skip_font_variant_position_from_decoder; 165 => one skip_number_from_decoder; 202 =>
-    one kiwi_skip_string_value; 322 => one skip_leading_trim_from_decoder; 337 => one
+    kiwi_skip_uint_value; 134 => one kiwi_skip_uint_value; 135 => one
+    kiwi_skip_uint_value; 136 => one kiwi_skip_uint_value; 137 => one
+    kiwi_skip_uint_value; 165 => one skip_number_from_decoder; 202 => one
+    kiwi_skip_string_value; 322 => one kiwi_skip_uint_value; 337 => one
     kiwi_skip_bool_value; 339 => one kiwi_skip_bool_value; 550 => one
     kiwi_skip_bool_value; 351 => one kiwi_skip_int_value; 417 => repeated
-    skip_responsive_text_style_variant_from_decoder; 352 => one
-    skip_section_status_from_decoder; 355 => one skip_section_status_info_from_decoder;
-    203 => one kiwi_skip_uint_value; 396 => one kiwi_skip_uint_value; 205 => repeated
-    skip_open_type_feature_from_decoder; 206 => repeated
-    skip_open_type_feature_from_decoder; 223 => one skip_hyperlink_from_decoder; 340 =>
-    one skip_mention_from_decoder; 260 => repeated skip_font_variation_from_decoder; 279
-    => one kiwi_skip_uint_value; 280 => one skip_text_truncation_from_decoder; 292 => one
-    kiwi_skip_bool_value; 391 => one skip_emoji_image_set_from_decoder; 392 => one
+    skip_responsive_text_style_variant_from_decoder; 352 => one kiwi_skip_uint_value; 355
+    => one skip_section_status_info_from_decoder; 203 => one kiwi_skip_uint_value; 396 =>
+    one kiwi_skip_uint_value; 205 => repeated kiwi_skip_uint_value; 206 => repeated
+    kiwi_skip_uint_value; 223 => one skip_hyperlink_from_decoder; 340 => one
+    skip_mention_from_decoder; 260 => repeated skip_font_variation_from_decoder; 279 =>
+    one kiwi_skip_uint_value; 280 => one kiwi_skip_uint_value; 292 => one
+    kiwi_skip_bool_value; 391 => one kiwi_skip_uint_value; 392 => one
     kiwi_skip_string_value; 6 => one kiwi_skip_bool_value; 58 => one
     kiwi_skip_uint_value; 7 => one kiwi_skip_bool_value; 59 => one kiwi_skip_uint_value;
-    434 => one skip_lock_mode_from_decoder; 8 => one kiwi_skip_float_value; 60 => one
-    kiwi_skip_uint_value; 9 => one skip_blend_mode_from_decoder; 61 => one
-    kiwi_skip_uint_value; 11 => one skip_vector_from_decoder; 63 => one
-    kiwi_skip_uint_value; 12 => one skip_matrix_from_decoder; 64 => one
-    kiwi_skip_uint_value; 13 => repeated kiwi_skip_float_value; 65 => one
-    kiwi_skip_uint_value; 16 => one kiwi_skip_bool_value; 68 => one kiwi_skip_uint_value;
-    424 => one skip_vector_from_decoder; 18 => one kiwi_skip_bool_value; 70 => one
-    kiwi_skip_uint_value; 317 => one skip_mask_type_from_decoder; 19 => one
+    434 => one kiwi_skip_uint_value; 8 => one kiwi_skip_float_value; 60 => one
+    kiwi_skip_uint_value; 9 => one kiwi_skip_uint_value; 61 => one kiwi_skip_uint_value;
+    11 => one skip_vector_from_decoder; 63 => one kiwi_skip_uint_value; 12 => one
+    skip_matrix_from_decoder; 64 => one kiwi_skip_uint_value; 13 => repeated
+    kiwi_skip_float_value; 65 => one kiwi_skip_uint_value; 16 => one
+    kiwi_skip_bool_value; 68 => one kiwi_skip_uint_value; 424 => one
+    skip_vector_from_decoder; 18 => one kiwi_skip_bool_value; 70 => one
+    kiwi_skip_uint_value; 317 => one kiwi_skip_uint_value; 19 => one
     kiwi_skip_float_value; 71 => one kiwi_skip_uint_value; 20 => one
     kiwi_skip_float_value; 72 => one kiwi_skip_uint_value; 26 => one
     kiwi_skip_float_value; 78 => one kiwi_skip_uint_value; 29 => one
-    skip_stroke_align_from_decoder; 81 => one kiwi_skip_uint_value; 30 => one
-    skip_stroke_cap_from_decoder; 82 => one kiwi_skip_uint_value; 497 => one
-    skip_number_from_decoder; 31 => one skip_stroke_join_from_decoder; 83 => one
-    kiwi_skip_uint_value; 38 => repeated skip_paint_from_decoder; 90 => one
-    kiwi_skip_uint_value; 39 => repeated skip_paint_from_decoder; 91 => one
-    kiwi_skip_uint_value; 43 => repeated skip_effect_from_decoder; 95 => one
-    kiwi_skip_uint_value; 50 => one skip_color_from_decoder; 102 => one
-    kiwi_skip_uint_value; 51 => repeated skip_path_from_decoder; 103 => one
-    kiwi_skip_uint_value; 52 => repeated skip_path_from_decoder; 104 => one
-    kiwi_skip_uint_value; 564 => repeated skip_path_from_decoder; 411 => repeated
-    skip_paint_from_decoder; 412 => one kiwi_skip_bool_value; 413 => one
-    skip_number_from_decoder; 415 => one skip_number_from_decoder; 416 => one
-    skip_text_decoration_style_from_decoder; 455 => repeated
+    kiwi_skip_uint_value; 81 => one kiwi_skip_uint_value; 30 => one kiwi_skip_uint_value;
+    82 => one kiwi_skip_uint_value; 497 => one skip_number_from_decoder; 31 => one
+    kiwi_skip_uint_value; 83 => one kiwi_skip_uint_value; 38 => repeated
+    skip_paint_from_decoder; 90 => one kiwi_skip_uint_value; 39 => repeated
+    skip_paint_from_decoder; 91 => one kiwi_skip_uint_value; 43 => repeated
+    skip_effect_from_decoder; 95 => one kiwi_skip_uint_value; 50 => one
+    skip_color_from_decoder; 102 => one kiwi_skip_uint_value; 51 => repeated
+    skip_path_from_decoder; 103 => one kiwi_skip_uint_value; 52 => repeated
+    skip_path_from_decoder; 104 => one kiwi_skip_uint_value; 564 => repeated
+    skip_path_from_decoder; 411 => repeated skip_paint_from_decoder; 412 => one
+    kiwi_skip_bool_value; 413 => one skip_number_from_decoder; 415 => one
+    skip_number_from_decoder; 416 => one kiwi_skip_uint_value; 455 => repeated
     skip_transform_modifier_from_decoder; 570 => one skip_transform3d_from_decoder; 571
     => one skip_stroke_data_from_decoder; 572 => one skip_scene3d_from_decoder; 587 =>
     one skip_transform_origin_from_decoder; 145 => one kiwi_skip_float_value; 146 => one
@@ -18271,164 +17270,154 @@ fig_scene_skip_field_decoder! {
     kiwi_skip_bool_value; 295 => one kiwi_skip_float_value; 296 => one
     kiwi_skip_float_value; 297 => one kiwi_skip_float_value; 298 => one
     kiwi_skip_float_value; 299 => one kiwi_skip_bool_value; 28 => one
-    skip_constraint_type_from_decoder; 80 => one kiwi_skip_uint_value; 105 => one
-    skip_stack_mode_from_decoder; 106 => one kiwi_skip_uint_value; 107 => one
+    kiwi_skip_uint_value; 80 => one kiwi_skip_uint_value; 105 => one
+    kiwi_skip_uint_value; 106 => one kiwi_skip_uint_value; 107 => one
     kiwi_skip_float_value; 108 => one kiwi_skip_uint_value; 109 => one
     kiwi_skip_float_value; 110 => one kiwi_skip_uint_value; 120 => one
-    skip_stack_counter_align_from_decoder; 121 => one skip_stack_justify_from_decoder;
-    208 => one skip_stack_align_from_decoder; 209 => one kiwi_skip_float_value; 210 =>
-    one kiwi_skip_float_value; 211 => one skip_stack_size_from_decoder; 212 => one
-    skip_stack_size_from_decoder; 229 => one skip_stack_size_from_decoder; 230 => one
-    skip_stack_justify_from_decoder; 231 => one skip_stack_align_from_decoder; 232 => one
+    kiwi_skip_uint_value; 121 => one kiwi_skip_uint_value; 208 => one
+    kiwi_skip_uint_value; 209 => one kiwi_skip_float_value; 210 => one
+    kiwi_skip_float_value; 211 => one kiwi_skip_uint_value; 212 => one
+    kiwi_skip_uint_value; 229 => one kiwi_skip_uint_value; 230 => one
+    kiwi_skip_uint_value; 231 => one kiwi_skip_uint_value; 232 => one
     kiwi_skip_float_value; 233 => one kiwi_skip_float_value; 234 => one
-    kiwi_skip_float_value; 236 => one skip_stack_counter_align_from_decoder; 269 => one
-    skip_stack_positioning_from_decoder; 271 => one kiwi_skip_bool_value; 323 => one
-    skip_stack_wrap_from_decoder; 324 => one kiwi_skip_float_value; 325 => one
+    kiwi_skip_float_value; 236 => one kiwi_skip_uint_value; 269 => one
+    kiwi_skip_uint_value; 271 => one kiwi_skip_bool_value; 323 => one
+    kiwi_skip_uint_value; 324 => one kiwi_skip_float_value; 325 => one
     skip_optional_vector_from_decoder; 326 => one skip_optional_vector_from_decoder; 343
-    => one skip_stack_counter_align_content_from_decoder; 406 => repeated
-    kiwi_skip_int_value; 574 => one kiwi_skip_uint_value; 435 => one
-    skip_guid_position_map_from_decoder; 436 => one skip_guid_position_map_from_decoder;
-    437 => one kiwi_skip_float_value; 438 => one kiwi_skip_float_value; 439 => one
-    skip_guid_from_decoder; 440 => one skip_guid_from_decoder; 441 => one
-    kiwi_skip_uint_value; 442 => one kiwi_skip_uint_value; 474 => one
-    skip_guid_grid_track_size_map_from_decoder; 475 => one
-    skip_guid_grid_track_size_map_from_decoder; 476 => one
-    skip_grid_child_align_from_decoder; 477 => one skip_grid_child_align_from_decoder;
-    555 => one skip_grid_auto_tracks_from_decoder; 556 => one kiwi_skip_bool_value; 344
-    => one kiwi_skip_bool_value; 139 => one skip_guid_from_decoder; 140 => one
-    skip_guid_from_decoder; 141 => one skip_color_from_decoder; 153 => one
-    skip_transition_info_from_decoder; 154 => one skip_transition_type_from_decoder; 155
-    => one kiwi_skip_float_value; 156 => one skip_easing_type_from_decoder; 181 => one
-    kiwi_skip_bool_value; 182 => one skip_connection_type_from_decoder; 183 => one
-    kiwi_skip_string_value; 184 => one skip_prototype_device_from_decoder; 187 => one
-    skip_interaction_type_from_decoder; 188 => one kiwi_skip_float_value; 189 => one
-    kiwi_skip_bool_value; 190 => one kiwi_skip_float_value; 192 => one
-    kiwi_skip_bool_value; 207 => one kiwi_skip_bool_value; 226 => repeated
-    skip_prototype_interaction_from_decoder; 426 => repeated
-    skip_prototype_interaction_from_decoder; 249 => one
+    => one kiwi_skip_uint_value; 406 => repeated kiwi_skip_int_value; 574 => one
+    kiwi_skip_uint_value; 435 => one skip_guid_position_map_from_decoder; 436 => one
+    skip_guid_position_map_from_decoder; 437 => one kiwi_skip_float_value; 438 => one
+    kiwi_skip_float_value; 439 => one skip_guid_from_decoder; 440 => one
+    skip_guid_from_decoder; 441 => one kiwi_skip_uint_value; 442 => one
+    kiwi_skip_uint_value; 474 => one skip_guid_grid_track_size_map_from_decoder; 475 =>
+    one skip_guid_grid_track_size_map_from_decoder; 476 => one kiwi_skip_uint_value; 477
+    => one kiwi_skip_uint_value; 555 => one kiwi_skip_uint_value; 556 => one
+    kiwi_skip_bool_value; 344 => one kiwi_skip_bool_value; 139 => one
+    skip_guid_from_decoder; 140 => one skip_guid_from_decoder; 141 => one
+    skip_color_from_decoder; 153 => one skip_transition_info_from_decoder; 154 => one
+    kiwi_skip_uint_value; 155 => one kiwi_skip_float_value; 156 => one
+    kiwi_skip_uint_value; 181 => one kiwi_skip_bool_value; 182 => one
+    kiwi_skip_uint_value; 183 => one kiwi_skip_string_value; 184 => one
+    skip_prototype_device_from_decoder; 187 => one kiwi_skip_uint_value; 188 => one
+    kiwi_skip_float_value; 189 => one kiwi_skip_bool_value; 190 => one
+    kiwi_skip_float_value; 192 => one kiwi_skip_bool_value; 207 => one
+    kiwi_skip_bool_value; 226 => repeated skip_prototype_interaction_from_decoder; 426 =>
+    repeated skip_prototype_interaction_from_decoder; 249 => one
     skip_prototype_starting_point_from_decoder; 204 => repeated
     skip_plugin_data_from_decoder; 219 => repeated
     skip_plugin_relaunch_data_from_decoder; 242 => one
     skip_connector_endpoint_from_decoder; 243 => one
-    skip_connector_endpoint_from_decoder; 244 => one
-    skip_connector_line_style_from_decoder; 245 => one skip_stroke_cap_from_decoder; 246
-    => one skip_stroke_cap_from_decoder; 253 => repeated
+    skip_connector_endpoint_from_decoder; 244 => one kiwi_skip_uint_value; 245 => one
+    kiwi_skip_uint_value; 246 => one kiwi_skip_uint_value; 253 => repeated
     skip_connector_control_point_from_decoder; 479 => repeated
     skip_connector_control_point_from_decoder; 255 => one
-    skip_connector_text_midpoint_from_decoder; 373 => one
-    skip_connector_type_from_decoder; 533 => one kiwi_skip_int_value; 369 => repeated
-    skip_annotation_from_decoder; 384 => repeated
-    skip_annotation_measurement_from_decoder; 453 => one
-    skip_annotation_categories_from_decoder; 241 => one
-    skip_shape_with_text_type_from_decoder; 247 => one kiwi_skip_float_value; 530 => one
-    kiwi_skip_bool_value; 254 => one skip_derived_immutable_frame_data_from_decoder; 338
-    => one skip_multiplayer_field_version_from_decoder; 240 => one
+    skip_connector_text_midpoint_from_decoder; 373 => one kiwi_skip_uint_value; 533 =>
+    one kiwi_skip_int_value; 369 => repeated skip_annotation_from_decoder; 384 =>
+    repeated skip_annotation_measurement_from_decoder; 453 => one
+    skip_annotation_categories_from_decoder; 241 => one kiwi_skip_uint_value; 247 => one
+    kiwi_skip_float_value; 530 => one kiwi_skip_bool_value; 254 => one
+    skip_derived_immutable_frame_data_from_decoder; 338 => one
+    skip_multiplayer_field_version_from_decoder; 240 => one
     skip_node_generation_data_from_decoder; 491 => one skip_jsx_data_from_decoder; 492 =>
     one skip_derived_jsx_data_from_decoder; 493 => one kiwi_skip_string_value; 259 => one
-    skip_code_block_language_from_decoder; 433 => one skip_code_block_theme_from_decoder;
-    278 => one skip_link_preview_data_from_decoder; 282 => one kiwi_skip_bool_value; 283
-    => one kiwi_skip_bool_value; 300 => one skip_video_playback_from_decoder; 301 => one
+    kiwi_skip_uint_value; 433 => one kiwi_skip_uint_value; 278 => one
+    skip_link_preview_data_from_decoder; 282 => one kiwi_skip_bool_value; 283 => one
+    kiwi_skip_bool_value; 300 => one skip_video_playback_from_decoder; 301 => one
     skip_stamp_data_from_decoder; 370 => one skip_section_preset_info_from_decoder; 409
     => one skip_platform_shape_definition_from_decoder; 273 => one
     skip_multiplayer_map_from_decoder; 274 => one kiwi_skip_uint_value; 275 => one
     skip_widget_derived_subtree_cursor_from_decoder; 276 => one
-    skip_widget_pointer_from_decoder; 285 => one skip_widget_input_behavior_from_decoder;
-    286 => one kiwi_skip_string_value; 291 => one skip_widget_hover_style_from_decoder;
-    293 => one kiwi_skip_bool_value; 360 => one kiwi_skip_bool_value; 262 => one
-    skip_widget_metadata_from_decoder; 263 => repeated skip_widget_event_from_decoder;
-    265 => repeated skip_widget_property_menu_item_from_decoder; 401 => one
-    skip_widget_input_text_node_type_from_decoder; 489 => one
-    skip_multiplayer_map_from_decoder; 308 => one
+    skip_widget_pointer_from_decoder; 285 => one kiwi_skip_uint_value; 286 => one
+    kiwi_skip_string_value; 291 => one skip_widget_hover_style_from_decoder; 293 => one
+    kiwi_skip_bool_value; 360 => one kiwi_skip_bool_value; 262 => one
+    skip_widget_metadata_from_decoder; 263 => repeated kiwi_skip_uint_value; 265 =>
+    repeated skip_widget_property_menu_item_from_decoder; 401 => one
+    kiwi_skip_uint_value; 489 => one skip_multiplayer_map_from_decoder; 308 => one
     skip_table_row_column_position_map_from_decoder; 309 => one
     skip_table_row_column_position_map_from_decoder; 310 => one
     skip_table_row_column_size_map_from_decoder; 311 => one
     skip_table_row_column_size_map_from_decoder; 538 => one
     skip_table_merged_cell_map_from_decoder; 371 => one
     skip_multiplayer_map_from_decoder; 372 => one skip_multiplayer_map_from_decoder; 402
-    => one skip_flapp_type_from_decoder; 486 => one kiwi_skip_bool_value; 389 => one
+    => one kiwi_skip_uint_value; 486 => one kiwi_skip_bool_value; 389 => one
     kiwi_skip_string_value; 410 => one kiwi_skip_bool_value; 573 => one
     skip_multiplayer_map_from_decoder; 379 => one skip_theme_id_from_decoder; 381 => one
     skip_slide_theme_data_from_decoder; 390 => one skip_slide_theme_map_from_decoder; 393
-    => one kiwi_skip_string_value; 443 => one skip_slide_number_from_decoder; 456 => one
+    => one kiwi_skip_string_value; 443 => one kiwi_skip_uint_value; 456 => one
     kiwi_skip_string_value; 363 => one skip_guid_from_decoder; 362 => one
     skip_guid_from_decoder; 364 => one kiwi_skip_string_value; 366 => one
-    skip_diagram_layout_rule_type_from_decoder; 367 => one
-    skip_diagram_parent_index_from_decoder; 368 => one
-    skip_diagram_layout_paused_from_decoder; 380 => one kiwi_skip_bool_value; 251 => one
-    skip_internal_enum_for_test_from_decoder; 257 => one
-    skip_internal_data_for_test_from_decoder; 14 => one kiwi_skip_bool_value; 66 => one
-    kiwi_skip_uint_value; 15 => one kiwi_skip_bool_value; 67 => one kiwi_skip_uint_value;
-    17 => one kiwi_skip_bool_value; 69 => one kiwi_skip_uint_value; 25 => one
-    kiwi_skip_float_value; 77 => one kiwi_skip_uint_value; 27 => one
-    kiwi_skip_float_value; 79 => one kiwi_skip_uint_value; 37 => one
-    skip_constraint_type_from_decoder; 89 => one kiwi_skip_uint_value; 45 => repeated
-    skip_export_settings_from_decoder; 97 => one kiwi_skip_uint_value; 46 => one
-    skip_text_auto_resize_from_decoder; 98 => one kiwi_skip_uint_value; 47 => repeated
+    kiwi_skip_uint_value; 367 => one skip_diagram_parent_index_from_decoder; 368 => one
+    kiwi_skip_uint_value; 380 => one kiwi_skip_bool_value; 251 => one
+    kiwi_skip_uint_value; 257 => one skip_internal_data_for_test_from_decoder; 14 => one
+    kiwi_skip_bool_value; 66 => one kiwi_skip_uint_value; 15 => one kiwi_skip_bool_value;
+    67 => one kiwi_skip_uint_value; 17 => one kiwi_skip_bool_value; 69 => one
+    kiwi_skip_uint_value; 25 => one kiwi_skip_float_value; 77 => one
+    kiwi_skip_uint_value; 27 => one kiwi_skip_float_value; 79 => one
+    kiwi_skip_uint_value; 37 => one kiwi_skip_uint_value; 89 => one kiwi_skip_uint_value;
+    45 => repeated skip_export_settings_from_decoder; 97 => one kiwi_skip_uint_value; 46
+    => one kiwi_skip_uint_value; 98 => one kiwi_skip_uint_value; 47 => repeated
     skip_layout_grid_from_decoder; 99 => one kiwi_skip_uint_value; 115 => one
     kiwi_skip_bool_value; 116 => one kiwi_skip_uint_value; 117 => one
     kiwi_skip_bool_value; 118 => one kiwi_skip_uint_value; 36 => one
-    skip_boolean_operation_from_decoder; 88 => one kiwi_skip_uint_value; 44 => one
-    skip_vector_mirror_from_decoder; 96 => one kiwi_skip_uint_value; 10 => one
-    kiwi_skip_uint_value; 62 => one kiwi_skip_uint_value; 24 => one
-    kiwi_skip_float_value; 76 => one kiwi_skip_uint_value; 195 => one
-    skip_arc_data_from_decoder; 48 => one skip_vector_data_from_decoder; 100 => one
-    kiwi_skip_uint_value; 425 => one kiwi_skip_uint_value; 432 => one
-    skip_text_path_start_from_decoder; 119 => one kiwi_skip_bool_value; 138 => repeated
-    skip_guide_from_decoder; 142 => one kiwi_skip_bool_value; 159 => one
-    skip_scroll_direction_from_decoder; 160 => one kiwi_skip_float_value; 166 => one
-    skip_vector_from_decoder; 175 => one kiwi_skip_bool_value; 178 => one
-    skip_scroll_contracted_state_from_decoder; 179 => one skip_vector_from_decoder; 180
-    => one kiwi_skip_string_value; 186 => one skip_scroll_behavior_from_decoder; 196 =>
-    one kiwi_skip_int_value; 197 => one skip_navigation_type_from_decoder; 198 => one
-    skip_overlay_position_type_from_decoder; 199 => one skip_vector_from_decoder; 200 =>
-    one skip_overlay_background_interaction_from_decoder; 201 => one
+    kiwi_skip_uint_value; 88 => one kiwi_skip_uint_value; 44 => one kiwi_skip_uint_value;
+    96 => one kiwi_skip_uint_value; 10 => one kiwi_skip_uint_value; 62 => one
+    kiwi_skip_uint_value; 24 => one kiwi_skip_float_value; 76 => one
+    kiwi_skip_uint_value; 195 => one skip_arc_data_from_decoder; 48 => one
+    skip_vector_data_from_decoder; 100 => one kiwi_skip_uint_value; 425 => one
+    kiwi_skip_uint_value; 432 => one skip_text_path_start_from_decoder; 119 => one
+    kiwi_skip_bool_value; 138 => repeated skip_guide_from_decoder; 142 => one
+    kiwi_skip_bool_value; 159 => one kiwi_skip_uint_value; 160 => one
+    kiwi_skip_float_value; 166 => one skip_vector_from_decoder; 175 => one
+    kiwi_skip_bool_value; 178 => one kiwi_skip_uint_value; 179 => one
+    skip_vector_from_decoder; 180 => one kiwi_skip_string_value; 186 => one
+    kiwi_skip_uint_value; 196 => one kiwi_skip_int_value; 197 => one
+    kiwi_skip_uint_value; 198 => one kiwi_skip_uint_value; 199 => one
+    skip_vector_from_decoder; 200 => one kiwi_skip_uint_value; 201 => one
     skip_overlay_background_appearance_from_decoder; 213 => one skip_guid_from_decoder;
-    220 => one kiwi_skip_bool_value; 221 => one skip_stack_size_from_decoder; 222 => one
+    220 => one kiwi_skip_bool_value; 221 => one kiwi_skip_uint_value; 222 => one
     kiwi_skip_bool_value; 224 => one skip_key_trigger_from_decoder; 227 => one
     kiwi_skip_string_value; 235 => repeated skip_guid_from_decoder; 237 => repeated
     skip_symbol_link_from_decoder; 239 => one skip_text_list_data_from_decoder; 261 =>
     one kiwi_skip_bool_value; 264 => one kiwi_skip_float_value; 270 => one
     skip_embed_data_from_decoder; 272 => one skip_rich_media_data_from_decoder; 277 =>
     one skip_multiplayer_map_from_decoder; 284 => one kiwi_skip_bool_value; 302 => one
-    skip_html_tag_from_decoder; 303 => one skip_aria_role_from_decoder; 357 => one
+    kiwi_skip_uint_value; 303 => one kiwi_skip_uint_value; 357 => one
     skip_aria_attributes_map_from_decoder; 304 => one kiwi_skip_string_value; 490 => one
     kiwi_skip_bool_value; 306 => one skip_variable_data_from_decoder; 307 => one
     skip_variable_data_map_from_decoder; 316 => one
     skip_variable_mode_by_set_map_from_decoder; 312 => repeated
     skip_variable_set_mode_from_decoder; 313 => one skip_variable_set_id_from_decoder;
-    314 => one skip_variable_resolved_data_type_from_decoder; 315 => one
-    skip_variable_data_values_from_decoder; 350 => one kiwi_skip_string_value; 566 => one
-    skip_variable_timing_display_unit_from_decoder; 353 => repeated
-    skip_variable_scope_from_decoder; 445 => one skip_variable_data_map_from_decoder; 358
-    => one skip_code_syntax_map_from_decoder; 388 => one skip_paste_source_from_decoder;
-    397 => one skip_editor_type_from_decoder; 446 => one skip_guid_from_decoder; 482 =>
-    one kiwi_skip_uint64_value; 447 => repeated skip_variable_width_point_from_decoder;
-    448 => one skip_dynamic_stroke_settings_from_decoder; 449 => one
+    314 => one kiwi_skip_uint_value; 315 => one skip_variable_data_values_from_decoder;
+    350 => one kiwi_skip_string_value; 566 => one kiwi_skip_uint_value; 353 => repeated
+    kiwi_skip_uint_value; 445 => one skip_variable_data_map_from_decoder; 358 => one
+    skip_code_syntax_map_from_decoder; 388 => one skip_paste_source_from_decoder; 397 =>
+    one kiwi_skip_uint_value; 446 => one skip_guid_from_decoder; 482 => one
+    kiwi_skip_uint64_value; 447 => repeated skip_variable_width_point_from_decoder; 448
+    => one skip_dynamic_stroke_settings_from_decoder; 449 => one
     skip_scatter_stroke_settings_from_decoder; 450 => one
     skip_stretch_stroke_settings_from_decoder; 488 => repeated skip_matrix_from_decoder;
-    452 => one skip_brush_type_from_decoder; 542 => one
-    skip_optional_vector_from_decoder; 554 => one kiwi_skip_float_value; 377 => one
-    skip_variable_set_id_from_decoder; 464 => one skip_variable_id_from_decoder; 378 =>
-    one skip_variable_id_or_variable_override_id_from_decoder; 385 => one
+    452 => one kiwi_skip_uint_value; 542 => one skip_optional_vector_from_decoder; 554 =>
+    one kiwi_skip_float_value; 377 => one skip_variable_set_id_from_decoder; 464 => one
+    skip_variable_id_from_decoder; 378 => one
+    skip_variable_id_or_variable_override_id_from_decoder; 385 => one
     kiwi_skip_bool_value; 386 => one kiwi_skip_string_value; 517 => one
     skip_inherited_variables_data_from_decoder; 361 => one
     skip_handoff_status_map_from_decoder; 327 => one
     skip_agenda_position_map_from_decoder; 328 => one
     skip_agenda_metadata_map_from_decoder; 329 => one skip_migration_status_from_decoder;
     330 => one kiwi_skip_bool_value; 331 => one skip_edit_info_from_decoder; 341 => one
-    skip_color_profile_from_decoder; 342 => one skip_symbol_id_from_decoder; 346 => one
-    skip_child_reading_direction_from_decoder; 347 => one kiwi_skip_string_value; 349 =>
-    one skip_document_color_profile_from_decoder; 354 => repeated
-    skip_developer_related_link_from_decoder; 356 => one kiwi_skip_string_value; 365 =>
-    one skip_edit_scope_info_from_decoder; 374 => one skip_semantic_weight_from_decoder;
-    375 => one skip_semantic_italic_from_decoder; 403 => one kiwi_skip_bool_value; 387 =>
-    one kiwi_skip_bool_value; 500 => one skip_derived_breakpoint_data_from_decoder; 398
-    => one skip_guid_from_decoder; 458 => one kiwi_skip_bool_value; 457 => one
-    skip_guid_from_decoder; 462 => one skip_guid_from_decoder; 501 => one
-    kiwi_skip_float_value; 522 => one kiwi_skip_bool_value; 400 => one
-    skip_responsive_set_settings_from_decoder; 404 => one
-    skip_node_behaviors_from_decoder; 414 => one kiwi_skip_string_value; 534 => repeated
-    skip_collaborative_text_op_id_from_decoder; 444 => one
+    kiwi_skip_uint_value; 342 => one skip_symbol_id_from_decoder; 346 => one
+    kiwi_skip_uint_value; 347 => one kiwi_skip_string_value; 349 => one
+    kiwi_skip_uint_value; 354 => repeated skip_developer_related_link_from_decoder; 356
+    => one kiwi_skip_string_value; 365 => one skip_edit_scope_info_from_decoder; 374 =>
+    one kiwi_skip_uint_value; 375 => one kiwi_skip_uint_value; 403 => one
+    kiwi_skip_bool_value; 387 => one kiwi_skip_bool_value; 500 => one
+    skip_derived_breakpoint_data_from_decoder; 398 => one skip_guid_from_decoder; 458 =>
+    one kiwi_skip_bool_value; 457 => one skip_guid_from_decoder; 462 => one
+    skip_guid_from_decoder; 501 => one kiwi_skip_float_value; 522 => one
+    kiwi_skip_bool_value; 400 => one skip_responsive_set_settings_from_decoder; 404 =>
+    one skip_node_behaviors_from_decoder; 414 => one kiwi_skip_string_value; 534 =>
+    repeated skip_collaborative_text_op_id_from_decoder; 444 => one
     skip_collaborative_plain_text_from_decoder; 427 => one
     skip_code_library_id_from_decoder; 467 => one skip_imported_code_files_from_decoder;
     468 => one skip_canvas_node_id_from_decoder; 498 => one kiwi_skip_bool_value; 502 =>
@@ -18439,17 +17428,17 @@ fig_scene_skip_field_decoder! {
     skip_prototype_device_from_decoder; 525 => repeated skip_code_example_from_decoder;
     428 => one skip_code_file_id_from_decoder; 430 => one kiwi_skip_string_value; 547 =>
     one kiwi_skip_string_value; 429 => one skip_code_component_id_from_decoder; 487 =>
-    one kiwi_skip_bool_value; 431 => one skip_code_snapshot_state_from_decoder; 451 =>
-    repeated skip_node_chat_message_from_decoder; 485 => one
+    one kiwi_skip_bool_value; 431 => one kiwi_skip_uint_value; 451 => repeated
+    skip_node_chat_message_from_decoder; 485 => one
     skip_node_chat_compression_state_from_decoder; 496 => one
     skip_ai_chat_thread_from_decoder; 484 => one kiwi_skip_string_value; 459 => one
     skip_code_snapshot_from_decoder; 589 => one skip_code_snapshot_layers_from_decoder;
     480 => one kiwi_skip_uint_value; 465 => one kiwi_skip_bool_value; 469 => one
     kiwi_skip_bool_value; 470 => one kiwi_skip_bool_value; 471 => one
     kiwi_skip_bool_value; 481 => one skip_canvas_node_id_from_decoder; 473 => one
-    skip_image_import_map_from_decoder; 516 => one skip_code_object_type_from_decoder;
-    472 => one kiwi_skip_string_value; 478 => one skip_code_behavior_data_from_decoder;
-    519 => one kiwi_skip_uint_value; 527 => one kiwi_skip_bool_value; 532 => one
+    skip_image_import_map_from_decoder; 516 => one kiwi_skip_uint_value; 472 => one
+    kiwi_skip_string_value; 478 => one skip_code_behavior_data_from_decoder; 519 => one
+    kiwi_skip_uint_value; 527 => one kiwi_skip_bool_value; 532 => one
     skip_code_embed_info_from_decoder; 546 => one kiwi_skip_bool_value; 558 => one
     skip_code_source_info_from_decoder; 536 => one kiwi_skip_string_value; 537 => bytes
     kiwi_skip_bytes_value; 419 => one skip_cms_selector_from_decoder; 420 => one
@@ -18470,24 +17459,21 @@ fig_scene_skip_field_decoder! {
     skip_canvas_node_id_from_decoder; 548 => one kiwi_skip_string_value; 523 => one
     skip_trss_transform2_d_from_decoder; 506 => one kiwi_skip_int64_value; 507 => one
     skip_keyframe_value_data_from_decoder; 586 => one skip_variable_data_from_decoder;
-    505 => one skip_interpolation_type_from_decoder; 508 => one
-    skip_bezier_handles_from_decoder; 535 => one skip_easing_data_from_decoder; 509 =>
-    one skip_keyframe_operation_from_decoder; 510 => one
-    skip_timeline_position_type_from_decoder; 545 => one kiwi_skip_bool_value; 511 => one
+    505 => one kiwi_skip_uint_value; 508 => one skip_bezier_handles_from_decoder; 535 =>
+    one skip_easing_data_from_decoder; 509 => one kiwi_skip_uint_value; 510 => one
+    kiwi_skip_uint_value; 545 => one kiwi_skip_bool_value; 511 => one
     skip_guid_from_decoder; 512 => one kiwi_skip_uint64_value; 513 => one
     kiwi_skip_int64_value; 543 => one kiwi_skip_bool_value; 514 => one
-    skip_playback_style_from_decoder; 552 => one
-    skip_timeline_definitions_map_from_decoder; 553 => one
-    skip_timeline_assignments_map_from_decoder; 521 => one
+    kiwi_skip_uint_value; 552 => one skip_timeline_definitions_map_from_decoder; 553 =>
+    one skip_timeline_assignments_map_from_decoder; 521 => one
     skip_animation_presets_from_decoder; 582 => repeated
     skip_style_id_for_animation_from_decoder; 583 => one
     skip_animation_preset_id_from_decoder; 568 => one skip_tools_from_decoder; 569 => one
     skip_custom_effects_from_decoder; 526 => one
     skip_transition_override_data_from_decoder; 544 => one kiwi_skip_bool_value; 557 =>
-    one skip_source_control_config_from_decoder; 559 => one
-    skip_spec_block_type_from_decoder; 560 => one
-    skip_collaborative_plain_text_from_decoder; 561 => one kiwi_skip_string_value; 562 =>
-    one kiwi_skip_string_value; 563 => one kiwi_skip_int_value; 575 => one
+    one skip_source_control_config_from_decoder; 559 => one kiwi_skip_uint_value; 560 =>
+    one skip_collaborative_plain_text_from_decoder; 561 => one kiwi_skip_string_value;
+    562 => one kiwi_skip_string_value; 563 => one kiwi_skip_int_value; 575 => one
     kiwi_skip_string_value; 576 => one kiwi_skip_int_value; 577 => one
     kiwi_skip_int_value; 578 => one skip_table_row_column_size_map_from_decoder; 579 =>
     one skip_table_row_column_size_map_from_decoder; 590 => one kiwi_skip_string_value;
