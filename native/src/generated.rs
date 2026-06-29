@@ -28,6 +28,24 @@ pub enum KiwiSkipKind {
 }
 
 
+#[derive(Clone, Debug)]
+pub struct KiwiSkipStructField {
+    pub repeated: bool,
+    pub bytes: bool,
+    pub skip: KiwiSkipFn,
+}
+
+
+macro_rules! kiwi_skip_struct_decoder {
+        (fn $name:ident;
+        decoder $decoder:ident;
+        fields [$($field_repeated:literal $field_bytes:literal $field_skip:ident;)*]) => {
+                fn $name($decoder: &mut Decoder<'_>) -> NifResult<()> {
+                        kiwi_skip_struct_fields($decoder, &[$(KiwiSkipStructField { repeated: $field_repeated, bytes: $field_bytes, skip: $field_skip},)*], 0)
+                }
+        };
+}
+
 fn kiwi_skip_bool_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.read_bool()?;
     Ok(())
@@ -88,6 +106,34 @@ fn kiwi_skip_repeated(decoder: &mut Decoder<'_>, item: KiwiSkipFn) -> NifResult<
 }
 
 
+fn kiwi_skip_struct_field(
+    decoder: &mut Decoder<'_>,
+    field: &KiwiSkipStructField,
+) -> NifResult<()> {
+    let skip = field.skip;
+    if field.bytes {
+        kiwi_skip_bytes_value(decoder)
+    } else {
+        if field.repeated { kiwi_skip_repeated(decoder, skip) } else { skip(decoder) }
+    }
+}
+
+
+fn kiwi_skip_struct_fields(
+    decoder: &mut Decoder<'_>,
+    fields: &[KiwiSkipStructField],
+    index: usize,
+) -> NifResult<()> {
+    if index == fields.len() {
+        Ok(())
+    } else {
+        let field = fields.get(index).unwrap();
+        kiwi_skip_struct_field(decoder, field)?;
+        kiwi_skip_struct_fields(decoder, fields, index + 1)
+    }
+}
+
+
 fn kiwi_skip_message_fields(
     decoder: &mut Decoder<'_>,
     _definition_name: &str,
@@ -116,14 +162,6 @@ fn kiwi_skip_kind(decoder: &mut Decoder<'_>, kind: &KiwiSkipKind) -> NifResult<(
         KiwiSkipKind::Bytes => kiwi_skip_bytes_value(decoder),
     }
 }
-
-fn kiwi_skip_struct_fields(decoder: &mut Decoder<'_>, fields: &[KiwiSkipKind]) -> NifResult<()> {
-    for kind in fields {
-        kiwi_skip_kind(decoder, kind)?;
-    }
-    Ok(())
-}
-
 macro_rules! kiwi_skip_kind {
     (one $skip:ident) => { KiwiSkipKind::One($skip) };
     (repeated $skip:ident) => { KiwiSkipKind::Repeated($skip) };
@@ -131,32 +169,6 @@ macro_rules! kiwi_skip_kind {
     (one, $skip:ident) => { KiwiSkipKind::One($skip) };
     (repeated, $skip:ident) => { KiwiSkipKind::Repeated($skip) };
     (bytes, $skip:ident) => { KiwiSkipKind::Bytes };
-}
-
-macro_rules! kiwi_skip_struct_decoder {
-    (fn $name:ident; decoder $decoder:ident; fields [$($field_mode:ident $field_skip:ident;)*]) => {
-        fn $name($decoder: &mut Decoder<'_>) -> NifResult<()> {
-            kiwi_skip_struct_fields($decoder, &[$(kiwi_skip_kind!($field_mode $field_skip),)*])
-        }
-    };
-}
-
-#[allow(unused_macros)]
-macro_rules! kiwi_skip_message_decoder {
-    (
-        fn $name:ident;
-        decoder $decoder:ident;
-        definition $definition_name:literal;
-        fields [$($field_id:literal => $field_mode:ident $field_skip:ident;)*]
-    ) => {
-        fn $name($decoder: &mut Decoder<'_>) -> NifResult<()> {
-            kiwi_skip_message_fields(
-                $decoder,
-                $definition_name,
-                &[$(KiwiSkipField { id: $field_id, kind: kiwi_skip_kind!($field_mode $field_skip) },)*],
-            )
-        }
-    };
 }
 
 
@@ -10510,8 +10522,8 @@ kiwi_skip_struct_decoder! {
     fn skip_guid_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_uint_value;
-        one kiwi_skip_uint_value;
+        false false kiwi_skip_uint_value;
+        false false kiwi_skip_uint_value;
     ]
 }
 
@@ -10519,10 +10531,10 @@ kiwi_skip_struct_decoder! {
     fn skip_color_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
     ]
 }
 
@@ -10530,8 +10542,8 @@ kiwi_skip_struct_decoder! {
     fn skip_vector_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
     ]
 }
 
@@ -10539,10 +10551,10 @@ kiwi_skip_struct_decoder! {
     fn skip_rect_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
     ]
 }
 
@@ -10550,8 +10562,8 @@ kiwi_skip_struct_decoder! {
     fn skip_color_stop_from_decoder;
     decoder decoder;
     fields [
-        one skip_color_from_decoder;
-        one kiwi_skip_float_value;
+        false false skip_color_from_decoder;
+        false false kiwi_skip_float_value;
     ]
 }
 
@@ -10559,12 +10571,12 @@ kiwi_skip_struct_decoder! {
     fn skip_matrix_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
     ]
 }
 
@@ -10572,8 +10584,8 @@ kiwi_skip_struct_decoder! {
     fn skip_parent_index_from_decoder;
     decoder decoder;
     fields [
-        one skip_guid_from_decoder;
-        one kiwi_skip_string_value;
+        false false skip_guid_from_decoder;
+        false false kiwi_skip_string_value;
     ]
 }
 
@@ -10581,8 +10593,8 @@ kiwi_skip_struct_decoder! {
     fn skip_number_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_float_value;
-        one kiwi_skip_uint_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_uint_value;
     ]
 }
 
@@ -10590,9 +10602,9 @@ kiwi_skip_struct_decoder! {
     fn skip_font_name_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_string_value;
-        one kiwi_skip_string_value;
-        one kiwi_skip_string_value;
+        false false kiwi_skip_string_value;
+        false false kiwi_skip_string_value;
+        false false kiwi_skip_string_value;
     ]
 }
 
@@ -10600,8 +10612,8 @@ kiwi_skip_struct_decoder! {
     fn skip_export_constraint_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_uint_value;
-        one kiwi_skip_float_value;
+        false false kiwi_skip_uint_value;
+        false false kiwi_skip_float_value;
     ]
 }
 
@@ -10609,8 +10621,8 @@ kiwi_skip_struct_decoder! {
     fn skip_guid_mapping_from_decoder;
     decoder decoder;
     fields [
-        one skip_guid_from_decoder;
-        one skip_guid_from_decoder;
+        false false skip_guid_from_decoder;
+        false false skip_guid_from_decoder;
     ]
 }
 
@@ -10618,7 +10630,7 @@ kiwi_skip_struct_decoder! {
     fn skip_blob_from_decoder;
     decoder decoder;
     fields [
-        bytes kiwi_skip_bytes_value;
+        false true kiwi_skip_bytes_value;
     ]
 }
 
@@ -10626,14 +10638,14 @@ kiwi_skip_struct_decoder! {
     fn skip_filter_color_adjust_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
     ]
 }
 
@@ -10641,8 +10653,8 @@ kiwi_skip_struct_decoder! {
     fn skip_index_range_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_uint_value;
-        one kiwi_skip_uint_value;
+        false false kiwi_skip_uint_value;
+        false false kiwi_skip_uint_value;
     ]
 }
 
@@ -10650,8 +10662,8 @@ kiwi_skip_struct_decoder! {
     fn skip_collaborative_text_op_id_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_uint_value;
-        one kiwi_skip_uint_value;
+        false false kiwi_skip_uint_value;
+        false false kiwi_skip_uint_value;
     ]
 }
 
@@ -10659,22 +10671,22 @@ kiwi_skip_struct_decoder! {
     fn skip_matrix4f_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
-        one kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
+        false false kiwi_skip_float_value;
     ]
 }
 
@@ -10682,8 +10694,8 @@ kiwi_skip_struct_decoder! {
     fn skip_number_vector2_d_from_decoder;
     decoder decoder;
     fields [
-        one skip_number_from_decoder;
-        one skip_number_from_decoder;
+        false false skip_number_from_decoder;
+        false false skip_number_from_decoder;
     ]
 }
 
@@ -10691,8 +10703,8 @@ kiwi_skip_struct_decoder! {
     fn skip_diagram_parent_index_from_decoder;
     decoder decoder;
     fields [
-        one skip_guid_from_decoder;
-        one kiwi_skip_string_value;
+        false false skip_guid_from_decoder;
+        false false kiwi_skip_string_value;
     ]
 }
 
@@ -10700,8 +10712,8 @@ kiwi_skip_struct_decoder! {
     fn skip_click_from_decoder;
     decoder decoder;
     fields [
-        one kiwi_skip_uint_value;
-        one skip_vector_from_decoder;
+        false false kiwi_skip_uint_value;
+        false false skip_vector_from_decoder;
     ]
 }
 
@@ -10709,8 +10721,8 @@ kiwi_skip_struct_decoder! {
     fn skip_scroll_position_from_decoder;
     decoder decoder;
     fields [
-        one skip_guid_from_decoder;
-        one skip_vector_from_decoder;
+        false false skip_guid_from_decoder;
+        false false skip_vector_from_decoder;
     ]
 }
 
@@ -10718,9 +10730,9 @@ kiwi_skip_struct_decoder! {
     fn skip_triggered_overlay_from_decoder;
     decoder decoder;
     fields [
-        one skip_guid_from_decoder;
-        one skip_guid_from_decoder;
-        one skip_guid_from_decoder;
+        false false skip_guid_from_decoder;
+        false false skip_guid_from_decoder;
+        false false skip_guid_from_decoder;
     ]
 }
 
@@ -10728,8 +10740,8 @@ kiwi_skip_struct_decoder! {
     fn skip_guid_and_encoded_offset_from_decoder;
     decoder decoder;
     fields [
-        one skip_guid_from_decoder;
-        one kiwi_skip_uint_value;
+        false false skip_guid_from_decoder;
+        false false kiwi_skip_uint_value;
     ]
 }
 #[derive(rustler::NifMap)]
