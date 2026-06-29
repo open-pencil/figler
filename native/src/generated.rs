@@ -122,13 +122,26 @@ fn kiwi_skip_message_fields(
     Ok(())
 }
 
+macro_rules! kiwi_skip_decode {
+    (bool) => { kiwi_skip_bool_value };
+    (byte) => { kiwi_skip_byte_value };
+    (float) => { kiwi_skip_float_value };
+    (int) => { kiwi_skip_int_value };
+    (int64) => { kiwi_skip_int64_value };
+    (string) => { kiwi_skip_string_value };
+    (uint) => { kiwi_skip_uint_value };
+    (uint64) => { kiwi_skip_uint64_value };
+    (bytes) => { kiwi_skip_bytes_value };
+    ($skip:ident) => { $skip };
+}
+
 macro_rules! kiwi_skip_kind {
     (one $skip:ident) => { KiwiSkipKind::One($skip) };
     (repeated $skip:ident) => { KiwiSkipKind::Repeated($skip) };
     (bytes $skip:ident) => { KiwiSkipKind::Bytes };
-    (one, $skip:ident) => { KiwiSkipKind::One($skip) };
-    (repeated, $skip:ident) => { KiwiSkipKind::Repeated($skip) };
-    (bytes, $skip:ident) => { KiwiSkipKind::Bytes };
+    (one, $skip:expr) => { KiwiSkipKind::One($skip) };
+    (repeated, $skip:expr) => { KiwiSkipKind::Repeated($skip) };
+    (bytes, $skip:expr) => { KiwiSkipKind::Bytes };
 }
 
 macro_rules! kiwi_skip_struct_decoder {
@@ -175,6 +188,19 @@ macro_rules! kiwi_sparse_enum_decoder {
             }
         }
     };
+}
+
+macro_rules! kiwi_sparse_decode {
+    (bool) => { kiwi_sparse_bool_value };
+    (byte) => { kiwi_sparse_byte_value };
+    (float) => { kiwi_sparse_float_value };
+    (int) => { kiwi_sparse_int_value };
+    (int64) => { kiwi_sparse_int64_value };
+    (string) => { kiwi_sparse_string_value };
+    (uint) => { kiwi_sparse_uint_value };
+    (uint64) => { kiwi_sparse_uint64_value };
+    (bytes) => { kiwi_sparse_bytes_value };
+    ($decode:ident) => { $decode };
 }
 
 macro_rules! kiwi_sparse_struct_decoder {
@@ -246,7 +272,7 @@ macro_rules! kiwi_sparse_skip_message_descriptor_decoder {
                             $definition_name,
                             $capacity,
                             &[
-                                $(KiwiSparseField { id: $field_id, name: $field_name, repeated: kiwi_sparse_repeated!($field_mode), decode: $field_decode},)*
+                                $(KiwiSparseField { id: $field_id, name: $field_name, repeated: kiwi_sparse_repeated!($field_mode), decode: kiwi_sparse_decode!($field_decode) },)*
                             ],
                         )
                 }
@@ -256,7 +282,7 @@ macro_rules! kiwi_sparse_skip_message_descriptor_decoder {
                             $decoder,
                             $definition_name,
                             &[
-                                $(KiwiSkipField { id: $field_id, kind: kiwi_skip_kind!($field_skip_mode, $field_skip) },)*
+                                $(KiwiSkipField { id: $field_id, kind: kiwi_skip_kind!($field_skip_mode, kiwi_skip_decode!($field_skip)) },)*
                             ],
                         )
                 }
@@ -1344,7 +1370,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
         2 => "color_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        3 => "position": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "position": one float; one float;
     ]
 }
 
@@ -1522,12 +1548,12 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CodeSourceInfo";
     capacity 7;
     fields [
-        1 => "origin_reference_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "origin_reference_id": one string; one string;
         2 => "origin_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         3 => "linked_snapshot_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        4 => "capture_mode": one decode_sparse_snapshot_capture_mode_from_decoder; one kiwi_skip_uint_value;
-        5 => "source_blob_ref": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        6 => "source_element_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "capture_mode": one decode_sparse_snapshot_capture_mode_from_decoder; one uint;
+        5 => "source_blob_ref": one string; one string;
+        6 => "source_element_id": one string; one string;
     ]
 }
 
@@ -1557,10 +1583,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CustomToolArtifactRef";
     capacity 5;
     fields [
-        1 => "custom_tool_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "custom_tool_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "published_custom_tool_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "published_custom_tool_version_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "custom_tool_id": one string; one string;
+        2 => "custom_tool_version": one string; one string;
+        3 => "published_custom_tool_id": one string; one string;
+        4 => "published_custom_tool_version_id": one string; one string;
     ]
 }
 
@@ -1856,9 +1882,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Image";
     capacity 4;
     fields [
-        1 => "hash": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
-        2 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "data_blob": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "hash": one bytes; bytes bytes;
+        2 => "name": one string; one string;
+        3 => "data_blob": one uint; one uint;
     ]
 }
 
@@ -1871,8 +1897,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Video";
     capacity 3;
     fields [
-        1 => "hash": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
-        2 => "s3_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "hash": one bytes; bytes bytes;
+        2 => "s3_url": one string; one string;
     ]
 }
 
@@ -1885,7 +1911,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PasteSource";
     capacity 3;
     fields [
-        1 => "src_file": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "src_file": one string; one string;
         2 => "src_node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
@@ -1917,16 +1943,16 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PaintFilterMessage";
     capacity 11;
     fields [
-        1 => "tint": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "shadows": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "highlights": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "detail": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "exposure": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        6 => "vignette": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        7 => "temperature": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        8 => "vibrance": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        9 => "contrast": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        10 => "brightness": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "tint": one float; one float;
+        2 => "shadows": one float; one float;
+        3 => "highlights": one float; one float;
+        4 => "detail": one float; one float;
+        5 => "exposure": one float; one float;
+        6 => "vignette": one float; one float;
+        7 => "temperature": one float; one float;
+        8 => "vibrance": one float; one float;
+        9 => "contrast": one float; one float;
+        10 => "brightness": one float; one float;
     ]
 }
 
@@ -1939,48 +1965,48 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Paint";
     capacity 43;
     fields [
-        1 => "type": one decode_sparse_paint_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_paint_type_from_decoder; one uint;
         2 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
-        3 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one kiwi_skip_uint_value;
+        3 => "opacity": one float; one float;
+        4 => "visible": one bool; one bool;
+        5 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one uint;
         6 => "stops": repeated decode_sparse_color_stop_from_decoder; repeated skip_color_stop_from_decoder;
         7 => "transform": one decode_sparse_matrix_from_decoder; one skip_matrix_from_decoder;
         8 => "image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
         9 => "image_thumbnail": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
-        10 => "image_scale_mode": one decode_sparse_image_scale_mode_from_decoder; one kiwi_skip_uint_value;
-        11 => "rotation": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        12 => "scale": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        10 => "image_scale_mode": one decode_sparse_image_scale_mode_from_decoder; one uint;
+        11 => "rotation": one float; one float;
+        12 => "scale": one float; one float;
         13 => "filter_color_adjust": one decode_sparse_filter_color_adjust_from_decoder; one skip_filter_color_adjust_from_decoder;
         14 => "paint_filter": one decode_sparse_paint_filter_message_from_decoder; one skip_paint_filter_message_from_decoder;
-        15 => "emoji_code_points": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        15 => "emoji_code_points": repeated uint; repeated uint;
         16 => "animated_image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
-        17 => "animation_frame": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        17 => "animation_frame": one uint; one uint;
         18 => "video": one decode_sparse_video_from_decoder; one skip_video_from_decoder;
-        19 => "original_image_width": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        20 => "original_image_height": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        19 => "original_image_width": one uint; one uint;
+        20 => "original_image_height": one uint; one uint;
         21 => "color_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        22 => "image_should_color_manage": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        22 => "image_should_color_manage": one bool; one bool;
         23 => "stops_var": repeated decode_sparse_color_stop_var_from_decoder; repeated skip_color_stop_var_from_decoder;
-        24 => "thumb_hash_base64": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        25 => "thumb_hash": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        24 => "thumb_hash_base64": one string; one string;
+        25 => "thumb_hash": one bytes; bytes bytes;
         26 => "source_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        27 => "spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        28 => "pattern_tile_type": one decode_sparse_pattern_tile_type_from_decoder; one kiwi_skip_uint_value;
-        29 => "vertical_alignment": one decode_sparse_pattern_alignment_from_decoder; one kiwi_skip_uint_value;
-        30 => "horizontal_alignment": one decode_sparse_pattern_alignment_from_decoder; one kiwi_skip_uint_value;
+        27 => "spacing": one float; one float;
+        28 => "pattern_tile_type": one decode_sparse_pattern_tile_type_from_decoder; one uint;
+        29 => "vertical_alignment": one decode_sparse_pattern_alignment_from_decoder; one uint;
+        30 => "horizontal_alignment": one decode_sparse_pattern_alignment_from_decoder; one uint;
         31 => "image_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         32 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        33 => "alt_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        34 => "noise_type": one decode_sparse_noise_type_from_decoder; one kiwi_skip_uint_value;
-        35 => "density": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        33 => "alt_text": one string; one string;
+        34 => "noise_type": one decode_sparse_noise_type_from_decoder; one uint;
+        35 => "density": one float; one float;
         36 => "noise_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         37 => "pattern_spacing": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         38 => "opacity_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         39 => "custom_effect_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
         40 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder; repeated skip_component_prop_assignment_from_decoder;
-        41 => "interpolation_color_space": one decode_sparse_interpolation_color_space_from_decoder; one kiwi_skip_uint_value;
-        42 => "interpolation_hue_method": one decode_sparse_interpolation_hue_method_from_decoder; one kiwi_skip_uint_value;
+        41 => "interpolation_color_space": one decode_sparse_interpolation_color_space_from_decoder; one uint;
+        42 => "interpolation_hue_method": one decode_sparse_interpolation_hue_method_from_decoder; one uint;
     ]
 }
 
@@ -2052,10 +2078,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 6;
     fields [
         1 => "key": one decode_sparse_font_name_from_decoder; one skip_font_name_from_decoder;
-        2 => "font_line_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "font_digest": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
-        4 => "font_style": one decode_sparse_font_style_from_decoder; one kiwi_skip_uint_value;
-        5 => "font_weight": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        2 => "font_line_height": one float; one float;
+        3 => "font_digest": one bytes; bytes bytes;
+        4 => "font_style": one decode_sparse_font_style_from_decoder; one uint;
+        5 => "font_weight": one int; one int;
     ]
 }
 
@@ -2068,9 +2094,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "FontVariation";
     capacity 4;
     fields [
-        1 => "axis_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "axis_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "axis_tag": one uint; one uint;
+        2 => "axis_name": one string; one string;
+        3 => "value": one float; one float;
     ]
 }
 
@@ -2083,23 +2109,23 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TextData";
     capacity 20;
     fields [
-        1 => "characters": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "character_style_i_ds": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        1 => "characters": one string; one string;
+        2 => "character_style_i_ds": repeated uint; repeated uint;
         3 => "style_override_table": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
         4 => "layout_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         5 => "baselines": repeated decode_sparse_baseline_from_decoder; repeated skip_baseline_from_decoder;
         6 => "glyphs": repeated decode_sparse_glyph_from_decoder; repeated skip_glyph_from_decoder;
         7 => "decorations": repeated decode_sparse_decoration_from_decoder; repeated skip_decoration_from_decoder;
-        8 => "layout_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        8 => "layout_version": one uint; one uint;
         9 => "font_meta_data": repeated decode_sparse_font_meta_data_from_decoder; repeated skip_font_meta_data_from_decoder;
         10 => "fallback_fonts": repeated decode_sparse_font_name_from_decoder; repeated skip_font_name_from_decoder;
         11 => "hyperlink_boxes": repeated decode_sparse_hyperlink_box_from_decoder; repeated skip_hyperlink_box_from_decoder;
         12 => "lines": repeated decode_sparse_text_line_data_from_decoder; repeated skip_text_line_data_from_decoder;
-        13 => "truncation_start_index": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        14 => "truncated_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        15 => "logical_index_to_character_offset_map": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        13 => "truncation_start_index": one int; one int;
+        14 => "truncated_height": one float; one float;
+        15 => "logical_index_to_character_offset_map": repeated float; repeated float;
         16 => "blockquotes": repeated decode_sparse_blockquote_from_decoder; repeated skip_blockquote_from_decoder;
-        17 => "min_content_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        17 => "min_content_height": one float; one float;
         18 => "mention_boxes": repeated decode_sparse_mention_box_from_decoder; repeated skip_mention_box_from_decoder;
         19 => "derived_lines": repeated decode_sparse_derived_text_line_data_from_decoder; repeated skip_derived_text_line_data_from_decoder;
     ]
@@ -2121,9 +2147,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         5 => "blockquotes": repeated decode_sparse_blockquote_from_decoder; repeated skip_blockquote_from_decoder;
         6 => "font_meta_data": repeated decode_sparse_font_meta_data_from_decoder; repeated skip_font_meta_data_from_decoder;
         7 => "hyperlink_boxes": repeated decode_sparse_hyperlink_box_from_decoder; repeated skip_hyperlink_box_from_decoder;
-        8 => "truncation_start_index": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        9 => "truncated_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        10 => "logical_index_to_character_offset_map": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        8 => "truncation_start_index": one int; one int;
+        9 => "truncated_height": one float; one float;
+        10 => "logical_index_to_character_offset_map": repeated float; repeated float;
         11 => "mention_boxes": repeated decode_sparse_mention_box_from_decoder; repeated skip_mention_box_from_decoder;
         12 => "derived_lines": repeated decode_sparse_derived_text_line_data_from_decoder; repeated skip_derived_text_line_data_from_decoder;
     ]
@@ -2139,11 +2165,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 7;
     fields [
         1 => "bounds": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
-        2 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "url": one string; one string;
         3 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        4 => "hyperlink_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        4 => "hyperlink_id": one int; one int;
         5 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder; one skip_cms_item_page_target_from_decoder;
-        6 => "open_in_new_tab": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "open_in_new_tab": one bool; one bool;
     ]
 }
 
@@ -2157,10 +2183,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 6;
     fields [
         1 => "bounds": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
-        2 => "start_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        3 => "end_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        4 => "is_valid": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "mention_key": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "start_index": one uint; one uint;
+        3 => "end_index": one uint; one uint;
+        4 => "is_valid": one bool; one bool;
+        5 => "mention_key": one uint; one uint;
     ]
 }
 
@@ -2174,13 +2200,13 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 9;
     fields [
         1 => "position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        2 => "width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "line_y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "line_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "first_character": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        6 => "end_character": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        7 => "line_ascent": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        8 => "ignore_leading_trim": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "width": one float; one float;
+        3 => "line_y": one float; one float;
+        4 => "line_height": one float; one float;
+        5 => "first_character": one uint; one uint;
+        6 => "end_character": one uint; one uint;
+        7 => "line_ascent": one float; one float;
+        8 => "ignore_leading_trim": one float; one float;
     ]
 }
 
@@ -2193,15 +2219,15 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Glyph";
     capacity 10;
     fields [
-        1 => "commands_blob": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "commands_blob": one uint; one uint;
         2 => "position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        3 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        4 => "font_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "first_character": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        6 => "advance": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        7 => "emoji_code_points": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
-        8 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder; one kiwi_skip_uint_value;
-        9 => "rotation": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "style_id": one uint; one uint;
+        4 => "font_size": one float; one float;
+        5 => "first_character": one uint; one uint;
+        6 => "advance": one float; one float;
+        7 => "emoji_code_points": repeated uint; repeated uint;
+        8 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder; one uint;
+        9 => "rotation": one float; one float;
     ]
 }
 
@@ -2215,7 +2241,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "rects": repeated decode_sparse_rect_from_decoder; repeated skip_rect_from_decoder;
-        2 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "style_id": one uint; one uint;
     ]
 }
 
@@ -2230,7 +2256,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "vertical_bar": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
         2 => "quote_mark_bounds": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
-        3 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "style_id": one uint; one uint;
     ]
 }
 
@@ -2243,7 +2269,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "VectorData";
     capacity 4;
     fields [
-        1 => "vector_network_blob": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "vector_network_blob": one uint; one uint;
         2 => "normalized_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         3 => "style_override_table": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
@@ -2258,8 +2284,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TextPathStart";
     capacity 3;
     fields [
-        1 => "t_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "forward": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "t_value": one float; one float;
+        2 => "forward": one bool; one bool;
     ]
 }
 
@@ -2287,7 +2313,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "symbol_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         2 => "symbol_overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
-        3 => "uniform_scale_factor": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "uniform_scale_factor": one float; one float;
     ]
 }
 
@@ -2328,7 +2354,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
-        2 => "use_fine_grained_syncing": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "use_fine_grained_syncing": one bool; one bool;
         3 => "diff_only_removals": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
@@ -2343,7 +2369,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
-        2 => "version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "version": one uint; one uint;
     ]
 }
 
@@ -2395,7 +2421,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AssetIdEntry";
     capacity 3;
     fields [
-        1 => "asset_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "asset_key": one string; one string;
         2 => "asset_id": one decode_sparse_asset_id_from_decoder; one skip_asset_id_from_decoder;
     ]
 }
@@ -2409,8 +2435,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AssetRef";
     capacity 3;
     fields [
-        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "key": one string; one string;
+        2 => "version": one string; one string;
     ]
 }
 
@@ -2632,7 +2658,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 5;
     fields [
         1 => "first_id": one decode_sparse_collaborative_text_op_id_from_decoder; one skip_collaborative_text_op_id_from_decoder;
-        2 => "run_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "run_length": one uint; one uint;
         3 => "parent_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
         4 => "rebased_on_op_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
     ]
@@ -2647,9 +2673,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CollaborativeTextStrippedOpRunWithLoc";
     capacity 6;
     fields [
-        1 => "type": one decode_sparse_collaborative_text_op_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_collaborative_text_op_type_from_decoder; one uint;
         2 => "range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
-        3 => "range_should_be_iterated_in_reverse": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "range_should_be_iterated_in_reverse": one bool; one bool;
         4 => "content_bytes_in_buffer": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
         5 => "rebased_range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
     ]
@@ -2666,10 +2692,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "id": one decode_sparse_collaborative_text_op_id_from_decoder; one skip_collaborative_text_op_id_from_decoder;
         2 => "parent_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
-        3 => "type": one decode_sparse_collaborative_text_op_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "type": one decode_sparse_collaborative_text_op_type_from_decoder; one uint;
         4 => "range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
-        5 => "range_should_be_iterated_in_reverse": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        6 => "content": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "range_should_be_iterated_in_reverse": one bool; one bool;
+        6 => "content": one string; one string;
         7 => "rebased_on_op_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
         8 => "rebased_range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
     ]
@@ -2686,7 +2712,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "history_ops_with_ids": repeated decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder; repeated skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
         2 => "history_ops_with_loc": repeated decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder; repeated skip_collaborative_text_stripped_op_run_with_loc_from_decoder;
-        3 => "history_string_content_buffer": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        3 => "history_string_content_buffer": one bytes; bytes bytes;
         4 => "changes_to_append": repeated decode_sparse_collaborative_text_op_run_from_decoder; repeated skip_collaborative_text_op_run_from_decoder;
     ]
 }
@@ -2701,9 +2727,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 6;
     fields [
         1 => "node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "field": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "field": one uint; one uint;
         3 => "selected_range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
-        4 => "caret_at_front": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "caret_at_front": one bool; one bool;
         5 => "text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
     ]
 }
@@ -2717,13 +2743,13 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ResponsiveTextStyleVariant";
     capacity 8;
     fields [
-        1 => "min_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "min_width": one float; one float;
         2 => "fields": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
         3 => "variable_font_size": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         4 => "variable_line_height": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         5 => "variable_letter_spacing": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         6 => "variable_paragraph_spacing": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        7 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        7 => "name": one string; one string;
     ]
 }
 
@@ -2749,14 +2775,14 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SlideThemeProps";
     capacity 9;
     fields [
-        1 => "theme_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "theme_version": one string; one string;
         2 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
         3 => "text_style_ids": repeated decode_sparse_style_id_from_decoder; repeated skip_style_id_from_decoder;
-        4 => "is_text_color_manually_selected": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "is_border_color_manually_selected": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "is_text_color_manually_selected": one bool; one bool;
+        5 => "is_border_color_manually_selected": one bool; one bool;
         6 => "subscribed_theme_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
-        7 => "schema_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        8 => "is_generated_from_design": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        7 => "schema_version": one uint; one uint;
+        8 => "is_generated_from_design": one bool; one bool;
     ]
 }
 
@@ -2796,15 +2822,15 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SharedSymbolReference";
     capacity 10;
     fields [
-        1 => "file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "file_key": one string; one string;
         2 => "symbol_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        3 => "version_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "version_hash": one string; one string;
         4 => "guid_path_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
-        5 => "bytes": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        5 => "bytes": one bytes; bytes bytes;
         6 => "library_guid_to_subscribing_guid": repeated decode_sparse_guid_mapping_from_decoder; repeated skip_guid_mapping_from_decoder;
-        7 => "component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        7 => "component_key": one string; one string;
         8 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
-        9 => "is_unflattened": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        9 => "is_unflattened": one bool; one bool;
     ]
 }
 
@@ -2817,9 +2843,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SharedComponentMasterData";
     capacity 4;
     fields [
-        1 => "component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "component_key": one string; one string;
         2 => "publishing_guid_path_to_team_library_guid": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
-        3 => "is_unflattened": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "is_unflattened": one bool; one bool;
     ]
 }
 
@@ -2833,7 +2859,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "override_path_of_swapped_instance": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
-        2 => "component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "component_key": one string; one string;
         3 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
@@ -2939,42 +2965,42 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Effect";
     capacity 56;
     fields [
-        1 => "type": one decode_sparse_effect_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_effect_type_from_decoder; one uint;
         2 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
         3 => "offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        4 => "radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        6 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one kiwi_skip_uint_value;
-        7 => "spread": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        8 => "show_shadow_behind_node": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "radius": one float; one float;
+        5 => "visible": one bool; one bool;
+        6 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one uint;
+        7 => "spread": one float; one float;
+        8 => "show_shadow_behind_node": one bool; one bool;
         9 => "radius_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         10 => "color_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         11 => "spread_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         12 => "x_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         13 => "y_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        14 => "count": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        15 => "repeat_type": one decode_sparse_repeat_type_from_decoder; one kiwi_skip_uint_value;
-        16 => "axis": one decode_sparse_effect_axis_from_decoder; one kiwi_skip_uint_value;
-        17 => "unit_type": one decode_sparse_unit_type_from_decoder; one kiwi_skip_uint_value;
-        18 => "order": one decode_sparse_repeat_order_from_decoder; one kiwi_skip_uint_value;
-        19 => "blur_op_type": one decode_sparse_blur_op_type_from_decoder; one kiwi_skip_uint_value;
+        14 => "count": one uint; one uint;
+        15 => "repeat_type": one decode_sparse_repeat_type_from_decoder; one uint;
+        16 => "axis": one decode_sparse_effect_axis_from_decoder; one uint;
+        17 => "unit_type": one decode_sparse_unit_type_from_decoder; one uint;
+        18 => "order": one decode_sparse_repeat_order_from_decoder; one uint;
+        19 => "blur_op_type": one decode_sparse_blur_op_type_from_decoder; one uint;
         20 => "start_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        21 => "start_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        21 => "start_radius": one float; one float;
         22 => "noise_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        23 => "clip_to_shape": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        23 => "clip_to_shape": one bool; one bool;
         24 => "secondary_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
-        25 => "density": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        26 => "noise_type": one decode_sparse_noise_type_from_decoder; one kiwi_skip_uint_value;
-        27 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        25 => "density": one float; one float;
+        26 => "noise_type": one decode_sparse_noise_type_from_decoder; one uint;
+        27 => "opacity": one float; one float;
         28 => "end_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        29 => "seed": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        30 => "refraction_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        31 => "specular_angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        32 => "specular_intensity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        33 => "bevel_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        34 => "chromatic_aberration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        35 => "reflection_distance": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        36 => "refraction_intensity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        29 => "seed": one uint; one uint;
+        30 => "refraction_radius": one float; one float;
+        31 => "specular_angle": one float; one float;
+        32 => "specular_intensity": one float; one float;
+        33 => "bevel_size": one float; one float;
+        34 => "chromatic_aberration": one float; one float;
+        35 => "reflection_distance": one float; one float;
+        36 => "refraction_intensity": one float; one float;
         37 => "refraction_radius_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         38 => "specular_angle_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         39 => "specular_intensity_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
@@ -3017,16 +3043,16 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TransformModifier";
     capacity 11;
     fields [
-        1 => "type": one decode_sparse_transform_modifier_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_transform_modifier_type_from_decoder; one uint;
         2 => "offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        3 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        4 => "count": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        5 => "repeat_type": one decode_sparse_repeat_type_from_decoder; one kiwi_skip_uint_value;
-        6 => "axis": one decode_sparse_effect_axis_from_decoder; one kiwi_skip_uint_value;
-        7 => "unit_type": one decode_sparse_unit_type_from_decoder; one kiwi_skip_uint_value;
-        8 => "order": one decode_sparse_repeat_order_from_decoder; one kiwi_skip_uint_value;
-        9 => "skew_x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        10 => "skew_y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "visible": one bool; one bool;
+        4 => "count": one uint; one uint;
+        5 => "repeat_type": one decode_sparse_repeat_type_from_decoder; one uint;
+        6 => "axis": one decode_sparse_effect_axis_from_decoder; one uint;
+        7 => "unit_type": one decode_sparse_unit_type_from_decoder; one uint;
+        8 => "order": one decode_sparse_repeat_order_from_decoder; one uint;
+        9 => "skew_x": one float; one float;
+        10 => "skew_y": one float; one float;
     ]
 }
 
@@ -3076,11 +3102,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "FixedOrderTransform3d";
     capacity 6;
     fields [
-        1 => "perspective": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "translate_z": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "rotate_x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "rotate_y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "rotate_z": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "perspective": one float; one float;
+        2 => "translate_z": one float; one float;
+        3 => "rotate_x": one float; one float;
+        4 => "rotate_y": one float; one float;
+        5 => "rotate_z": one float; one float;
     ]
 }
 
@@ -3109,9 +3135,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 5;
     fields [
         1 => "matrix3d": one decode_sparse_matrix4f_from_decoder; one skip_matrix4f_from_decoder;
-        2 => "perspective": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "rotate_angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "translate_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "perspective": one float; one float;
+        3 => "rotate_angle": one float; one float;
+        4 => "translate_value": one float; one float;
     ]
 }
 
@@ -3124,7 +3150,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TransformFn";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_transform_fn_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_transform_fn_type_from_decoder; one uint;
         2 => "value": one decode_sparse_transform_fn_value_from_decoder; one skip_transform_fn_value_from_decoder;
     ]
 }
@@ -3152,9 +3178,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Transform3d";
     capacity 4;
     fields [
-        1 => "type": one decode_sparse_transform_schema_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_transform_schema_type_from_decoder; one uint;
         2 => "value": one decode_sparse_transform_schema_value_from_decoder; one skip_transform_schema_value_from_decoder;
-        3 => "backface_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "backface_hidden": one bool; one bool;
     ]
 }
 
@@ -3179,9 +3205,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Scene3d";
     capacity 4;
     fields [
-        1 => "perspective": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "perspective": one float; one float;
         2 => "perspective_origin": one decode_sparse_number_vector2_d_from_decoder; one skip_number_vector2_d_from_decoder;
-        3 => "preserve3d": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "preserve3d": one bool; one bool;
     ]
 }
 
@@ -3208,8 +3234,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TransitionInfo";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_transition_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "type": one decode_sparse_transition_type_from_decoder; one uint;
+        2 => "duration": one float; one float;
     ]
 }
 
@@ -3244,10 +3270,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PrototypeDevice";
     capacity 5;
     fields [
-        1 => "type": one decode_sparse_prototype_device_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_prototype_device_type_from_decoder; one uint;
         2 => "size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        3 => "preset_identifier": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "rotation": one decode_sparse_device_rotation_from_decoder; one kiwi_skip_uint_value;
+        3 => "preset_identifier": one string; one string;
+        4 => "rotation": one decode_sparse_device_rotation_from_decoder; one uint;
     ]
 }
 
@@ -3296,7 +3322,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "OverlayBackgroundAppearance";
     capacity 3;
     fields [
-        1 => "background_type": one decode_sparse_overlay_background_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "background_type": one decode_sparse_overlay_background_type_from_decoder; one uint;
         2 => "background_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
     ]
 }
@@ -3346,21 +3372,21 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ExportSettings";
     capacity 16;
     fields [
-        1 => "suffix": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "image_type": one decode_sparse_image_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "suffix": one string; one string;
+        2 => "image_type": one decode_sparse_image_type_from_decoder; one uint;
         3 => "constraint": one decode_sparse_export_constraint_from_decoder; one skip_export_constraint_from_decoder;
-        4 => "svg_data_name": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "svg_id_mode": one decode_sparse_export_svgid_mode_from_decoder; one kiwi_skip_uint_value;
-        6 => "svg_outline_text": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        7 => "contents_only": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        8 => "svg_force_stroke_masks": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        9 => "use_absolute_bounds": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        10 => "color_profile": one decode_sparse_export_color_profile_from_decoder; one kiwi_skip_uint_value;
-        11 => "quality": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        12 => "use_bicubic_sampler": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        13 => "frame_rate": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        14 => "loop_count": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        15 => "background_type": one decode_sparse_export_background_type_from_decoder; one kiwi_skip_uint_value;
+        4 => "svg_data_name": one bool; one bool;
+        5 => "svg_id_mode": one decode_sparse_export_svgid_mode_from_decoder; one uint;
+        6 => "svg_outline_text": one bool; one bool;
+        7 => "contents_only": one bool; one bool;
+        8 => "svg_force_stroke_masks": one bool; one bool;
+        9 => "use_absolute_bounds": one bool; one bool;
+        10 => "color_profile": one decode_sparse_export_color_profile_from_decoder; one uint;
+        11 => "quality": one float; one float;
+        12 => "use_bicubic_sampler": one bool; one bool;
+        13 => "frame_rate": one int; one int;
+        14 => "loop_count": one int; one int;
+        15 => "background_type": one decode_sparse_export_background_type_from_decoder; one uint;
     ]
 }
 
@@ -3383,15 +3409,15 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "LayoutGrid";
     capacity 14;
     fields [
-        1 => "type": one decode_sparse_layout_grid_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "axis": one decode_sparse_axis_from_decoder; one kiwi_skip_uint_value;
-        3 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        4 => "num_sections": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        5 => "offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        6 => "section_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        7 => "gutter_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "type": one decode_sparse_layout_grid_type_from_decoder; one uint;
+        2 => "axis": one decode_sparse_axis_from_decoder; one uint;
+        3 => "visible": one bool; one bool;
+        4 => "num_sections": one int; one int;
+        5 => "offset": one float; one float;
+        6 => "section_size": one float; one float;
+        7 => "gutter_size": one float; one float;
         8 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
-        9 => "pattern": one decode_sparse_layout_grid_pattern_from_decoder; one kiwi_skip_uint_value;
+        9 => "pattern": one decode_sparse_layout_grid_pattern_from_decoder; one uint;
         10 => "num_sections_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         11 => "offset_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         12 => "section_size_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
@@ -3408,8 +3434,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Guide";
     capacity 4;
     fields [
-        1 => "axis": one decode_sparse_axis_from_decoder; one kiwi_skip_uint_value;
-        2 => "offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "axis": one decode_sparse_axis_from_decoder; one uint;
+        2 => "offset": one float; one float;
         3 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
@@ -3423,9 +3449,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Path";
     capacity 4;
     fields [
-        1 => "winding_rule": one decode_sparse_winding_rule_from_decoder; one kiwi_skip_uint_value;
-        2 => "commands_blob": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        3 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "winding_rule": one decode_sparse_winding_rule_from_decoder; one uint;
+        2 => "commands_blob": one uint; one uint;
+        3 => "style_id": one uint; one uint;
     ]
 }
 
@@ -3474,9 +3500,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "DynamicStrokeSettings";
     capacity 4;
     fields [
-        1 => "frequency": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "wiggle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "smoothen": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "frequency": one float; one float;
+        2 => "wiggle": one float; one float;
+        3 => "smoothen": one float; one float;
     ]
 }
 
@@ -3489,11 +3515,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ScatterStrokeSettings";
     capacity 6;
     fields [
-        1 => "gap": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "wiggle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "angular_jitter": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "rotation": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "size_jitter": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "gap": one float; one float;
+        2 => "wiggle": one float; one float;
+        3 => "angular_jitter": one float; one float;
+        4 => "rotation": one float; one float;
+        5 => "size_jitter": one float; one float;
     ]
 }
 
@@ -3506,7 +3532,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "StretchStrokeSettings";
     capacity 2;
     fields [
-        1 => "orientation": one decode_sparse_brush_orientation_from_decoder; one kiwi_skip_uint_value;
+        1 => "orientation": one decode_sparse_brush_orientation_from_decoder; one uint;
     ]
 }
 
@@ -3520,7 +3546,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "strokes": repeated decode_sparse_stroke_from_decoder; repeated skip_stroke_from_decoder;
-        2 => "version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "version": one uint; one uint;
     ]
 }
 
@@ -3533,20 +3559,20 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Stroke";
     capacity 15;
     fields [
-        1 => "stroke_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        2 => "stroke_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "stroke_id": one int; one int;
+        2 => "stroke_weight": one float; one float;
         3 => "stroke_weight_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         4 => "stroke_paint": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
         5 => "style_id_for_stroke_fill": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
-        6 => "stroke_align": one decode_sparse_stroke_align_from_decoder; one kiwi_skip_uint_value;
-        7 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder; one kiwi_skip_uint_value;
+        6 => "stroke_align": one decode_sparse_stroke_align_from_decoder; one uint;
+        7 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder; one uint;
         8 => "stroke_cap_size": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
-        9 => "stroke_join": one decode_sparse_stroke_join_from_decoder; one kiwi_skip_uint_value;
-        10 => "miter_limit": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        11 => "dash_pattern": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        9 => "stroke_join": one decode_sparse_stroke_join_from_decoder; one uint;
+        10 => "miter_limit": one float; one float;
+        11 => "dash_pattern": repeated float; repeated float;
         12 => "path_trim": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
-        13 => "stroke_offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        14 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        13 => "stroke_offset": one float; one float;
+        14 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -3559,10 +3585,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "VariableWidthPoint";
     capacity 5;
     fields [
-        1 => "position": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "ascent": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "descent": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "segment_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        1 => "position": one float; one float;
+        2 => "ascent": one float; one float;
+        3 => "descent": one float; one float;
+        4 => "segment_id": one int; one int;
     ]
 }
 
@@ -3575,8 +3601,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SharedStyleReference";
     capacity 3;
     fields [
-        1 => "style_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "version_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "style_key": one string; one string;
+        2 => "version_hash": one string; one string;
     ]
 }
 
@@ -3589,9 +3615,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SharedStyleMasterData";
     capacity 4;
     fields [
-        1 => "style_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "sort_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "style_key": one string; one string;
+        2 => "sort_position": one string; one string;
+        3 => "file_key": one string; one string;
     ]
 }
 
@@ -3615,9 +3641,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ArcData";
     capacity 4;
     fields [
-        1 => "starting_angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "ending_angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "inner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "starting_angle": one float; one float;
+        2 => "ending_angle": one float; one float;
+        3 => "inner_radius": one float; one float;
     ]
 }
 
@@ -3630,9 +3656,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SymbolLink";
     capacity 4;
     fields [
-        1 => "uri": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "display_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "display_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "uri": one string; one string;
+        2 => "display_name": one string; one string;
+        3 => "display_text": one string; one string;
     ]
 }
 
@@ -3645,9 +3671,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PluginData";
     capacity 4;
     fields [
-        1 => "plugin_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "plugin_id": one string; one string;
+        2 => "value": one string; one string;
+        3 => "key": one string; one string;
     ]
 }
 
@@ -3660,10 +3686,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PluginRelaunchData";
     capacity 6;
     fields [
-        1 => "plugin_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "message": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "command": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "plugin_id": one string; one string;
+        2 => "message": one string; one string;
+        3 => "command": one string; one string;
+        4 => "is_deleted": one bool; one bool;
         5 => "custom_tool_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
     ]
 }
@@ -3677,8 +3703,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "MultiplayerFieldVersion";
     capacity 3;
     fields [
-        1 => "counter": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "counter": one uint; one uint;
+        2 => "session_id": one uint; one uint;
     ]
 }
 
@@ -3711,7 +3737,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "endpoint_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         2 => "position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        3 => "magnet": one decode_sparse_connector_magnet_from_decoder; one kiwi_skip_uint_value;
+        3 => "magnet": one decode_sparse_connector_magnet_from_decoder; one uint;
         4 => "relative_position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
     ]
 }
@@ -3760,9 +3786,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ConnectorTextMidpoint";
     capacity 4;
     fields [
-        1 => "section": one decode_sparse_connector_text_section_from_decoder; one kiwi_skip_uint_value;
-        2 => "offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "off_axis_offset": one decode_sparse_connector_off_axis_offset_from_decoder; one kiwi_skip_uint_value;
+        1 => "section": one decode_sparse_connector_text_section_from_decoder; one uint;
+        2 => "offset": one float; one float;
+        3 => "off_axis_offset": one decode_sparse_connector_off_axis_offset_from_decoder; one uint;
     ]
 }
 
@@ -3837,7 +3863,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AnnotationProperty";
     capacity 2;
     fields [
-        1 => "type": one decode_sparse_annotation_property_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_annotation_property_type_from_decoder; one uint;
     ]
 }
 
@@ -3880,9 +3906,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AnnotationCategoryCustom";
     capacity 4;
     fields [
-        1 => "color": one decode_sparse_annotation_category_color_from_decoder; one kiwi_skip_uint_value;
+        1 => "color": one decode_sparse_annotation_category_color_from_decoder; one uint;
         2 => "custom_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
-        3 => "label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "label": one string; one string;
     ]
 }
 
@@ -3896,7 +3922,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "preset": one decode_sparse_annotation_category_preset_from_decoder; one kiwi_skip_uint_value;
+        2 => "preset": one decode_sparse_annotation_category_preset_from_decoder; one uint;
         3 => "custom": one decode_sparse_annotation_category_custom_from_decoder; one skip_annotation_category_custom_from_decoder;
     ]
 }
@@ -3910,7 +3936,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AnnotationCategories";
     capacity 3;
     fields [
-        1 => "version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "version": one uint; one uint;
         2 => "items": repeated decode_sparse_annotation_category_from_decoder; repeated skip_annotation_category_from_decoder;
     ]
 }
@@ -3924,9 +3950,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Annotation";
     capacity 5;
     fields [
-        1 => "label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "label": one string; one string;
         2 => "properties": repeated decode_sparse_annotation_property_from_decoder; repeated skip_annotation_property_from_decoder;
-        3 => "label_v2": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "label_v2": one string; one string;
         4 => "category_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
@@ -3955,12 +3981,12 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         2 => "from_node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         3 => "to_node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        4 => "from_node_side": one decode_sparse_annotation_measurement_node_side_from_decoder; one kiwi_skip_uint_value;
-        5 => "to_same_side": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        6 => "inner_offset_relative": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        7 => "outer_offset_fixed": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "from_node_side": one decode_sparse_annotation_measurement_node_side_from_decoder; one uint;
+        5 => "to_same_side": one bool; one bool;
+        6 => "inner_offset_relative": one float; one float;
+        7 => "outer_offset_fixed": one float; one float;
         8 => "to_node_stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
-        9 => "free_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        9 => "free_text": one string; one string;
     ]
 }
 
@@ -3973,8 +3999,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "LibraryMoveInfo";
     capacity 3;
     fields [
-        1 => "old_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "paste_file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "old_key": one string; one string;
+        2 => "paste_file_key": one string; one string;
     ]
 }
 
@@ -3988,7 +4014,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "source_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "source_component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "source_component_key": one string; one string;
     ]
 }
 
@@ -4001,10 +4027,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "DeveloperRelatedLink";
     capacity 5;
     fields [
-        1 => "node_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "link_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "link_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "node_id": one string; one string;
+        2 => "file_key": one string; one string;
+        3 => "link_name": one string; one string;
+        4 => "link_url": one string; one string;
     ]
 }
 
@@ -4030,10 +4056,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "EditInfo";
     capacity 5;
     fields [
-        1 => "timestamp_iso8601": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "last_edited_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        4 => "created_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "timestamp_iso8601": one string; one string;
+        2 => "user_id": one string; one string;
+        3 => "last_edited_at": one uint; one uint;
+        4 => "created_at": one uint; one uint;
     ]
 }
 
@@ -4096,11 +4122,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SectionStatusInfo";
     capacity 6;
     fields [
-        1 => "status": one decode_sparse_section_status_from_decoder; one kiwi_skip_uint_value;
-        2 => "last_update_unix_timestamp": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        3 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "prev_status": one decode_sparse_section_status_from_decoder; one kiwi_skip_uint_value;
+        1 => "status": one decode_sparse_section_status_from_decoder; one uint;
+        2 => "last_update_unix_timestamp": one uint; one uint;
+        3 => "description": one string; one string;
+        4 => "user_id": one string; one string;
+        5 => "prev_status": one decode_sparse_section_status_from_decoder; one uint;
     ]
 }
 
@@ -4113,12 +4139,12 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "BuzzApprovalRequestInfo";
     capacity 8;
     fields [
-        1 => "request_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "requester_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "requested_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        4 => "reviewer_user_ids": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
-        5 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        6 => "note": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "request_id": one string; one string;
+        2 => "requester_user_id": one string; one string;
+        3 => "requested_at": one uint; one uint;
+        4 => "reviewer_user_ids": repeated string; repeated string;
+        5 => "title": one string; one string;
+        6 => "note": one string; one string;
         7 => "assets_in_request": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
     ]
 }
@@ -4157,9 +4183,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "BuzzApprovalNodeStatusInfo";
     capacity 4;
     fields [
-        1 => "current_status": one decode_sparse_buzz_approval_node_status_from_decoder; one kiwi_skip_uint_value;
-        2 => "was_previously_approved": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        3 => "approval_revoked_at_history": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        1 => "current_status": one decode_sparse_buzz_approval_node_status_from_decoder; one uint;
+        2 => "was_previously_approved": one bool; one bool;
+        3 => "approval_revoked_at_history": repeated uint; repeated uint;
     ]
 }
 
@@ -4172,11 +4198,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CodeEmbedInfo";
     capacity 6;
     fields [
-        1 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "src_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "thumbnail_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "is_published_site": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "url": one string; one string;
+        2 => "src_url": one string; one string;
+        3 => "title": one string; one string;
+        4 => "thumbnail_image_hash": one string; one string;
+        5 => "is_published_site": one bool; one bool;
     ]
 }
 
@@ -4200,168 +4226,168 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 591;
     fields [
         1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "phase": one decode_sparse_node_phase_from_decoder; one kiwi_skip_uint_value;
+        2 => "phase": one decode_sparse_node_phase_from_decoder; one uint;
         3 => "parent_index": one decode_sparse_parent_index_from_decoder; one skip_parent_index_from_decoder;
-        4 => "type": one decode_sparse_node_type_from_decoder; one kiwi_skip_uint_value;
-        5 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        6 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        7 => "locked": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        8 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        9 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one kiwi_skip_uint_value;
-        10 => "count": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "type": one decode_sparse_node_type_from_decoder; one uint;
+        5 => "name": one string; one string;
+        6 => "visible": one bool; one bool;
+        7 => "locked": one bool; one bool;
+        8 => "opacity": one float; one float;
+        9 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one uint;
+        10 => "count": one uint; one uint;
         11 => "size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         12 => "transform": one decode_sparse_matrix_from_decoder; one skip_matrix_from_decoder;
-        13 => "dash_pattern": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
-        14 => "auto_rename": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        15 => "background_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        16 => "mask": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        17 => "export_contents_only": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        18 => "mask_is_outline": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        19 => "background_opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        20 => "corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        21 => "font_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        22 => "paragraph_indent": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        23 => "paragraph_spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        24 => "star_inner_scale": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        25 => "miter_limit": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        26 => "stroke_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        27 => "text_tracking": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        28 => "horizontal_constraint": one decode_sparse_constraint_type_from_decoder; one kiwi_skip_uint_value;
-        29 => "stroke_align": one decode_sparse_stroke_align_from_decoder; one kiwi_skip_uint_value;
-        30 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder; one kiwi_skip_uint_value;
-        31 => "stroke_join": one decode_sparse_stroke_join_from_decoder; one kiwi_skip_uint_value;
-        32 => "text_align_horizontal": one decode_sparse_text_align_horizontal_from_decoder; one kiwi_skip_uint_value;
-        33 => "text_align_vertical": one decode_sparse_text_align_vertical_from_decoder; one kiwi_skip_uint_value;
-        34 => "text_case": one decode_sparse_text_case_from_decoder; one kiwi_skip_uint_value;
-        35 => "text_decoration": one decode_sparse_text_decoration_from_decoder; one kiwi_skip_uint_value;
-        36 => "boolean_operation": one decode_sparse_boolean_operation_from_decoder; one kiwi_skip_uint_value;
-        37 => "vertical_constraint": one decode_sparse_constraint_type_from_decoder; one kiwi_skip_uint_value;
+        13 => "dash_pattern": repeated float; repeated float;
+        14 => "auto_rename": one bool; one bool;
+        15 => "background_enabled": one bool; one bool;
+        16 => "mask": one bool; one bool;
+        17 => "export_contents_only": one bool; one bool;
+        18 => "mask_is_outline": one bool; one bool;
+        19 => "background_opacity": one float; one float;
+        20 => "corner_radius": one float; one float;
+        21 => "font_size": one float; one float;
+        22 => "paragraph_indent": one float; one float;
+        23 => "paragraph_spacing": one float; one float;
+        24 => "star_inner_scale": one float; one float;
+        25 => "miter_limit": one float; one float;
+        26 => "stroke_weight": one float; one float;
+        27 => "text_tracking": one float; one float;
+        28 => "horizontal_constraint": one decode_sparse_constraint_type_from_decoder; one uint;
+        29 => "stroke_align": one decode_sparse_stroke_align_from_decoder; one uint;
+        30 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder; one uint;
+        31 => "stroke_join": one decode_sparse_stroke_join_from_decoder; one uint;
+        32 => "text_align_horizontal": one decode_sparse_text_align_horizontal_from_decoder; one uint;
+        33 => "text_align_vertical": one decode_sparse_text_align_vertical_from_decoder; one uint;
+        34 => "text_case": one decode_sparse_text_case_from_decoder; one uint;
+        35 => "text_decoration": one decode_sparse_text_decoration_from_decoder; one uint;
+        36 => "boolean_operation": one decode_sparse_boolean_operation_from_decoder; one uint;
+        37 => "vertical_constraint": one decode_sparse_constraint_type_from_decoder; one uint;
         38 => "fill_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
         39 => "stroke_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
         40 => "line_height": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
         41 => "font_name": one decode_sparse_font_name_from_decoder; one skip_font_name_from_decoder;
         42 => "text_data": one decode_sparse_text_data_from_decoder; one skip_text_data_from_decoder;
         43 => "effects": repeated decode_sparse_effect_from_decoder; repeated skip_effect_from_decoder;
-        44 => "handle_mirroring": one decode_sparse_vector_mirror_from_decoder; one kiwi_skip_uint_value;
+        44 => "handle_mirroring": one decode_sparse_vector_mirror_from_decoder; one uint;
         45 => "export_settings": repeated decode_sparse_export_settings_from_decoder; repeated skip_export_settings_from_decoder;
-        46 => "text_auto_resize": one decode_sparse_text_auto_resize_from_decoder; one kiwi_skip_uint_value;
+        46 => "text_auto_resize": one decode_sparse_text_auto_resize_from_decoder; one uint;
         47 => "layout_grids": repeated decode_sparse_layout_grid_from_decoder; repeated skip_layout_grid_from_decoder;
         48 => "vector_data": one decode_sparse_vector_data_from_decoder; one skip_vector_data_from_decoder;
-        49 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        49 => "style_id": one uint; one uint;
         50 => "background_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
         51 => "fill_geometry": repeated decode_sparse_path_from_decoder; repeated skip_path_from_decoder;
         52 => "stroke_geometry": repeated decode_sparse_path_from_decoder; repeated skip_path_from_decoder;
-        53 => "guid_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        54 => "phase_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        55 => "parent_index_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        56 => "type_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        57 => "name_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        58 => "visible_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        59 => "locked_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        60 => "opacity_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        61 => "blend_mode_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        62 => "count_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        63 => "size_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        64 => "transform_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        65 => "dash_pattern_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        66 => "auto_rename_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        67 => "background_enabled_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        68 => "mask_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        69 => "export_contents_only_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        70 => "mask_is_outline_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        71 => "background_opacity_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        72 => "corner_radius_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        73 => "font_size_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        74 => "paragraph_indent_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        75 => "paragraph_spacing_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        76 => "star_inner_scale_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        77 => "miter_limit_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        78 => "stroke_weight_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        79 => "text_tracking_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        80 => "horizontal_constraint_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        81 => "stroke_align_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        82 => "stroke_cap_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        83 => "stroke_join_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        84 => "text_align_horizontal_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        85 => "text_align_vertical_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        86 => "text_case_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        87 => "text_decoration_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        88 => "boolean_operation_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        89 => "vertical_constraint_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        90 => "fill_paints_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        91 => "stroke_paints_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        92 => "line_height_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        93 => "font_name_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        94 => "text_data_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        95 => "effects_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        96 => "handle_mirroring_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        97 => "export_settings_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        98 => "text_auto_resize_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        99 => "layout_grids_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        100 => "vector_data_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        101 => "style_id_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        102 => "background_color_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        103 => "fill_geometry_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        104 => "stroke_geometry_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        105 => "stack_mode": one decode_sparse_stack_mode_from_decoder; one kiwi_skip_uint_value;
-        106 => "stack_mode_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        107 => "stack_spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        108 => "stack_spacing_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        109 => "stack_padding": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        110 => "stack_padding_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        53 => "guid_tag": one uint; one uint;
+        54 => "phase_tag": one uint; one uint;
+        55 => "parent_index_tag": one uint; one uint;
+        56 => "type_tag": one uint; one uint;
+        57 => "name_tag": one uint; one uint;
+        58 => "visible_tag": one uint; one uint;
+        59 => "locked_tag": one uint; one uint;
+        60 => "opacity_tag": one uint; one uint;
+        61 => "blend_mode_tag": one uint; one uint;
+        62 => "count_tag": one uint; one uint;
+        63 => "size_tag": one uint; one uint;
+        64 => "transform_tag": one uint; one uint;
+        65 => "dash_pattern_tag": one uint; one uint;
+        66 => "auto_rename_tag": one uint; one uint;
+        67 => "background_enabled_tag": one uint; one uint;
+        68 => "mask_tag": one uint; one uint;
+        69 => "export_contents_only_tag": one uint; one uint;
+        70 => "mask_is_outline_tag": one uint; one uint;
+        71 => "background_opacity_tag": one uint; one uint;
+        72 => "corner_radius_tag": one uint; one uint;
+        73 => "font_size_tag": one uint; one uint;
+        74 => "paragraph_indent_tag": one uint; one uint;
+        75 => "paragraph_spacing_tag": one uint; one uint;
+        76 => "star_inner_scale_tag": one uint; one uint;
+        77 => "miter_limit_tag": one uint; one uint;
+        78 => "stroke_weight_tag": one uint; one uint;
+        79 => "text_tracking_tag": one uint; one uint;
+        80 => "horizontal_constraint_tag": one uint; one uint;
+        81 => "stroke_align_tag": one uint; one uint;
+        82 => "stroke_cap_tag": one uint; one uint;
+        83 => "stroke_join_tag": one uint; one uint;
+        84 => "text_align_horizontal_tag": one uint; one uint;
+        85 => "text_align_vertical_tag": one uint; one uint;
+        86 => "text_case_tag": one uint; one uint;
+        87 => "text_decoration_tag": one uint; one uint;
+        88 => "boolean_operation_tag": one uint; one uint;
+        89 => "vertical_constraint_tag": one uint; one uint;
+        90 => "fill_paints_tag": one uint; one uint;
+        91 => "stroke_paints_tag": one uint; one uint;
+        92 => "line_height_tag": one uint; one uint;
+        93 => "font_name_tag": one uint; one uint;
+        94 => "text_data_tag": one uint; one uint;
+        95 => "effects_tag": one uint; one uint;
+        96 => "handle_mirroring_tag": one uint; one uint;
+        97 => "export_settings_tag": one uint; one uint;
+        98 => "text_auto_resize_tag": one uint; one uint;
+        99 => "layout_grids_tag": one uint; one uint;
+        100 => "vector_data_tag": one uint; one uint;
+        101 => "style_id_tag": one uint; one uint;
+        102 => "background_color_tag": one uint; one uint;
+        103 => "fill_geometry_tag": one uint; one uint;
+        104 => "stroke_geometry_tag": one uint; one uint;
+        105 => "stack_mode": one decode_sparse_stack_mode_from_decoder; one uint;
+        106 => "stack_mode_tag": one uint; one uint;
+        107 => "stack_spacing": one float; one float;
+        108 => "stack_spacing_tag": one uint; one uint;
+        109 => "stack_padding": one float; one float;
+        110 => "stack_padding_tag": one uint; one uint;
         111 => "guid_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
-        112 => "guid_path_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        112 => "guid_path_tag": one uint; one uint;
         113 => "symbol_data": one decode_sparse_symbol_data_from_decoder; one skip_symbol_data_from_decoder;
-        114 => "symbol_data_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        115 => "frame_mask_disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        116 => "frame_mask_disabled_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        117 => "resize_to_fit": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        118 => "resize_to_fit_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        119 => "export_background_disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        120 => "stack_counter_align": one decode_sparse_stack_counter_align_from_decoder; one kiwi_skip_uint_value;
-        121 => "stack_justify": one decode_sparse_stack_justify_from_decoder; one kiwi_skip_uint_value;
+        114 => "symbol_data_tag": one uint; one uint;
+        115 => "frame_mask_disabled": one bool; one bool;
+        116 => "frame_mask_disabled_tag": one uint; one uint;
+        117 => "resize_to_fit": one bool; one bool;
+        118 => "resize_to_fit_tag": one uint; one uint;
+        119 => "export_background_disabled": one bool; one bool;
+        120 => "stack_counter_align": one decode_sparse_stack_counter_align_from_decoder; one uint;
+        121 => "stack_justify": one decode_sparse_stack_justify_from_decoder; one uint;
         122 => "shared_symbol_reference": one decode_sparse_shared_symbol_reference_from_decoder; one skip_shared_symbol_reference_from_decoder;
-        123 => "is_symbol_publishable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        123 => "is_symbol_publishable": one bool; one bool;
         124 => "shared_symbol_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
         125 => "derived_symbol_data": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
-        126 => "shared_symbol_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        127 => "font_variant_common_ligatures": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        128 => "font_variant_contextual_ligatures": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        129 => "font_variant_discretionary_ligatures": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        130 => "font_variant_historical_ligatures": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        131 => "font_variant_ordinal": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        132 => "font_variant_slashed_zero": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        133 => "font_variant_numeric_figure": one decode_sparse_font_variant_numeric_figure_from_decoder; one kiwi_skip_uint_value;
-        134 => "font_variant_numeric_spacing": one decode_sparse_font_variant_numeric_spacing_from_decoder; one kiwi_skip_uint_value;
-        135 => "font_variant_numeric_fraction": one decode_sparse_font_variant_numeric_fraction_from_decoder; one kiwi_skip_uint_value;
-        136 => "font_variant_caps": one decode_sparse_font_variant_caps_from_decoder; one kiwi_skip_uint_value;
-        137 => "font_variant_position": one decode_sparse_font_variant_position_from_decoder; one kiwi_skip_uint_value;
+        126 => "shared_symbol_version": one string; one string;
+        127 => "font_variant_common_ligatures": one bool; one bool;
+        128 => "font_variant_contextual_ligatures": one bool; one bool;
+        129 => "font_variant_discretionary_ligatures": one bool; one bool;
+        130 => "font_variant_historical_ligatures": one bool; one bool;
+        131 => "font_variant_ordinal": one bool; one bool;
+        132 => "font_variant_slashed_zero": one bool; one bool;
+        133 => "font_variant_numeric_figure": one decode_sparse_font_variant_numeric_figure_from_decoder; one uint;
+        134 => "font_variant_numeric_spacing": one decode_sparse_font_variant_numeric_spacing_from_decoder; one uint;
+        135 => "font_variant_numeric_fraction": one decode_sparse_font_variant_numeric_fraction_from_decoder; one uint;
+        136 => "font_variant_caps": one decode_sparse_font_variant_caps_from_decoder; one uint;
+        137 => "font_variant_position": one decode_sparse_font_variant_position_from_decoder; one uint;
         138 => "guides": repeated decode_sparse_guide_from_decoder; repeated skip_guide_from_decoder;
         139 => "transition_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         140 => "prototype_start_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         141 => "prototype_background_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
-        142 => "internal_only": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        142 => "internal_only": one bool; one bool;
         143 => "overridden_symbol_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        144 => "symbol_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        145 => "rectangle_top_left_corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        146 => "rectangle_top_right_corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        147 => "rectangle_bottom_left_corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        148 => "rectangle_bottom_right_corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        149 => "rectangle_corner_radii_independent": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        150 => "rectangle_corner_tool_independent": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        151 => "proportions_constrained": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        144 => "symbol_description": one string; one string;
+        145 => "rectangle_top_left_corner_radius": one float; one float;
+        146 => "rectangle_top_right_corner_radius": one float; one float;
+        147 => "rectangle_bottom_left_corner_radius": one float; one float;
+        148 => "rectangle_bottom_right_corner_radius": one float; one float;
+        149 => "rectangle_corner_radii_independent": one bool; one bool;
+        150 => "rectangle_corner_tool_independent": one bool; one bool;
+        151 => "proportions_constrained": one bool; one bool;
         152 => "shared_component_master_data": one decode_sparse_shared_component_master_data_from_decoder; one skip_shared_component_master_data_from_decoder;
         153 => "transition_info": one decode_sparse_transition_info_from_decoder; one skip_transition_info_from_decoder;
-        154 => "transition_type": one decode_sparse_transition_type_from_decoder; one kiwi_skip_uint_value;
-        155 => "transition_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        156 => "easing_type": one decode_sparse_easing_type_from_decoder; one kiwi_skip_uint_value;
-        157 => "is_fill_style": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        154 => "transition_type": one decode_sparse_transition_type_from_decoder; one uint;
+        155 => "transition_duration": one float; one float;
+        156 => "easing_type": one decode_sparse_easing_type_from_decoder; one uint;
+        157 => "is_fill_style": one bool; one bool;
         158 => "inherit_fill_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        159 => "scroll_direction": one decode_sparse_scroll_direction_from_decoder; one kiwi_skip_uint_value;
-        160 => "corner_smoothing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        161 => "is_stroke_style": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        159 => "scroll_direction": one decode_sparse_scroll_direction_from_decoder; one uint;
+        160 => "corner_smoothing": one float; one float;
+        161 => "is_stroke_style": one bool; one bool;
         162 => "inherit_stroke_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        163 => "style_type": one decode_sparse_style_type_from_decoder; one kiwi_skip_uint_value;
+        163 => "style_type": one decode_sparse_style_type_from_decoder; one uint;
         164 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
         165 => "letter_spacing": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
         166 => "scroll_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
@@ -4369,141 +4395,141 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         168 => "inherit_export_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         169 => "inherit_effect_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         170 => "inherit_grid_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        171 => "version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        171 => "version": one string; one string;
         172 => "shared_style_master_data": one decode_sparse_shared_style_master_data_from_decoder; one skip_shared_style_master_data_from_decoder;
         173 => "shared_style_reference": one decode_sparse_shared_style_reference_from_decoder; one skip_shared_style_reference_from_decoder;
-        174 => "is_publishable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        175 => "export_text_as_svg_text": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        176 => "is_soft_deleted_style": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        177 => "is_non_updateable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        178 => "scroll_contracted_state": one decode_sparse_scroll_contracted_state_from_decoder; one kiwi_skip_uint_value;
+        174 => "is_publishable": one bool; one bool;
+        175 => "export_text_as_svg_text": one bool; one bool;
+        176 => "is_soft_deleted_style": one bool; one bool;
+        177 => "is_non_updateable": one bool; one bool;
+        178 => "scroll_contracted_state": one decode_sparse_scroll_contracted_state_from_decoder; one uint;
         179 => "contracted_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        180 => "fixed_children_divider": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        181 => "transition_preserve_scroll": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        182 => "connection_type": one decode_sparse_connection_type_from_decoder; one kiwi_skip_uint_value;
-        183 => "connection_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        180 => "fixed_children_divider": one string; one string;
+        181 => "transition_preserve_scroll": one bool; one bool;
+        182 => "connection_type": one decode_sparse_connection_type_from_decoder; one uint;
+        183 => "connection_url": one string; one string;
         184 => "prototype_device": one decode_sparse_prototype_device_from_decoder; one skip_prototype_device_from_decoder;
         185 => "inherit_fill_style_id_for_stroke": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        186 => "scroll_behavior": one decode_sparse_scroll_behavior_from_decoder; one kiwi_skip_uint_value;
-        187 => "interaction_type": one decode_sparse_interaction_type_from_decoder; one kiwi_skip_uint_value;
-        188 => "transition_timeout": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        189 => "interaction_maintained": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        190 => "interaction_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        191 => "style_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        192 => "destination_is_overlay": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        186 => "scroll_behavior": one decode_sparse_scroll_behavior_from_decoder; one uint;
+        187 => "interaction_type": one decode_sparse_interaction_type_from_decoder; one uint;
+        188 => "transition_timeout": one float; one float;
+        189 => "interaction_maintained": one bool; one bool;
+        190 => "interaction_duration": one float; one float;
+        191 => "style_description": one string; one string;
+        192 => "destination_is_overlay": one bool; one bool;
         193 => "background_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
         194 => "inherit_fill_style_id_for_background": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         195 => "arc_data": one decode_sparse_arc_data_from_decoder; one skip_arc_data_from_decoder;
-        196 => "derived_symbol_data_layout_version": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        197 => "navigation_type": one decode_sparse_navigation_type_from_decoder; one kiwi_skip_uint_value;
-        198 => "overlay_position_type": one decode_sparse_overlay_position_type_from_decoder; one kiwi_skip_uint_value;
+        196 => "derived_symbol_data_layout_version": one int; one int;
+        197 => "navigation_type": one decode_sparse_navigation_type_from_decoder; one uint;
+        198 => "overlay_position_type": one decode_sparse_overlay_position_type_from_decoder; one uint;
         199 => "overlay_relative_position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        200 => "overlay_background_interaction": one decode_sparse_overlay_background_interaction_from_decoder; one kiwi_skip_uint_value;
+        200 => "overlay_background_interaction": one decode_sparse_overlay_background_interaction_from_decoder; one uint;
         201 => "overlay_background_appearance": one decode_sparse_overlay_background_appearance_from_decoder; one skip_overlay_background_appearance_from_decoder;
-        202 => "font_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        203 => "text_user_layout_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        202 => "font_version": one string; one string;
+        203 => "text_user_layout_version": one uint; one uint;
         204 => "plugin_data": repeated decode_sparse_plugin_data_from_decoder; repeated skip_plugin_data_from_decoder;
-        205 => "toggled_on_ot_features": repeated decode_sparse_open_type_feature_from_decoder; repeated kiwi_skip_uint_value;
-        206 => "toggled_off_ot_features": repeated decode_sparse_open_type_feature_from_decoder; repeated kiwi_skip_uint_value;
-        207 => "transition_should_smart_animate": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        208 => "stack_align": one decode_sparse_stack_align_from_decoder; one kiwi_skip_uint_value;
-        209 => "stack_horizontal_padding": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        210 => "stack_vertical_padding": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        211 => "stack_width": one decode_sparse_stack_size_from_decoder; one kiwi_skip_uint_value;
-        212 => "stack_height": one decode_sparse_stack_size_from_decoder; one kiwi_skip_uint_value;
+        205 => "toggled_on_ot_features": repeated decode_sparse_open_type_feature_from_decoder; repeated uint;
+        206 => "toggled_off_ot_features": repeated decode_sparse_open_type_feature_from_decoder; repeated uint;
+        207 => "transition_should_smart_animate": one bool; one bool;
+        208 => "stack_align": one decode_sparse_stack_align_from_decoder; one uint;
+        209 => "stack_horizontal_padding": one float; one float;
+        210 => "stack_vertical_padding": one float; one float;
+        211 => "stack_width": one decode_sparse_stack_size_from_decoder; one uint;
+        212 => "stack_height": one decode_sparse_stack_size_from_decoder; one uint;
         213 => "override_key": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        214 => "publish_file": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        214 => "publish_file": one string; one string;
         215 => "publish_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        216 => "component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        217 => "is_c2": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        218 => "published_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        216 => "component_key": one string; one string;
+        217 => "is_c2": one bool; one bool;
+        218 => "published_version": one string; one string;
         219 => "plugin_relaunch_data": repeated decode_sparse_plugin_relaunch_data_from_decoder; repeated skip_plugin_relaunch_data_from_decoder;
-        220 => "container_supports_fill_stroke_and_corners": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        221 => "stack_counter_sizing": one decode_sparse_stack_size_from_decoder; one kiwi_skip_uint_value;
-        222 => "containers_support_fill_stroke_and_corners": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        220 => "container_supports_fill_stroke_and_corners": one bool; one bool;
+        221 => "stack_counter_sizing": one decode_sparse_stack_size_from_decoder; one uint;
+        222 => "containers_support_fill_stroke_and_corners": one bool; one bool;
         223 => "hyperlink": one decode_sparse_hyperlink_from_decoder; one skip_hyperlink_from_decoder;
         224 => "key_trigger": one decode_sparse_key_trigger_from_decoder; one skip_key_trigger_from_decoder;
-        225 => "is_state_group": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        225 => "is_state_group": one bool; one bool;
         226 => "prototype_interactions": repeated decode_sparse_prototype_interaction_from_decoder; repeated skip_prototype_interaction_from_decoder;
-        227 => "voice_event_phrase": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        227 => "voice_event_phrase": one string; one string;
         228 => "force_unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
-        229 => "stack_primary_sizing": one decode_sparse_stack_size_from_decoder; one kiwi_skip_uint_value;
-        230 => "stack_primary_align_items": one decode_sparse_stack_justify_from_decoder; one kiwi_skip_uint_value;
-        231 => "stack_counter_align_items": one decode_sparse_stack_align_from_decoder; one kiwi_skip_uint_value;
-        232 => "stack_child_primary_grow": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        233 => "stack_padding_right": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        234 => "stack_padding_bottom": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        229 => "stack_primary_sizing": one decode_sparse_stack_size_from_decoder; one uint;
+        230 => "stack_primary_align_items": one decode_sparse_stack_justify_from_decoder; one uint;
+        231 => "stack_counter_align_items": one decode_sparse_stack_align_from_decoder; one uint;
+        232 => "stack_child_primary_grow": one float; one float;
+        233 => "stack_padding_right": one float; one float;
+        234 => "stack_padding_bottom": one float; one float;
         235 => "ancestor_path_before_deletion": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
-        236 => "stack_child_align_self": one decode_sparse_stack_counter_align_from_decoder; one kiwi_skip_uint_value;
+        236 => "stack_child_align_self": one decode_sparse_stack_counter_align_from_decoder; one uint;
         237 => "symbol_links": repeated decode_sparse_symbol_link_from_decoder; repeated skip_symbol_link_from_decoder;
         238 => "state_group_property_value_orders": repeated decode_sparse_state_group_property_value_order_from_decoder; repeated skip_state_group_property_value_order_from_decoder;
         239 => "text_list_data": one decode_sparse_text_list_data_from_decoder; one skip_text_list_data_from_decoder;
         240 => "node_generation_data": one decode_sparse_node_generation_data_from_decoder; one skip_node_generation_data_from_decoder;
-        241 => "shape_with_text_type": one decode_sparse_shape_with_text_type_from_decoder; one kiwi_skip_uint_value;
+        241 => "shape_with_text_type": one decode_sparse_shape_with_text_type_from_decoder; one uint;
         242 => "connector_start": one decode_sparse_connector_endpoint_from_decoder; one skip_connector_endpoint_from_decoder;
         243 => "connector_end": one decode_sparse_connector_endpoint_from_decoder; one skip_connector_endpoint_from_decoder;
-        244 => "connector_line_style": one decode_sparse_connector_line_style_from_decoder; one kiwi_skip_uint_value;
-        245 => "connector_start_cap": one decode_sparse_stroke_cap_from_decoder; one kiwi_skip_uint_value;
-        246 => "connector_end_cap": one decode_sparse_stroke_cap_from_decoder; one kiwi_skip_uint_value;
-        247 => "shape_user_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        244 => "connector_line_style": one decode_sparse_connector_line_style_from_decoder; one uint;
+        245 => "connector_start_cap": one decode_sparse_stroke_cap_from_decoder; one uint;
+        246 => "connector_end_cap": one decode_sparse_stroke_cap_from_decoder; one uint;
+        247 => "shape_user_height": one float; one float;
         248 => "override_stash": repeated decode_sparse_instance_override_stash_from_decoder; repeated skip_instance_override_stash_from_decoder;
         249 => "prototype_starting_point": one decode_sparse_prototype_starting_point_from_decoder; one skip_prototype_starting_point_from_decoder;
         250 => "override_stash_v2": repeated decode_sparse_instance_override_stash_v2_from_decoder; repeated skip_instance_override_stash_v2_from_decoder;
-        251 => "internal_enum_for_test": one decode_sparse_internal_enum_for_test_from_decoder; one kiwi_skip_uint_value;
-        252 => "origin_component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        251 => "internal_enum_for_test": one decode_sparse_internal_enum_for_test_from_decoder; one uint;
+        252 => "origin_component_key": one string; one string;
         253 => "connector_control_points": repeated decode_sparse_connector_control_point_from_decoder; repeated skip_connector_control_point_from_decoder;
         254 => "derived_immutable_frame_data": one decode_sparse_derived_immutable_frame_data_from_decoder; one skip_derived_immutable_frame_data_from_decoder;
         255 => "connector_text_midpoint": one decode_sparse_connector_text_midpoint_from_decoder; one skip_connector_text_midpoint_from_decoder;
         256 => "library_move_info": one decode_sparse_library_move_info_from_decoder; one skip_library_move_info_from_decoder;
         257 => "internal_data_for_test": one decode_sparse_internal_data_for_test_from_decoder; one skip_internal_data_for_test_from_decoder;
-        258 => "use_absolute_bounds": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        259 => "code_block_language": one decode_sparse_code_block_language_from_decoder; one kiwi_skip_uint_value;
+        258 => "use_absolute_bounds": one bool; one bool;
+        259 => "code_block_language": one decode_sparse_code_block_language_from_decoder; one uint;
         260 => "font_variations": repeated decode_sparse_font_variation_from_decoder; repeated skip_font_variation_from_decoder;
-        261 => "detach_optical_size_from_font_size": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        261 => "detach_optical_size_from_font_size": one bool; one bool;
         262 => "widget_metadata": one decode_sparse_widget_metadata_from_decoder; one skip_widget_metadata_from_decoder;
-        263 => "widget_events": repeated decode_sparse_widget_event_from_decoder; repeated kiwi_skip_uint_value;
-        264 => "list_spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        263 => "widget_events": repeated decode_sparse_widget_event_from_decoder; repeated uint;
+        264 => "list_spacing": one float; one float;
         265 => "widget_property_menu_items": repeated decode_sparse_widget_property_menu_item_from_decoder; repeated skip_widget_property_menu_item_from_decoder;
         266 => "component_prop_defs": repeated decode_sparse_component_prop_def_from_decoder; repeated skip_component_prop_def_from_decoder;
         267 => "component_prop_refs": repeated decode_sparse_component_prop_ref_from_decoder; repeated skip_component_prop_ref_from_decoder;
         268 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder; repeated skip_component_prop_assignment_from_decoder;
-        269 => "stack_positioning": one decode_sparse_stack_positioning_from_decoder; one kiwi_skip_uint_value;
+        269 => "stack_positioning": one decode_sparse_stack_positioning_from_decoder; one uint;
         270 => "embed_data": one decode_sparse_embed_data_from_decoder; one skip_embed_data_from_decoder;
-        271 => "stack_reverse_z_index": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        271 => "stack_reverse_z_index": one bool; one bool;
         272 => "rich_media_data": one decode_sparse_rich_media_data_from_decoder; one skip_rich_media_data_from_decoder;
         273 => "widget_synced_state": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
-        274 => "widget_sync_cursor": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        274 => "widget_sync_cursor": one uint; one uint;
         275 => "widget_derived_subtree_cursor": one decode_sparse_widget_derived_subtree_cursor_from_decoder; one skip_widget_derived_subtree_cursor_from_decoder;
         276 => "widget_cached_ancestor": one decode_sparse_widget_pointer_from_decoder; one skip_widget_pointer_from_decoder;
         277 => "rendered_synced_state": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
         278 => "link_preview_data": one decode_sparse_link_preview_data_from_decoder; one skip_link_preview_data_from_decoder;
-        279 => "text_bidi_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        280 => "text_truncation": one decode_sparse_text_truncation_from_decoder; one kiwi_skip_uint_value;
+        279 => "text_bidi_version": one uint; one uint;
+        280 => "text_truncation": one decode_sparse_text_truncation_from_decoder; one uint;
         281 => "library_move_history": repeated decode_sparse_library_move_history_item_from_decoder; repeated skip_library_move_history_item_from_decoder;
-        282 => "shape_truncates": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        283 => "section_contents_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        284 => "simplify_instance_panels": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        285 => "widget_input_behavior": one decode_sparse_widget_input_behavior_from_decoder; one kiwi_skip_uint_value;
-        286 => "widget_tooltip": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        287 => "border_top_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        288 => "border_bottom_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        289 => "border_left_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        290 => "border_right_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        282 => "shape_truncates": one bool; one bool;
+        283 => "section_contents_hidden": one bool; one bool;
+        284 => "simplify_instance_panels": one bool; one bool;
+        285 => "widget_input_behavior": one decode_sparse_widget_input_behavior_from_decoder; one uint;
+        286 => "widget_tooltip": one string; one string;
+        287 => "border_top_hidden": one bool; one bool;
+        288 => "border_bottom_hidden": one bool; one bool;
+        289 => "border_left_hidden": one bool; one bool;
+        290 => "border_right_hidden": one bool; one bool;
         291 => "widget_hover_style": one decode_sparse_widget_hover_style_from_decoder; one skip_widget_hover_style_from_decoder;
-        292 => "has_had_rtl_text": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        293 => "is_widget_stickable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        294 => "borders_take_space": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        295 => "border_top_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        296 => "border_bottom_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        297 => "border_left_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        298 => "border_right_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        299 => "border_stroke_weights_independent": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        292 => "has_had_rtl_text": one bool; one bool;
+        293 => "is_widget_stickable": one bool; one bool;
+        294 => "borders_take_space": one bool; one bool;
+        295 => "border_top_weight": one float; one float;
+        296 => "border_bottom_weight": one float; one float;
+        297 => "border_left_weight": one float; one float;
+        298 => "border_right_weight": one float; one float;
+        299 => "border_stroke_weights_independent": one bool; one bool;
         300 => "video_playback": one decode_sparse_video_playback_from_decoder; one skip_video_playback_from_decoder;
         301 => "stamp_data": one decode_sparse_stamp_data_from_decoder; one skip_stamp_data_from_decoder;
-        302 => "accessible_html_tag": one decode_sparse_html_tag_from_decoder; one kiwi_skip_uint_value;
-        303 => "aria_role": one decode_sparse_aria_role_from_decoder; one kiwi_skip_uint_value;
-        304 => "accessible_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        305 => "props_are_bubbled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        302 => "accessible_html_tag": one decode_sparse_html_tag_from_decoder; one uint;
+        303 => "aria_role": one decode_sparse_aria_role_from_decoder; one uint;
+        304 => "accessible_label": one string; one string;
+        305 => "props_are_bubbled": one bool; one bool;
         306 => "variable_data": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         307 => "variable_consumption_map": one decode_sparse_variable_data_map_from_decoder; one skip_variable_data_map_from_decoder;
         308 => "table_row_positions": one decode_sparse_table_row_column_position_map_from_decoder; one skip_table_row_column_position_map_from_decoder;
@@ -4512,109 +4538,109 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         311 => "table_column_widths": one decode_sparse_table_row_column_size_map_from_decoder; one skip_table_row_column_size_map_from_decoder;
         312 => "variable_set_modes": repeated decode_sparse_variable_set_mode_from_decoder; repeated skip_variable_set_mode_from_decoder;
         313 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
-        314 => "variable_resolved_type": one decode_sparse_variable_resolved_data_type_from_decoder; one kiwi_skip_uint_value;
+        314 => "variable_resolved_type": one decode_sparse_variable_resolved_data_type_from_decoder; one uint;
         315 => "variable_data_values": one decode_sparse_variable_data_values_from_decoder; one skip_variable_data_values_from_decoder;
         316 => "variable_mode_by_set_map": one decode_sparse_variable_mode_by_set_map_from_decoder; one skip_variable_mode_by_set_map_from_decoder;
-        317 => "mask_type": one decode_sparse_mask_type_from_decoder; one kiwi_skip_uint_value;
-        318 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        319 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        320 => "sort_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        321 => "override_level": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        322 => "leading_trim": one decode_sparse_leading_trim_from_decoder; one kiwi_skip_uint_value;
-        323 => "stack_wrap": one decode_sparse_stack_wrap_from_decoder; one kiwi_skip_uint_value;
-        324 => "stack_counter_spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        317 => "mask_type": one decode_sparse_mask_type_from_decoder; one uint;
+        318 => "description": one string; one string;
+        319 => "key": one string; one string;
+        320 => "sort_position": one string; one string;
+        321 => "override_level": one int; one int;
+        322 => "leading_trim": one decode_sparse_leading_trim_from_decoder; one uint;
+        323 => "stack_wrap": one decode_sparse_stack_wrap_from_decoder; one uint;
+        324 => "stack_counter_spacing": one float; one float;
         325 => "min_size": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
         326 => "max_size": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
         327 => "agenda_position_map": one decode_sparse_agenda_position_map_from_decoder; one skip_agenda_position_map_from_decoder;
         328 => "agenda_metadata_map": one decode_sparse_agenda_metadata_map_from_decoder; one skip_agenda_metadata_map_from_decoder;
         329 => "migration_status": one decode_sparse_migration_status_from_decoder; one skip_migration_status_from_decoder;
-        330 => "is_soft_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        330 => "is_soft_deleted": one bool; one bool;
         331 => "edit_info": one decode_sparse_edit_info_from_decoder; one skip_edit_info_from_decoder;
         332 => "style_id_for_fill": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
         333 => "style_id_for_stroke_fill": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
         334 => "style_id_for_text": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
         335 => "style_id_for_effect": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
         336 => "style_id_for_grid": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
-        337 => "hanging_punctuation": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        337 => "hanging_punctuation": one bool; one bool;
         338 => "derived_immutable_frame_data_version": one decode_sparse_multiplayer_field_version_from_decoder; one skip_multiplayer_field_version_from_decoder;
-        339 => "hanging_list": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        339 => "hanging_list": one bool; one bool;
         340 => "mention": one decode_sparse_mention_from_decoder; one skip_mention_from_decoder;
-        341 => "color_profile": one decode_sparse_color_profile_from_decoder; one kiwi_skip_uint_value;
+        341 => "color_profile": one decode_sparse_color_profile_from_decoder; one uint;
         342 => "detached_symbol_id": one decode_sparse_symbol_id_from_decoder; one skip_symbol_id_from_decoder;
-        343 => "stack_counter_align_content": one decode_sparse_stack_counter_align_content_from_decoder; one kiwi_skip_uint_value;
-        344 => "is_snake_game_board": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        343 => "stack_counter_align_content": one decode_sparse_stack_counter_align_content_from_decoder; one uint;
+        344 => "is_snake_game_board": one bool; one bool;
         345 => "ojans_super_secret_node_field": one decode_sparse_shared_style_master_data_from_decoder; one skip_shared_style_master_data_from_decoder;
-        346 => "child_reading_direction": one decode_sparse_child_reading_direction_from_decoder; one kiwi_skip_uint_value;
-        347 => "reading_index": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        346 => "child_reading_direction": one decode_sparse_child_reading_direction_from_decoder; one uint;
+        347 => "reading_index": one string; one string;
         348 => "sev_moonlit_lily_data": one decode_sparse_shared_style_master_data_from_decoder; one skip_shared_style_master_data_from_decoder;
-        349 => "document_color_profile": one decode_sparse_document_color_profile_from_decoder; one kiwi_skip_uint_value;
-        350 => "variable_token_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        351 => "max_lines": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        352 => "section_status": one decode_sparse_section_status_from_decoder; one kiwi_skip_uint_value;
-        353 => "variable_scopes": repeated decode_sparse_variable_scope_from_decoder; repeated kiwi_skip_uint_value;
+        349 => "document_color_profile": one decode_sparse_document_color_profile_from_decoder; one uint;
+        350 => "variable_token_name": one string; one string;
+        351 => "max_lines": one int; one int;
+        352 => "section_status": one decode_sparse_section_status_from_decoder; one uint;
+        353 => "variable_scopes": repeated decode_sparse_variable_scope_from_decoder; repeated uint;
         354 => "developer_related_links": repeated decode_sparse_developer_related_link_from_decoder; repeated skip_developer_related_link_from_decoder;
         355 => "section_status_info": one decode_sparse_section_status_info_from_decoder; one skip_section_status_info_from_decoder;
-        356 => "slide_active_theme_lib_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        356 => "slide_active_theme_lib_key": one string; one string;
         357 => "aria_attributes": one decode_sparse_aria_attributes_map_from_decoder; one skip_aria_attributes_map_from_decoder;
         358 => "code_syntax": one decode_sparse_code_syntax_map_from_decoder; one skip_code_syntax_map_from_decoder;
         359 => "derived_text_data": one decode_sparse_derived_text_data_from_decoder; one skip_derived_text_data_from_decoder;
-        360 => "should_hide_cursors_on_widget_hover": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        360 => "should_hide_cursors_on_widget_hover": one bool; one bool;
         361 => "handoff_status_map": one decode_sparse_handoff_status_map_from_decoder; one skip_handoff_status_map_from_decoder;
         362 => "layout_root": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         363 => "diagram_parent_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        364 => "layout_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        364 => "layout_position": one string; one string;
         365 => "edit_scope_info": one decode_sparse_edit_scope_info_from_decoder; one skip_edit_scope_info_from_decoder;
-        366 => "diagram_layout_rule_type": one decode_sparse_diagram_layout_rule_type_from_decoder; one kiwi_skip_uint_value;
+        366 => "diagram_layout_rule_type": one decode_sparse_diagram_layout_rule_type_from_decoder; one uint;
         367 => "diagram_parent_index": one decode_sparse_diagram_parent_index_from_decoder; one skip_diagram_parent_index_from_decoder;
-        368 => "diagram_layout_paused": one decode_sparse_diagram_layout_paused_from_decoder; one kiwi_skip_uint_value;
+        368 => "diagram_layout_paused": one decode_sparse_diagram_layout_paused_from_decoder; one uint;
         369 => "annotations": repeated decode_sparse_annotation_from_decoder; repeated skip_annotation_from_decoder;
         370 => "section_preset_info": one decode_sparse_section_preset_info_from_decoder; one skip_section_preset_info_from_decoder;
         371 => "interactive_slide_config_data": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
         372 => "interactive_slide_participant_data": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
-        373 => "connector_type": one decode_sparse_connector_type_from_decoder; one kiwi_skip_uint_value;
-        374 => "semantic_weight": one decode_sparse_semantic_weight_from_decoder; one kiwi_skip_uint_value;
-        375 => "semantic_italic": one decode_sparse_semantic_italic_from_decoder; one kiwi_skip_uint_value;
-        376 => "is_override_over_text_style": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        373 => "connector_type": one decode_sparse_connector_type_from_decoder; one uint;
+        374 => "semantic_weight": one decode_sparse_semantic_weight_from_decoder; one uint;
+        375 => "semantic_italic": one decode_sparse_semantic_italic_from_decoder; one uint;
+        376 => "is_override_over_text_style": one bool; one bool;
         377 => "backing_variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
         378 => "backing_variable_id": one decode_sparse_variable_id_or_variable_override_id_from_decoder; one skip_variable_id_or_variable_override_id_from_decoder;
         379 => "theme_id": one decode_sparse_theme_id_from_decoder; one skip_theme_id_from_decoder;
-        380 => "is_page_divider": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        380 => "is_page_divider": one bool; one bool;
         381 => "slide_theme_data": one decode_sparse_slide_theme_data_from_decoder; one skip_slide_theme_data_from_decoder;
-        382 => "module_type": one decode_sparse_module_type_from_decoder; one kiwi_skip_uint_value;
+        382 => "module_type": one decode_sparse_module_type_from_decoder; one uint;
         383 => "file_asset_ids": one decode_sparse_asset_id_map_from_decoder; one skip_asset_id_map_from_decoder;
         384 => "measurements": repeated decode_sparse_annotation_measurement_from_decoder; repeated skip_annotation_measurement_from_decoder;
-        385 => "is_collection_extendable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        386 => "root_variable_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        387 => "is_responsive_set": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        385 => "is_collection_extendable": one bool; one bool;
+        386 => "root_variable_key": one string; one string;
+        387 => "is_responsive_set": one bool; one bool;
         388 => "paste_source": one decode_sparse_paste_source_from_decoder; one skip_paste_source_from_decoder;
-        389 => "slide_speaker_notes": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        389 => "slide_speaker_notes": one string; one string;
         390 => "slide_theme_map": one decode_sparse_slide_theme_map_from_decoder; one skip_slide_theme_map_from_decoder;
-        391 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder; one kiwi_skip_uint_value;
-        392 => "slide_thumbnail_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        393 => "slide_template_file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        394 => "nested_instance_resize_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        395 => "source_library_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        396 => "text_explicit_layout_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        397 => "page_type": one decode_sparse_editor_type_from_decoder; one kiwi_skip_uint_value;
+        391 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder; one uint;
+        392 => "slide_thumbnail_hash": one string; one string;
+        393 => "slide_template_file_key": one string; one string;
+        394 => "nested_instance_resize_enabled": one bool; one bool;
+        395 => "source_library_key": one string; one string;
+        396 => "text_explicit_layout_version": one uint; one uint;
+        397 => "page_type": one decode_sparse_editor_type_from_decoder; one uint;
         398 => "default_responsive_set_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        399 => "user_facing_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        399 => "user_facing_version": one string; one string;
         400 => "responsive_set_settings": one decode_sparse_responsive_set_settings_from_decoder; one skip_responsive_set_settings_from_decoder;
-        401 => "widget_input_text_node_type": one decode_sparse_widget_input_text_node_type_from_decoder; one kiwi_skip_uint_value;
-        402 => "flapp_type": one decode_sparse_flapp_type_from_decoder; one kiwi_skip_uint_value;
-        403 => "are_slides_manually_indented": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        401 => "widget_input_text_node_type": one decode_sparse_widget_input_text_node_type_from_decoder; one uint;
+        402 => "flapp_type": one decode_sparse_flapp_type_from_decoder; one uint;
+        403 => "are_slides_manually_indented": one bool; one bool;
         404 => "behaviors": one decode_sparse_node_behaviors_from_decoder; one skip_node_behaviors_from_decoder;
-        405 => "ai_edited_node_change_field_numbers": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
-        406 => "sorted_moving_child_indices": repeated kiwi_sparse_int_value; repeated kiwi_skip_int_value;
+        405 => "ai_edited_node_change_field_numbers": repeated uint; repeated uint;
+        406 => "sorted_moving_child_indices": repeated int; repeated int;
         407 => "first_draft_data": one decode_sparse_first_draft_data_from_decoder; one skip_first_draft_data_from_decoder;
-        408 => "ai_edit_scope_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        408 => "ai_edit_scope_label": one string; one string;
         409 => "platform_shape_definition": one decode_sparse_platform_shape_definition_from_decoder; one skip_platform_shape_definition_from_decoder;
-        410 => "is_skipped_slide": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        410 => "is_skipped_slide": one bool; one bool;
         411 => "text_decoration_fill_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
-        412 => "text_decoration_skip_ink": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        412 => "text_decoration_skip_ink": one bool; one bool;
         413 => "text_underline_offset": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
-        414 => "source_code": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        414 => "source_code": one string; one string;
         415 => "text_decoration_thickness": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
-        416 => "text_decoration_style": one decode_sparse_text_decoration_style_from_decoder; one kiwi_skip_uint_value;
+        416 => "text_decoration_style": one decode_sparse_text_decoration_style_from_decoder; one uint;
         417 => "responsive_text_style_variants": repeated decode_sparse_responsive_text_style_variant_from_decoder; repeated skip_responsive_text_style_variant_from_decoder;
         418 => "first_draft_kit_element_data": one decode_sparse_first_draft_kit_element_data_from_decoder; one skip_first_draft_kit_element_data_from_decoder;
         419 => "cms_selector": one decode_sparse_cms_selector_from_decoder; one skip_cms_selector_from_decoder;
@@ -4623,25 +4649,25 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         422 => "hub_file_attribution": one decode_sparse_hub_file_attribution_from_decoder; one skip_hub_file_attribution_from_decoder;
         423 => "target_aspect_ratio": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
         424 => "rotation_origin": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        425 => "vector_operation_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        425 => "vector_operation_version": one uint; one uint;
         426 => "object_animations": repeated decode_sparse_prototype_interaction_from_decoder; repeated skip_prototype_interaction_from_decoder;
         427 => "belongs_to_code_library_id": one decode_sparse_code_library_id_from_decoder; one skip_code_library_id_from_decoder;
         428 => "exported_from_code_file_id": one decode_sparse_code_file_id_from_decoder; one skip_code_file_id_from_decoder;
         429 => "backing_code_component_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
-        430 => "code_export_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        431 => "code_snapshot_state": one decode_sparse_code_snapshot_state_from_decoder; one kiwi_skip_uint_value;
+        430 => "code_export_name": one string; one string;
+        431 => "code_snapshot_state": one decode_sparse_code_snapshot_state_from_decoder; one uint;
         432 => "text_path_start": one decode_sparse_text_path_start_from_decoder; one skip_text_path_start_from_decoder;
-        433 => "code_block_theme": one decode_sparse_code_block_theme_from_decoder; one kiwi_skip_uint_value;
-        434 => "lock_mode": one decode_sparse_lock_mode_from_decoder; one kiwi_skip_uint_value;
+        433 => "code_block_theme": one decode_sparse_code_block_theme_from_decoder; one uint;
+        434 => "lock_mode": one decode_sparse_lock_mode_from_decoder; one uint;
         435 => "grid_rows": one decode_sparse_guid_position_map_from_decoder; one skip_guid_position_map_from_decoder;
         436 => "grid_columns": one decode_sparse_guid_position_map_from_decoder; one skip_guid_position_map_from_decoder;
-        437 => "grid_row_gap": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        438 => "grid_column_gap": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        437 => "grid_row_gap": one float; one float;
+        438 => "grid_column_gap": one float; one float;
         439 => "grid_row_anchor": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         440 => "grid_column_anchor": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        441 => "grid_row_span": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        442 => "grid_column_span": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        443 => "slide_number": one decode_sparse_slide_number_from_decoder; one kiwi_skip_uint_value;
+        441 => "grid_row_span": one uint; one uint;
+        442 => "grid_column_span": one uint; one uint;
+        443 => "slide_number": one decode_sparse_slide_number_from_decoder; one uint;
         444 => "collaborative_source_code": one decode_sparse_collaborative_plain_text_from_decoder; one skip_collaborative_plain_text_from_decoder;
         445 => "parameter_consumption_map": one decode_sparse_variable_data_map_from_decoder; one skip_variable_data_map_from_decoder;
         446 => "stroke_brush_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
@@ -4650,145 +4676,145 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         449 => "scatter_stroke_settings": one decode_sparse_scatter_stroke_settings_from_decoder; one skip_scatter_stroke_settings_from_decoder;
         450 => "stretch_stroke_settings": one decode_sparse_stretch_stroke_settings_from_decoder; one skip_stretch_stroke_settings_from_decoder;
         451 => "chat_messages": repeated decode_sparse_node_chat_message_from_decoder; repeated skip_node_chat_message_from_decoder;
-        452 => "brush_type": one decode_sparse_brush_type_from_decoder; one kiwi_skip_uint_value;
+        452 => "brush_type": one decode_sparse_brush_type_from_decoder; one uint;
         453 => "annotation_categories": one decode_sparse_annotation_categories_from_decoder; one skip_annotation_categories_from_decoder;
         454 => "managed_string_data": one decode_sparse_managed_string_data_from_decoder; one skip_managed_string_data_from_decoder;
         455 => "transform_modifiers": repeated decode_sparse_transform_modifier_from_decoder; repeated skip_transform_modifier_from_decoder;
-        456 => "slide_number_separator": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        456 => "slide_number_separator": one string; one string;
         457 => "primary_responsive_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        458 => "is_primary_breakpoint": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        458 => "is_primary_breakpoint": one bool; one bool;
         459 => "code_snapshot": one decode_sparse_code_snapshot_from_decoder; one skip_code_snapshot_from_decoder;
         460 => "cms_rich_text_style_map": one decode_sparse_cms_rich_text_style_map_from_decoder; one skip_cms_rich_text_style_map_from_decoder;
         461 => "cooper_template_data": one decode_sparse_cooper_template_data_from_decoder; one skip_cooper_template_data_from_decoder;
         462 => "multi_edit_glue_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        463 => "is_slot": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        463 => "is_slot": one bool; one bool;
         464 => "overridden_variable_id": one decode_sparse_variable_id_from_decoder; one skip_variable_id_from_decoder;
-        465 => "is_code_behavior": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        465 => "is_code_behavior": one bool; one bool;
         466 => "thumbnail_info": one decode_sparse_thumbnail_info_from_decoder; one skip_thumbnail_info_from_decoder;
         467 => "imported_code_files": one decode_sparse_imported_code_files_from_decoder; one skip_imported_code_files_from_decoder;
         468 => "code_file_canvas_node_id": one decode_sparse_canvas_node_id_from_decoder; one skip_canvas_node_id_from_decoder;
-        469 => "auto_fork_code": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        470 => "has_been_manually_renamed": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        471 => "code_created_from_design": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        472 => "code_file_path": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        469 => "auto_fork_code": one bool; one bool;
+        470 => "has_been_manually_renamed": one bool; one bool;
+        471 => "code_created_from_design": one bool; one bool;
+        472 => "code_file_path": one string; one string;
         473 => "image_imports": one decode_sparse_image_import_map_from_decoder; one skip_image_import_map_from_decoder;
         474 => "grid_columns_sizing": one decode_sparse_guid_grid_track_size_map_from_decoder; one skip_guid_grid_track_size_map_from_decoder;
         475 => "grid_rows_sizing": one decode_sparse_guid_grid_track_size_map_from_decoder; one skip_guid_grid_track_size_map_from_decoder;
-        476 => "grid_child_vertical_align": one decode_sparse_grid_child_align_from_decoder; one kiwi_skip_uint_value;
-        477 => "grid_child_horizontal_align": one decode_sparse_grid_child_align_from_decoder; one kiwi_skip_uint_value;
+        476 => "grid_child_vertical_align": one decode_sparse_grid_child_align_from_decoder; one uint;
+        477 => "grid_child_horizontal_align": one decode_sparse_grid_child_align_from_decoder; one uint;
         478 => "code_behavior_data": one decode_sparse_code_behavior_data_from_decoder; one skip_code_behavior_data_from_decoder;
         479 => "connector_bezier_control_points": repeated decode_sparse_connector_control_point_from_decoder; repeated skip_connector_control_point_from_decoder;
-        480 => "code_snapshot_invalidated_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        480 => "code_snapshot_invalidated_at": one uint; one uint;
         481 => "code_created_from_design_node_id": one decode_sparse_canvas_node_id_from_decoder; one skip_canvas_node_id_from_decoder;
-        482 => "stroke_seed": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        482 => "stroke_seed": one uint64; one uint64;
         483 => "variant_prop_specs": repeated decode_sparse_variant_prop_spec_from_decoder; repeated skip_variant_prop_spec_from_decoder;
-        484 => "code_chat_messages_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        484 => "code_chat_messages_key": one string; one string;
         485 => "chat_compression_state": one decode_sparse_node_chat_compression_state_from_decoder; one skip_node_chat_compression_state_from_decoder;
-        486 => "is_embedded_prototype": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        487 => "is_main_code_component": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        486 => "is_embedded_prototype": one bool; one bool;
+        487 => "is_main_code_component": one bool; one bool;
         488 => "scatter_brush_transforms": repeated decode_sparse_matrix_from_decoder; repeated skip_matrix_from_decoder;
         489 => "jsx_props": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
-        490 => "is_decorative_image": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        490 => "is_decorative_image": one bool; one bool;
         491 => "jsx_data": one decode_sparse_jsx_data_from_decoder; one skip_jsx_data_from_decoder;
         492 => "derived_jsx_data": one decode_sparse_derived_jsx_data_from_decoder; one skip_derived_jsx_data_from_decoder;
-        493 => "stable_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        493 => "stable_key": one string; one string;
         494 => "ai_canvas_prompt": one decode_sparse_ai_canvas_prompt_from_decoder; one skip_ai_canvas_prompt_from_decoder;
-        495 => "is_slot_content": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        495 => "is_slot_content": one bool; one bool;
         496 => "ai_chat_thread": one decode_sparse_ai_chat_thread_from_decoder; one skip_ai_chat_thread_from_decoder;
         497 => "stroke_cap_size": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
-        498 => "is_entrypoint_code_file": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        498 => "is_entrypoint_code_file": one bool; one bool;
         499 => "backing_node_id": one decode_sparse_canvas_node_id_from_decoder; one skip_canvas_node_id_from_decoder;
         500 => "derived_breakpoint_data": one decode_sparse_derived_breakpoint_data_from_decoder; one skip_derived_breakpoint_data_from_decoder;
-        501 => "breakpoint_min_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        502 => "component_or_state_group_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        503 => "component_or_state_group_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        504 => "source_code_library_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        505 => "interpolation_type": one decode_sparse_interpolation_type_from_decoder; one kiwi_skip_uint_value;
-        506 => "timeline_position": one kiwi_sparse_int64_value; one kiwi_skip_int64_value;
+        501 => "breakpoint_min_width": one float; one float;
+        502 => "component_or_state_group_key": one string; one string;
+        503 => "component_or_state_group_version": one uint; one uint;
+        504 => "source_code_library_key": one string; one string;
+        505 => "interpolation_type": one decode_sparse_interpolation_type_from_decoder; one uint;
+        506 => "timeline_position": one int64; one int64;
         507 => "keyframe_value": one decode_sparse_keyframe_value_data_from_decoder; one skip_keyframe_value_data_from_decoder;
         508 => "bezier_handles": one decode_sparse_bezier_handles_from_decoder; one skip_bezier_handles_from_decoder;
-        509 => "keyframe_operation": one decode_sparse_keyframe_operation_from_decoder; one kiwi_skip_uint_value;
-        510 => "timeline_position_type": one decode_sparse_timeline_position_type_from_decoder; one kiwi_skip_uint_value;
+        509 => "keyframe_operation": one decode_sparse_keyframe_operation_from_decoder; one uint;
+        510 => "timeline_position_type": one decode_sparse_timeline_position_type_from_decoder; one uint;
         511 => "clip_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        512 => "timeline_duration": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
-        513 => "timeline_offset": one kiwi_sparse_int64_value; one kiwi_skip_int64_value;
-        514 => "playback_style": one decode_sparse_playback_style_from_decoder; one kiwi_skip_uint_value;
-        515 => "source_code_library_keys": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
-        516 => "code_object_type": one decode_sparse_code_object_type_from_decoder; one kiwi_skip_uint_value;
+        512 => "timeline_duration": one uint64; one uint64;
+        513 => "timeline_offset": one int64; one int64;
+        514 => "playback_style": one decode_sparse_playback_style_from_decoder; one uint;
+        515 => "source_code_library_keys": repeated string; repeated string;
+        516 => "code_object_type": one decode_sparse_code_object_type_from_decoder; one uint;
         517 => "inherited_variable_ids": one decode_sparse_inherited_variables_data_from_decoder; one skip_inherited_variables_data_from_decoder;
-        518 => "make_library_component_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        519 => "code_library_format": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        520 => "should_hide_preview_for_make_kit_creation": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        518 => "make_library_component_id": one string; one string;
+        519 => "code_library_format": one uint; one uint;
+        520 => "should_hide_preview_for_make_kit_creation": one bool; one bool;
         521 => "animation_presets": one decode_sparse_animation_presets_from_decoder; one skip_animation_presets_from_decoder;
-        522 => "is_breakpoint_in_focus": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        522 => "is_breakpoint_in_focus": one bool; one bool;
         523 => "motion_transform": one decode_sparse_trss_transform2_d_from_decoder; one skip_trss_transform2_d_from_decoder;
         524 => "used_make_libraries": repeated decode_sparse_used_make_library_from_decoder; repeated skip_used_make_library_from_decoder;
         525 => "code_examples": repeated decode_sparse_code_example_from_decoder; repeated skip_code_example_from_decoder;
         526 => "transition_overrides": one decode_sparse_transition_override_data_from_decoder; one skip_transition_override_data_from_decoder;
-        527 => "is_code_preview_playing_on_canvas": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        527 => "is_code_preview_playing_on_canvas": one bool; one bool;
         528 => "buzz_approval_requests": one decode_sparse_buzz_approval_requests_from_decoder; one skip_buzz_approval_requests_from_decoder;
         529 => "buzz_approval_node_status_info": one decode_sparse_buzz_approval_node_status_info_from_decoder; one skip_buzz_approval_node_status_info_from_decoder;
-        530 => "is_stroke_paint_derived": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        530 => "is_stroke_paint_derived": one bool; one bool;
         531 => "code_preview_settings": one decode_sparse_prototype_device_from_decoder; one skip_prototype_device_from_decoder;
         532 => "code_embed_info": one decode_sparse_code_embed_info_from_decoder; one skip_code_embed_info_from_decoder;
-        533 => "connector_version": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        533 => "connector_version": one int; one int;
         534 => "source_code_collaborative_text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
         535 => "easing_data": one decode_sparse_easing_data_from_decoder; one skip_easing_data_from_decoder;
-        536 => "mime_type": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        537 => "blob_ref": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        536 => "mime_type": one string; one string;
+        537 => "blob_ref": one bytes; bytes bytes;
         538 => "table_merged_cells": one decode_sparse_table_merged_cell_map_from_decoder; one skip_table_merged_cell_map_from_decoder;
         539 => "repeater_symbol_id": one decode_sparse_symbol_id_from_decoder; one skip_symbol_id_from_decoder;
         540 => "repeater_cms_override_data": one decode_sparse_repeater_cms_override_data_from_decoder; one skip_repeater_cms_override_data_from_decoder;
         541 => "repeater_override_data": one decode_sparse_repeater_override_data_from_decoder; one skip_repeater_override_data_from_decoder;
         542 => "path_trim": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
-        543 => "timeline_disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        544 => "use_legacy_smart_animate": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        545 => "is_clip": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        546 => "is_embed_code_layer": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        547 => "code_component_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        548 => "page_status": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        543 => "timeline_disabled": one bool; one bool;
+        544 => "use_legacy_smart_animate": one bool; one bool;
+        545 => "is_clip": one bool; one bool;
+        546 => "is_embed_code_layer": one bool; one bool;
+        547 => "code_component_description": one string; one string;
+        548 => "page_status": one string; one string;
         549 => "repeater_symbol_override_data": one decode_sparse_repeater_symbol_override_data_from_decoder; one skip_repeater_symbol_override_data_from_decoder;
-        550 => "fallback_glyphs": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        551 => "is_make_kit": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        550 => "fallback_glyphs": one bool; one bool;
+        551 => "is_make_kit": one bool; one bool;
         552 => "timeline_definitions": one decode_sparse_timeline_definitions_map_from_decoder; one skip_timeline_definitions_map_from_decoder;
         553 => "timeline_assignments": one decode_sparse_timeline_assignments_map_from_decoder; one skip_timeline_assignments_map_from_decoder;
-        554 => "stroke_offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        555 => "grid_auto_tracks": one decode_sparse_grid_auto_tracks_from_decoder; one kiwi_skip_uint_value;
-        556 => "grid_reflow_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        554 => "stroke_offset": one float; one float;
+        555 => "grid_auto_tracks": one decode_sparse_grid_auto_tracks_from_decoder; one uint;
+        556 => "grid_reflow_enabled": one bool; one bool;
         557 => "source_control_config": one decode_sparse_source_control_config_from_decoder; one skip_source_control_config_from_decoder;
         558 => "code_source_info": one decode_sparse_code_source_info_from_decoder; one skip_code_source_info_from_decoder;
-        559 => "spec_block_type": one decode_sparse_spec_block_type_from_decoder; one kiwi_skip_uint_value;
+        559 => "spec_block_type": one decode_sparse_spec_block_type_from_decoder; one uint;
         560 => "spec_block_content": one decode_sparse_collaborative_plain_text_from_decoder; one skip_collaborative_plain_text_from_decoder;
-        561 => "spec_code_block_language": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        562 => "spec_block_table_alignment": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        563 => "spec_block_indent_level": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        561 => "spec_code_block_language": one string; one string;
+        562 => "spec_block_table_alignment": one string; one string;
+        563 => "spec_block_indent_level": one int; one int;
         564 => "offset_fill_mask_geometry": repeated decode_sparse_path_from_decoder; repeated skip_path_from_decoder;
-        565 => "placeholder": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        566 => "timing_display_unit": one decode_sparse_variable_timing_display_unit_from_decoder; one kiwi_skip_uint_value;
-        567 => "disable_jit_dst": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        565 => "placeholder": one bool; one bool;
+        566 => "timing_display_unit": one decode_sparse_variable_timing_display_unit_from_decoder; one uint;
+        567 => "disable_jit_dst": one bool; one bool;
         568 => "tools": one decode_sparse_tools_from_decoder; one skip_tools_from_decoder;
         569 => "custom_effects": one decode_sparse_custom_effects_from_decoder; one skip_custom_effects_from_decoder;
         570 => "transform3d": one decode_sparse_transform3d_from_decoder; one skip_transform3d_from_decoder;
         571 => "stroke_data": one decode_sparse_stroke_data_from_decoder; one skip_stroke_data_from_decoder;
         572 => "scene3d": one decode_sparse_scene3d_from_decoder; one skip_scene3d_from_decoder;
         573 => "presentation_outlines": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
-        574 => "stack_layout_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        575 => "spec_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        576 => "spec_width": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        577 => "spec_height": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        574 => "stack_layout_version": one uint; one uint;
+        575 => "spec_image_hash": one string; one string;
+        576 => "spec_width": one int; one int;
+        577 => "spec_height": one int; one int;
         578 => "spec_block_table_row_heights": one decode_sparse_table_row_column_size_map_from_decoder; one skip_table_row_column_size_map_from_decoder;
         579 => "spec_block_table_column_widths": one decode_sparse_table_row_column_size_map_from_decoder; one skip_table_row_column_size_map_from_decoder;
         580 => "style_animations": repeated decode_sparse_style_animation_from_decoder; repeated skip_style_animation_from_decoder;
         581 => "partial_paste_annotation": one decode_sparse_partial_paste_annotation_from_decoder; one skip_partial_paste_annotation_from_decoder;
         582 => "style_ids_for_animation": repeated decode_sparse_style_id_for_animation_from_decoder; repeated skip_style_id_for_animation_from_decoder;
         583 => "backing_animation_preset_id": one decode_sparse_animation_preset_id_from_decoder; one skip_animation_preset_id_from_decoder;
-        584 => "placeholder_client_lifecycle_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        585 => "placeholder_invalidate_at": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        584 => "placeholder_client_lifecycle_id": one string; one string;
+        585 => "placeholder_invalidate_at": one int; one int;
         586 => "keyframe_value_ref": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         587 => "transform_origin": one decode_sparse_transform_origin_from_decoder; one skip_transform_origin_from_decoder;
         588 => "custom_tool_artifact_ref": one decode_sparse_custom_tool_artifact_ref_from_decoder; one skip_custom_tool_artifact_ref_from_decoder;
         589 => "code_snapshot_layers": one decode_sparse_code_snapshot_layers_from_decoder; one skip_code_snapshot_layers_from_decoder;
-        590 => "spec_embed_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        590 => "spec_embed_url": one string; one string;
     ]
 }
 
@@ -4812,9 +4838,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "GitRepoRef";
     capacity 4;
     fields [
-        1 => "provider": one decode_sparse_git_repo_ref_provider_from_decoder; one kiwi_skip_uint_value;
-        2 => "git_repo": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "git_ref": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "provider": one decode_sparse_git_repo_ref_provider_from_decoder; one uint;
+        2 => "git_repo": one string; one string;
+        3 => "git_ref": one string; one string;
     ]
 }
 
@@ -4844,10 +4870,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         1 => "paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
         2 => "offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         3 => "layout_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        4 => "device_pixel_ratio": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "device_pixel_ratio": one uint; one uint;
         5 => "canvas_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        6 => "state": one decode_sparse_code_snapshot_state_from_decoder; one kiwi_skip_uint_value;
-        7 => "invalidated_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        6 => "state": one decode_sparse_code_snapshot_state_from_decoder; one uint;
+        7 => "invalidated_at": one uint; one uint;
     ]
 }
 
@@ -4873,8 +4899,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CodeSnapshotLayers";
     capacity 4;
     fields [
-        1 => "state": one decode_sparse_code_snapshot_state_from_decoder; one kiwi_skip_uint_value;
-        2 => "invalidated_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "state": one decode_sparse_code_snapshot_state_from_decoder; one uint;
+        2 => "invalidated_at": one uint; one uint;
         3 => "layers": repeated decode_sparse_code_output_layer_from_decoder; repeated skip_code_output_layer_from_decoder;
     ]
 }
@@ -4888,11 +4914,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CodeBehaviorData";
     capacity 6;
     fields [
-        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "icon": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "node_types": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
-        4 => "category": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "api_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "name": one string; one string;
+        2 => "icon": one string; one string;
+        3 => "node_types": repeated string; repeated string;
+        4 => "category": one string; one string;
+        5 => "api_version": one uint; one uint;
     ]
 }
 
@@ -4905,8 +4931,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CodeExample";
     capacity 3;
     fields [
-        1 => "example_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "code_export_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "example_name": one string; one string;
+        2 => "code_export_name": one string; one string;
     ]
 }
 
@@ -4919,7 +4945,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "UsedMakeLibrary";
     capacity 2;
     fields [
-        1 => "make_library_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "make_library_id": one string; one string;
     ]
 }
 
@@ -4932,24 +4958,24 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CookieBannerText";
     capacity 19;
     fields [
-        1 => "banner_header": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "banner_disclaimer_explicit": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "banner_disclaimer_implicit": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "policy_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "accept_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        6 => "acknowledge_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        7 => "manage_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        8 => "reject_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        9 => "necessary_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        10 => "necessary_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        11 => "analytics_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        12 => "analytics_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        13 => "preferences_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        14 => "preferences_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        15 => "marketing_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        16 => "marketing_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        17 => "save_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        18 => "trigger_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "banner_header": one string; one string;
+        2 => "banner_disclaimer_explicit": one string; one string;
+        3 => "banner_disclaimer_implicit": one string; one string;
+        4 => "policy_label": one string; one string;
+        5 => "accept_text": one string; one string;
+        6 => "acknowledge_text": one string; one string;
+        7 => "manage_text": one string; one string;
+        8 => "reject_text": one string; one string;
+        9 => "necessary_text": one string; one string;
+        10 => "necessary_description": one string; one string;
+        11 => "analytics_text": one string; one string;
+        12 => "analytics_description": one string; one string;
+        13 => "preferences_text": one string; one string;
+        14 => "preferences_description": one string; one string;
+        15 => "marketing_text": one string; one string;
+        16 => "marketing_description": one string; one string;
+        17 => "save_label": one string; one string;
+        18 => "trigger_label": one string; one string;
     ]
 }
 
@@ -4962,17 +4988,17 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CookieBannerSettings";
     capacity 12;
     fields [
-        1 => "enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        2 => "component_type": one decode_sparse_cookie_banner_component_type_from_decoder; one kiwi_skip_uint_value;
-        3 => "x_alignment": one decode_sparse_cookie_x_alignment_from_decoder; one kiwi_skip_uint_value;
-        4 => "y_alignment": one decode_sparse_cookie_y_alignment_from_decoder; one kiwi_skip_uint_value;
-        5 => "trigger_x_alignment": one decode_sparse_cookie_x_alignment_from_decoder; one kiwi_skip_uint_value;
-        6 => "trigger_y_alignment": one decode_sparse_cookie_y_alignment_from_decoder; one kiwi_skip_uint_value;
-        7 => "trigger_component_type": one decode_sparse_trigger_component_type_from_decoder; one kiwi_skip_uint_value;
-        8 => "policy_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "enabled": one bool; one bool;
+        2 => "component_type": one decode_sparse_cookie_banner_component_type_from_decoder; one uint;
+        3 => "x_alignment": one decode_sparse_cookie_x_alignment_from_decoder; one uint;
+        4 => "y_alignment": one decode_sparse_cookie_y_alignment_from_decoder; one uint;
+        5 => "trigger_x_alignment": one decode_sparse_cookie_x_alignment_from_decoder; one uint;
+        6 => "trigger_y_alignment": one decode_sparse_cookie_y_alignment_from_decoder; one uint;
+        7 => "trigger_component_type": one decode_sparse_trigger_component_type_from_decoder; one uint;
+        8 => "policy_url": one string; one string;
         9 => "text": one decode_sparse_cookie_banner_text_from_decoder; one skip_cookie_banner_text_from_decoder;
         10 => "policy_link": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        11 => "locale": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        11 => "locale": one string; one string;
     ]
 }
 
@@ -5027,26 +5053,26 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ResponsiveSetSettings";
     capacity 22;
     fields [
-        1 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "scaling_mode": one decode_sparse_responsive_scaling_mode_from_decoder; one kiwi_skip_uint_value;
-        4 => "scaling_min_font_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "scaling_max_font_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        6 => "scaling_min_layout_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        7 => "scaling_max_layout_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        8 => "lang": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        9 => "favicon_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        10 => "social_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        11 => "google_analytics_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        12 => "block_search_indexing": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        13 => "custom_code_head_start": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        14 => "custom_code_head_end": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        15 => "custom_code_body_start": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        16 => "custom_code_body_end": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "title": one string; one string;
+        2 => "description": one string; one string;
+        3 => "scaling_mode": one decode_sparse_responsive_scaling_mode_from_decoder; one uint;
+        4 => "scaling_min_font_size": one float; one float;
+        5 => "scaling_max_font_size": one float; one float;
+        6 => "scaling_min_layout_width": one float; one float;
+        7 => "scaling_max_layout_width": one float; one float;
+        8 => "lang": one string; one string;
+        9 => "favicon_hash": one string; one string;
+        10 => "social_image_hash": one string; one string;
+        11 => "google_analytics_id": one string; one string;
+        12 => "block_search_indexing": one bool; one bool;
+        13 => "custom_code_head_start": one string; one string;
+        14 => "custom_code_head_end": one string; one string;
+        15 => "custom_code_body_start": one string; one string;
+        16 => "custom_code_body_end": one string; one string;
         17 => "favicon_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         18 => "social_image_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        19 => "add_bypass_links": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        20 => "ignore_reduced_motion": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        19 => "add_bypass_links": one bool; one bool;
+        20 => "ignore_reduced_motion": one bool; one bool;
         21 => "cookie_banner": one decode_sparse_cookie_banner_settings_from_decoder; one skip_cookie_banner_settings_from_decoder;
     ]
 }
@@ -5070,10 +5096,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CMSSelector";
     capacity 5;
     fields [
-        1 => "cms_collection_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "cms_collection_id": one string; one string;
         2 => "filter_criteria": one decode_sparse_cms_filter_critera_from_decoder; one skip_cms_filter_critera_from_decoder;
         3 => "sorts": repeated decode_sparse_cms_selector_sort_from_decoder; repeated skip_cms_selector_sort_from_decoder;
-        4 => "limit": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "limit": one uint; one uint;
     ]
 }
 
@@ -5086,7 +5112,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CMSFilterCritera";
     capacity 3;
     fields [
-        1 => "match_type": one decode_sparse_cms_filter_criteria_match_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "match_type": one decode_sparse_cms_filter_criteria_match_type_from_decoder; one uint;
         2 => "filters": repeated decode_sparse_cms_selector_filter_from_decoder; repeated skip_cms_selector_filter_from_decoder;
     ]
 }
@@ -5110,9 +5136,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CMSSelectorFilter";
     capacity 4;
     fields [
-        1 => "cms_field_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "op": one decode_sparse_cms_selector_filter_operator_from_decoder; one kiwi_skip_uint_value;
-        3 => "comparison_value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "cms_field_id": one string; one string;
+        2 => "op": one decode_sparse_cms_selector_filter_operator_from_decoder; one uint;
+        3 => "comparison_value": one string; one string;
     ]
 }
 
@@ -5134,8 +5160,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CMSSelectorSort";
     capacity 3;
     fields [
-        1 => "cms_field_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "order_by": one decode_sparse_cms_field_order_by_from_decoder; one kiwi_skip_uint_value;
+        1 => "cms_field_id": one string; one string;
+        2 => "order_by": one decode_sparse_cms_field_order_by_from_decoder; one uint;
     ]
 }
 
@@ -5171,8 +5197,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CMSConsumptionMapEntry";
     capacity 3;
     fields [
-        1 => "consumption_field": one decode_sparse_cms_consumption_field_from_decoder; one kiwi_skip_uint_value;
-        2 => "cms_field_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "consumption_field": one decode_sparse_cms_consumption_field_from_decoder; one uint;
+        2 => "cms_field_id": one string; one string;
     ]
 }
 
@@ -5208,7 +5234,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CMSRichTextStyleEntry";
     capacity 3;
     fields [
-        1 => "style_class": one decode_sparse_cms_rich_text_style_class_from_decoder; one kiwi_skip_uint_value;
+        1 => "style_class": one decode_sparse_cms_rich_text_style_class_from_decoder; one uint;
         2 => "text_descriptor": one decode_sparse_cms_rich_text_descriptor_from_decoder; one skip_cms_rich_text_descriptor_from_decoder;
     ]
 }
@@ -5332,8 +5358,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "HubFileAttribution";
     capacity 3;
     fields [
-        1 => "hub_file_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "hub_file_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "hub_file_id": one string; one string;
+        2 => "hub_file_name": one string; one string;
     ]
 }
 
@@ -5346,11 +5372,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ManagedStringData";
     capacity 6;
     fields [
-        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "context": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "locale": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "key": one string; one string;
+        2 => "context": one string; one string;
+        3 => "locale": one string; one string;
         4 => "content": one decode_sparse_managed_string_node_from_decoder; one skip_managed_string_node_from_decoder;
-        5 => "content_schema": one decode_sparse_managed_string_content_schema_from_decoder; one kiwi_skip_uint_value;
+        5 => "content_schema": one decode_sparse_managed_string_content_schema_from_decoder; one uint;
     ]
 }
 
@@ -5384,7 +5410,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ManagedStringNode";
     capacity 6;
     fields [
-        1 => "type": one decode_sparse_managed_string_node_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_managed_string_node_type_from_decoder; one uint;
         2 => "text_node_data": one decode_sparse_managed_string_text_node_data_from_decoder; one skip_managed_string_text_node_data_from_decoder;
         3 => "concatenate_node_data": one decode_sparse_managed_string_concatenate_ast_node_data_from_decoder; one skip_managed_string_concatenate_ast_node_data_from_decoder;
         4 => "plural_node_data": one decode_sparse_managed_string_plural_ast_node_data_from_decoder; one skip_managed_string_plural_ast_node_data_from_decoder;
@@ -5401,7 +5427,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ManagedStringTextNodeData";
     capacity 2;
     fields [
-        1 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "value": one string; one string;
     ]
 }
 
@@ -5441,7 +5467,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ManagedStringPluralAstNodeData";
     capacity 3;
     fields [
-        1 => "identifier": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "identifier": one string; one string;
         2 => "conditions": repeated decode_sparse_managed_string_plural_type_map_entry_from_decoder; repeated skip_managed_string_plural_type_map_entry_from_decoder;
     ]
 }
@@ -5455,7 +5481,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ManagedStringPluralTypeMapEntry";
     capacity 3;
     fields [
-        1 => "key": one decode_sparse_managed_string_plural_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "key": one decode_sparse_managed_string_plural_type_from_decoder; one uint;
         2 => "value": one decode_sparse_managed_string_node_from_decoder; one skip_managed_string_node_from_decoder;
     ]
 }
@@ -5481,9 +5507,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ManagedStringPlaceholderAstNodeData";
     capacity 4;
     fields [
-        1 => "identifier": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "format_type": one decode_sparse_managed_string_format_type_from_decoder; one kiwi_skip_uint_value;
-        3 => "format_pattern": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "identifier": one string; one string;
+        2 => "format_type": one decode_sparse_managed_string_format_type_from_decoder; one uint;
+        3 => "format_pattern": one string; one string;
     ]
 }
 
@@ -5509,12 +5535,12 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "VideoPlayback";
     capacity 7;
     fields [
-        1 => "autoplay": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        2 => "media_loop": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        3 => "muted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        4 => "show_controls": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "start_time_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        6 => "end_time_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "autoplay": one bool; one bool;
+        2 => "media_loop": one bool; one bool;
+        3 => "muted": one bool; one bool;
+        4 => "show_controls": one bool; one bool;
+        5 => "start_time_ms": one uint; one uint;
+        6 => "end_time_ms": one uint; one uint;
     ]
 }
 
@@ -5559,10 +5585,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "fill_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
         2 => "stroke_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
-        3 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "are_fill_paints_set": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "are_stroke_paints_set": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        6 => "is_opacity_set": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "opacity": one float; one float;
+        4 => "are_fill_paints_set": one bool; one bool;
+        5 => "are_stroke_paints_set": one bool; one bool;
+        6 => "is_opacity_set": one bool; one bool;
     ]
 }
 
@@ -5575,8 +5601,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "WidgetDerivedSubtreeCursor";
     capacity 3;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "counter": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "session_id": one uint; one uint;
+        2 => "counter": one uint; one uint;
     ]
 }
 
@@ -5602,8 +5628,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "MultiplayerMapEntry";
     capacity 3;
     fields [
-        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "key": one string; one string;
+        2 => "value": one string; one string;
     ]
 }
 
@@ -5629,9 +5655,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "VariableDataMapEntry";
     capacity 4;
     fields [
-        1 => "node_field": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "node_field": one uint; one uint;
         2 => "variable_data": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        3 => "variable_field": one decode_sparse_variable_field_from_decoder; one kiwi_skip_uint_value;
+        3 => "variable_field": one decode_sparse_variable_field_from_decoder; one uint;
     ]
 }
 
@@ -5759,8 +5785,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CodeSyntaxMapEntry";
     capacity 3;
     fields [
-        1 => "platform": one decode_sparse_code_syntax_platform_from_decoder; one kiwi_skip_uint_value;
-        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "platform": one decode_sparse_code_syntax_platform_from_decoder; one uint;
+        2 => "value": one string; one string;
     ]
 }
 
@@ -5788,8 +5814,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "row_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         2 => "col_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        3 => "row_span": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        4 => "col_span": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        3 => "row_span": one int; one int;
+        4 => "col_span": one int; one int;
     ]
 }
 
@@ -5816,7 +5842,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "position": one string; one string;
     ]
 }
 
@@ -5843,7 +5869,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "position": one string; one string;
     ]
 }
 
@@ -5924,8 +5950,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "GridTrackSizingFunction";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_grid_track_sizing_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "type": one decode_sparse_grid_track_sizing_type_from_decoder; one uint;
+        2 => "value": one float; one float;
     ]
 }
 
@@ -5963,7 +5989,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "size": one float; one float;
     ]
 }
 
@@ -5990,7 +6016,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "position": one string; one string;
     ]
 }
 
@@ -6040,8 +6066,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AgendaMetadata";
     capacity 7;
     fields [
-        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "type": one decode_sparse_agenda_item_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "name": one string; one string;
+        2 => "type": one decode_sparse_agenda_item_type_from_decoder; one uint;
         3 => "target_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         4 => "timer_info": one decode_sparse_agenda_timer_info_from_decoder; one skip_agenda_timer_info_from_decoder;
         5 => "vote_info": one decode_sparse_agenda_vote_info_from_decoder; one skip_agenda_vote_info_from_decoder;
@@ -6058,7 +6084,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AgendaTimerInfo";
     capacity 2;
     fields [
-        1 => "timer_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "timer_length": one uint; one uint;
     ]
 }
 
@@ -6071,7 +6097,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AgendaVoteInfo";
     capacity 2;
     fields [
-        1 => "vote_count": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "vote_count": one uint; one uint;
     ]
 }
 
@@ -6084,8 +6110,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AgendaMusicInfo";
     capacity 3;
     fields [
-        1 => "song_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "start_time_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "song_id": one string; one string;
+        2 => "start_time_ms": one uint; one uint;
     ]
 }
 
@@ -6130,11 +6156,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ComponentPropRef";
     capacity 6;
     fields [
-        1 => "node_field": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "node_field": one uint; one uint;
         2 => "def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        3 => "zombie_fallback_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "component_prop_node_field": one decode_sparse_component_prop_node_field_from_decoder; one kiwi_skip_uint_value;
-        5 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "zombie_fallback_name": one string; one string;
+        4 => "component_prop_node_field": one decode_sparse_component_prop_node_field_from_decoder; one uint;
+        5 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -6177,16 +6203,16 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 14;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "name": one string; one string;
         3 => "initial_value": one decode_sparse_component_prop_value_from_decoder; one skip_component_prop_value_from_decoder;
-        4 => "sort_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "sort_position": one string; one string;
         5 => "parent_prop_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        6 => "type": one decode_sparse_component_prop_type_from_decoder; one kiwi_skip_uint_value;
-        7 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "type": one decode_sparse_component_prop_type_from_decoder; one uint;
+        7 => "is_deleted": one bool; one bool;
         8 => "preferred_values": one decode_sparse_component_prop_preferred_values_from_decoder; one skip_component_prop_preferred_values_from_decoder;
         9 => "var_value": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         10 => "parameter_config": one decode_sparse_parameter_config_from_decoder; one skip_parameter_config_from_decoder;
-        11 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        11 => "description": one string; one string;
         12 => "slot_prop_config": one decode_sparse_slot_prop_config_from_decoder; one skip_slot_prop_config_from_decoder;
         13 => "color_array_config": one decode_sparse_color_array_config_from_decoder; one skip_color_array_config_from_decoder;
     ]
@@ -6201,10 +6227,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ComponentPropValue";
     capacity 13;
     fields [
-        1 => "bool_value": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "bool_value": one bool; one bool;
         2 => "text_value": one decode_sparse_text_data_from_decoder; one skip_text_data_from_decoder;
         3 => "guid_value": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        4 => "float_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "float_value": one float; one float;
         5 => "easing_data": one decode_sparse_easing_data_from_decoder; one skip_easing_data_from_decoder;
         6 => "vector_value": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         7 => "line_value": one decode_sparse_line_from_decoder; one skip_line_from_decoder;
@@ -6225,10 +6251,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TimelineData";
     capacity 5;
     fields [
-        1 => "duration_us": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
-        2 => "default_timeline": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "duration_us": one uint64; one uint64;
+        2 => "default_timeline": one bool; one bool;
         3 => "parent_timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        4 => "playback_style": one decode_sparse_playback_style_from_decoder; one kiwi_skip_uint_value;
+        4 => "playback_style": one decode_sparse_playback_style_from_decoder; one uint;
     ]
 }
 
@@ -6282,8 +6308,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TimelineBindingData";
     capacity 3;
     fields [
-        1 => "offset_us": one kiwi_sparse_int64_value; one kiwi_skip_int64_value;
-        2 => "disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "offset_us": one int64; one int64;
+        2 => "disabled": one bool; one bool;
     ]
 }
 
@@ -6348,7 +6374,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ComponentPropPreferredValues";
     capacity 3;
     fields [
-        1 => "string_values": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
+        1 => "string_values": repeated string; repeated string;
         2 => "instance_swap_values": repeated decode_sparse_instance_swap_preferred_value_from_decoder; repeated skip_instance_swap_preferred_value_from_decoder;
     ]
 }
@@ -6363,7 +6389,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 14;
     fields [
         1 => "number_prop_config": one decode_sparse_number_prop_config_from_decoder; one skip_number_prop_config_from_decoder;
-        2 => "control": one decode_sparse_parameter_config_control_from_decoder; one kiwi_skip_uint_value;
+        2 => "control": one decode_sparse_parameter_config_control_from_decoder; one uint;
         3 => "slider_config": one decode_sparse_slider_config_from_decoder; one skip_slider_config_from_decoder;
         4 => "label": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         5 => "input_config": one decode_sparse_input_config_from_decoder; one skip_input_config_from_decoder;
@@ -6374,7 +6400,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         10 => "rotation3_d_config": one decode_sparse_rotation3_d_config_from_decoder; one skip_rotation3_d_config_from_decoder;
         11 => "circle_point_config": one decode_sparse_circle_point_config_from_decoder; one skip_circle_point_config_from_decoder;
         12 => "color_point_config": one decode_sparse_color_point_config_from_decoder; one skip_color_point_config_from_decoder;
-        13 => "show_divider_above": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        13 => "show_divider_above": one bool; one bool;
     ]
 }
 
@@ -6441,8 +6467,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PointConfig";
     capacity 3;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
-        2 => "unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one uint;
+        2 => "unit": one decode_sparse_number_units_from_decoder; one uint;
     ]
 }
 
@@ -6469,8 +6495,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "LineConfig";
     capacity 3;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
-        2 => "unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one uint;
+        2 => "unit": one decode_sparse_number_units_from_decoder; one uint;
     ]
 }
 
@@ -6484,7 +6510,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "center": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        2 => "radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "radius": one float; one float;
     ]
 }
 
@@ -6497,11 +6523,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PointRadiusConfig";
     capacity 6;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
-        2 => "position_unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
-        3 => "radius_unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
-        4 => "min_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "max_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one uint;
+        2 => "position_unit": one decode_sparse_number_units_from_decoder; one uint;
+        3 => "radius_unit": one decode_sparse_number_units_from_decoder; one uint;
+        4 => "min_radius": one float; one float;
+        5 => "max_radius": one float; one float;
     ]
 }
 
@@ -6514,10 +6540,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Rotation3D";
     capacity 5;
     fields [
-        1 => "x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "z": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "translate_z": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "x": one float; one float;
+        2 => "y": one float; one float;
+        3 => "z": one float; one float;
+        4 => "translate_z": one float; one float;
     ]
 }
 
@@ -6530,7 +6556,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Rotation3DConfig";
     capacity 2;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one uint;
     ]
 }
 
@@ -6544,8 +6570,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "center": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        2 => "radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "radius": one float; one float;
+        3 => "angle": one float; one float;
     ]
 }
 
@@ -6558,11 +6584,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CirclePointConfig";
     capacity 6;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
-        2 => "position_unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
-        3 => "radius_unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
-        4 => "min_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        5 => "max_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one uint;
+        2 => "position_unit": one decode_sparse_number_units_from_decoder; one uint;
+        3 => "radius_unit": one decode_sparse_number_units_from_decoder; one uint;
+        4 => "min_radius": one float; one float;
+        5 => "max_radius": one float; one float;
     ]
 }
 
@@ -6589,8 +6615,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ColorPointConfig";
     capacity 3;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
-        2 => "unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one uint;
+        2 => "unit": one decode_sparse_number_units_from_decoder; one uint;
     ]
 }
 
@@ -6616,7 +6642,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "GradientStop";
     capacity 3;
     fields [
-        1 => "position": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "position": one float; one float;
         2 => "color": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
@@ -6631,7 +6657,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "value": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        2 => "label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "label": one string; one string;
     ]
 }
 
@@ -6657,8 +6683,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ColorArrayConfig";
     capacity 3;
     fields [
-        1 => "min_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "max_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "min_length": one uint; one uint;
+        2 => "max_length": one uint; one uint;
     ]
 }
 
@@ -6671,11 +6697,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SlotPropConfig";
     capacity 6;
     fields [
-        1 => "stretch_child_on_insert": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        2 => "display_by_default": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        3 => "min_children": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        4 => "max_children": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        5 => "allow_preferred_values_only": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "stretch_child_on_insert": one bool; one bool;
+        2 => "display_by_default": one bool; one bool;
+        3 => "min_children": one uint; one uint;
+        4 => "max_children": one uint; one uint;
+        5 => "allow_preferred_values_only": one bool; one bool;
     ]
 }
 
@@ -6688,7 +6714,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "NumberPropConfig";
     capacity 5;
     fields [
-        1 => "control": one decode_sparse_parameter_config_control_from_decoder; one kiwi_skip_uint_value;
+        1 => "control": one decode_sparse_parameter_config_control_from_decoder; one uint;
         2 => "min": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         3 => "max": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         4 => "step": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
@@ -6704,8 +6730,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "InstanceSwapPreferredValue";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_instance_swap_preferred_value_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "type": one decode_sparse_instance_swap_preferred_value_type_from_decoder; one uint;
+        2 => "key": one string; one string;
     ]
 }
 
@@ -6752,11 +6778,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "WidgetMetadata";
     capacity 6;
     fields [
-        1 => "plugin_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "plugin_version_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "widget_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "is_resizable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "is_rotatable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "plugin_id": one string; one string;
+        2 => "plugin_version_id": one string; one string;
+        3 => "widget_name": one string; one string;
+        4 => "is_resizable": one bool; one bool;
+        5 => "is_rotatable": one bool; one bool;
     ]
 }
 
@@ -6784,8 +6810,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "WidgetPropertyMenuSelectorOption";
     capacity 3;
     fields [
-        1 => "option": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "tooltip": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "option": one string; one string;
+        2 => "tooltip": one string; one string;
     ]
 }
 
@@ -6808,15 +6834,15 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "WidgetPropertyMenuItem";
     capacity 10;
     fields [
-        1 => "property_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "tooltip": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "item_type": one decode_sparse_widget_property_menu_item_type_from_decoder; one kiwi_skip_uint_value;
-        4 => "icon": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "property_name": one string; one string;
+        2 => "tooltip": one string; one string;
+        3 => "item_type": one decode_sparse_widget_property_menu_item_type_from_decoder; one uint;
+        4 => "icon": one string; one string;
         5 => "options": repeated decode_sparse_widget_property_menu_selector_option_from_decoder; repeated skip_widget_property_menu_selector_option_from_decoder;
-        6 => "selected_option": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        7 => "is_toggled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        8 => "href": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        9 => "allow_custom_color": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "selected_option": one string; one string;
+        7 => "is_toggled": one bool; one bool;
+        8 => "href": one string; one string;
+        9 => "allow_custom_color": one bool; one bool;
     ]
 }
 
@@ -6907,7 +6933,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "InternalDataForTest";
     capacity 2;
     fields [
-        1 => "test_field_a": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        1 => "test_field_a": one int; one int;
     ]
 }
 
@@ -6920,8 +6946,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "StateGroupPropertyValueOrder";
     capacity 3;
     fields [
-        1 => "property": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "values": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
+        1 => "property": one string; one string;
+        2 => "values": repeated string; repeated string;
     ]
 }
 
@@ -6946,9 +6972,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PartialPasteAnnotation";
     capacity 4;
     fields [
-        1 => "is_partial": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        2 => "annotated_at": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
-        3 => "error_state": one decode_sparse_backfill_error_from_decoder; one kiwi_skip_uint_value;
+        1 => "is_partial": one bool; one bool;
+        2 => "annotated_at": one uint64; one uint64;
+        3 => "error_state": one decode_sparse_backfill_error_from_decoder; one uint;
     ]
 }
 
@@ -6962,7 +6988,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "prop_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "value": one string; one string;
     ]
 }
 
@@ -6975,10 +7001,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TextListData";
     capacity 5;
     fields [
-        1 => "list_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        2 => "bullet_type": one decode_sparse_bullet_type_from_decoder; one kiwi_skip_uint_value;
-        3 => "indentation_level": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        4 => "line_number": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        1 => "list_id": one int; one int;
+        2 => "bullet_type": one decode_sparse_bullet_type_from_decoder; one uint;
+        3 => "indentation_level": one int; one int;
+        4 => "line_number": one int; one int;
     ]
 }
 
@@ -7003,16 +7029,16 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TextLineData";
     capacity 11;
     fields [
-        1 => "line_type": one decode_sparse_line_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "indentation_level": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        3 => "directionality": one decode_sparse_directionality_from_decoder; one kiwi_skip_uint_value;
-        4 => "directionality_intent": one decode_sparse_directionality_intent_from_decoder; one kiwi_skip_uint_value;
-        5 => "downgrade_style_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        6 => "consistency_style_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        7 => "list_start_offset": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        8 => "is_first_line_of_list": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        9 => "source_directionality": one decode_sparse_source_directionality_from_decoder; one kiwi_skip_uint_value;
-        10 => "style_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        1 => "line_type": one decode_sparse_line_type_from_decoder; one uint;
+        2 => "indentation_level": one int; one int;
+        3 => "directionality": one decode_sparse_directionality_from_decoder; one uint;
+        4 => "directionality_intent": one decode_sparse_directionality_intent_from_decoder; one uint;
+        5 => "downgrade_style_id": one int; one int;
+        6 => "consistency_style_id": one int; one int;
+        7 => "list_start_offset": one int; one int;
+        8 => "is_first_line_of_list": one bool; one bool;
+        9 => "source_directionality": one decode_sparse_source_directionality_from_decoder; one uint;
+        10 => "style_id": one int; one int;
     ]
 }
 
@@ -7025,7 +7051,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "DerivedTextLineData";
     capacity 2;
     fields [
-        1 => "directionality": one decode_sparse_directionality_from_decoder; one kiwi_skip_uint_value;
+        1 => "directionality": one decode_sparse_directionality_from_decoder; one uint;
     ]
 }
 
@@ -7085,8 +7111,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         2 => "event": one decode_sparse_prototype_event_from_decoder; one skip_prototype_event_from_decoder;
         3 => "actions": repeated decode_sparse_prototype_action_from_decoder; repeated skip_prototype_action_from_decoder;
-        4 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "state_management_version": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        4 => "is_deleted": one bool; one bool;
+        5 => "state_management_version": one int; one int;
     ]
 }
 
@@ -7099,13 +7125,13 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PrototypeEvent";
     capacity 8;
     fields [
-        1 => "interaction_type": one decode_sparse_interaction_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "interaction_maintained": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        3 => "interaction_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "interaction_type": one decode_sparse_interaction_type_from_decoder; one uint;
+        2 => "interaction_maintained": one bool; one bool;
+        3 => "interaction_duration": one float; one float;
         4 => "key_trigger": one decode_sparse_key_trigger_from_decoder; one skip_key_trigger_from_decoder;
-        5 => "voice_event_phrase": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        6 => "transition_timeout": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        7 => "media_hit_time": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "voice_event_phrase": one string; one string;
+        6 => "transition_timeout": one float; one float;
+        7 => "media_hit_time": one float; one float;
     ]
 }
 
@@ -7147,47 +7173,47 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 43;
     fields [
         1 => "transition_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "transition_type": one decode_sparse_transition_type_from_decoder; one kiwi_skip_uint_value;
-        3 => "transition_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "easing_type": one decode_sparse_easing_type_from_decoder; one kiwi_skip_uint_value;
-        5 => "transition_timeout": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        6 => "transition_should_smart_animate": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        7 => "connection_type": one decode_sparse_connection_type_from_decoder; one kiwi_skip_uint_value;
-        8 => "connection_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "transition_type": one decode_sparse_transition_type_from_decoder; one uint;
+        3 => "transition_duration": one float; one float;
+        4 => "easing_type": one decode_sparse_easing_type_from_decoder; one uint;
+        5 => "transition_timeout": one float; one float;
+        6 => "transition_should_smart_animate": one bool; one bool;
+        7 => "connection_type": one decode_sparse_connection_type_from_decoder; one uint;
+        8 => "connection_url": one string; one string;
         9 => "overlay_relative_position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        10 => "navigation_type": one decode_sparse_navigation_type_from_decoder; one kiwi_skip_uint_value;
-        11 => "transition_preserve_scroll": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        12 => "easing_function": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        10 => "navigation_type": one decode_sparse_navigation_type_from_decoder; one uint;
+        11 => "transition_preserve_scroll": one bool; one bool;
+        12 => "easing_function": repeated float; repeated float;
         13 => "extra_scroll_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         14 => "target_variable_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         15 => "target_variable_value": one decode_sparse_variable_any_value_from_decoder; one skip_variable_any_value_from_decoder;
-        16 => "media_action": one decode_sparse_media_action_from_decoder; one kiwi_skip_uint_value;
-        17 => "transition_reset_video_position": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        18 => "open_url_in_new_tab": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        16 => "media_action": one decode_sparse_media_action_from_decoder; one uint;
+        17 => "transition_reset_video_position": one bool; one bool;
+        18 => "open_url_in_new_tab": one bool; one bool;
         19 => "target_variable": one decode_sparse_prototype_variable_target_from_decoder; one skip_prototype_variable_target_from_decoder;
         20 => "target_variable_data": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        21 => "media_skip_to_time": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        22 => "media_skip_by_amount": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        21 => "media_skip_to_time": one float; one float;
+        22 => "media_skip_by_amount": one float; one float;
         23 => "conditions": repeated decode_sparse_variable_data_from_decoder; repeated skip_variable_data_from_decoder;
         24 => "conditional_actions": repeated decode_sparse_conditional_actions_from_decoder; repeated skip_conditional_actions_from_decoder;
-        25 => "transition_reset_scroll_position": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        26 => "transition_reset_interactive_components": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        25 => "transition_reset_scroll_position": one bool; one bool;
+        26 => "transition_reset_interactive_components": one bool; one bool;
         27 => "target_variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
         28 => "target_variable_mode_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        29 => "target_variable_set_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        30 => "animation_type": one decode_sparse_animation_type_from_decoder; one kiwi_skip_uint_value;
+        29 => "target_variable_set_key": one string; one string;
+        30 => "animation_type": one decode_sparse_animation_type_from_decoder; one uint;
         31 => "animation_target_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        32 => "animation_phase": one decode_sparse_animation_phase_from_decoder; one kiwi_skip_uint_value;
+        32 => "animation_phase": one decode_sparse_animation_phase_from_decoder; one uint;
         33 => "animation_state": one decode_sparse_animation_state_from_decoder; one skip_animation_state_from_decoder;
         34 => "link_param": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         35 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder; one skip_cms_item_page_target_from_decoder;
-        36 => "media_playback_rate": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        37 => "simple_link": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        36 => "media_playback_rate": one float; one float;
+        37 => "simple_link": one bool; one bool;
         38 => "variable_set_target_extension_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
-        39 => "animation_timeline_action": one decode_sparse_animation_timeline_action_from_decoder; one kiwi_skip_uint_value;
-        40 => "animation_skip_to_time": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        39 => "animation_timeline_action": one decode_sparse_animation_timeline_action_from_decoder; one uint;
+        40 => "animation_skip_to_time": one float; one float;
         41 => "animation_timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        42 => "transition_overrides_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        42 => "transition_overrides_enabled": one bool; one bool;
     ]
 }
 
@@ -7224,7 +7250,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AnimationState";
     capacity 3;
     fields [
-        1 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "opacity": one float; one float;
         2 => "transform": one decode_sparse_matrix_from_decoder; one skip_matrix_from_decoder;
     ]
 }
@@ -7238,9 +7264,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PrototypeStartingPoint";
     capacity 4;
     fields [
-        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "name": one string; one string;
+        2 => "description": one string; one string;
+        3 => "position": one string; one string;
     ]
 }
 
@@ -7266,8 +7292,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "KeyTrigger";
     capacity 3;
     fields [
-        1 => "key_codes": repeated kiwi_sparse_int_value; repeated kiwi_skip_int_value;
-        2 => "trigger_device": one decode_sparse_trigger_device_from_decoder; one kiwi_skip_uint_value;
+        1 => "key_codes": repeated int; repeated int;
+        2 => "trigger_device": one decode_sparse_trigger_device_from_decoder; one uint;
     ]
 }
 
@@ -7280,9 +7306,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Hyperlink";
     capacity 5;
     fields [
-        1 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "url": one string; one string;
         2 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        3 => "open_in_new_tab": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "open_in_new_tab": one bool; one bool;
         4 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder; one skip_cms_item_page_target_from_decoder;
     ]
 }
@@ -7297,8 +7323,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "cms_item_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "field_schema_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "cms_item_id": one string; one string;
+        3 => "field_schema_id": one string; one string;
     ]
 }
 
@@ -7323,13 +7349,13 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 9;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "mentioned_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "mentioned_by_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "source": one decode_sparse_mention_source_from_decoder; one kiwi_skip_uint_value;
-        6 => "mentioned_user_id_int": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
-        7 => "mentioned_by_user_id_int": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
-        8 => "mentioned_user_group_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "mentioned_user_id": one string; one string;
+        3 => "mentioned_by_user_id": one string; one string;
+        4 => "file_key": one string; one string;
+        5 => "source": one decode_sparse_mention_source_from_decoder; one uint;
+        6 => "mentioned_user_id_int": one uint64; one uint64;
+        7 => "mentioned_by_user_id_int": one uint64; one uint64;
+        8 => "mentioned_user_group_id": one string; one string;
     ]
 }
 
@@ -7342,20 +7368,20 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "EmbedData";
     capacity 15;
     fields [
-        1 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "src_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "thumbnail_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        6 => "height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        7 => "embed_type": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        8 => "thumbnail_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        9 => "favicon_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        10 => "provider": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        11 => "original_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        12 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        13 => "embed_version_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        14 => "is_published_site": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "url": one string; one string;
+        2 => "src_url": one string; one string;
+        3 => "title": one string; one string;
+        4 => "thumbnail_url": one string; one string;
+        5 => "width": one float; one float;
+        6 => "height": one float; one float;
+        7 => "embed_type": one string; one string;
+        8 => "thumbnail_image_hash": one string; one string;
+        9 => "favicon_image_hash": one string; one string;
+        10 => "provider": one string; one string;
+        11 => "original_text": one string; one string;
+        12 => "description": one string; one string;
+        13 => "embed_version_id": one string; one string;
+        14 => "is_published_site": one bool; one bool;
     ]
 }
 
@@ -7368,9 +7394,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "StampData";
     capacity 4;
     fields [
-        1 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "voting_session_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "stamped_by_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "user_id": one string; one string;
+        2 => "voting_session_id": one string; one string;
+        3 => "stamped_by_user_id": one string; one string;
     ]
 }
 
@@ -7383,14 +7409,14 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "LinkPreviewData";
     capacity 9;
     fields [
-        1 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "provider": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "thumbnail_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        6 => "favicon_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        7 => "thumbnail_image_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        8 => "thumbnail_image_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "url": one string; one string;
+        2 => "title": one string; one string;
+        3 => "provider": one string; one string;
+        4 => "description": one string; one string;
+        5 => "thumbnail_image_hash": one string; one string;
+        6 => "favicon_image_hash": one string; one string;
+        7 => "thumbnail_image_width": one float; one float;
+        8 => "thumbnail_image_height": one float; one float;
     ]
 }
 
@@ -7404,8 +7430,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 5;
     fields [
         1 => "canvas_space_bounds": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
-        2 => "pixel_preview": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        3 => "pixel_density": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "pixel_preview": one bool; one bool;
+        3 => "pixel_density": one float; one float;
         4 => "canvas_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
@@ -7419,11 +7445,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Mouse";
     capacity 6;
     fields [
-        1 => "cursor": one decode_sparse_mouse_cursor_from_decoder; one kiwi_skip_uint_value;
+        1 => "cursor": one decode_sparse_mouse_cursor_from_decoder; one uint;
         2 => "canvas_space_location": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
         3 => "canvas_space_selection_box": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
         4 => "canvas_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        5 => "cursor_hidden_reason": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        5 => "cursor_hidden_reason": one uint; one uint;
     ]
 }
 
@@ -7491,9 +7517,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 5;
     fields [
         1 => "node_for_finding_topmost_screen_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "target_variable_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "target_variable_data": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "resolved_variable_modes": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "target_variable_id": one string; one string;
+        3 => "target_variable_data": one string; one string;
+        4 => "resolved_variable_modes": one string; one string;
     ]
 }
 
@@ -7507,8 +7533,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 5;
     fields [
         1 => "node_for_finding_topmost_screen_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "target_variable_set_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "target_variable_mode_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "target_variable_set_key": one string; one string;
+        3 => "target_variable_mode_id": one string; one string;
         4 => "target_variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
     ]
 }
@@ -7523,10 +7549,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 6;
     fields [
         1 => "target_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "is_playing": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        3 => "is_playing_sound": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        4 => "current_times": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
-        5 => "action_taken_timestamp": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "is_playing": one bool; one bool;
+        3 => "is_playing_sound": one bool; one bool;
+        4 => "current_times": repeated uint; repeated uint;
+        5 => "action_taken_timestamp": one uint; one uint;
     ]
 }
 
@@ -7540,7 +7566,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "session_id": one uint; one uint;
     ]
 }
 
@@ -7581,8 +7607,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         2 => "new_state": one decode_sparse_presented_state_from_decoder; one skip_presented_state_from_decoder;
         3 => "hotspot_blueprint_id": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
         4 => "interaction_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        5 => "is_hotspot_in_new_presented_state": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        6 => "direction": one decode_sparse_transition_direction_from_decoder; one kiwi_skip_uint_value;
+        5 => "is_hotspot_in_new_presented_state": one bool; one bool;
+        6 => "direction": one decode_sparse_transition_direction_from_decoder; one uint;
         7 => "instance_stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
     ]
 }
@@ -7600,7 +7626,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         2 => "interaction_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         3 => "hotspot_stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
         4 => "instance_stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
-        5 => "phase": one decode_sparse_playback_change_phase_from_decoder; one kiwi_skip_uint_value;
+        5 => "phase": one decode_sparse_playback_change_phase_from_decoder; one uint;
     ]
 }
 
@@ -7658,9 +7684,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PlaybackChangeKeyframe";
     capacity 4;
     fields [
-        1 => "phase": one decode_sparse_playback_change_phase_from_decoder; one kiwi_skip_uint_value;
-        2 => "progress": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "timestamp": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "phase": one decode_sparse_playback_change_phase_from_decoder; one uint;
+        2 => "progress": one float; one float;
+        3 => "timestamp": one float; one float;
     ]
 }
 
@@ -7676,7 +7702,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         1 => "stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
         2 => "last_top_level_change": one decode_sparse_top_level_playback_change_from_decoder; one skip_top_level_playback_change_from_decoder;
         3 => "last_top_level_change_status": one decode_sparse_playback_change_keyframe_from_decoder; one skip_playback_change_keyframe_from_decoder;
-        4 => "timestamp": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "timestamp": one float; one float;
     ]
 }
 
@@ -7690,7 +7716,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "blueprint_id": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
-        2 => "overlay_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "overlay_index": one uint; one uint;
         3 => "scroll_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
     ]
 }
@@ -7707,9 +7733,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         1 => "last_top_level_change": one decode_sparse_top_level_playback_change_from_decoder; one skip_top_level_playback_change_from_decoder;
         2 => "last_top_level_change_status": one decode_sparse_playback_change_keyframe_from_decoder; one skip_playback_change_keyframe_from_decoder;
         3 => "scroll_mappings": repeated decode_sparse_scroll_mapping_from_decoder; repeated skip_scroll_mapping_from_decoder;
-        4 => "timestamp": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "timestamp": one float; one float;
         5 => "pointer_location": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        6 => "is_top_level_frame_change": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "is_top_level_frame_change": one bool; one bool;
         7 => "state_mappings": repeated decode_sparse_state_mapping_from_decoder; repeated skip_state_mapping_from_decoder;
     ]
 }
@@ -7723,8 +7749,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ChatMessage";
     capacity 3;
     fields [
-        1 => "text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "previous_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "text": one string; one string;
+        2 => "previous_text": one string; one string;
     ]
 }
 
@@ -7737,7 +7763,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "VoiceMetadata";
     capacity 2;
     fields [
-        1 => "connected_call_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "connected_call_id": one string; one string;
     ]
 }
 
@@ -7750,8 +7776,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AprilFunCursor";
     capacity 3;
     fields [
-        1 => "id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "trail_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "id": one string; one string;
+        2 => "trail_enabled": one bool; one bool;
     ]
 }
 
@@ -7764,8 +7790,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AprilFunFigPal";
     capacity 3;
     fields [
-        1 => "customization": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "customization": one string; one string;
+        2 => "name": one string; one string;
     ]
 }
 
@@ -7813,9 +7839,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AgentInfo";
     capacity 4;
     fields [
-        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "logo": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "oauth_client_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "name": one string; one string;
+        2 => "logo": one string; one string;
+        3 => "oauth_client_id": one string; one string;
     ]
 }
 
@@ -7828,51 +7854,51 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "UserChange";
     capacity 47;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "connected": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        3 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "session_id": one uint; one uint;
+        2 => "connected": one bool; one bool;
+        3 => "name": one string; one string;
         4 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
-        5 => "image_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "image_url": one string; one string;
         6 => "viewport": one decode_sparse_viewport_from_decoder; one skip_viewport_from_decoder;
         7 => "mouse": one decode_sparse_mouse_from_decoder; one skip_mouse_from_decoder;
         8 => "selection": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
-        9 => "observing": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
-        10 => "device_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        9 => "observing": repeated uint; repeated uint;
+        10 => "device_name": one string; one string;
         11 => "recent_clicks": repeated decode_sparse_click_from_decoder; repeated skip_click_from_decoder;
         12 => "scroll_positions": repeated decode_sparse_scroll_position_from_decoder; repeated skip_scroll_position_from_decoder;
         13 => "triggered_overlays": repeated decode_sparse_triggered_overlay_from_decoder; repeated skip_triggered_overlay_from_decoder;
-        14 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        14 => "user_id": one string; one string;
         15 => "last_triggered_hotspot": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         16 => "last_triggered_prototype_interaction_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         17 => "triggered_overlays_data": repeated decode_sparse_triggered_overlay_data_from_decoder; repeated skip_triggered_overlay_data_from_decoder;
         18 => "playback_updates": repeated decode_sparse_playback_update_from_decoder; repeated skip_playback_update_from_decoder;
         19 => "chat_message": one decode_sparse_chat_message_from_decoder; one skip_chat_message_from_decoder;
         20 => "voice_metadata": one decode_sparse_voice_metadata_from_decoder; one skip_voice_metadata_from_decoder;
-        21 => "can_write": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        22 => "high_five_status": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        21 => "can_write": one bool; one bool;
+        22 => "high_five_status": one bool; one bool;
         23 => "instance_state_changes": repeated decode_sparse_instance_state_change_from_decoder; repeated skip_instance_state_change_from_decoder;
         24 => "text_cursor": one decode_sparse_text_cursor_from_decoder; one skip_text_cursor_from_decoder;
         25 => "text_selection": one decode_sparse_text_selection_from_decoder; one skip_text_selection_from_decoder;
-        26 => "connected_at_time_s": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        27 => "focus_on_text_cursor": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        28 => "heartbeat": one decode_sparse_heartbeat_from_decoder; one kiwi_skip_uint_value;
+        26 => "connected_at_time_s": one uint; one uint;
+        27 => "focus_on_text_cursor": one bool; one bool;
+        28 => "heartbeat": one decode_sparse_heartbeat_from_decoder; one uint;
         29 => "triggered_set_variable_action_data": repeated decode_sparse_triggered_set_variable_action_data_from_decoder; repeated skip_triggered_set_variable_action_data_from_decoder;
         30 => "video_state_change_data": repeated decode_sparse_video_state_change_data_from_decoder; repeated skip_video_state_change_data_from_decoder;
-        31 => "client_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        31 => "client_id": one string; one string;
         32 => "focused_slide_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         33 => "triggered_set_variable_mode_action_data": repeated decode_sparse_triggered_set_variable_mode_action_data_from_decoder; repeated skip_triggered_set_variable_mode_action_data_from_decoder;
         34 => "april_fun_cursor": one decode_sparse_april_fun_cursor_from_decoder; one skip_april_fun_cursor_from_decoder;
         35 => "embedded_prototype_data": repeated decode_sparse_embedded_prototype_data_from_decoder; repeated skip_embedded_prototype_data_from_decoder;
         36 => "active_slides_embeddable_prototype": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         37 => "active_code_component_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        38 => "last_triggered_object_animation_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        38 => "last_triggered_object_animation_index": one uint; one uint;
         39 => "april_fun_fig_pal": one decode_sparse_april_fun_fig_pal_from_decoder; one skip_april_fun_fig_pal_from_decoder;
         40 => "collaborative_text_selection": one decode_sparse_collaborative_text_selection_from_decoder; one skip_collaborative_text_selection_from_decoder;
-        41 => "sites_view_state": one decode_sparse_sites_view_state_from_decoder; one kiwi_skip_uint_value;
+        41 => "sites_view_state": one decode_sparse_sites_view_state_from_decoder; one uint;
         42 => "node_chat_exchanges": repeated decode_sparse_node_chat_exchange_from_decoder; repeated skip_node_chat_exchange_from_decoder;
         43 => "active_embedded_prototypes": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
-        44 => "stable_session_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        45 => "design_full_page_view_state": one decode_sparse_design_full_page_view_state_from_decoder; one kiwi_skip_uint_value;
+        44 => "stable_session_id": one string; one string;
+        45 => "design_full_page_view_state": one decode_sparse_design_full_page_view_state_from_decoder; one uint;
         46 => "agent_info": one decode_sparse_agent_info_from_decoder; one skip_agent_info_from_decoder;
     ]
 }
@@ -7886,10 +7912,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "InteractiveSlideElementChange";
     capacity 5;
     fields [
-        1 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "anonymous_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "user_id": one string; one string;
+        2 => "anonymous_user_id": one string; one string;
         3 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        4 => "response_data": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "response_data": one string; one string;
     ]
 }
 
@@ -7917,7 +7943,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "asset_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "approved": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "approved": one bool; one bool;
     ]
 }
 
@@ -7932,7 +7958,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "asset_entries": repeated decode_sparse_buzz_approval_asset_entry_from_decoder; repeated skip_buzz_approval_asset_entry_from_decoder;
         2 => "canvas_grid_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        3 => "request_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "request_id": one string; one string;
     ]
 }
 
@@ -7967,8 +7993,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "starting_node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "depth": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        3 => "behavior": one decode_sparse_scene_graph_query_behavior_from_decoder; one kiwi_skip_uint_value;
+        2 => "depth": one uint; one uint;
+        3 => "behavior": one decode_sparse_scene_graph_query_behavior_from_decoder; one uint;
     ]
 }
 
@@ -7981,7 +8007,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "NodeChangesMetadata";
     capacity 2;
     fields [
-        1 => "blobs_field_offset": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "blobs_field_offset": one uint; one uint;
     ]
 }
 
@@ -7994,7 +8020,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CursorReaction";
     capacity 2;
     fields [
-        1 => "image_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "image_url": one string; one string;
     ]
 }
 
@@ -8007,14 +8033,14 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TimerInfo";
     capacity 9;
     fields [
-        1 => "is_paused": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        2 => "time_remaining_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        3 => "total_time_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        4 => "timer_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        5 => "set_by": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        6 => "song_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        7 => "last_received_song_timestamp_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        8 => "song_uuid": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "is_paused": one bool; one bool;
+        2 => "time_remaining_ms": one uint; one uint;
+        3 => "total_time_ms": one uint; one uint;
+        4 => "timer_id": one uint; one uint;
+        5 => "set_by": one string; one string;
+        6 => "song_id": one uint; one uint;
+        7 => "last_received_song_timestamp_ms": one uint; one uint;
+        8 => "song_uuid": one string; one string;
     ]
 }
 
@@ -8027,11 +8053,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "MusicInfo";
     capacity 6;
     fields [
-        1 => "is_paused": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        2 => "message_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        3 => "song_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "last_received_song_timestamp_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        5 => "is_stopped": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "is_paused": one bool; one bool;
+        2 => "message_id": one uint; one uint;
+        3 => "song_id": one string; one string;
+        4 => "last_received_song_timestamp_ms": one uint; one uint;
+        5 => "is_stopped": one bool; one bool;
     ]
 }
 
@@ -8044,8 +8070,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PresenterNomination";
     capacity 3;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "is_cancelled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "session_id": one uint; one uint;
+        2 => "is_cancelled": one bool; one bool;
     ]
 }
 
@@ -8058,9 +8084,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PresenterInfo";
     capacity 4;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "session_id": one uint; one uint;
         2 => "nomination": one decode_sparse_presenter_nomination_from_decoder; one skip_presenter_nomination_from_decoder;
-        3 => "is_reconnected": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "is_reconnected": one bool; one bool;
     ]
 }
 
@@ -8073,7 +8099,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ClientBroadcast";
     capacity 7;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "session_id": one uint; one uint;
         2 => "cursor_reaction": one decode_sparse_cursor_reaction_from_decoder; one skip_cursor_reaction_from_decoder;
         3 => "timer": one decode_sparse_timer_info_from_decoder; one skip_timer_info_from_decoder;
         4 => "presenter": one decode_sparse_presenter_info_from_decoder; one skip_presenter_info_from_decoder;
@@ -8101,51 +8127,51 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Message";
     capacity 46;
     fields [
-        1 => "type": one decode_sparse_message_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        3 => "ack_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_message_type_from_decoder; one uint;
+        2 => "session_id": one uint; one uint;
+        3 => "ack_id": one uint; one uint;
         4 => "node_changes": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
         5 => "user_changes": repeated decode_sparse_user_change_from_decoder; repeated skip_user_change_from_decoder;
         6 => "blobs": repeated decode_sparse_blob_from_decoder; repeated skip_blob_from_decoder;
-        7 => "signal_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        8 => "access": one decode_sparse_access_from_decoder; one kiwi_skip_uint_value;
-        9 => "style_set_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        10 => "style_set_type": one decode_sparse_style_set_type_from_decoder; one kiwi_skip_uint_value;
-        11 => "style_set_content_type": one decode_sparse_style_set_content_type_from_decoder; one kiwi_skip_uint_value;
-        12 => "paste_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        7 => "signal_name": one string; one string;
+        8 => "access": one decode_sparse_access_from_decoder; one uint;
+        9 => "style_set_name": one string; one string;
+        10 => "style_set_type": one decode_sparse_style_set_type_from_decoder; one uint;
+        11 => "style_set_content_type": one decode_sparse_style_set_content_type_from_decoder; one uint;
+        12 => "paste_id": one int; one int;
         13 => "paste_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        14 => "paste_file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        15 => "signal_payload": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        14 => "paste_file_key": one string; one string;
+        15 => "signal_payload": one string; one string;
         16 => "scene_graph_queries": repeated decode_sparse_scene_graph_query_from_decoder; repeated skip_scene_graph_query_from_decoder;
         17 => "node_changes_metadata": one decode_sparse_node_changes_metadata_from_decoder; one skip_node_changes_metadata_from_decoder;
-        18 => "file_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        19 => "paste_is_partially_outside_enclosing_frame": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        18 => "file_version": one uint; one uint;
+        19 => "paste_is_partially_outside_enclosing_frame": one bool; one bool;
         20 => "paste_page_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        21 => "is_cut": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        21 => "is_cut": one bool; one bool;
         22 => "local_undo_stack": repeated decode_sparse_message_from_decoder; repeated skip_message_from_decoder;
         23 => "local_redo_stack": repeated decode_sparse_message_from_decoder; repeated skip_message_from_decoder;
         24 => "broadcasts": repeated decode_sparse_client_broadcast_from_decoder; repeated skip_client_broadcast_from_decoder;
-        25 => "reconnect_sequence_number": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        26 => "paste_branch_source_file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        27 => "paste_editor_type": one decode_sparse_editor_type_from_decoder; one kiwi_skip_uint_value;
-        28 => "post_sync_actions": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        25 => "reconnect_sequence_number": one uint; one uint;
+        26 => "paste_branch_source_file_key": one string; one string;
+        27 => "paste_editor_type": one decode_sparse_editor_type_from_decoder; one uint;
+        28 => "post_sync_actions": one string; one string;
         29 => "published_asset_guids": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
-        30 => "blob_base_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        31 => "dirty_from_initial_load": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        30 => "blob_base_index": one uint; one uint;
+        31 => "dirty_from_initial_load": one bool; one bool;
         32 => "interactive_slide_element_change": one decode_sparse_interactive_slide_element_change_from_decoder; one skip_interactive_slide_element_change_from_decoder;
         33 => "clipboard_selection_regions": repeated decode_sparse_clipboard_selection_region_from_decoder; repeated skip_clipboard_selection_region_from_decoder;
         34 => "encoded_offsets_index": one decode_sparse_encoded_offsets_index_from_decoder; one skip_encoded_offsets_index_from_decoder;
-        35 => "has_repeating_content": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        35 => "has_repeating_content": one bool; one bool;
         36 => "node_status_change": one decode_sparse_node_status_change_from_decoder; one skip_node_status_change_from_decoder;
-        37 => "is_retransmission": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        38 => "sent_timestamp": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        37 => "is_retransmission": one bool; one bool;
+        38 => "sent_timestamp": one uint64; one uint64;
         39 => "annotation_categories": repeated decode_sparse_annotation_category_from_decoder; repeated skip_annotation_category_from_decoder;
         40 => "client_rendered_metadata": one decode_sparse_client_rendered_metadata_from_decoder; one skip_client_rendered_metadata_from_decoder;
-        41 => "paste_asset_type": one decode_sparse_paste_asset_type_from_decoder; one kiwi_skip_uint_value;
-        42 => "stable_session_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        41 => "paste_asset_type": one decode_sparse_paste_asset_type_from_decoder; one uint;
+        42 => "stable_session_id": one string; one string;
         43 => "object_animations": one decode_sparse_object_animation_list_from_decoder; one skip_object_animation_list_from_decoder;
         44 => "buzz_approval_change": one decode_sparse_buzz_approval_change_from_decoder; one skip_buzz_approval_change_from_decoder;
-        45 => "scene_graph_query_mode": one decode_sparse_scene_graph_query_mode_from_decoder; one kiwi_skip_uint_value;
+        45 => "scene_graph_query_mode": one decode_sparse_scene_graph_query_mode_from_decoder; one uint;
     ]
 }
 
@@ -8158,9 +8184,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "EncodedOffsetsIndex";
     capacity 5;
     fields [
-        1 => "node_changes_field_offset": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "node_changes_field_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        3 => "blobs_field_offset": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        1 => "node_changes_field_offset": one uint; one uint;
+        2 => "node_changes_field_length": one uint; one uint;
+        3 => "blobs_field_offset": one uint; one uint;
         4 => "node_change_offsets": repeated decode_sparse_guid_and_encoded_offset_from_decoder; repeated skip_guid_and_encoded_offset_from_decoder;
     ]
 }
@@ -8196,8 +8222,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "RichMediaData";
     capacity 3;
     fields [
-        1 => "media_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "rich_media_type": one decode_sparse_rich_media_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "media_hash": one string; one string;
+        2 => "rich_media_type": one decode_sparse_rich_media_type_from_decoder; one uint;
     ]
 }
 
@@ -8282,9 +8308,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "VariableAnyValue";
     capacity 30;
     fields [
-        1 => "bool_value": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        2 => "text_value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "float_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "bool_value": one bool; one bool;
+        2 => "text_value": one string; one string;
+        3 => "float_value": one float; one float;
         4 => "alias": one decode_sparse_variable_id_from_decoder; one skip_variable_id_from_decoder;
         5 => "color_value": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
         6 => "expression_value": one decode_sparse_expression_from_decoder; one skip_expression_from_decoder;
@@ -8351,7 +8377,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "Expression";
     capacity 3;
     fields [
-        1 => "expression_function": one decode_sparse_expression_function_from_decoder; one kiwi_skip_uint_value;
+        1 => "expression_function": one decode_sparse_expression_function_from_decoder; one uint;
         2 => "expression_arguments": repeated decode_sparse_variable_data_from_decoder; repeated skip_variable_data_from_decoder;
     ]
 }
@@ -8365,7 +8391,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "VariableMapValue";
     capacity 4;
     fields [
-        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "key": one string; one string;
         2 => "value": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         3 => "guid_key": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
@@ -8423,11 +8449,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
         2 => "image_thumbnail": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
-        3 => "alt_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "original_image_height": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        5 => "original_image_width": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "alt_text": one string; one string;
+        4 => "original_image_height": one uint; one uint;
+        5 => "original_image_width": one uint; one uint;
         6 => "animated_image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
-        7 => "animation_frame": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        7 => "animation_frame": one uint; one uint;
     ]
 }
 
@@ -8441,7 +8467,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "thumbnail_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "thumbnail_version": one string; one string;
     ]
 }
 
@@ -8454,8 +8480,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AiCanvasPrompt";
     capacity 4;
     fields [
-        1 => "user_prompt": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "author_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "user_prompt": one string; one string;
+        2 => "author_id": one string; one string;
         3 => "parent_node_ids": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
     ]
 }
@@ -8470,8 +8496,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "stable_path_to_node": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
-        2 => "node_field": one decode_sparse_node_field_alias_type_from_decoder; one kiwi_skip_uint_value;
-        3 => "index_or_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "node_field": one decode_sparse_node_field_alias_type_from_decoder; one uint;
+        3 => "index_or_key": one string; one string;
     ]
 }
 
@@ -8494,10 +8520,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CMSAlias";
     capacity 5;
     fields [
-        1 => "collection_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "item_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "field_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "type": one decode_sparse_variable_data_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "collection_id": one string; one string;
+        2 => "item_id": one string; one string;
+        3 => "field_id": one string; one string;
+        4 => "type": one decode_sparse_variable_data_type_from_decoder; one uint;
     ]
 }
 
@@ -8510,7 +8536,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "JsRuntimeAlias";
     capacity 2;
     fields [
-        1 => "lookup_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "lookup_key": one string; one string;
     ]
 }
 
@@ -8550,8 +8576,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ManagedStringPlaceholderMapEntry";
     capacity 3;
     fields [
-        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "key": one string; one string;
+        2 => "value": one string; one string;
     ]
 }
 
@@ -8648,9 +8674,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 5;
     fields [
         1 => "translation": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        2 => "rotation": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "rotation": one float; one float;
         3 => "scale": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        4 => "shear_x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "shear_x": one float; one float;
     ]
 }
 
@@ -8664,8 +8690,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "value": one decode_sparse_variable_any_value_from_decoder; one skip_variable_any_value_from_decoder;
-        2 => "data_type": one decode_sparse_variable_data_type_from_decoder; one kiwi_skip_uint_value;
-        3 => "resolved_data_type": one decode_sparse_variable_resolved_data_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "data_type": one decode_sparse_variable_data_type_from_decoder; one uint;
+        3 => "resolved_data_type": one decode_sparse_variable_resolved_data_type_from_decoder; one uint;
     ]
 }
 
@@ -8679,8 +8705,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 6;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "sort_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "name": one string; one string;
+        3 => "sort_position": one string; one string;
         4 => "parent_variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
         5 => "parent_mode_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
@@ -8753,7 +8779,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "KeyframeAnyValue";
     capacity 5;
     fields [
-        1 => "float_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "float_value": one float; one float;
         2 => "color_value": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
         3 => "text_data_value": one decode_sparse_text_data_from_decoder; one skip_text_data_from_decoder;
         4 => "vector_value": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
@@ -8783,7 +8809,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "value": one decode_sparse_keyframe_any_value_from_decoder; one skip_keyframe_any_value_from_decoder;
-        2 => "value_type": one decode_sparse_keyframe_value_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "value_type": one decode_sparse_keyframe_value_type_from_decoder; one uint;
     ]
 }
 
@@ -8852,7 +8878,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "value": one decode_sparse_keyframe_track_any_parameter_from_decoder; one skip_keyframe_track_any_parameter_from_decoder;
-        2 => "type": one decode_sparse_keyframe_track_parameter_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "type": one decode_sparse_keyframe_track_parameter_type_from_decoder; one uint;
     ]
 }
 
@@ -8921,7 +8947,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         2 => "timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         3 => "animation_style_id": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
-        4 => "timeline_offset": one kiwi_sparse_int64_value; one kiwi_skip_int64_value;
+        4 => "timeline_offset": one int64; one int64;
     ]
 }
 
@@ -8988,9 +9014,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SpringParams";
     capacity 4;
     fields [
-        1 => "stiffness": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "damping": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "mass": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "stiffness": one float; one float;
+        2 => "damping": one float; one float;
+        3 => "mass": one float; one float;
     ]
 }
 
@@ -9017,7 +9043,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "EasingData";
     capacity 3;
     fields [
-        1 => "easing_type": one decode_sparse_easing_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "easing_type": one decode_sparse_easing_type_from_decoder; one uint;
         2 => "easing_value": one decode_sparse_transition_easing_any_value_from_decoder; one skip_transition_easing_any_value_from_decoder;
     ]
 }
@@ -9032,15 +9058,15 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 11;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "duration": one float; one float;
         3 => "duration_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        4 => "delay": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "delay": one float; one float;
         5 => "delay_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         6 => "easing": one decode_sparse_easing_data_from_decoder; one skip_easing_data_from_decoder;
         7 => "easing_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        8 => "created_at_ms": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        8 => "created_at_ms": one uint64; one uint64;
         9 => "interaction_i_ds": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
-        10 => "disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        10 => "disabled": one bool; one bool;
     ]
 }
 
@@ -9093,10 +9119,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TransitionOverrideBindingLocation";
     capacity 5;
     fields [
-        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder; one kiwi_skip_uint_value;
-        2 => "parameter_field_value": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        3 => "index": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        4 => "effect_parametrized_field_value": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder; one uint;
+        2 => "parameter_field_value": one int; one int;
+        3 => "index": one int; one int;
+        4 => "effect_parametrized_field_value": one int; one int;
     ]
 }
 
@@ -9139,10 +9165,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "NodeContentsKeyframeBindingLocation";
     capacity 5;
     fields [
-        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder; one kiwi_skip_uint_value;
-        2 => "parameter_field_value": one decode_sparse_variable_field_from_decoder; one kiwi_skip_uint_value;
-        3 => "index": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        4 => "effect_parametrized_field_value": one decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder; one kiwi_skip_uint_value;
+        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder; one uint;
+        2 => "parameter_field_value": one decode_sparse_variable_field_from_decoder; one uint;
+        3 => "index": one int; one int;
+        4 => "effect_parametrized_field_value": one decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder; one uint;
     ]
 }
 
@@ -9168,7 +9194,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "TransitionOverridePropMapEntry";
     capacity 5;
     fields [
-        1 => "prop": one decode_sparse_transition_override_prop_from_decoder; one kiwi_skip_uint_value;
+        1 => "prop": one decode_sparse_transition_override_prop_from_decoder; one uint;
         2 => "overrides": repeated decode_sparse_transition_override_from_decoder; repeated skip_transition_override_from_decoder;
         3 => "binding_location": one decode_sparse_transition_override_binding_location_from_decoder; one skip_transition_override_binding_location_from_decoder;
         4 => "node_contents_binding_location": one decode_sparse_node_contents_keyframe_binding_location_from_decoder; one skip_node_contents_keyframe_binding_location_from_decoder;
@@ -9397,7 +9423,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "MigrationStatus";
     capacity 2;
     fields [
-        1 => "dsd_cleanup": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "dsd_cleanup": one bool; one bool;
     ]
 }
 
@@ -9442,11 +9468,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ARIAAttributeAnyValue";
     capacity 6;
     fields [
-        1 => "bool_value": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        2 => "string_value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "float_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "int_value": one kiwi_sparse_int_value; one kiwi_skip_int_value;
-        5 => "string_array_value": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
+        1 => "bool_value": one bool; one bool;
+        2 => "string_value": one string; one string;
+        3 => "float_value": one float; one float;
+        4 => "int_value": one int; one int;
+        5 => "string_array_value": repeated string; repeated string;
     ]
 }
 
@@ -9472,7 +9498,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ARIAAttributeData";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_aria_attribute_data_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_aria_attribute_data_type_from_decoder; one uint;
         2 => "value": one decode_sparse_aria_attribute_any_value_from_decoder; one skip_aria_attribute_any_value_from_decoder;
     ]
 }
@@ -9499,7 +9525,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ARIAAttributesMapEntry";
     capacity 3;
     fields [
-        1 => "attribute": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "attribute": one string; one string;
         2 => "value": one decode_sparse_aria_attribute_data_from_decoder; one skip_aria_attribute_data_from_decoder;
     ]
 }
@@ -9555,7 +9581,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "frames": repeated decode_sparse_edit_scope_stack_from_decoder; repeated skip_edit_scope_stack_from_decoder;
-        2 => "node_change_field_numbers": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        2 => "node_change_field_numbers": repeated uint; repeated uint;
     ]
 }
 
@@ -9581,9 +9607,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "EditScope";
     capacity 4;
     fields [
-        1 => "type": one decode_sparse_edit_scope_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "editor_type": one decode_sparse_editor_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_edit_scope_type_from_decoder; one uint;
+        2 => "label": one string; one string;
+        3 => "editor_type": one decode_sparse_editor_type_from_decoder; one uint;
     ]
 }
 
@@ -9644,10 +9670,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "SectionPresetInfo";
     capacity 5;
     fields [
-        1 => "shelf_id": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
-        2 => "template_id": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
-        3 => "template_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "state": one decode_sparse_section_preset_state_from_decoder; one kiwi_skip_uint_value;
+        1 => "shelf_id": one uint64; one uint64;
+        2 => "template_id": one uint64; one uint64;
+        3 => "template_name": one string; one string;
+        4 => "state": one decode_sparse_section_preset_state_from_decoder; one uint;
     ]
 }
 
@@ -9663,8 +9689,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
         1 => "parent": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         2 => "nodes": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
         3 => "enclosing_frame_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
-        4 => "paste_is_partially_outside_enclosing_frame": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        5 => "focus_type": one decode_sparse_selection_region_focus_type_from_decoder; one kiwi_skip_uint_value;
+        4 => "paste_is_partially_outside_enclosing_frame": one bool; one bool;
+        5 => "focus_type": one decode_sparse_selection_region_focus_type_from_decoder; one uint;
     ]
 }
 
@@ -9688,8 +9714,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "FirstDraftKit";
     capacity 3;
     fields [
-        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "type": one decode_sparse_first_draft_kit_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "key": one string; one string;
+        2 => "type": one decode_sparse_first_draft_kit_type_from_decoder; one uint;
     ]
 }
 
@@ -9702,7 +9728,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "FirstDraftData";
     capacity 3;
     fields [
-        1 => "generation_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "generation_id": one string; one string;
         2 => "kit": one decode_sparse_first_draft_kit_from_decoder; one skip_first_draft_kit_from_decoder;
     ]
 }
@@ -9727,7 +9753,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "FirstDraftKitElementData";
     capacity 2;
     fields [
-        1 => "type": one decode_sparse_first_draft_kit_element_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_first_draft_kit_element_type_from_decoder; one uint;
     ]
 }
 
@@ -9763,7 +9789,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "PlatformShapePropertyMapEntry";
     capacity 3;
     fields [
-        1 => "property": one decode_sparse_platform_shape_property_from_decoder; one kiwi_skip_uint_value;
+        1 => "property": one decode_sparse_platform_shape_property_from_decoder; one uint;
         2 => "node_paths": repeated decode_sparse_guid_path_from_decoder; repeated skip_guid_path_from_decoder;
     ]
 }
@@ -9778,7 +9804,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 4;
     fields [
         1 => "property_map_entries": repeated decode_sparse_platform_shape_property_map_entry_from_decoder; repeated skip_platform_shape_property_map_entry_from_decoder;
-        2 => "behavior_type": one decode_sparse_platform_shape_behavior_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "behavior_type": one decode_sparse_platform_shape_behavior_type_from_decoder; one uint;
         3 => "thumbnail_node": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
     ]
 }
@@ -9814,10 +9840,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "BehaviorTransition";
     capacity 7;
     fields [
-        1 => "easing_type": one decode_sparse_easing_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "easing_function": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
-        3 => "transition_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "delay": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "easing_type": one decode_sparse_easing_type_from_decoder; one uint;
+        2 => "easing_function": repeated float; repeated float;
+        3 => "transition_duration": one float; one float;
+        4 => "delay": one float; one float;
         5 => "transition_duration_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         6 => "delay_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
@@ -9856,16 +9882,16 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AppearBehavior";
     capacity 11;
     fields [
-        1 => "trigger": one decode_sparse_appear_behavior_trigger_from_decoder; one kiwi_skip_uint_value;
-        2 => "direction": one decode_sparse_relative_direction_from_decoder; one kiwi_skip_uint_value;
+        1 => "trigger": one decode_sparse_appear_behavior_trigger_from_decoder; one uint;
+        2 => "direction": one decode_sparse_relative_direction_from_decoder; one uint;
         3 => "other_layer": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         4 => "enter_transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
         5 => "enter_state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
         6 => "exit_transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
         7 => "exit_state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
-        8 => "plays_once": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        8 => "plays_once": one bool; one bool;
         9 => "plays_once_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        10 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        10 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -9880,7 +9906,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
         2 => "state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
-        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -9895,7 +9921,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
         2 => "state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
-        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -9910,7 +9936,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
         2 => "state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
-        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -9923,11 +9949,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ScrollParallaxBehavior";
     capacity 6;
     fields [
-        1 => "axis": one decode_sparse_scroll_direction_from_decoder; one kiwi_skip_uint_value;
-        2 => "speed": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "relative_to_page": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "axis": one decode_sparse_scroll_direction_from_decoder; one uint;
+        2 => "speed": one float; one float;
+        3 => "relative_to_page": one bool; one bool;
         4 => "speed_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        5 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -9951,15 +9977,15 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ScrollTransformBehavior";
     capacity 10;
     fields [
-        1 => "trigger": one decode_sparse_scroll_transform_behavior_trigger_from_decoder; one kiwi_skip_uint_value;
+        1 => "trigger": one decode_sparse_scroll_transform_behavior_trigger_from_decoder; one uint;
         2 => "other_layer": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         3 => "transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
         4 => "from_state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
         5 => "to_state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
-        6 => "plays_once": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
-        7 => "plays_once_var": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "plays_once": one bool; one bool;
+        7 => "plays_once_var": one bool; one bool;
         8 => "plays_once_var2": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        9 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        9 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -9972,10 +9998,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CursorBehavior";
     capacity 5;
     fields [
-        1 => "hotspot_x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "hotspot_y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "hotspot_x": one float; one float;
+        2 => "hotspot_y": one float; one float;
         3 => "cursor_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        4 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -9988,13 +10014,13 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "MarqueeBehavior";
     capacity 8;
     fields [
-        1 => "direction": one decode_sparse_relative_direction_from_decoder; one kiwi_skip_uint_value;
-        2 => "speed": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "should_loop_infinitely": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "direction": one decode_sparse_relative_direction_from_decoder; one uint;
+        2 => "speed": one float; one float;
+        3 => "should_loop_infinitely": one bool; one bool;
         4 => "speed_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         5 => "should_loop_infinitely_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
         6 => "pause_on_hover": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
-        7 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        7 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -10009,7 +10035,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "code_component_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
         2 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder; repeated skip_component_prop_assignment_from_decoder;
-        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -10022,10 +10048,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ClientRenderedMetadata";
     capacity 5;
     fields [
-        1 => "load_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "tracking_session_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "tracking_session_sequence_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        4 => "reconnect_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "load_id": one string; one string;
+        2 => "tracking_session_id": one string; one string;
+        3 => "tracking_session_sequence_id": one uint; one uint;
+        4 => "reconnect_id": one string; one string;
     ]
 }
 
@@ -10048,10 +10074,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "LinkBehavior";
     capacity 5;
     fields [
-        1 => "type": one decode_sparse_link_behavior_type_from_decoder; one kiwi_skip_uint_value;
-        2 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "type": one decode_sparse_link_behavior_type_from_decoder; one uint;
+        2 => "url": one string; one string;
         3 => "page": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        4 => "open_in_new_window": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "open_in_new_window": one bool; one bool;
     ]
 }
 
@@ -10079,7 +10105,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 3;
     fields [
         1 => "theme_id": one decode_sparse_theme_id_from_decoder; one skip_theme_id_from_decoder;
-        2 => "version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "version": one string; one string;
     ]
 }
 
@@ -10119,13 +10145,13 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     capacity 9;
     fields [
         1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
-        2 => "type": one decode_sparse_node_chat_message_type_from_decoder; one kiwi_skip_uint_value;
-        3 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        4 => "text_content": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "sent_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "type": one decode_sparse_node_chat_message_type_from_decoder; one uint;
+        3 => "user_id": one string; one string;
+        4 => "text_content": one string; one string;
+        5 => "sent_at": one uint; one uint;
         6 => "tool_calls": repeated decode_sparse_node_chat_tool_call_from_decoder; repeated skip_node_chat_tool_call_from_decoder;
         7 => "tool_results": repeated decode_sparse_node_chat_tool_result_from_decoder; repeated skip_node_chat_tool_result_from_decoder;
-        8 => "sent_at64": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        8 => "sent_at64": one uint64; one uint64;
     ]
 }
 
@@ -10138,9 +10164,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "NodeChatToolCall";
     capacity 4;
     fields [
-        1 => "tool_call_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "tool_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "args_json": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "tool_call_id": one string; one string;
+        2 => "tool_name": one string; one string;
+        3 => "args_json": one string; one string;
     ]
 }
 
@@ -10153,9 +10179,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "NodeChatToolResult";
     capacity 4;
     fields [
-        1 => "tool_call_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "tool_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "result_json": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "tool_call_id": one string; one string;
+        2 => "tool_name": one string; one string;
+        3 => "result_json": one string; one string;
     ]
 }
 
@@ -10170,7 +10196,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     fields [
         1 => "node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
         2 => "messages": repeated decode_sparse_node_chat_message_from_decoder; repeated skip_node_chat_message_from_decoder;
-        3 => "is_typing": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "is_typing": one bool; one bool;
         4 => "file_updates": repeated decode_sparse_file_update_from_decoder; repeated skip_file_update_from_decoder;
     ]
 }
@@ -10184,8 +10210,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "NodeChatCompressionState";
     capacity 3;
     fields [
-        1 => "start_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "summary": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "start_index": one uint; one uint;
+        2 => "summary": one string; one string;
     ]
 }
 
@@ -10198,9 +10224,9 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "FileUpdate";
     capacity 4;
     fields [
-        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "contents": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        1 => "name": one string; one string;
+        2 => "contents": one string; one string;
+        3 => "is_deleted": one bool; one bool;
     ]
 }
 
@@ -10213,7 +10239,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AIChatContentPart";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_ai_chat_content_part_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_ai_chat_content_part_type_from_decoder; one uint;
         2 => "value": one decode_sparse_ai_chat_content_part_any_value_from_decoder; one skip_ai_chat_content_part_any_value_from_decoder;
     ]
 }
@@ -10238,8 +10264,8 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AIChatContentPartAnyValue";
     capacity 3;
     fields [
-        1 => "text_value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        2 => "selected_node_ids": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
+        1 => "text_value": one string; one string;
+        2 => "selected_node_ids": repeated string; repeated string;
     ]
 }
 
@@ -10264,11 +10290,11 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "AIChatMessage";
     capacity 6;
     fields [
-        1 => "created_at_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
-        2 => "role": one decode_sparse_ai_chat_message_role_from_decoder; one kiwi_skip_uint_value;
+        1 => "created_at_ms": one uint; one uint;
+        2 => "role": one decode_sparse_ai_chat_message_role_from_decoder; one uint;
         3 => "content": repeated decode_sparse_ai_chat_content_part_from_decoder; repeated skip_ai_chat_content_part_from_decoder;
-        4 => "client_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
-        5 => "created_at_ms64": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        4 => "client_id": one string; one string;
+        5 => "created_at_ms64": one uint64; one uint64;
     ]
 }
 
@@ -10367,7 +10393,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "CooperTemplateData";
     capacity 2;
     fields [
-        1 => "type": one decode_sparse_cooper_template_type_from_decoder; one kiwi_skip_uint_value;
+        1 => "type": one decode_sparse_cooper_template_type_from_decoder; one uint;
     ]
 }
 
@@ -10393,7 +10419,7 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "ImageImport";
     capacity 3;
     fields [
-        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        1 => "name": one string; one string;
         2 => "image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
     ]
 }
@@ -10418,10 +10444,10 @@ kiwi_sparse_skip_message_descriptor_decoder! {
     definition "BezierHandles";
     capacity 5;
     fields [
-        1 => "p1x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        2 => "p1y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        3 => "p2x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
-        4 => "p2y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        1 => "p1x": one float; one float;
+        2 => "p1y": one float; one float;
+        3 => "p2x": one float; one float;
+        4 => "p2y": one float; one float;
     ]
 }
 
