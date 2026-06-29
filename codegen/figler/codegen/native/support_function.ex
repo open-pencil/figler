@@ -69,17 +69,18 @@ defmodule Figler.Codegen.Native.SupportFunction do
   """
   @spec scene_reader_items() :: [RustQ.Rust.Fragment.t()]
   def scene_reader_items do
-    MetaAST.items(__MODULE__, [
-      :read_scene_float64_value,
-      :read_scene_size_value,
-      :read_scene_transform_value,
-      :read_scene_font_name_value,
-      :scene_node_record_base_attr_count,
-      :scene_node_record_attr,
-      :scene_node_record_attr_count,
-      :scene_query_node,
-      :scene_query_node_term
-    ])
+    MetaAST.macro_items(__MODULE__, [:scene_attr_count]) ++
+      MetaAST.items(__MODULE__, [
+        :read_scene_float64_value,
+        :read_scene_size_value,
+        :read_scene_transform_value,
+        :read_scene_font_name_value,
+        :scene_node_record_base_attr_count,
+        :scene_node_record_attr,
+        :scene_node_record_attr_count,
+        :scene_query_node,
+        :scene_query_node_term
+      ])
   end
 
   @doc """
@@ -186,6 +187,14 @@ defmodule Figler.Codegen.Native.SupportFunction do
     optional_field_names()
     |> Enum.map(&count_optional_scene_node_record_attr/1)
     |> block()
+  end
+
+  defrustmacro scene_attr_count(record, amount) do
+    if record.is_some() do
+      amount
+    else
+      0
+    end
   end
 
   @spec scene_node_record_base_attr_count() :: R.usize()
@@ -494,9 +503,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   defp count_optional_scene_node_record_attr(field, count) do
     quote do
-      if record.unquote(field).is_some() do
-        assign!(count, count + unquote(count))
-      end
+      assign!(count, count + scene_attr_count!(record.unquote(field), unquote(count)))
     end
   end
 

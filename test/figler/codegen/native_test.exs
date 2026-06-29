@@ -73,6 +73,7 @@ defmodule Figler.Codegen.NativeTest do
 
     assert helper_source =~ "fn scene_node_record_attr"
     assert helper_source =~ "return Some((\"guid\", record.guid.to_string()))"
+    assert helper_source =~ "macro_rules! scene_attr_count"
     assert helper_source =~ "fn scene_node_record_attr_count"
     assert helper_source =~ "fn scene_query_node"
     assert helper_source =~ "SceneQueryNode {"

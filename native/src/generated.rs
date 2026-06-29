@@ -27459,6 +27459,11 @@ mod scene_xpath_runtime {
         let position = decoder.read_string_value()?;
         Ok((guid, position))
     }
+    macro_rules! scene_attr_count {
+        ($record:expr, $amount:expr) => {
+            { if $record .is_some() { $amount } else { 0 } }
+        };
+    }
     fn read_scene_float64_value(decoder: &mut Decoder<'_>) -> NifResult<f64> {
         let value = decoder.read_var_float_value()?;
         Ok(value as f64)
@@ -27671,72 +27676,28 @@ mod scene_xpath_runtime {
     }
     fn scene_node_record_attr_count(record: &SceneNodeRecord) -> usize {
         let mut count = scene_node_record_base_attr_count();
-        if record.name.is_some() {
-            count += 1;
-        }
-        if record.parent_guid.is_some() {
-            count += 1;
-        }
-        if record.position.is_some() {
-            count += 1;
-        }
-        if record.size.is_some() {
-            count += 4;
-        }
-        if record.transform.is_some() {
-            count += 1;
-        }
-        if record.visible.is_some() {
-            count += 1;
-        }
-        if record.locked.is_some() {
-            count += 1;
-        }
-        if record.opacity.is_some() {
-            count += 1;
-        }
-        if record.text.is_some() {
-            count += 1;
-        }
-        if record.font_family.is_some() {
-            count += 1;
-        }
-        if record.font_style.is_some() {
-            count += 1;
-        }
-        if record.font_postscript.is_some() {
-            count += 1;
-        }
-        if record.font_size.is_some() {
-            count += 1;
-        }
-        if record.text_style_guid.is_some() {
-            count += 1;
-        }
-        if record.component_key.is_some() {
-            count += 1;
-        }
-        if record.origin_component_key.is_some() {
-            count += 1;
-        }
-        if record.fill_style_guid.is_some() {
-            count += 1;
-        }
-        if record.stroke_style_guid.is_some() {
-            count += 1;
-        }
-        if record.effect_style_guid.is_some() {
-            count += 1;
-        }
-        if record.grid_style_guid.is_some() {
-            count += 1;
-        }
-        if record.fill_count.is_some() {
-            count += 1;
-        }
-        if record.stroke_count.is_some() {
-            count += 1;
-        }
+        count += scene_attr_count!(record.name, 1);
+        count += scene_attr_count!(record.parent_guid, 1);
+        count += scene_attr_count!(record.position, 1);
+        count += scene_attr_count!(record.size, 4);
+        count += scene_attr_count!(record.transform, 1);
+        count += scene_attr_count!(record.visible, 1);
+        count += scene_attr_count!(record.locked, 1);
+        count += scene_attr_count!(record.opacity, 1);
+        count += scene_attr_count!(record.text, 1);
+        count += scene_attr_count!(record.font_family, 1);
+        count += scene_attr_count!(record.font_style, 1);
+        count += scene_attr_count!(record.font_postscript, 1);
+        count += scene_attr_count!(record.font_size, 1);
+        count += scene_attr_count!(record.text_style_guid, 1);
+        count += scene_attr_count!(record.component_key, 1);
+        count += scene_attr_count!(record.origin_component_key, 1);
+        count += scene_attr_count!(record.fill_style_guid, 1);
+        count += scene_attr_count!(record.stroke_style_guid, 1);
+        count += scene_attr_count!(record.effect_style_guid, 1);
+        count += scene_attr_count!(record.grid_style_guid, 1);
+        count += scene_attr_count!(record.fill_count, 1);
+        count += scene_attr_count!(record.stroke_count, 1);
         count
     }
     fn scene_query_node(scene: &SceneIndex, node_index: usize) -> SceneQueryNode {
