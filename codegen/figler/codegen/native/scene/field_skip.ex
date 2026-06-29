@@ -32,11 +32,15 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
     One schema field skip operation rendered as a macro arm.
     """
 
-    @enforce_keys [:id, :mode, :function]
-    defstruct [:id, :mode, :function]
+    @enforce_keys [:id, :repeated, :bytes, :function]
+    defstruct [:id, :repeated, :bytes, :function]
 
-    @type mode :: :one | :repeated | :bytes
-    @type t :: %__MODULE__{id: non_neg_integer(), mode: mode(), function: String.t()}
+    @type t :: %__MODULE__{
+            id: non_neg_integer(),
+            repeated: boolean(),
+            bytes: boolean(),
+            function: String.t()
+          }
   end
 
   @spec decoder(map(), Decoder.t()) :: RustQ.Rust.Fragment.t()
@@ -70,27 +74,32 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
   end
 
   defp field(%{id: id, array?: true, type: "byte"}, _definition_map) do
-    %Field{id: id, mode: :bytes, function: "kiwi_skip_bytes_value"}
+    %Field{id: id, repeated: false, bytes: true, function: "kiwi_skip_bytes_value"}
   end
 
   defp field(%{id: id, array?: true, type: type}, definition_map) do
-    %Field{id: id, mode: :repeated, function: skip_function(type, definition_map)}
+    %Field{id: id, repeated: true, bytes: false, function: skip_function(type, definition_map)}
   end
 
   defp field(%{id: id, type: type}, definition_map) do
-    %Field{id: id, mode: :one, function: skip_function(type, definition_map)}
+    %Field{id: id, repeated: false, bytes: false, function: skip_function(type, definition_map)}
   end
 
   defp field_entry(%Field{} = field) do
     [
       Integer.to_string(field.id),
       " => ",
-      Atom.to_string(field.mode),
+      bool_literal(field.repeated),
+      " ",
+      bool_literal(field.bytes),
       " ",
       field.function,
       ";"
     ]
   end
+
+  defp bool_literal(true), do: "true"
+  defp bool_literal(false), do: "false"
 
   defp skip_function(type, definition_map) do
     cond do

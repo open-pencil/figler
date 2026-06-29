@@ -3,11 +3,11 @@ macro_rules! fig_scene_skip_field_decoder {
         fn $name:ident;
         decoder $decoder:ident;
         definition $definition_name:literal;
-        fields [$($field_id:literal => $field_mode:ident $field_skip:ident;)*]
+        fields [$($field_id:literal => $field_repeated:literal $field_bytes:literal $field_skip:ident;)*]
     ) => {
         fn $name($decoder: &mut Decoder<'_>, field: u32) -> NifResult<()> {
             match field {
-                $($field_id => kiwi_skip_kind($decoder, &kiwi_skip_kind!($field_mode $field_skip))?,)*
+                $($field_id => kiwi_skip_kind($decoder, &kiwi_skip_descriptor_kind($field_repeated, $field_bytes, $field_skip))?,)*
                 field => {
                     return Err(Error::Term(Box::new(format!(
                         "unknown field {} while decoding {}",
