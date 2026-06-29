@@ -23,55 +23,66 @@ struct KiwiSkipField {
     kind: KiwiSkipKind,
 }
 
+
 fn kiwi_skip_bool_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.read_bool()?;
     Ok(())
 }
+
 
 fn kiwi_skip_byte_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.read_byte()?;
     Ok(())
 }
 
+
 fn kiwi_skip_float_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.read_var_float_value()?;
     Ok(())
 }
+
 
 fn kiwi_skip_int_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.read_var_int()?;
     Ok(())
 }
 
+
 fn kiwi_skip_int64_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.read_var_int64()?;
     Ok(())
 }
+
 
 fn kiwi_skip_string_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.skip_string()?;
     Ok(())
 }
 
+
 fn kiwi_skip_uint_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.read_var_uint()?;
     Ok(())
 }
+
 
 fn kiwi_skip_uint64_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.read_var_uint64()?;
     Ok(())
 }
 
+
 fn kiwi_skip_bytes_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
     decoder.skip_byte_array()?;
     Ok(())
 }
 
+
 fn kiwi_skip_repeated(decoder: &mut Decoder<'_>, item: KiwiSkipFn) -> NifResult<()> {
     decoder.read_repeated(|decoder| item(decoder))?;
     Ok(())
 }
+
 
 fn kiwi_skip_kind(decoder: &mut Decoder<'_>, kind: &KiwiSkipKind) -> NifResult<()> {
     match kind {
@@ -201,41 +212,84 @@ struct KiwiSparseField {
     kind: KiwiSparseKind,
 }
 
-fn kiwi_sparse_bool_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    Ok(decoder.read_bool()?.encode(env))
+
+fn kiwi_sparse_bool_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    let value = decoder.read_bool()?;
+    Ok(value.encode(env))
 }
 
-fn kiwi_sparse_byte_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    Ok(decoder.read_byte()?.encode(env))
+
+fn kiwi_sparse_byte_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    let value = decoder.read_byte()?;
+    Ok(value.encode(env))
 }
 
-fn kiwi_sparse_float_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    Ok(decoder.read_var_float(env)?.encode(env))
+
+fn kiwi_sparse_float_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    decoder.read_var_float(env)
 }
 
-fn kiwi_sparse_int_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    Ok(decoder.read_var_int()?.encode(env))
+
+fn kiwi_sparse_int_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    let value = decoder.read_var_int()?;
+    Ok(value.encode(env))
 }
 
-fn kiwi_sparse_int64_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    Ok(decoder.read_var_int64()?.encode(env))
+
+fn kiwi_sparse_int64_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    let value = decoder.read_var_int64()?;
+    Ok(value.encode(env))
 }
 
-fn kiwi_sparse_string_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    Ok(decoder.read_string(env)?.encode(env))
+
+fn kiwi_sparse_string_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    decoder.read_string(env)
 }
 
-fn kiwi_sparse_uint_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    Ok(decoder.read_var_uint()?.encode(env))
+
+fn kiwi_sparse_uint_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    let value = decoder.read_var_uint()?;
+    Ok(value.encode(env))
 }
 
-fn kiwi_sparse_uint64_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    Ok(decoder.read_var_uint64()?.encode(env))
+
+fn kiwi_sparse_uint64_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    let value = decoder.read_var_uint64()?;
+    Ok(value.encode(env))
 }
 
-fn kiwi_sparse_bytes_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+
+fn kiwi_sparse_bytes_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
     decoder.read_byte_array(env)
 }
+
 
 fn kiwi_sparse_kind<'a>(env: Env<'a>, decoder: &mut Decoder<'_>, kind: &KiwiSparseKind) -> NifResult<Term<'a>> {
     match kind {

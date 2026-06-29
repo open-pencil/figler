@@ -60,6 +60,7 @@ generate "native", "native/src/generated.rs" do
       definitions: ["Message"],
       features: [:sparse, :skip],
       sparse_messages: :descriptor,
+      decoder_sources: ["native/src/runtime.rs"],
       module_prefix: "Figler.Schema"
     ),
     Figler.Codegen.Native.source(schema)
