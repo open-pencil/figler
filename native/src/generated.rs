@@ -160,33 +160,6 @@ macro_rules! kiwi_skip_message_decoder {
 }
 
 
-macro_rules! kiwi_sparse_struct_decoder {
-    (
-        fn $name:ident;
-        env $env:ident;
-        decoder $decoder:ident;
-        module $module_name:literal;
-        capacity $capacity:literal;
-        fields [$($field_name:literal: $field_expr:expr;)*]
-    ) => {
-        fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-            let module_atom = Atom::from_str($env, $module_name).unwrap();
-            let module_key_atom = Atom::from_str($env, "__kiwi_module__").unwrap();
-            let mut keys = Vec::with_capacity($capacity);
-            let mut values = Vec::with_capacity($capacity);
-            keys.push(module_key_atom.encode($env));
-            values.push(module_atom.encode($env));
-            $(
-                keys.push(Atom::from_str($env, $field_name).unwrap().encode($env));
-                values.push($field_expr);
-            )*
-            Term::map_from_term_arrays($env, &keys, &values)
-        }
-    };
-}
-
-
-
 #[allow(unused_macros)]
 macro_rules! kiwi_sparse_repeated {
     (one) => {
@@ -219,6 +192,14 @@ pub struct KiwiSparseField {
 }
 
 
+#[derive(Clone, Debug)]
+pub struct KiwiSparseStructField {
+    pub name: &'static str,
+    pub repeated: bool,
+    pub decode: KiwiSparseDecodeFn,
+}
+
+
 macro_rules! kiwi_sparse_enum_decoder {
         (fn $name:ident;
         env $env:ident;
@@ -230,6 +211,27 @@ macro_rules! kiwi_sparse_enum_decoder {
                             $decoder,
                             &[
                                 $(KiwiSparseEnumVariant { value: $variant_value, name: $variant_name},)*
+                            ],
+                        )
+                }
+        };
+}
+
+macro_rules! kiwi_sparse_struct_decoder {
+        (fn $name:ident;
+        env $env:ident;
+        decoder $decoder:ident;
+        module $module_name:literal;
+        capacity $capacity:literal;
+        fields [$($field_name:literal $field_mode:ident $field_decode:ident;)*]) => {
+                fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+                        kiwi_sparse_struct_fields(
+                            $env,
+                            $decoder,
+                            $module_name,
+                            $capacity,
+                            &[
+                                $(KiwiSparseStructField { name: $field_name, repeated: kiwi_sparse_repeated!($field_mode), decode: $field_decode},)*
                             ],
                         )
                 }
@@ -375,6 +377,72 @@ fn kiwi_sparse_field_value<'a>(
         Ok(values.encode(env))
     } else {
         decode(env, decoder)
+    }
+}
+
+
+fn kiwi_sparse_struct_field_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    field: &KiwiSparseStructField,
+) -> NifResult<Term<'a>> {
+    let decode = field.decode;
+    if field.repeated {
+        let value = decoder.read_repeated(|decoder| decode(env, decoder))?;
+        Ok(value.encode(env))
+    } else {
+        decode(env, decoder)
+    }
+}
+
+
+fn kiwi_sparse_struct_fields<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    module_name: &str,
+    capacity: usize,
+    fields: &[KiwiSparseStructField],
+) -> NifResult<Term<'a>> {
+    let module_atom = Atom::from_str(env, module_name).unwrap();
+    let module_key_atom = Atom::from_str(env, "__kiwi_module__").unwrap();
+    let mut keys = Vec::with_capacity(capacity);
+    let mut values = Vec::with_capacity(capacity);
+    keys.push(module_key_atom.encode(env));
+    values.push(module_atom.encode(env));
+    kiwi_sparse_struct_fields_remaining(
+        env,
+        decoder,
+        fields,
+        0,
+        &mut keys,
+        &mut values,
+    )?;
+    Term::map_from_term_arrays(env, &keys, &values)
+}
+
+
+fn kiwi_sparse_struct_fields_remaining<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    fields: &[KiwiSparseStructField],
+    index: usize,
+    keys: &mut Vec<Term<'a>>,
+    values: &mut Vec<Term<'a>>,
+) -> NifResult<()> {
+    if index == fields.len() {
+        Ok(())
+    } else {
+        let field = fields.get(index).unwrap();
+        keys.push(Atom::from_str(env, field.name).unwrap().encode(env));
+        values.push(kiwi_sparse_struct_field_value(env, decoder, field)?);
+        kiwi_sparse_struct_fields_remaining(
+            env,
+            decoder,
+            fields,
+            index + 1,
+            keys,
+            values,
+        )
     }
 }
 
@@ -1299,8 +1367,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.GUID";
     capacity 3;
     fields [
-        "session_id": decoder.read_var_uint()?.encode(env);
-        "local_id": decoder.read_var_uint()?.encode(env);
+        "session_id" one kiwi_sparse_uint_value;
+        "local_id" one kiwi_sparse_uint_value;
     ]
 }
 
@@ -1311,10 +1379,10 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.Color";
     capacity 5;
     fields [
-        "r": decoder.read_var_float(env)?.encode(env);
-        "g": decoder.read_var_float(env)?.encode(env);
-        "b": decoder.read_var_float(env)?.encode(env);
-        "a": decoder.read_var_float(env)?.encode(env);
+        "r" one kiwi_sparse_float_value;
+        "g" one kiwi_sparse_float_value;
+        "b" one kiwi_sparse_float_value;
+        "a" one kiwi_sparse_float_value;
     ]
 }
 
@@ -1325,8 +1393,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.Vector";
     capacity 3;
     fields [
-        "x": decoder.read_var_float(env)?.encode(env);
-        "y": decoder.read_var_float(env)?.encode(env);
+        "x" one kiwi_sparse_float_value;
+        "y" one kiwi_sparse_float_value;
     ]
 }
 
@@ -1337,10 +1405,10 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.Rect";
     capacity 5;
     fields [
-        "x": decoder.read_var_float(env)?.encode(env);
-        "y": decoder.read_var_float(env)?.encode(env);
-        "w": decoder.read_var_float(env)?.encode(env);
-        "h": decoder.read_var_float(env)?.encode(env);
+        "x" one kiwi_sparse_float_value;
+        "y" one kiwi_sparse_float_value;
+        "w" one kiwi_sparse_float_value;
+        "h" one kiwi_sparse_float_value;
     ]
 }
 
@@ -1351,8 +1419,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.ColorStop";
     capacity 3;
     fields [
-        "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        "position": decoder.read_var_float(env)?.encode(env);
+        "color" one decode_sparse_color_from_decoder;
+        "position" one kiwi_sparse_float_value;
     ]
 }
 
@@ -1378,12 +1446,12 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.Matrix";
     capacity 7;
     fields [
-        "m00": decoder.read_var_float(env)?.encode(env);
-        "m01": decoder.read_var_float(env)?.encode(env);
-        "m02": decoder.read_var_float(env)?.encode(env);
-        "m10": decoder.read_var_float(env)?.encode(env);
-        "m11": decoder.read_var_float(env)?.encode(env);
-        "m12": decoder.read_var_float(env)?.encode(env);
+        "m00" one kiwi_sparse_float_value;
+        "m01" one kiwi_sparse_float_value;
+        "m02" one kiwi_sparse_float_value;
+        "m10" one kiwi_sparse_float_value;
+        "m11" one kiwi_sparse_float_value;
+        "m12" one kiwi_sparse_float_value;
     ]
 }
 
@@ -1394,8 +1462,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.ParentIndex";
     capacity 3;
     fields [
-        "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        "position": decoder.read_string(env)?.encode(env);
+        "guid" one decode_sparse_guid_from_decoder;
+        "position" one kiwi_sparse_string_value;
     ]
 }
 
@@ -1406,8 +1474,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.Number";
     capacity 3;
     fields [
-        "value": decoder.read_var_float(env)?.encode(env);
-        "units": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
+        "value" one kiwi_sparse_float_value;
+        "units" one decode_sparse_number_units_from_decoder;
     ]
 }
 
@@ -1418,9 +1486,9 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.FontName";
     capacity 4;
     fields [
-        "family": decoder.read_string(env)?.encode(env);
-        "style": decoder.read_string(env)?.encode(env);
-        "postscript": decoder.read_string(env)?.encode(env);
+        "family" one kiwi_sparse_string_value;
+        "style" one kiwi_sparse_string_value;
+        "postscript" one kiwi_sparse_string_value;
     ]
 }
 
@@ -1842,8 +1910,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.ExportConstraint";
     capacity 3;
     fields [
-        "type": decode_sparse_export_constraint_type_from_decoder(env, decoder)?.encode(env);
-        "value": decoder.read_var_float(env)?.encode(env);
+        "type" one decode_sparse_export_constraint_type_from_decoder;
+        "value" one kiwi_sparse_float_value;
     ]
 }
 
@@ -1854,8 +1922,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.GUIDMapping";
     capacity 3;
     fields [
-        "from": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        "to": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        "from" one decode_sparse_guid_from_decoder;
+        "to" one decode_sparse_guid_from_decoder;
     ]
 }
 
@@ -1866,7 +1934,7 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.Blob";
     capacity 2;
     fields [
-        "bytes": decoder.read_byte_array(env)?;
+        "bytes" one kiwi_sparse_bytes_value;
     ]
 }
 
@@ -1920,14 +1988,14 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.FilterColorAdjust";
     capacity 9;
     fields [
-        "tint": decoder.read_var_float(env)?.encode(env);
-        "shadows": decoder.read_var_float(env)?.encode(env);
-        "highlights": decoder.read_var_float(env)?.encode(env);
-        "detail": decoder.read_var_float(env)?.encode(env);
-        "exposure": decoder.read_var_float(env)?.encode(env);
-        "vignette": decoder.read_var_float(env)?.encode(env);
-        "temperature": decoder.read_var_float(env)?.encode(env);
-        "vibrance": decoder.read_var_float(env)?.encode(env);
+        "tint" one kiwi_sparse_float_value;
+        "shadows" one kiwi_sparse_float_value;
+        "highlights" one kiwi_sparse_float_value;
+        "detail" one kiwi_sparse_float_value;
+        "exposure" one kiwi_sparse_float_value;
+        "vignette" one kiwi_sparse_float_value;
+        "temperature" one kiwi_sparse_float_value;
+        "vibrance" one kiwi_sparse_float_value;
     ]
 }
 
@@ -2618,8 +2686,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.IndexRange";
     capacity 3;
     fields [
-        "start_index": decoder.read_var_uint()?.encode(env);
-        "end_index_exclusive": decoder.read_var_uint()?.encode(env);
+        "start_index" one kiwi_sparse_uint_value;
+        "end_index_exclusive" one kiwi_sparse_uint_value;
     ]
 }
 
@@ -2630,8 +2698,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.CollaborativeTextOpID";
     capacity 3;
     fields [
-        "session_id": decoder.read_var_uint()?.encode(env);
-        "counter_id": decoder.read_var_uint()?.encode(env);
+        "session_id" one kiwi_sparse_uint_value;
+        "counter_id" one kiwi_sparse_uint_value;
     ]
 }
 
@@ -3071,22 +3139,22 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.Matrix4f";
     capacity 17;
     fields [
-        "m00": decoder.read_var_float(env)?.encode(env);
-        "m01": decoder.read_var_float(env)?.encode(env);
-        "m02": decoder.read_var_float(env)?.encode(env);
-        "m03": decoder.read_var_float(env)?.encode(env);
-        "m10": decoder.read_var_float(env)?.encode(env);
-        "m11": decoder.read_var_float(env)?.encode(env);
-        "m12": decoder.read_var_float(env)?.encode(env);
-        "m13": decoder.read_var_float(env)?.encode(env);
-        "m20": decoder.read_var_float(env)?.encode(env);
-        "m21": decoder.read_var_float(env)?.encode(env);
-        "m22": decoder.read_var_float(env)?.encode(env);
-        "m23": decoder.read_var_float(env)?.encode(env);
-        "m30": decoder.read_var_float(env)?.encode(env);
-        "m31": decoder.read_var_float(env)?.encode(env);
-        "m32": decoder.read_var_float(env)?.encode(env);
-        "m33": decoder.read_var_float(env)?.encode(env);
+        "m00" one kiwi_sparse_float_value;
+        "m01" one kiwi_sparse_float_value;
+        "m02" one kiwi_sparse_float_value;
+        "m03" one kiwi_sparse_float_value;
+        "m10" one kiwi_sparse_float_value;
+        "m11" one kiwi_sparse_float_value;
+        "m12" one kiwi_sparse_float_value;
+        "m13" one kiwi_sparse_float_value;
+        "m20" one kiwi_sparse_float_value;
+        "m21" one kiwi_sparse_float_value;
+        "m22" one kiwi_sparse_float_value;
+        "m23" one kiwi_sparse_float_value;
+        "m30" one kiwi_sparse_float_value;
+        "m31" one kiwi_sparse_float_value;
+        "m32" one kiwi_sparse_float_value;
+        "m33" one kiwi_sparse_float_value;
     ]
 }
 
@@ -3188,8 +3256,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.NumberVector2D";
     capacity 3;
     fields [
-        "x": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
-        "y": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
+        "x" one decode_sparse_number_from_decoder;
+        "y" one decode_sparse_number_from_decoder;
     ]
 }
 
@@ -6129,8 +6197,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.DiagramParentIndex";
     capacity 3;
     fields [
-        "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        "position": decoder.read_string(env)?.encode(env);
+        "guid" one decode_sparse_guid_from_decoder;
+        "position" one kiwi_sparse_string_value;
     ]
 }
 
@@ -7457,8 +7525,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.Click";
     capacity 3;
     fields [
-        "id": decoder.read_var_uint()?.encode(env);
-        "point": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
+        "id" one kiwi_sparse_uint_value;
+        "point" one decode_sparse_vector_from_decoder;
     ]
 }
 
@@ -7469,8 +7537,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.ScrollPosition";
     capacity 3;
     fields [
-        "node": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        "scroll_offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
+        "node" one decode_sparse_guid_from_decoder;
+        "scroll_offset" one decode_sparse_vector_from_decoder;
     ]
 }
 
@@ -7481,9 +7549,9 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.TriggeredOverlay";
     capacity 4;
     fields [
-        "overlay_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        "hotspot_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        "swap_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        "overlay_guid" one decode_sparse_guid_from_decoder;
+        "hotspot_guid" one decode_sparse_guid_from_decoder;
+        "swap_guid" one decode_sparse_guid_from_decoder;
     ]
 }
 
@@ -8195,8 +8263,8 @@ kiwi_sparse_struct_decoder! {
     module "Elixir.Figler.Schema.GUIDAndEncodedOffset";
     capacity 3;
     fields [
-        "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        "offset": decoder.read_var_uint()?.encode(env);
+        "guid" one decode_sparse_guid_from_decoder;
+        "offset" one kiwi_sparse_uint_value;
     ]
 }
 

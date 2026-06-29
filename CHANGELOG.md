@@ -10,9 +10,10 @@
 - Regenerate sparse descriptor declarations and descriptor macros from RustQ
   `@type` / `defrustmacro` support.
 - Share sparse and skip message descriptor field inventories, use RustQ-authored
-  sparse enum and descriptor skip scanning, and generate skip descriptor
-  function/enum/field declarations from RustQ type metadata in native Rust.
-- Reduce checked-in generated native source to about 535 KB / 13,366 lines while
+  sparse enum, sparse struct, and descriptor skip scanning, and generate skip
+  descriptor function/enum/field declarations from RustQ type metadata in native
+  Rust.
+- Reduce checked-in generated native source to about 535 KB / 13,434 lines while
   preserving public sparse decode and graph seed performance paths.
 
 ## 0.1.0 - 2026-06-26
