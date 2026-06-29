@@ -10,18 +10,22 @@ use std::sync::OnceLock;
 use crate::runtime::Decoder;
 
 
-type KiwiSkipFn = fn(&mut Decoder<'_>) -> NifResult<()>;
-
-enum KiwiSkipKind {
+#[derive(Clone, Debug)]
+pub enum KiwiSkipKind {
     One(KiwiSkipFn),
     Repeated(KiwiSkipFn),
     Bytes,
 }
 
-struct KiwiSkipField {
-    id: u32,
-    kind: KiwiSkipKind,
+
+#[derive(Clone, Debug)]
+pub struct KiwiSkipField {
+    pub id: u32,
+    pub kind: KiwiSkipKind,
 }
+
+
+pub type KiwiSkipFn = fn(&mut Decoder<'_>) -> NifResult<()>;
 
 
 fn kiwi_skip_bool_value(decoder: &mut Decoder<'_>) -> NifResult<()> {
