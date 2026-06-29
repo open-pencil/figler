@@ -126,6 +126,9 @@ macro_rules! kiwi_skip_kind {
     (one $skip:ident) => { KiwiSkipKind::One($skip) };
     (repeated $skip:ident) => { KiwiSkipKind::Repeated($skip) };
     (bytes $skip:ident) => { KiwiSkipKind::Bytes };
+    (one, $skip:ident) => { KiwiSkipKind::One($skip) };
+    (repeated, $skip:ident) => { KiwiSkipKind::Repeated($skip) };
+    (bytes, $skip:ident) => { KiwiSkipKind::Bytes };
 }
 
 macro_rules! kiwi_skip_struct_decoder {
@@ -136,6 +139,7 @@ macro_rules! kiwi_skip_struct_decoder {
     };
 }
 
+#[allow(unused_macros)]
 macro_rules! kiwi_skip_message_decoder {
     (
         fn $name:ident;
@@ -225,15 +229,16 @@ pub struct KiwiSparseField {
 }
 
 
-macro_rules! kiwi_sparse_message_descriptor_decoder {
-        (fn $name:ident;
+macro_rules! kiwi_sparse_skip_message_descriptor_decoder {
+        (sparse_fn $sparse_name:ident;
+        skip_fn $skip_name:ident;
         env $env:ident;
         decoder $decoder:ident;
         module $module_name:literal;
         definition $definition_name:literal;
         capacity $capacity:literal;
-        fields [$($field_id:literal => $field_name:literal: $field_mode:ident $field_decode:ident;)*]) => {
-                fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+        fields [$($field_id:literal => $field_name:literal: $field_mode:ident $field_decode:ident; $field_skip_mode:ident $field_skip:ident;)*]) => {
+                fn $sparse_name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
                         kiwi_sparse_message_fields(
                             $env,
                             $decoder,
@@ -242,6 +247,16 @@ macro_rules! kiwi_sparse_message_descriptor_decoder {
                             $capacity,
                             &[
                                 $(KiwiSparseField { id: $field_id, name: $field_name, repeated: kiwi_sparse_repeated!($field_mode), decode: $field_decode},)*
+                            ],
+                        )
+                }
+                
+                fn $skip_name($decoder: &mut Decoder<'_>) -> NifResult<()> {
+                        kiwi_skip_message_fields(
+                            $decoder,
+                            $definition_name,
+                            &[
+                                $(KiwiSkipField { id: $field_id, kind: kiwi_skip_kind!($field_skip_mode, $field_skip) },)*
                             ],
                         )
                 }
@@ -1318,17 +1333,18 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_color_stop_var_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_color_stop_var_from_decoder;
+    skip_fn skip_color_stop_var_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ColorStopVar";
     definition "ColorStopVar";
     capacity 4;
     fields [
-        1 => "color": one decode_sparse_color_from_decoder;
-        2 => "color_var": one decode_sparse_variable_data_from_decoder;
-        3 => "position": one kiwi_sparse_float_value;
+        1 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        2 => "color_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        3 => "position": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
@@ -1497,20 +1513,21 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_source_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_source_info_from_decoder;
+    skip_fn skip_code_source_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeSourceInfo";
     definition "CodeSourceInfo";
     capacity 7;
     fields [
-        1 => "origin_reference_id": one kiwi_sparse_string_value;
-        2 => "origin_node_id": one decode_sparse_guid_from_decoder;
-        3 => "linked_snapshot_id": one decode_sparse_guid_from_decoder;
-        4 => "capture_mode": one decode_sparse_snapshot_capture_mode_from_decoder;
-        5 => "source_blob_ref": one kiwi_sparse_string_value;
-        6 => "source_element_id": one kiwi_sparse_string_value;
+        1 => "origin_reference_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "origin_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "linked_snapshot_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "capture_mode": one decode_sparse_snapshot_capture_mode_from_decoder; one kiwi_skip_uint_value;
+        5 => "source_blob_ref": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        6 => "source_element_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -1531,18 +1548,19 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_custom_tool_artifact_ref_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_custom_tool_artifact_ref_from_decoder;
+    skip_fn skip_custom_tool_artifact_ref_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CustomToolArtifactRef";
     definition "CustomToolArtifactRef";
     capacity 5;
     fields [
-        1 => "custom_tool_id": one kiwi_sparse_string_value;
-        2 => "custom_tool_version": one kiwi_sparse_string_value;
-        3 => "published_custom_tool_id": one kiwi_sparse_string_value;
-        4 => "published_custom_tool_version_id": one kiwi_sparse_string_value;
+        1 => "custom_tool_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "custom_tool_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "published_custom_tool_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "published_custom_tool_version_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -1829,43 +1847,46 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_image_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_image_from_decoder;
+    skip_fn skip_image_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Image";
     definition "Image";
     capacity 4;
     fields [
-        1 => "hash": one kiwi_sparse_bytes_value;
-        2 => "name": one kiwi_sparse_string_value;
-        3 => "data_blob": one kiwi_sparse_uint_value;
+        1 => "hash": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        2 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "data_blob": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_video_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_video_from_decoder;
+    skip_fn skip_video_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Video";
     definition "Video";
     capacity 3;
     fields [
-        1 => "hash": one kiwi_sparse_bytes_value;
-        2 => "s3_url": one kiwi_sparse_string_value;
+        1 => "hash": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        2 => "s3_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_paste_source_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_paste_source_from_decoder;
+    skip_fn skip_paste_source_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PasteSource";
     definition "PasteSource";
     capacity 3;
     fields [
-        1 => "src_file": one kiwi_sparse_string_value;
-        2 => "src_node": one decode_sparse_guid_from_decoder;
+        1 => "src_file": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "src_node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
@@ -1887,77 +1908,79 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_paint_filter_message_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_paint_filter_message_from_decoder;
+    skip_fn skip_paint_filter_message_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PaintFilterMessage";
     definition "PaintFilterMessage";
     capacity 11;
     fields [
-        1 => "tint": one kiwi_sparse_float_value;
-        2 => "shadows": one kiwi_sparse_float_value;
-        3 => "highlights": one kiwi_sparse_float_value;
-        4 => "detail": one kiwi_sparse_float_value;
-        5 => "exposure": one kiwi_sparse_float_value;
-        6 => "vignette": one kiwi_sparse_float_value;
-        7 => "temperature": one kiwi_sparse_float_value;
-        8 => "vibrance": one kiwi_sparse_float_value;
-        9 => "contrast": one kiwi_sparse_float_value;
-        10 => "brightness": one kiwi_sparse_float_value;
+        1 => "tint": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "shadows": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "highlights": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "detail": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "exposure": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        6 => "vignette": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        7 => "temperature": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        8 => "vibrance": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        9 => "contrast": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        10 => "brightness": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_paint_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_paint_from_decoder;
+    skip_fn skip_paint_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Paint";
     definition "Paint";
     capacity 43;
     fields [
-        1 => "type": one decode_sparse_paint_type_from_decoder;
-        2 => "color": one decode_sparse_color_from_decoder;
-        3 => "opacity": one kiwi_sparse_float_value;
-        4 => "visible": one kiwi_sparse_bool_value;
-        5 => "blend_mode": one decode_sparse_blend_mode_from_decoder;
-        6 => "stops": repeated decode_sparse_color_stop_from_decoder;
-        7 => "transform": one decode_sparse_matrix_from_decoder;
-        8 => "image": one decode_sparse_image_from_decoder;
-        9 => "image_thumbnail": one decode_sparse_image_from_decoder;
-        10 => "image_scale_mode": one decode_sparse_image_scale_mode_from_decoder;
-        11 => "rotation": one kiwi_sparse_float_value;
-        12 => "scale": one kiwi_sparse_float_value;
-        13 => "filter_color_adjust": one decode_sparse_filter_color_adjust_from_decoder;
-        14 => "paint_filter": one decode_sparse_paint_filter_message_from_decoder;
-        15 => "emoji_code_points": repeated kiwi_sparse_uint_value;
-        16 => "animated_image": one decode_sparse_image_from_decoder;
-        17 => "animation_frame": one kiwi_sparse_uint_value;
-        18 => "video": one decode_sparse_video_from_decoder;
-        19 => "original_image_width": one kiwi_sparse_uint_value;
-        20 => "original_image_height": one kiwi_sparse_uint_value;
-        21 => "color_var": one decode_sparse_variable_data_from_decoder;
-        22 => "image_should_color_manage": one kiwi_sparse_bool_value;
-        23 => "stops_var": repeated decode_sparse_color_stop_var_from_decoder;
-        24 => "thumb_hash_base64": one kiwi_sparse_string_value;
-        25 => "thumb_hash": one kiwi_sparse_bytes_value;
-        26 => "source_node_id": one decode_sparse_guid_from_decoder;
-        27 => "spacing": one kiwi_sparse_float_value;
-        28 => "pattern_tile_type": one decode_sparse_pattern_tile_type_from_decoder;
-        29 => "vertical_alignment": one decode_sparse_pattern_alignment_from_decoder;
-        30 => "horizontal_alignment": one decode_sparse_pattern_alignment_from_decoder;
-        31 => "image_var": one decode_sparse_variable_data_from_decoder;
-        32 => "id": one decode_sparse_guid_from_decoder;
-        33 => "alt_text": one kiwi_sparse_string_value;
-        34 => "noise_type": one decode_sparse_noise_type_from_decoder;
-        35 => "density": one kiwi_sparse_float_value;
-        36 => "noise_size": one decode_sparse_vector_from_decoder;
-        37 => "pattern_spacing": one decode_sparse_vector_from_decoder;
-        38 => "opacity_var": one decode_sparse_variable_data_from_decoder;
-        39 => "custom_effect_id": one decode_sparse_code_component_id_from_decoder;
-        40 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
-        41 => "interpolation_color_space": one decode_sparse_interpolation_color_space_from_decoder;
-        42 => "interpolation_hue_method": one decode_sparse_interpolation_hue_method_from_decoder;
+        1 => "type": one decode_sparse_paint_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        3 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one kiwi_skip_uint_value;
+        6 => "stops": repeated decode_sparse_color_stop_from_decoder; repeated skip_color_stop_from_decoder;
+        7 => "transform": one decode_sparse_matrix_from_decoder; one skip_matrix_from_decoder;
+        8 => "image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
+        9 => "image_thumbnail": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
+        10 => "image_scale_mode": one decode_sparse_image_scale_mode_from_decoder; one kiwi_skip_uint_value;
+        11 => "rotation": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        12 => "scale": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        13 => "filter_color_adjust": one decode_sparse_filter_color_adjust_from_decoder; one skip_filter_color_adjust_from_decoder;
+        14 => "paint_filter": one decode_sparse_paint_filter_message_from_decoder; one skip_paint_filter_message_from_decoder;
+        15 => "emoji_code_points": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        16 => "animated_image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
+        17 => "animation_frame": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        18 => "video": one decode_sparse_video_from_decoder; one skip_video_from_decoder;
+        19 => "original_image_width": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        20 => "original_image_height": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        21 => "color_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        22 => "image_should_color_manage": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        23 => "stops_var": repeated decode_sparse_color_stop_var_from_decoder; repeated skip_color_stop_var_from_decoder;
+        24 => "thumb_hash_base64": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        25 => "thumb_hash": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        26 => "source_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        27 => "spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        28 => "pattern_tile_type": one decode_sparse_pattern_tile_type_from_decoder; one kiwi_skip_uint_value;
+        29 => "vertical_alignment": one decode_sparse_pattern_alignment_from_decoder; one kiwi_skip_uint_value;
+        30 => "horizontal_alignment": one decode_sparse_pattern_alignment_from_decoder; one kiwi_skip_uint_value;
+        31 => "image_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        32 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        33 => "alt_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        34 => "noise_type": one decode_sparse_noise_type_from_decoder; one kiwi_skip_uint_value;
+        35 => "density": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        36 => "noise_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        37 => "pattern_spacing": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        38 => "opacity_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        39 => "custom_effect_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
+        40 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder; repeated skip_component_prop_assignment_from_decoder;
+        41 => "interpolation_color_space": one decode_sparse_interpolation_color_space_from_decoder; one kiwi_skip_uint_value;
+        42 => "interpolation_hue_method": one decode_sparse_interpolation_hue_method_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -2019,514 +2042,549 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_font_meta_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_font_meta_data_from_decoder;
+    skip_fn skip_font_meta_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.FontMetaData";
     definition "FontMetaData";
     capacity 6;
     fields [
-        1 => "key": one decode_sparse_font_name_from_decoder;
-        2 => "font_line_height": one kiwi_sparse_float_value;
-        3 => "font_digest": one kiwi_sparse_bytes_value;
-        4 => "font_style": one decode_sparse_font_style_from_decoder;
-        5 => "font_weight": one kiwi_sparse_int_value;
+        1 => "key": one decode_sparse_font_name_from_decoder; one skip_font_name_from_decoder;
+        2 => "font_line_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "font_digest": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        4 => "font_style": one decode_sparse_font_style_from_decoder; one kiwi_skip_uint_value;
+        5 => "font_weight": one kiwi_sparse_int_value; one kiwi_skip_int_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_font_variation_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_font_variation_from_decoder;
+    skip_fn skip_font_variation_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.FontVariation";
     definition "FontVariation";
     capacity 4;
     fields [
-        1 => "axis_tag": one kiwi_sparse_uint_value;
-        2 => "axis_name": one kiwi_sparse_string_value;
-        3 => "value": one kiwi_sparse_float_value;
+        1 => "axis_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "axis_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_text_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_text_data_from_decoder;
+    skip_fn skip_text_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TextData";
     definition "TextData";
     capacity 20;
     fields [
-        1 => "characters": one kiwi_sparse_string_value;
-        2 => "character_style_i_ds": repeated kiwi_sparse_uint_value;
-        3 => "style_override_table": repeated decode_sparse_node_change_from_decoder;
-        4 => "layout_size": one decode_sparse_vector_from_decoder;
-        5 => "baselines": repeated decode_sparse_baseline_from_decoder;
-        6 => "glyphs": repeated decode_sparse_glyph_from_decoder;
-        7 => "decorations": repeated decode_sparse_decoration_from_decoder;
-        8 => "layout_version": one kiwi_sparse_uint_value;
-        9 => "font_meta_data": repeated decode_sparse_font_meta_data_from_decoder;
-        10 => "fallback_fonts": repeated decode_sparse_font_name_from_decoder;
-        11 => "hyperlink_boxes": repeated decode_sparse_hyperlink_box_from_decoder;
-        12 => "lines": repeated decode_sparse_text_line_data_from_decoder;
-        13 => "truncation_start_index": one kiwi_sparse_int_value;
-        14 => "truncated_height": one kiwi_sparse_float_value;
-        15 => "logical_index_to_character_offset_map": repeated kiwi_sparse_float_value;
-        16 => "blockquotes": repeated decode_sparse_blockquote_from_decoder;
-        17 => "min_content_height": one kiwi_sparse_float_value;
-        18 => "mention_boxes": repeated decode_sparse_mention_box_from_decoder;
-        19 => "derived_lines": repeated decode_sparse_derived_text_line_data_from_decoder;
+        1 => "characters": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "character_style_i_ds": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        3 => "style_override_table": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
+        4 => "layout_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        5 => "baselines": repeated decode_sparse_baseline_from_decoder; repeated skip_baseline_from_decoder;
+        6 => "glyphs": repeated decode_sparse_glyph_from_decoder; repeated skip_glyph_from_decoder;
+        7 => "decorations": repeated decode_sparse_decoration_from_decoder; repeated skip_decoration_from_decoder;
+        8 => "layout_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        9 => "font_meta_data": repeated decode_sparse_font_meta_data_from_decoder; repeated skip_font_meta_data_from_decoder;
+        10 => "fallback_fonts": repeated decode_sparse_font_name_from_decoder; repeated skip_font_name_from_decoder;
+        11 => "hyperlink_boxes": repeated decode_sparse_hyperlink_box_from_decoder; repeated skip_hyperlink_box_from_decoder;
+        12 => "lines": repeated decode_sparse_text_line_data_from_decoder; repeated skip_text_line_data_from_decoder;
+        13 => "truncation_start_index": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        14 => "truncated_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        15 => "logical_index_to_character_offset_map": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        16 => "blockquotes": repeated decode_sparse_blockquote_from_decoder; repeated skip_blockquote_from_decoder;
+        17 => "min_content_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        18 => "mention_boxes": repeated decode_sparse_mention_box_from_decoder; repeated skip_mention_box_from_decoder;
+        19 => "derived_lines": repeated decode_sparse_derived_text_line_data_from_decoder; repeated skip_derived_text_line_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_derived_text_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_derived_text_data_from_decoder;
+    skip_fn skip_derived_text_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.DerivedTextData";
     definition "DerivedTextData";
     capacity 13;
     fields [
-        1 => "layout_size": one decode_sparse_vector_from_decoder;
-        2 => "baselines": repeated decode_sparse_baseline_from_decoder;
-        3 => "glyphs": repeated decode_sparse_glyph_from_decoder;
-        4 => "decorations": repeated decode_sparse_decoration_from_decoder;
-        5 => "blockquotes": repeated decode_sparse_blockquote_from_decoder;
-        6 => "font_meta_data": repeated decode_sparse_font_meta_data_from_decoder;
-        7 => "hyperlink_boxes": repeated decode_sparse_hyperlink_box_from_decoder;
-        8 => "truncation_start_index": one kiwi_sparse_int_value;
-        9 => "truncated_height": one kiwi_sparse_float_value;
-        10 => "logical_index_to_character_offset_map": repeated kiwi_sparse_float_value;
-        11 => "mention_boxes": repeated decode_sparse_mention_box_from_decoder;
-        12 => "derived_lines": repeated decode_sparse_derived_text_line_data_from_decoder;
+        1 => "layout_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        2 => "baselines": repeated decode_sparse_baseline_from_decoder; repeated skip_baseline_from_decoder;
+        3 => "glyphs": repeated decode_sparse_glyph_from_decoder; repeated skip_glyph_from_decoder;
+        4 => "decorations": repeated decode_sparse_decoration_from_decoder; repeated skip_decoration_from_decoder;
+        5 => "blockquotes": repeated decode_sparse_blockquote_from_decoder; repeated skip_blockquote_from_decoder;
+        6 => "font_meta_data": repeated decode_sparse_font_meta_data_from_decoder; repeated skip_font_meta_data_from_decoder;
+        7 => "hyperlink_boxes": repeated decode_sparse_hyperlink_box_from_decoder; repeated skip_hyperlink_box_from_decoder;
+        8 => "truncation_start_index": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        9 => "truncated_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        10 => "logical_index_to_character_offset_map": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        11 => "mention_boxes": repeated decode_sparse_mention_box_from_decoder; repeated skip_mention_box_from_decoder;
+        12 => "derived_lines": repeated decode_sparse_derived_text_line_data_from_decoder; repeated skip_derived_text_line_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_hyperlink_box_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_hyperlink_box_from_decoder;
+    skip_fn skip_hyperlink_box_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.HyperlinkBox";
     definition "HyperlinkBox";
     capacity 7;
     fields [
-        1 => "bounds": one decode_sparse_rect_from_decoder;
-        2 => "url": one kiwi_sparse_string_value;
-        3 => "guid": one decode_sparse_guid_from_decoder;
-        4 => "hyperlink_id": one kiwi_sparse_int_value;
-        5 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder;
-        6 => "open_in_new_tab": one kiwi_sparse_bool_value;
+        1 => "bounds": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
+        2 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "hyperlink_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        5 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder; one skip_cms_item_page_target_from_decoder;
+        6 => "open_in_new_tab": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_mention_box_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_mention_box_from_decoder;
+    skip_fn skip_mention_box_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.MentionBox";
     definition "MentionBox";
     capacity 6;
     fields [
-        1 => "bounds": one decode_sparse_rect_from_decoder;
-        2 => "start_index": one kiwi_sparse_uint_value;
-        3 => "end_index": one kiwi_sparse_uint_value;
-        4 => "is_valid": one kiwi_sparse_bool_value;
-        5 => "mention_key": one kiwi_sparse_uint_value;
+        1 => "bounds": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
+        2 => "start_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "end_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "is_valid": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "mention_key": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_baseline_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_baseline_from_decoder;
+    skip_fn skip_baseline_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Baseline";
     definition "Baseline";
     capacity 9;
     fields [
-        1 => "position": one decode_sparse_vector_from_decoder;
-        2 => "width": one kiwi_sparse_float_value;
-        3 => "line_y": one kiwi_sparse_float_value;
-        4 => "line_height": one kiwi_sparse_float_value;
-        5 => "first_character": one kiwi_sparse_uint_value;
-        6 => "end_character": one kiwi_sparse_uint_value;
-        7 => "line_ascent": one kiwi_sparse_float_value;
-        8 => "ignore_leading_trim": one kiwi_sparse_float_value;
+        1 => "position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        2 => "width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "line_y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "line_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "first_character": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        6 => "end_character": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        7 => "line_ascent": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        8 => "ignore_leading_trim": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_glyph_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_glyph_from_decoder;
+    skip_fn skip_glyph_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Glyph";
     definition "Glyph";
     capacity 10;
     fields [
-        1 => "commands_blob": one kiwi_sparse_uint_value;
-        2 => "position": one decode_sparse_vector_from_decoder;
-        3 => "style_id": one kiwi_sparse_uint_value;
-        4 => "font_size": one kiwi_sparse_float_value;
-        5 => "first_character": one kiwi_sparse_uint_value;
-        6 => "advance": one kiwi_sparse_float_value;
-        7 => "emoji_code_points": repeated kiwi_sparse_uint_value;
-        8 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder;
-        9 => "rotation": one kiwi_sparse_float_value;
+        1 => "commands_blob": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        3 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "font_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "first_character": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        6 => "advance": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        7 => "emoji_code_points": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        8 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder; one kiwi_skip_uint_value;
+        9 => "rotation": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_decoration_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_decoration_from_decoder;
+    skip_fn skip_decoration_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Decoration";
     definition "Decoration";
     capacity 3;
     fields [
-        1 => "rects": repeated decode_sparse_rect_from_decoder;
-        2 => "style_id": one kiwi_sparse_uint_value;
+        1 => "rects": repeated decode_sparse_rect_from_decoder; repeated skip_rect_from_decoder;
+        2 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_blockquote_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_blockquote_from_decoder;
+    skip_fn skip_blockquote_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Blockquote";
     definition "Blockquote";
     capacity 4;
     fields [
-        1 => "vertical_bar": one decode_sparse_rect_from_decoder;
-        2 => "quote_mark_bounds": one decode_sparse_rect_from_decoder;
-        3 => "style_id": one kiwi_sparse_uint_value;
+        1 => "vertical_bar": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
+        2 => "quote_mark_bounds": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
+        3 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_vector_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_vector_data_from_decoder;
+    skip_fn skip_vector_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VectorData";
     definition "VectorData";
     capacity 4;
     fields [
-        1 => "vector_network_blob": one kiwi_sparse_uint_value;
-        2 => "normalized_size": one decode_sparse_vector_from_decoder;
-        3 => "style_override_table": repeated decode_sparse_node_change_from_decoder;
+        1 => "vector_network_blob": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "normalized_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        3 => "style_override_table": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_text_path_start_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_text_path_start_from_decoder;
+    skip_fn skip_text_path_start_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TextPathStart";
     definition "TextPathStart";
     capacity 3;
     fields [
-        1 => "t_value": one kiwi_sparse_float_value;
-        2 => "forward": one kiwi_sparse_bool_value;
+        1 => "t_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "forward": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_guid_path_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_guid_path_from_decoder;
+    skip_fn skip_guid_path_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GUIDPath";
     definition "GUIDPath";
     capacity 2;
     fields [
-        1 => "guids": repeated decode_sparse_guid_from_decoder;
+        1 => "guids": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_symbol_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_symbol_data_from_decoder;
+    skip_fn skip_symbol_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SymbolData";
     definition "SymbolData";
     capacity 4;
     fields [
-        1 => "symbol_id": one decode_sparse_guid_from_decoder;
-        2 => "symbol_overrides": repeated decode_sparse_node_change_from_decoder;
-        3 => "uniform_scale_factor": one kiwi_sparse_float_value;
+        1 => "symbol_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "symbol_overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
+        3 => "uniform_scale_factor": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_guid_path_mapping_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_guid_path_mapping_from_decoder;
+    skip_fn skip_guid_path_mapping_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GUIDPathMapping";
     definition "GUIDPathMapping";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "path": one decode_sparse_guid_path_from_decoder;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_derived_breakpoint_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_derived_breakpoint_data_from_decoder;
+    skip_fn skip_derived_breakpoint_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.DerivedBreakpointData";
     definition "DerivedBreakpointData";
     capacity 2;
     fields [
-        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_generation_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_generation_data_from_decoder;
+    skip_fn skip_node_generation_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeGenerationData";
     definition "NodeGenerationData";
     capacity 4;
     fields [
-        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
-        2 => "use_fine_grained_syncing": one kiwi_sparse_bool_value;
-        3 => "diff_only_removals": repeated decode_sparse_node_change_from_decoder;
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
+        2 => "use_fine_grained_syncing": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "diff_only_removals": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_derived_immutable_frame_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_derived_immutable_frame_data_from_decoder;
+    skip_fn skip_derived_immutable_frame_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.DerivedImmutableFrameData";
     definition "DerivedImmutableFrameData";
     capacity 3;
     fields [
-        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
-        2 => "version": one kiwi_sparse_uint_value;
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
+        2 => "version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_jsx_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_jsx_data_from_decoder;
+    skip_fn skip_jsx_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.JsxData";
     definition "JsxData";
     capacity 2;
     fields [
-        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_derived_jsx_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_derived_jsx_data_from_decoder;
+    skip_fn skip_derived_jsx_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.DerivedJsxData";
     definition "DerivedJsxData";
     capacity 2;
     fields [
-        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_asset_id_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_asset_id_map_from_decoder;
+    skip_fn skip_asset_id_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AssetIdMap";
     definition "AssetIdMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_asset_id_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_asset_id_entry_from_decoder; repeated skip_asset_id_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_asset_id_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_asset_id_entry_from_decoder;
+    skip_fn skip_asset_id_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AssetIdEntry";
     definition "AssetIdEntry";
     capacity 3;
     fields [
-        1 => "asset_key": one kiwi_sparse_string_value;
-        2 => "asset_id": one decode_sparse_asset_id_from_decoder;
+        1 => "asset_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "asset_id": one decode_sparse_asset_id_from_decoder; one skip_asset_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_asset_ref_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_asset_ref_from_decoder;
+    skip_fn skip_asset_ref_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AssetRef";
     definition "AssetRef";
     capacity 3;
     fields [
-        1 => "key": one kiwi_sparse_string_value;
-        2 => "version": one kiwi_sparse_string_value;
+        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_asset_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_asset_id_from_decoder;
+    skip_fn skip_asset_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AssetId";
     definition "AssetId";
     capacity 8;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
-        3 => "state_group_id": one decode_sparse_state_group_id_from_decoder;
-        4 => "style_id": one decode_sparse_style_id_from_decoder;
-        5 => "symbol_id": one decode_sparse_symbol_id_from_decoder;
-        6 => "variable_id": one decode_sparse_variable_id_from_decoder;
-        7 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
+        3 => "state_group_id": one decode_sparse_state_group_id_from_decoder; one skip_state_group_id_from_decoder;
+        4 => "style_id": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        5 => "symbol_id": one decode_sparse_symbol_id_from_decoder; one skip_symbol_id_from_decoder;
+        6 => "variable_id": one decode_sparse_variable_id_from_decoder; one skip_variable_id_from_decoder;
+        7 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_state_group_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_state_group_id_from_decoder;
+    skip_fn skip_state_group_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StateGroupId";
     definition "StateGroupId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_style_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_style_id_from_decoder;
+    skip_fn skip_style_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StyleId";
     definition "StyleId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_symbol_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_symbol_id_from_decoder;
+    skip_fn skip_symbol_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SymbolId";
     definition "SymbolId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_id_from_decoder;
+    skip_fn skip_variable_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableID";
     definition "VariableID";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_override_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_override_id_from_decoder;
+    skip_fn skip_variable_override_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableOverrideId";
     definition "VariableOverrideId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_set_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_set_id_from_decoder;
+    skip_fn skip_variable_set_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableSetID";
     definition "VariableSetID";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_theme_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_theme_id_from_decoder;
+    skip_fn skip_theme_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ThemeID";
     definition "ThemeID";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_library_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_library_id_from_decoder;
+    skip_fn skip_code_library_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeLibraryId";
     definition "CodeLibraryId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_file_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_file_id_from_decoder;
+    skip_fn skip_code_file_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeFileId";
     definition "CodeFileId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_component_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_component_id_from_decoder;
+    skip_fn skip_code_component_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeComponentId";
     definition "CodeComponentId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_canvas_node_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_canvas_node_id_from_decoder;
+    skip_fn skip_canvas_node_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CanvasNodeId";
     definition "CanvasNodeId";
     capacity 4;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "symbol_id": one decode_sparse_symbol_id_from_decoder;
-        3 => "state_group_id": one decode_sparse_state_group_id_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "symbol_id": one decode_sparse_symbol_id_from_decoder; one skip_symbol_id_from_decoder;
+        3 => "state_group_id": one decode_sparse_state_group_id_from_decoder; one skip_state_group_id_from_decoder;
     ]
 }
 
@@ -2564,102 +2622,108 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
+    skip_fn skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithIDs";
     definition "CollaborativeTextStrippedOpRunWithIDs";
     capacity 5;
     fields [
-        1 => "first_id": one decode_sparse_collaborative_text_op_id_from_decoder;
-        2 => "run_length": one kiwi_sparse_uint_value;
-        3 => "parent_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder;
-        4 => "rebased_on_op_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder;
+        1 => "first_id": one decode_sparse_collaborative_text_op_id_from_decoder; one skip_collaborative_text_op_id_from_decoder;
+        2 => "run_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "parent_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
+        4 => "rebased_on_op_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder;
+    skip_fn skip_collaborative_text_stripped_op_run_with_loc_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithLoc";
     definition "CollaborativeTextStrippedOpRunWithLoc";
     capacity 6;
     fields [
-        1 => "type": one decode_sparse_collaborative_text_op_type_from_decoder;
-        2 => "range": one decode_sparse_index_range_from_decoder;
-        3 => "range_should_be_iterated_in_reverse": one kiwi_sparse_bool_value;
-        4 => "content_bytes_in_buffer": one decode_sparse_index_range_from_decoder;
-        5 => "rebased_range": one decode_sparse_index_range_from_decoder;
+        1 => "type": one decode_sparse_collaborative_text_op_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
+        3 => "range_should_be_iterated_in_reverse": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "content_bytes_in_buffer": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
+        5 => "rebased_range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_collaborative_text_op_run_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_collaborative_text_op_run_from_decoder;
+    skip_fn skip_collaborative_text_op_run_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CollaborativeTextOpRun";
     definition "CollaborativeTextOpRun";
     capacity 9;
     fields [
-        1 => "id": one decode_sparse_collaborative_text_op_id_from_decoder;
-        2 => "parent_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder;
-        3 => "type": one decode_sparse_collaborative_text_op_type_from_decoder;
-        4 => "range": one decode_sparse_index_range_from_decoder;
-        5 => "range_should_be_iterated_in_reverse": one kiwi_sparse_bool_value;
-        6 => "content": one kiwi_sparse_string_value;
-        7 => "rebased_on_op_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder;
-        8 => "rebased_range": one decode_sparse_index_range_from_decoder;
+        1 => "id": one decode_sparse_collaborative_text_op_id_from_decoder; one skip_collaborative_text_op_id_from_decoder;
+        2 => "parent_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
+        3 => "type": one decode_sparse_collaborative_text_op_type_from_decoder; one kiwi_skip_uint_value;
+        4 => "range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
+        5 => "range_should_be_iterated_in_reverse": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "content": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        7 => "rebased_on_op_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
+        8 => "rebased_range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_collaborative_plain_text_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_collaborative_plain_text_from_decoder;
+    skip_fn skip_collaborative_plain_text_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CollaborativePlainText";
     definition "CollaborativePlainText";
     capacity 5;
     fields [
-        1 => "history_ops_with_ids": repeated decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
-        2 => "history_ops_with_loc": repeated decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder;
-        3 => "history_string_content_buffer": one kiwi_sparse_bytes_value;
-        4 => "changes_to_append": repeated decode_sparse_collaborative_text_op_run_from_decoder;
+        1 => "history_ops_with_ids": repeated decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder; repeated skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
+        2 => "history_ops_with_loc": repeated decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder; repeated skip_collaborative_text_stripped_op_run_with_loc_from_decoder;
+        3 => "history_string_content_buffer": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        4 => "changes_to_append": repeated decode_sparse_collaborative_text_op_run_from_decoder; repeated skip_collaborative_text_op_run_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_collaborative_text_selection_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_collaborative_text_selection_from_decoder;
+    skip_fn skip_collaborative_text_selection_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CollaborativeTextSelection";
     definition "CollaborativeTextSelection";
     capacity 6;
     fields [
-        1 => "node": one decode_sparse_guid_from_decoder;
-        2 => "field": one kiwi_sparse_uint_value;
-        3 => "selected_range": one decode_sparse_index_range_from_decoder;
-        4 => "caret_at_front": one kiwi_sparse_bool_value;
-        5 => "text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder;
+        1 => "node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "field": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "selected_range": one decode_sparse_index_range_from_decoder; one skip_index_range_from_decoder;
+        4 => "caret_at_front": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_responsive_text_style_variant_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_responsive_text_style_variant_from_decoder;
+    skip_fn skip_responsive_text_style_variant_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ResponsiveTextStyleVariant";
     definition "ResponsiveTextStyleVariant";
     capacity 8;
     fields [
-        1 => "min_width": one kiwi_sparse_float_value;
-        2 => "fields": one decode_sparse_node_change_from_decoder;
-        3 => "variable_font_size": one decode_sparse_variable_data_from_decoder;
-        4 => "variable_line_height": one decode_sparse_variable_data_from_decoder;
-        5 => "variable_letter_spacing": one decode_sparse_variable_data_from_decoder;
-        6 => "variable_paragraph_spacing": one decode_sparse_variable_data_from_decoder;
-        7 => "name": one kiwi_sparse_string_value;
+        1 => "min_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "fields": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
+        3 => "variable_font_size": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        4 => "variable_line_height": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        5 => "variable_letter_spacing": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        6 => "variable_paragraph_spacing": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        7 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -2676,133 +2740,142 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_slide_theme_props_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_slide_theme_props_from_decoder;
+    skip_fn skip_slide_theme_props_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SlideThemeProps";
     definition "SlideThemeProps";
     capacity 9;
     fields [
-        1 => "theme_version": one kiwi_sparse_string_value;
-        2 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder;
-        3 => "text_style_ids": repeated decode_sparse_style_id_from_decoder;
-        4 => "is_text_color_manually_selected": one kiwi_sparse_bool_value;
-        5 => "is_border_color_manually_selected": one kiwi_sparse_bool_value;
-        6 => "subscribed_theme_ref": one decode_sparse_asset_ref_from_decoder;
-        7 => "schema_version": one kiwi_sparse_uint_value;
-        8 => "is_generated_from_design": one kiwi_sparse_bool_value;
+        1 => "theme_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
+        3 => "text_style_ids": repeated decode_sparse_style_id_from_decoder; repeated skip_style_id_from_decoder;
+        4 => "is_text_color_manually_selected": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "is_border_color_manually_selected": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "subscribed_theme_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
+        7 => "schema_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        8 => "is_generated_from_design": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_slide_theme_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_slide_theme_map_from_decoder;
+    skip_fn skip_slide_theme_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SlideThemeMap";
     definition "SlideThemeMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_slide_theme_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_slide_theme_map_entry_from_decoder; repeated skip_slide_theme_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_slide_theme_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_slide_theme_map_entry_from_decoder;
+    skip_fn skip_slide_theme_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SlideThemeMapEntry";
     definition "SlideThemeMapEntry";
     capacity 3;
     fields [
-        1 => "theme_id": one decode_sparse_theme_id_from_decoder;
-        2 => "theme_props": one decode_sparse_slide_theme_props_from_decoder;
+        1 => "theme_id": one decode_sparse_theme_id_from_decoder; one skip_theme_id_from_decoder;
+        2 => "theme_props": one decode_sparse_slide_theme_props_from_decoder; one skip_slide_theme_props_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_shared_symbol_reference_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_shared_symbol_reference_from_decoder;
+    skip_fn skip_shared_symbol_reference_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SharedSymbolReference";
     definition "SharedSymbolReference";
     capacity 10;
     fields [
-        1 => "file_key": one kiwi_sparse_string_value;
-        2 => "symbol_id": one decode_sparse_guid_from_decoder;
-        3 => "version_hash": one kiwi_sparse_string_value;
-        4 => "guid_path_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
-        5 => "bytes": one kiwi_sparse_bytes_value;
-        6 => "library_guid_to_subscribing_guid": repeated decode_sparse_guid_mapping_from_decoder;
-        7 => "component_key": one kiwi_sparse_string_value;
-        8 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
-        9 => "is_unflattened": one kiwi_sparse_bool_value;
+        1 => "file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "symbol_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "version_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "guid_path_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
+        5 => "bytes": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        6 => "library_guid_to_subscribing_guid": repeated decode_sparse_guid_mapping_from_decoder; repeated skip_guid_mapping_from_decoder;
+        7 => "component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        8 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
+        9 => "is_unflattened": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_shared_component_master_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_shared_component_master_data_from_decoder;
+    skip_fn skip_shared_component_master_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SharedComponentMasterData";
     definition "SharedComponentMasterData";
     capacity 4;
     fields [
-        1 => "component_key": one kiwi_sparse_string_value;
-        2 => "publishing_guid_path_to_team_library_guid": repeated decode_sparse_guid_path_mapping_from_decoder;
-        3 => "is_unflattened": one kiwi_sparse_bool_value;
+        1 => "component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "publishing_guid_path_to_team_library_guid": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
+        3 => "is_unflattened": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_instance_override_stash_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_instance_override_stash_from_decoder;
+    skip_fn skip_instance_override_stash_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InstanceOverrideStash";
     definition "InstanceOverrideStash";
     capacity 4;
     fields [
-        1 => "override_path_of_swapped_instance": one decode_sparse_guid_path_from_decoder;
-        2 => "component_key": one kiwi_sparse_string_value;
-        3 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        1 => "override_path_of_swapped_instance": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        2 => "component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_instance_override_stash_v2_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_instance_override_stash_v2_from_decoder;
+    skip_fn skip_instance_override_stash_v2_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InstanceOverrideStashV2";
     definition "InstanceOverrideStashV2";
     capacity 4;
     fields [
-        1 => "override_path_of_swapped_instance": one decode_sparse_guid_path_from_decoder;
-        2 => "local_symbol_id": one decode_sparse_guid_from_decoder;
-        3 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        1 => "override_path_of_swapped_instance": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        2 => "local_symbol_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_imported_code_file_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_imported_code_file_entry_from_decoder;
+    skip_fn skip_imported_code_file_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ImportedCodeFileEntry";
     definition "ImportedCodeFileEntry";
     capacity 2;
     fields [
-        1 => "code_file_id": one decode_sparse_code_file_id_from_decoder;
+        1 => "code_file_id": one decode_sparse_code_file_id_from_decoder; one skip_code_file_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_imported_code_files_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_imported_code_files_from_decoder;
+    skip_fn skip_imported_code_files_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ImportedCodeFiles";
     definition "ImportedCodeFiles";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_imported_code_file_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_imported_code_file_entry_from_decoder; repeated skip_imported_code_file_entry_from_decoder;
     ]
 }
 
@@ -2857,69 +2930,70 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_effect_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_effect_from_decoder;
+    skip_fn skip_effect_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Effect";
     definition "Effect";
     capacity 56;
     fields [
-        1 => "type": one decode_sparse_effect_type_from_decoder;
-        2 => "color": one decode_sparse_color_from_decoder;
-        3 => "offset": one decode_sparse_vector_from_decoder;
-        4 => "radius": one kiwi_sparse_float_value;
-        5 => "visible": one kiwi_sparse_bool_value;
-        6 => "blend_mode": one decode_sparse_blend_mode_from_decoder;
-        7 => "spread": one kiwi_sparse_float_value;
-        8 => "show_shadow_behind_node": one kiwi_sparse_bool_value;
-        9 => "radius_var": one decode_sparse_variable_data_from_decoder;
-        10 => "color_var": one decode_sparse_variable_data_from_decoder;
-        11 => "spread_var": one decode_sparse_variable_data_from_decoder;
-        12 => "x_var": one decode_sparse_variable_data_from_decoder;
-        13 => "y_var": one decode_sparse_variable_data_from_decoder;
-        14 => "count": one kiwi_sparse_uint_value;
-        15 => "repeat_type": one decode_sparse_repeat_type_from_decoder;
-        16 => "axis": one decode_sparse_effect_axis_from_decoder;
-        17 => "unit_type": one decode_sparse_unit_type_from_decoder;
-        18 => "order": one decode_sparse_repeat_order_from_decoder;
-        19 => "blur_op_type": one decode_sparse_blur_op_type_from_decoder;
-        20 => "start_offset": one decode_sparse_vector_from_decoder;
-        21 => "start_radius": one kiwi_sparse_float_value;
-        22 => "noise_size": one decode_sparse_vector_from_decoder;
-        23 => "clip_to_shape": one kiwi_sparse_bool_value;
-        24 => "secondary_color": one decode_sparse_color_from_decoder;
-        25 => "density": one kiwi_sparse_float_value;
-        26 => "noise_type": one decode_sparse_noise_type_from_decoder;
-        27 => "opacity": one kiwi_sparse_float_value;
-        28 => "end_offset": one decode_sparse_vector_from_decoder;
-        29 => "seed": one kiwi_sparse_uint_value;
-        30 => "refraction_radius": one kiwi_sparse_float_value;
-        31 => "specular_angle": one kiwi_sparse_float_value;
-        32 => "specular_intensity": one kiwi_sparse_float_value;
-        33 => "bevel_size": one kiwi_sparse_float_value;
-        34 => "chromatic_aberration": one kiwi_sparse_float_value;
-        35 => "reflection_distance": one kiwi_sparse_float_value;
-        36 => "refraction_intensity": one kiwi_sparse_float_value;
-        37 => "refraction_radius_var": one decode_sparse_variable_data_from_decoder;
-        38 => "specular_angle_var": one decode_sparse_variable_data_from_decoder;
-        39 => "specular_intensity_var": one decode_sparse_variable_data_from_decoder;
-        40 => "chromatic_aberration_var": one decode_sparse_variable_data_from_decoder;
-        41 => "splay_var": one decode_sparse_variable_data_from_decoder;
-        42 => "refraction_intensity_var": one decode_sparse_variable_data_from_decoder;
-        43 => "custom_effect_id": one decode_sparse_code_component_id_from_decoder;
-        44 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
-        45 => "start_radius_var": one decode_sparse_variable_data_from_decoder;
-        46 => "start_offset_x_var": one decode_sparse_variable_data_from_decoder;
-        47 => "start_offset_y_var": one decode_sparse_variable_data_from_decoder;
-        48 => "end_offset_x_var": one decode_sparse_variable_data_from_decoder;
-        49 => "end_offset_y_var": one decode_sparse_variable_data_from_decoder;
-        50 => "noise_size_x_var": one decode_sparse_variable_data_from_decoder;
-        51 => "noise_size_y_var": one decode_sparse_variable_data_from_decoder;
-        52 => "density_var": one decode_sparse_variable_data_from_decoder;
-        53 => "effect_opacity_var": one decode_sparse_variable_data_from_decoder;
-        54 => "secondary_color_var": one decode_sparse_variable_data_from_decoder;
-        55 => "id": one decode_sparse_guid_from_decoder;
+        1 => "type": one decode_sparse_effect_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        3 => "offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        4 => "radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one kiwi_skip_uint_value;
+        7 => "spread": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        8 => "show_shadow_behind_node": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        9 => "radius_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        10 => "color_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        11 => "spread_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        12 => "x_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        13 => "y_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        14 => "count": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        15 => "repeat_type": one decode_sparse_repeat_type_from_decoder; one kiwi_skip_uint_value;
+        16 => "axis": one decode_sparse_effect_axis_from_decoder; one kiwi_skip_uint_value;
+        17 => "unit_type": one decode_sparse_unit_type_from_decoder; one kiwi_skip_uint_value;
+        18 => "order": one decode_sparse_repeat_order_from_decoder; one kiwi_skip_uint_value;
+        19 => "blur_op_type": one decode_sparse_blur_op_type_from_decoder; one kiwi_skip_uint_value;
+        20 => "start_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        21 => "start_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        22 => "noise_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        23 => "clip_to_shape": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        24 => "secondary_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        25 => "density": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        26 => "noise_type": one decode_sparse_noise_type_from_decoder; one kiwi_skip_uint_value;
+        27 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        28 => "end_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        29 => "seed": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        30 => "refraction_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        31 => "specular_angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        32 => "specular_intensity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        33 => "bevel_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        34 => "chromatic_aberration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        35 => "reflection_distance": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        36 => "refraction_intensity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        37 => "refraction_radius_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        38 => "specular_angle_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        39 => "specular_intensity_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        40 => "chromatic_aberration_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        41 => "splay_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        42 => "refraction_intensity_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        43 => "custom_effect_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
+        44 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder; repeated skip_component_prop_assignment_from_decoder;
+        45 => "start_radius_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        46 => "start_offset_x_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        47 => "start_offset_y_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        48 => "end_offset_x_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        49 => "end_offset_y_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        50 => "noise_size_x_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        51 => "noise_size_y_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        52 => "density_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        53 => "effect_opacity_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        54 => "secondary_color_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        55 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
@@ -2934,24 +3008,25 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transform_modifier_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transform_modifier_from_decoder;
+    skip_fn skip_transform_modifier_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransformModifier";
     definition "TransformModifier";
     capacity 11;
     fields [
-        1 => "type": one decode_sparse_transform_modifier_type_from_decoder;
-        2 => "offset": one decode_sparse_vector_from_decoder;
-        3 => "visible": one kiwi_sparse_bool_value;
-        4 => "count": one kiwi_sparse_uint_value;
-        5 => "repeat_type": one decode_sparse_repeat_type_from_decoder;
-        6 => "axis": one decode_sparse_effect_axis_from_decoder;
-        7 => "unit_type": one decode_sparse_unit_type_from_decoder;
-        8 => "order": one decode_sparse_repeat_order_from_decoder;
-        9 => "skew_x": one kiwi_sparse_float_value;
-        10 => "skew_y": one kiwi_sparse_float_value;
+        1 => "type": one decode_sparse_transform_modifier_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        3 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "count": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        5 => "repeat_type": one decode_sparse_repeat_type_from_decoder; one kiwi_skip_uint_value;
+        6 => "axis": one decode_sparse_effect_axis_from_decoder; one kiwi_skip_uint_value;
+        7 => "unit_type": one decode_sparse_unit_type_from_decoder; one kiwi_skip_uint_value;
+        8 => "order": one decode_sparse_repeat_order_from_decoder; one kiwi_skip_uint_value;
+        9 => "skew_x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        10 => "skew_y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
@@ -2992,19 +3067,20 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_fixed_order_transform3d_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_fixed_order_transform3d_from_decoder;
+    skip_fn skip_fixed_order_transform3d_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.FixedOrderTransform3d";
     definition "FixedOrderTransform3d";
     capacity 6;
     fields [
-        1 => "perspective": one kiwi_sparse_float_value;
-        2 => "translate_z": one kiwi_sparse_float_value;
-        3 => "rotate_x": one kiwi_sparse_float_value;
-        4 => "rotate_y": one kiwi_sparse_float_value;
-        5 => "rotate_z": one kiwi_sparse_float_value;
+        1 => "perspective": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "translate_z": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "rotate_x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "rotate_y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "rotate_z": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
@@ -3023,58 +3099,62 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transform_fn_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transform_fn_value_from_decoder;
+    skip_fn skip_transform_fn_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransformFnValue";
     definition "TransformFnValue";
     capacity 5;
     fields [
-        1 => "matrix3d": one decode_sparse_matrix4f_from_decoder;
-        2 => "perspective": one kiwi_sparse_float_value;
-        3 => "rotate_angle": one kiwi_sparse_float_value;
-        4 => "translate_value": one kiwi_sparse_float_value;
+        1 => "matrix3d": one decode_sparse_matrix4f_from_decoder; one skip_matrix4f_from_decoder;
+        2 => "perspective": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "rotate_angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "translate_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transform_fn_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transform_fn_from_decoder;
+    skip_fn skip_transform_fn_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransformFn";
     definition "TransformFn";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_transform_fn_type_from_decoder;
-        2 => "value": one decode_sparse_transform_fn_value_from_decoder;
+        1 => "type": one decode_sparse_transform_fn_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "value": one decode_sparse_transform_fn_value_from_decoder; one skip_transform_fn_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transform_schema_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transform_schema_value_from_decoder;
+    skip_fn skip_transform_schema_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransformSchemaValue";
     definition "TransformSchemaValue";
     capacity 3;
     fields [
-        1 => "fixed_order_transform3d": one decode_sparse_fixed_order_transform3d_from_decoder;
-        2 => "transform_functions": repeated decode_sparse_transform_fn_from_decoder;
+        1 => "fixed_order_transform3d": one decode_sparse_fixed_order_transform3d_from_decoder; one skip_fixed_order_transform3d_from_decoder;
+        2 => "transform_functions": repeated decode_sparse_transform_fn_from_decoder; repeated skip_transform_fn_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transform3d_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transform3d_from_decoder;
+    skip_fn skip_transform3d_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Transform3d";
     definition "Transform3d";
     capacity 4;
     fields [
-        1 => "type": one decode_sparse_transform_schema_type_from_decoder;
-        2 => "value": one decode_sparse_transform_schema_value_from_decoder;
-        3 => "backface_hidden": one kiwi_sparse_bool_value;
+        1 => "type": one decode_sparse_transform_schema_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "value": one decode_sparse_transform_schema_value_from_decoder; one skip_transform_schema_value_from_decoder;
+        3 => "backface_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -3090,43 +3170,46 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_scene3d_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_scene3d_from_decoder;
+    skip_fn skip_scene3d_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Scene3d";
     definition "Scene3d";
     capacity 4;
     fields [
-        1 => "perspective": one kiwi_sparse_float_value;
-        2 => "perspective_origin": one decode_sparse_number_vector2_d_from_decoder;
-        3 => "preserve3d": one kiwi_sparse_bool_value;
+        1 => "perspective": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "perspective_origin": one decode_sparse_number_vector2_d_from_decoder; one skip_number_vector2_d_from_decoder;
+        3 => "preserve3d": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transform_origin_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transform_origin_from_decoder;
+    skip_fn skip_transform_origin_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransformOrigin";
     definition "TransformOrigin";
     capacity 3;
     fields [
-        1 => "x": one decode_sparse_number_from_decoder;
-        2 => "y": one decode_sparse_number_from_decoder;
+        1 => "x": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
+        2 => "y": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transition_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transition_info_from_decoder;
+    skip_fn skip_transition_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransitionInfo";
     definition "TransitionInfo";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_transition_type_from_decoder;
-        2 => "duration": one kiwi_sparse_float_value;
+        1 => "type": one decode_sparse_transition_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
@@ -3152,18 +3235,19 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_prototype_device_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_prototype_device_from_decoder;
+    skip_fn skip_prototype_device_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PrototypeDevice";
     definition "PrototypeDevice";
     capacity 5;
     fields [
-        1 => "type": one decode_sparse_prototype_device_type_from_decoder;
-        2 => "size": one decode_sparse_vector_from_decoder;
-        3 => "preset_identifier": one kiwi_sparse_string_value;
-        4 => "rotation": one decode_sparse_device_rotation_from_decoder;
+        1 => "type": one decode_sparse_prototype_device_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        3 => "preset_identifier": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "rotation": one decode_sparse_device_rotation_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -3203,16 +3287,17 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_overlay_background_appearance_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_overlay_background_appearance_from_decoder;
+    skip_fn skip_overlay_background_appearance_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.OverlayBackgroundAppearance";
     definition "OverlayBackgroundAppearance";
     capacity 3;
     fields [
-        1 => "background_type": one decode_sparse_overlay_background_type_from_decoder;
-        2 => "background_color": one decode_sparse_color_from_decoder;
+        1 => "background_type": one decode_sparse_overlay_background_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "background_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
     ]
 }
 
@@ -3252,29 +3337,30 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_export_settings_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_export_settings_from_decoder;
+    skip_fn skip_export_settings_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ExportSettings";
     definition "ExportSettings";
     capacity 16;
     fields [
-        1 => "suffix": one kiwi_sparse_string_value;
-        2 => "image_type": one decode_sparse_image_type_from_decoder;
-        3 => "constraint": one decode_sparse_export_constraint_from_decoder;
-        4 => "svg_data_name": one kiwi_sparse_bool_value;
-        5 => "svg_id_mode": one decode_sparse_export_svgid_mode_from_decoder;
-        6 => "svg_outline_text": one kiwi_sparse_bool_value;
-        7 => "contents_only": one kiwi_sparse_bool_value;
-        8 => "svg_force_stroke_masks": one kiwi_sparse_bool_value;
-        9 => "use_absolute_bounds": one kiwi_sparse_bool_value;
-        10 => "color_profile": one decode_sparse_export_color_profile_from_decoder;
-        11 => "quality": one kiwi_sparse_float_value;
-        12 => "use_bicubic_sampler": one kiwi_sparse_bool_value;
-        13 => "frame_rate": one kiwi_sparse_int_value;
-        14 => "loop_count": one kiwi_sparse_int_value;
-        15 => "background_type": one decode_sparse_export_background_type_from_decoder;
+        1 => "suffix": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "image_type": one decode_sparse_image_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "constraint": one decode_sparse_export_constraint_from_decoder; one skip_export_constraint_from_decoder;
+        4 => "svg_data_name": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "svg_id_mode": one decode_sparse_export_svgid_mode_from_decoder; one kiwi_skip_uint_value;
+        6 => "svg_outline_text": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        7 => "contents_only": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        8 => "svg_force_stroke_masks": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        9 => "use_absolute_bounds": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        10 => "color_profile": one decode_sparse_export_color_profile_from_decoder; one kiwi_skip_uint_value;
+        11 => "quality": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        12 => "use_bicubic_sampler": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        13 => "frame_rate": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        14 => "loop_count": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        15 => "background_type": one decode_sparse_export_background_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -3288,55 +3374,58 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_layout_grid_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_layout_grid_from_decoder;
+    skip_fn skip_layout_grid_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.LayoutGrid";
     definition "LayoutGrid";
     capacity 14;
     fields [
-        1 => "type": one decode_sparse_layout_grid_type_from_decoder;
-        2 => "axis": one decode_sparse_axis_from_decoder;
-        3 => "visible": one kiwi_sparse_bool_value;
-        4 => "num_sections": one kiwi_sparse_int_value;
-        5 => "offset": one kiwi_sparse_float_value;
-        6 => "section_size": one kiwi_sparse_float_value;
-        7 => "gutter_size": one kiwi_sparse_float_value;
-        8 => "color": one decode_sparse_color_from_decoder;
-        9 => "pattern": one decode_sparse_layout_grid_pattern_from_decoder;
-        10 => "num_sections_var": one decode_sparse_variable_data_from_decoder;
-        11 => "offset_var": one decode_sparse_variable_data_from_decoder;
-        12 => "section_size_var": one decode_sparse_variable_data_from_decoder;
-        13 => "gutter_size_var": one decode_sparse_variable_data_from_decoder;
+        1 => "type": one decode_sparse_layout_grid_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "axis": one decode_sparse_axis_from_decoder; one kiwi_skip_uint_value;
+        3 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "num_sections": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        5 => "offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        6 => "section_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        7 => "gutter_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        8 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        9 => "pattern": one decode_sparse_layout_grid_pattern_from_decoder; one kiwi_skip_uint_value;
+        10 => "num_sections_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        11 => "offset_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        12 => "section_size_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        13 => "gutter_size_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_guide_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_guide_from_decoder;
+    skip_fn skip_guide_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Guide";
     definition "Guide";
     capacity 4;
     fields [
-        1 => "axis": one decode_sparse_axis_from_decoder;
-        2 => "offset": one kiwi_sparse_float_value;
-        3 => "guid": one decode_sparse_guid_from_decoder;
+        1 => "axis": one decode_sparse_axis_from_decoder; one kiwi_skip_uint_value;
+        2 => "offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_path_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_path_from_decoder;
+    skip_fn skip_path_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Path";
     definition "Path";
     capacity 4;
     fields [
-        1 => "winding_rule": one decode_sparse_winding_rule_from_decoder;
-        2 => "commands_blob": one kiwi_sparse_uint_value;
-        3 => "style_id": one kiwi_sparse_uint_value;
+        1 => "winding_rule": one decode_sparse_winding_rule_from_decoder; one kiwi_skip_uint_value;
+        2 => "commands_blob": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
@@ -3376,125 +3465,133 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_dynamic_stroke_settings_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_dynamic_stroke_settings_from_decoder;
+    skip_fn skip_dynamic_stroke_settings_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.DynamicStrokeSettings";
     definition "DynamicStrokeSettings";
     capacity 4;
     fields [
-        1 => "frequency": one kiwi_sparse_float_value;
-        2 => "wiggle": one kiwi_sparse_float_value;
-        3 => "smoothen": one kiwi_sparse_float_value;
+        1 => "frequency": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "wiggle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "smoothen": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_scatter_stroke_settings_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_scatter_stroke_settings_from_decoder;
+    skip_fn skip_scatter_stroke_settings_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ScatterStrokeSettings";
     definition "ScatterStrokeSettings";
     capacity 6;
     fields [
-        1 => "gap": one kiwi_sparse_float_value;
-        2 => "wiggle": one kiwi_sparse_float_value;
-        3 => "angular_jitter": one kiwi_sparse_float_value;
-        4 => "rotation": one kiwi_sparse_float_value;
-        5 => "size_jitter": one kiwi_sparse_float_value;
+        1 => "gap": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "wiggle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "angular_jitter": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "rotation": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "size_jitter": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_stretch_stroke_settings_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_stretch_stroke_settings_from_decoder;
+    skip_fn skip_stretch_stroke_settings_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StretchStrokeSettings";
     definition "StretchStrokeSettings";
     capacity 2;
     fields [
-        1 => "orientation": one decode_sparse_brush_orientation_from_decoder;
+        1 => "orientation": one decode_sparse_brush_orientation_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_stroke_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_stroke_data_from_decoder;
+    skip_fn skip_stroke_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StrokeData";
     definition "StrokeData";
     capacity 3;
     fields [
-        1 => "strokes": repeated decode_sparse_stroke_from_decoder;
-        2 => "version": one kiwi_sparse_uint_value;
+        1 => "strokes": repeated decode_sparse_stroke_from_decoder; repeated skip_stroke_from_decoder;
+        2 => "version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_stroke_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_stroke_from_decoder;
+    skip_fn skip_stroke_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Stroke";
     definition "Stroke";
     capacity 15;
     fields [
-        1 => "stroke_id": one kiwi_sparse_int_value;
-        2 => "stroke_weight": one kiwi_sparse_float_value;
-        3 => "stroke_weight_var": one decode_sparse_variable_data_from_decoder;
-        4 => "stroke_paint": repeated decode_sparse_paint_from_decoder;
-        5 => "style_id_for_stroke_fill": one decode_sparse_style_id_from_decoder;
-        6 => "stroke_align": one decode_sparse_stroke_align_from_decoder;
-        7 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder;
-        8 => "stroke_cap_size": one decode_sparse_number_from_decoder;
-        9 => "stroke_join": one decode_sparse_stroke_join_from_decoder;
-        10 => "miter_limit": one kiwi_sparse_float_value;
-        11 => "dash_pattern": repeated kiwi_sparse_float_value;
-        12 => "path_trim": one decode_sparse_optional_vector_from_decoder;
-        13 => "stroke_offset": one kiwi_sparse_float_value;
-        14 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "stroke_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        2 => "stroke_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "stroke_weight_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        4 => "stroke_paint": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
+        5 => "style_id_for_stroke_fill": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        6 => "stroke_align": one decode_sparse_stroke_align_from_decoder; one kiwi_skip_uint_value;
+        7 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder; one kiwi_skip_uint_value;
+        8 => "stroke_cap_size": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
+        9 => "stroke_join": one decode_sparse_stroke_join_from_decoder; one kiwi_skip_uint_value;
+        10 => "miter_limit": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        11 => "dash_pattern": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        12 => "path_trim": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
+        13 => "stroke_offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        14 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_width_point_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_width_point_from_decoder;
+    skip_fn skip_variable_width_point_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableWidthPoint";
     definition "VariableWidthPoint";
     capacity 5;
     fields [
-        1 => "position": one kiwi_sparse_float_value;
-        2 => "ascent": one kiwi_sparse_float_value;
-        3 => "descent": one kiwi_sparse_float_value;
-        4 => "segment_id": one kiwi_sparse_int_value;
+        1 => "position": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "ascent": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "descent": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "segment_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_shared_style_reference_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_shared_style_reference_from_decoder;
+    skip_fn skip_shared_style_reference_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SharedStyleReference";
     definition "SharedStyleReference";
     capacity 3;
     fields [
-        1 => "style_key": one kiwi_sparse_string_value;
-        2 => "version_hash": one kiwi_sparse_string_value;
+        1 => "style_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "version_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_shared_style_master_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_shared_style_master_data_from_decoder;
+    skip_fn skip_shared_style_master_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SharedStyleMasterData";
     definition "SharedStyleMasterData";
     capacity 4;
     fields [
-        1 => "style_key": one kiwi_sparse_string_value;
-        2 => "sort_position": one kiwi_sparse_string_value;
-        3 => "file_key": one kiwi_sparse_string_value;
+        1 => "style_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "sort_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -3509,74 +3606,79 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_arc_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_arc_data_from_decoder;
+    skip_fn skip_arc_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ArcData";
     definition "ArcData";
     capacity 4;
     fields [
-        1 => "starting_angle": one kiwi_sparse_float_value;
-        2 => "ending_angle": one kiwi_sparse_float_value;
-        3 => "inner_radius": one kiwi_sparse_float_value;
+        1 => "starting_angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "ending_angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "inner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_symbol_link_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_symbol_link_from_decoder;
+    skip_fn skip_symbol_link_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SymbolLink";
     definition "SymbolLink";
     capacity 4;
     fields [
-        1 => "uri": one kiwi_sparse_string_value;
-        2 => "display_name": one kiwi_sparse_string_value;
-        3 => "display_text": one kiwi_sparse_string_value;
+        1 => "uri": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "display_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "display_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_plugin_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_plugin_data_from_decoder;
+    skip_fn skip_plugin_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PluginData";
     definition "PluginData";
     capacity 4;
     fields [
-        1 => "plugin_id": one kiwi_sparse_string_value;
-        2 => "value": one kiwi_sparse_string_value;
-        3 => "key": one kiwi_sparse_string_value;
+        1 => "plugin_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_plugin_relaunch_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_plugin_relaunch_data_from_decoder;
+    skip_fn skip_plugin_relaunch_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PluginRelaunchData";
     definition "PluginRelaunchData";
     capacity 6;
     fields [
-        1 => "plugin_id": one kiwi_sparse_string_value;
-        2 => "message": one kiwi_sparse_string_value;
-        3 => "command": one kiwi_sparse_string_value;
-        4 => "is_deleted": one kiwi_sparse_bool_value;
-        5 => "custom_tool_id": one decode_sparse_code_component_id_from_decoder;
+        1 => "plugin_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "message": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "command": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "custom_tool_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_multiplayer_field_version_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_multiplayer_field_version_from_decoder;
+    skip_fn skip_multiplayer_field_version_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.MultiplayerFieldVersion";
     definition "MultiplayerFieldVersion";
     capacity 3;
     fields [
-        1 => "counter": one kiwi_sparse_uint_value;
-        2 => "session_id": one kiwi_sparse_uint_value;
+        1 => "counter": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
@@ -3598,31 +3700,33 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_connector_endpoint_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_connector_endpoint_from_decoder;
+    skip_fn skip_connector_endpoint_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ConnectorEndpoint";
     definition "ConnectorEndpoint";
     capacity 5;
     fields [
-        1 => "endpoint_node_id": one decode_sparse_guid_from_decoder;
-        2 => "position": one decode_sparse_vector_from_decoder;
-        3 => "magnet": one decode_sparse_connector_magnet_from_decoder;
-        4 => "relative_position": one decode_sparse_vector_from_decoder;
+        1 => "endpoint_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        3 => "magnet": one decode_sparse_connector_magnet_from_decoder; one kiwi_skip_uint_value;
+        4 => "relative_position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_connector_control_point_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_connector_control_point_from_decoder;
+    skip_fn skip_connector_control_point_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ConnectorControlPoint";
     definition "ConnectorControlPoint";
     capacity 3;
     fields [
-        1 => "position": one decode_sparse_vector_from_decoder;
-        2 => "axis": one decode_sparse_vector_from_decoder;
+        1 => "position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        2 => "axis": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
     ]
 }
 
@@ -3647,17 +3751,18 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_connector_text_midpoint_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_connector_text_midpoint_from_decoder;
+    skip_fn skip_connector_text_midpoint_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ConnectorTextMidpoint";
     definition "ConnectorTextMidpoint";
     capacity 4;
     fields [
-        1 => "section": one decode_sparse_connector_text_section_from_decoder;
-        2 => "offset": one kiwi_sparse_float_value;
-        3 => "off_axis_offset": one decode_sparse_connector_off_axis_offset_from_decoder;
+        1 => "section": one decode_sparse_connector_text_section_from_decoder; one kiwi_skip_uint_value;
+        2 => "offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "off_axis_offset": one decode_sparse_connector_off_axis_offset_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -3723,15 +3828,16 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_annotation_property_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_annotation_property_from_decoder;
+    skip_fn skip_annotation_property_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnnotationProperty";
     definition "AnnotationProperty";
     capacity 2;
     fields [
-        1 => "type": one decode_sparse_annotation_property_type_from_decoder;
+        1 => "type": one decode_sparse_annotation_property_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -3765,59 +3871,63 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_annotation_category_custom_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_annotation_category_custom_from_decoder;
+    skip_fn skip_annotation_category_custom_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnnotationCategoryCustom";
     definition "AnnotationCategoryCustom";
     capacity 4;
     fields [
-        1 => "color": one decode_sparse_annotation_category_color_from_decoder;
-        2 => "custom_color": one decode_sparse_color_from_decoder;
-        3 => "label": one kiwi_sparse_string_value;
+        1 => "color": one decode_sparse_annotation_category_color_from_decoder; one kiwi_skip_uint_value;
+        2 => "custom_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        3 => "label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_annotation_category_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_annotation_category_from_decoder;
+    skip_fn skip_annotation_category_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnnotationCategory";
     definition "AnnotationCategory";
     capacity 4;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "preset": one decode_sparse_annotation_category_preset_from_decoder;
-        3 => "custom": one decode_sparse_annotation_category_custom_from_decoder;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "preset": one decode_sparse_annotation_category_preset_from_decoder; one kiwi_skip_uint_value;
+        3 => "custom": one decode_sparse_annotation_category_custom_from_decoder; one skip_annotation_category_custom_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_annotation_categories_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_annotation_categories_from_decoder;
+    skip_fn skip_annotation_categories_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnnotationCategories";
     definition "AnnotationCategories";
     capacity 3;
     fields [
-        1 => "version": one kiwi_sparse_uint_value;
-        2 => "items": repeated decode_sparse_annotation_category_from_decoder;
+        1 => "version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "items": repeated decode_sparse_annotation_category_from_decoder; repeated skip_annotation_category_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_annotation_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_annotation_from_decoder;
+    skip_fn skip_annotation_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Annotation";
     definition "Annotation";
     capacity 5;
     fields [
-        1 => "label": one kiwi_sparse_string_value;
-        2 => "properties": repeated decode_sparse_annotation_property_from_decoder;
-        3 => "label_v2": one kiwi_sparse_string_value;
-        4 => "category_id": one decode_sparse_guid_from_decoder;
+        1 => "label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "properties": repeated decode_sparse_annotation_property_from_decoder; repeated skip_annotation_property_from_decoder;
+        3 => "label_v2": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "category_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
@@ -3833,91 +3943,97 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_annotation_measurement_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_annotation_measurement_from_decoder;
+    skip_fn skip_annotation_measurement_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnnotationMeasurement";
     definition "AnnotationMeasurement";
     capacity 10;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "from_node": one decode_sparse_guid_from_decoder;
-        3 => "to_node": one decode_sparse_guid_from_decoder;
-        4 => "from_node_side": one decode_sparse_annotation_measurement_node_side_from_decoder;
-        5 => "to_same_side": one kiwi_sparse_bool_value;
-        6 => "inner_offset_relative": one kiwi_sparse_float_value;
-        7 => "outer_offset_fixed": one kiwi_sparse_float_value;
-        8 => "to_node_stable_path": one decode_sparse_guid_path_from_decoder;
-        9 => "free_text": one kiwi_sparse_string_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "from_node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "to_node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "from_node_side": one decode_sparse_annotation_measurement_node_side_from_decoder; one kiwi_skip_uint_value;
+        5 => "to_same_side": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "inner_offset_relative": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        7 => "outer_offset_fixed": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        8 => "to_node_stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        9 => "free_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_library_move_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_library_move_info_from_decoder;
+    skip_fn skip_library_move_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.LibraryMoveInfo";
     definition "LibraryMoveInfo";
     capacity 3;
     fields [
-        1 => "old_key": one kiwi_sparse_string_value;
-        2 => "paste_file_key": one kiwi_sparse_string_value;
+        1 => "old_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "paste_file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_library_move_history_item_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_library_move_history_item_from_decoder;
+    skip_fn skip_library_move_history_item_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.LibraryMoveHistoryItem";
     definition "LibraryMoveHistoryItem";
     capacity 3;
     fields [
-        1 => "source_node_id": one decode_sparse_guid_from_decoder;
-        2 => "source_component_key": one kiwi_sparse_string_value;
+        1 => "source_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "source_component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_developer_related_link_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_developer_related_link_from_decoder;
+    skip_fn skip_developer_related_link_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.DeveloperRelatedLink";
     definition "DeveloperRelatedLink";
     capacity 5;
     fields [
-        1 => "node_id": one kiwi_sparse_string_value;
-        2 => "file_key": one kiwi_sparse_string_value;
-        3 => "link_name": one kiwi_sparse_string_value;
-        4 => "link_url": one kiwi_sparse_string_value;
+        1 => "node_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "link_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "link_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_widget_pointer_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_widget_pointer_from_decoder;
+    skip_fn skip_widget_pointer_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.WidgetPointer";
     definition "WidgetPointer";
     capacity 2;
     fields [
-        1 => "node_id": one decode_sparse_guid_from_decoder;
+        1 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_edit_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_edit_info_from_decoder;
+    skip_fn skip_edit_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EditInfo";
     definition "EditInfo";
     capacity 5;
     fields [
-        1 => "timestamp_iso8601": one kiwi_sparse_string_value;
-        2 => "user_id": one kiwi_sparse_string_value;
-        3 => "last_edited_at": one kiwi_sparse_uint_value;
-        4 => "created_at": one kiwi_sparse_uint_value;
+        1 => "timestamp_iso8601": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "last_edited_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "created_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
@@ -3971,49 +4087,52 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_section_status_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_section_status_info_from_decoder;
+    skip_fn skip_section_status_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SectionStatusInfo";
     definition "SectionStatusInfo";
     capacity 6;
     fields [
-        1 => "status": one decode_sparse_section_status_from_decoder;
-        2 => "last_update_unix_timestamp": one kiwi_sparse_uint_value;
-        3 => "description": one kiwi_sparse_string_value;
-        4 => "user_id": one kiwi_sparse_string_value;
-        5 => "prev_status": one decode_sparse_section_status_from_decoder;
+        1 => "status": one decode_sparse_section_status_from_decoder; one kiwi_skip_uint_value;
+        2 => "last_update_unix_timestamp": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "prev_status": one decode_sparse_section_status_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_buzz_approval_request_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_buzz_approval_request_info_from_decoder;
+    skip_fn skip_buzz_approval_request_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.BuzzApprovalRequestInfo";
     definition "BuzzApprovalRequestInfo";
     capacity 8;
     fields [
-        1 => "request_id": one kiwi_sparse_string_value;
-        2 => "requester_user_id": one kiwi_sparse_string_value;
-        3 => "requested_at": one kiwi_sparse_uint_value;
-        4 => "reviewer_user_ids": repeated kiwi_sparse_string_value;
-        5 => "title": one kiwi_sparse_string_value;
-        6 => "note": one kiwi_sparse_string_value;
-        7 => "assets_in_request": repeated decode_sparse_guid_from_decoder;
+        1 => "request_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "requester_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "requested_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "reviewer_user_ids": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
+        5 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        6 => "note": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        7 => "assets_in_request": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_buzz_approval_requests_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_buzz_approval_requests_from_decoder;
+    skip_fn skip_buzz_approval_requests_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.BuzzApprovalRequests";
     definition "BuzzApprovalRequests";
     capacity 2;
     fields [
-        1 => "requests": repeated decode_sparse_buzz_approval_request_info_from_decoder;
+        1 => "requests": repeated decode_sparse_buzz_approval_request_info_from_decoder; repeated skip_buzz_approval_request_info_from_decoder;
     ]
 }
 
@@ -4029,33 +4148,35 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_buzz_approval_node_status_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_buzz_approval_node_status_info_from_decoder;
+    skip_fn skip_buzz_approval_node_status_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.BuzzApprovalNodeStatusInfo";
     definition "BuzzApprovalNodeStatusInfo";
     capacity 4;
     fields [
-        1 => "current_status": one decode_sparse_buzz_approval_node_status_from_decoder;
-        2 => "was_previously_approved": one kiwi_sparse_bool_value;
-        3 => "approval_revoked_at_history": repeated kiwi_sparse_uint_value;
+        1 => "current_status": one decode_sparse_buzz_approval_node_status_from_decoder; one kiwi_skip_uint_value;
+        2 => "was_previously_approved": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "approval_revoked_at_history": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_embed_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_embed_info_from_decoder;
+    skip_fn skip_code_embed_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeEmbedInfo";
     definition "CodeEmbedInfo";
     capacity 6;
     fields [
-        1 => "url": one kiwi_sparse_string_value;
-        2 => "src_url": one kiwi_sparse_string_value;
-        3 => "title": one kiwi_sparse_string_value;
-        4 => "thumbnail_image_hash": one kiwi_sparse_string_value;
-        5 => "is_published_site": one kiwi_sparse_bool_value;
+        1 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "src_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "thumbnail_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "is_published_site": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -4069,604 +4190,605 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_change_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_change_from_decoder;
+    skip_fn skip_node_change_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeChange";
     definition "NodeChange";
     capacity 591;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "phase": one decode_sparse_node_phase_from_decoder;
-        3 => "parent_index": one decode_sparse_parent_index_from_decoder;
-        4 => "type": one decode_sparse_node_type_from_decoder;
-        5 => "name": one kiwi_sparse_string_value;
-        6 => "visible": one kiwi_sparse_bool_value;
-        7 => "locked": one kiwi_sparse_bool_value;
-        8 => "opacity": one kiwi_sparse_float_value;
-        9 => "blend_mode": one decode_sparse_blend_mode_from_decoder;
-        10 => "count": one kiwi_sparse_uint_value;
-        11 => "size": one decode_sparse_vector_from_decoder;
-        12 => "transform": one decode_sparse_matrix_from_decoder;
-        13 => "dash_pattern": repeated kiwi_sparse_float_value;
-        14 => "auto_rename": one kiwi_sparse_bool_value;
-        15 => "background_enabled": one kiwi_sparse_bool_value;
-        16 => "mask": one kiwi_sparse_bool_value;
-        17 => "export_contents_only": one kiwi_sparse_bool_value;
-        18 => "mask_is_outline": one kiwi_sparse_bool_value;
-        19 => "background_opacity": one kiwi_sparse_float_value;
-        20 => "corner_radius": one kiwi_sparse_float_value;
-        21 => "font_size": one kiwi_sparse_float_value;
-        22 => "paragraph_indent": one kiwi_sparse_float_value;
-        23 => "paragraph_spacing": one kiwi_sparse_float_value;
-        24 => "star_inner_scale": one kiwi_sparse_float_value;
-        25 => "miter_limit": one kiwi_sparse_float_value;
-        26 => "stroke_weight": one kiwi_sparse_float_value;
-        27 => "text_tracking": one kiwi_sparse_float_value;
-        28 => "horizontal_constraint": one decode_sparse_constraint_type_from_decoder;
-        29 => "stroke_align": one decode_sparse_stroke_align_from_decoder;
-        30 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder;
-        31 => "stroke_join": one decode_sparse_stroke_join_from_decoder;
-        32 => "text_align_horizontal": one decode_sparse_text_align_horizontal_from_decoder;
-        33 => "text_align_vertical": one decode_sparse_text_align_vertical_from_decoder;
-        34 => "text_case": one decode_sparse_text_case_from_decoder;
-        35 => "text_decoration": one decode_sparse_text_decoration_from_decoder;
-        36 => "boolean_operation": one decode_sparse_boolean_operation_from_decoder;
-        37 => "vertical_constraint": one decode_sparse_constraint_type_from_decoder;
-        38 => "fill_paints": repeated decode_sparse_paint_from_decoder;
-        39 => "stroke_paints": repeated decode_sparse_paint_from_decoder;
-        40 => "line_height": one decode_sparse_number_from_decoder;
-        41 => "font_name": one decode_sparse_font_name_from_decoder;
-        42 => "text_data": one decode_sparse_text_data_from_decoder;
-        43 => "effects": repeated decode_sparse_effect_from_decoder;
-        44 => "handle_mirroring": one decode_sparse_vector_mirror_from_decoder;
-        45 => "export_settings": repeated decode_sparse_export_settings_from_decoder;
-        46 => "text_auto_resize": one decode_sparse_text_auto_resize_from_decoder;
-        47 => "layout_grids": repeated decode_sparse_layout_grid_from_decoder;
-        48 => "vector_data": one decode_sparse_vector_data_from_decoder;
-        49 => "style_id": one kiwi_sparse_uint_value;
-        50 => "background_color": one decode_sparse_color_from_decoder;
-        51 => "fill_geometry": repeated decode_sparse_path_from_decoder;
-        52 => "stroke_geometry": repeated decode_sparse_path_from_decoder;
-        53 => "guid_tag": one kiwi_sparse_uint_value;
-        54 => "phase_tag": one kiwi_sparse_uint_value;
-        55 => "parent_index_tag": one kiwi_sparse_uint_value;
-        56 => "type_tag": one kiwi_sparse_uint_value;
-        57 => "name_tag": one kiwi_sparse_uint_value;
-        58 => "visible_tag": one kiwi_sparse_uint_value;
-        59 => "locked_tag": one kiwi_sparse_uint_value;
-        60 => "opacity_tag": one kiwi_sparse_uint_value;
-        61 => "blend_mode_tag": one kiwi_sparse_uint_value;
-        62 => "count_tag": one kiwi_sparse_uint_value;
-        63 => "size_tag": one kiwi_sparse_uint_value;
-        64 => "transform_tag": one kiwi_sparse_uint_value;
-        65 => "dash_pattern_tag": one kiwi_sparse_uint_value;
-        66 => "auto_rename_tag": one kiwi_sparse_uint_value;
-        67 => "background_enabled_tag": one kiwi_sparse_uint_value;
-        68 => "mask_tag": one kiwi_sparse_uint_value;
-        69 => "export_contents_only_tag": one kiwi_sparse_uint_value;
-        70 => "mask_is_outline_tag": one kiwi_sparse_uint_value;
-        71 => "background_opacity_tag": one kiwi_sparse_uint_value;
-        72 => "corner_radius_tag": one kiwi_sparse_uint_value;
-        73 => "font_size_tag": one kiwi_sparse_uint_value;
-        74 => "paragraph_indent_tag": one kiwi_sparse_uint_value;
-        75 => "paragraph_spacing_tag": one kiwi_sparse_uint_value;
-        76 => "star_inner_scale_tag": one kiwi_sparse_uint_value;
-        77 => "miter_limit_tag": one kiwi_sparse_uint_value;
-        78 => "stroke_weight_tag": one kiwi_sparse_uint_value;
-        79 => "text_tracking_tag": one kiwi_sparse_uint_value;
-        80 => "horizontal_constraint_tag": one kiwi_sparse_uint_value;
-        81 => "stroke_align_tag": one kiwi_sparse_uint_value;
-        82 => "stroke_cap_tag": one kiwi_sparse_uint_value;
-        83 => "stroke_join_tag": one kiwi_sparse_uint_value;
-        84 => "text_align_horizontal_tag": one kiwi_sparse_uint_value;
-        85 => "text_align_vertical_tag": one kiwi_sparse_uint_value;
-        86 => "text_case_tag": one kiwi_sparse_uint_value;
-        87 => "text_decoration_tag": one kiwi_sparse_uint_value;
-        88 => "boolean_operation_tag": one kiwi_sparse_uint_value;
-        89 => "vertical_constraint_tag": one kiwi_sparse_uint_value;
-        90 => "fill_paints_tag": one kiwi_sparse_uint_value;
-        91 => "stroke_paints_tag": one kiwi_sparse_uint_value;
-        92 => "line_height_tag": one kiwi_sparse_uint_value;
-        93 => "font_name_tag": one kiwi_sparse_uint_value;
-        94 => "text_data_tag": one kiwi_sparse_uint_value;
-        95 => "effects_tag": one kiwi_sparse_uint_value;
-        96 => "handle_mirroring_tag": one kiwi_sparse_uint_value;
-        97 => "export_settings_tag": one kiwi_sparse_uint_value;
-        98 => "text_auto_resize_tag": one kiwi_sparse_uint_value;
-        99 => "layout_grids_tag": one kiwi_sparse_uint_value;
-        100 => "vector_data_tag": one kiwi_sparse_uint_value;
-        101 => "style_id_tag": one kiwi_sparse_uint_value;
-        102 => "background_color_tag": one kiwi_sparse_uint_value;
-        103 => "fill_geometry_tag": one kiwi_sparse_uint_value;
-        104 => "stroke_geometry_tag": one kiwi_sparse_uint_value;
-        105 => "stack_mode": one decode_sparse_stack_mode_from_decoder;
-        106 => "stack_mode_tag": one kiwi_sparse_uint_value;
-        107 => "stack_spacing": one kiwi_sparse_float_value;
-        108 => "stack_spacing_tag": one kiwi_sparse_uint_value;
-        109 => "stack_padding": one kiwi_sparse_float_value;
-        110 => "stack_padding_tag": one kiwi_sparse_uint_value;
-        111 => "guid_path": one decode_sparse_guid_path_from_decoder;
-        112 => "guid_path_tag": one kiwi_sparse_uint_value;
-        113 => "symbol_data": one decode_sparse_symbol_data_from_decoder;
-        114 => "symbol_data_tag": one kiwi_sparse_uint_value;
-        115 => "frame_mask_disabled": one kiwi_sparse_bool_value;
-        116 => "frame_mask_disabled_tag": one kiwi_sparse_uint_value;
-        117 => "resize_to_fit": one kiwi_sparse_bool_value;
-        118 => "resize_to_fit_tag": one kiwi_sparse_uint_value;
-        119 => "export_background_disabled": one kiwi_sparse_bool_value;
-        120 => "stack_counter_align": one decode_sparse_stack_counter_align_from_decoder;
-        121 => "stack_justify": one decode_sparse_stack_justify_from_decoder;
-        122 => "shared_symbol_reference": one decode_sparse_shared_symbol_reference_from_decoder;
-        123 => "is_symbol_publishable": one kiwi_sparse_bool_value;
-        124 => "shared_symbol_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
-        125 => "derived_symbol_data": repeated decode_sparse_node_change_from_decoder;
-        126 => "shared_symbol_version": one kiwi_sparse_string_value;
-        127 => "font_variant_common_ligatures": one kiwi_sparse_bool_value;
-        128 => "font_variant_contextual_ligatures": one kiwi_sparse_bool_value;
-        129 => "font_variant_discretionary_ligatures": one kiwi_sparse_bool_value;
-        130 => "font_variant_historical_ligatures": one kiwi_sparse_bool_value;
-        131 => "font_variant_ordinal": one kiwi_sparse_bool_value;
-        132 => "font_variant_slashed_zero": one kiwi_sparse_bool_value;
-        133 => "font_variant_numeric_figure": one decode_sparse_font_variant_numeric_figure_from_decoder;
-        134 => "font_variant_numeric_spacing": one decode_sparse_font_variant_numeric_spacing_from_decoder;
-        135 => "font_variant_numeric_fraction": one decode_sparse_font_variant_numeric_fraction_from_decoder;
-        136 => "font_variant_caps": one decode_sparse_font_variant_caps_from_decoder;
-        137 => "font_variant_position": one decode_sparse_font_variant_position_from_decoder;
-        138 => "guides": repeated decode_sparse_guide_from_decoder;
-        139 => "transition_node_id": one decode_sparse_guid_from_decoder;
-        140 => "prototype_start_node_id": one decode_sparse_guid_from_decoder;
-        141 => "prototype_background_color": one decode_sparse_color_from_decoder;
-        142 => "internal_only": one kiwi_sparse_bool_value;
-        143 => "overridden_symbol_id": one decode_sparse_guid_from_decoder;
-        144 => "symbol_description": one kiwi_sparse_string_value;
-        145 => "rectangle_top_left_corner_radius": one kiwi_sparse_float_value;
-        146 => "rectangle_top_right_corner_radius": one kiwi_sparse_float_value;
-        147 => "rectangle_bottom_left_corner_radius": one kiwi_sparse_float_value;
-        148 => "rectangle_bottom_right_corner_radius": one kiwi_sparse_float_value;
-        149 => "rectangle_corner_radii_independent": one kiwi_sparse_bool_value;
-        150 => "rectangle_corner_tool_independent": one kiwi_sparse_bool_value;
-        151 => "proportions_constrained": one kiwi_sparse_bool_value;
-        152 => "shared_component_master_data": one decode_sparse_shared_component_master_data_from_decoder;
-        153 => "transition_info": one decode_sparse_transition_info_from_decoder;
-        154 => "transition_type": one decode_sparse_transition_type_from_decoder;
-        155 => "transition_duration": one kiwi_sparse_float_value;
-        156 => "easing_type": one decode_sparse_easing_type_from_decoder;
-        157 => "is_fill_style": one kiwi_sparse_bool_value;
-        158 => "inherit_fill_style_id": one decode_sparse_guid_from_decoder;
-        159 => "scroll_direction": one decode_sparse_scroll_direction_from_decoder;
-        160 => "corner_smoothing": one kiwi_sparse_float_value;
-        161 => "is_stroke_style": one kiwi_sparse_bool_value;
-        162 => "inherit_stroke_style_id": one decode_sparse_guid_from_decoder;
-        163 => "style_type": one decode_sparse_style_type_from_decoder;
-        164 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
-        165 => "letter_spacing": one decode_sparse_number_from_decoder;
-        166 => "scroll_offset": one decode_sparse_vector_from_decoder;
-        167 => "inherit_text_style_id": one decode_sparse_guid_from_decoder;
-        168 => "inherit_export_style_id": one decode_sparse_guid_from_decoder;
-        169 => "inherit_effect_style_id": one decode_sparse_guid_from_decoder;
-        170 => "inherit_grid_style_id": one decode_sparse_guid_from_decoder;
-        171 => "version": one kiwi_sparse_string_value;
-        172 => "shared_style_master_data": one decode_sparse_shared_style_master_data_from_decoder;
-        173 => "shared_style_reference": one decode_sparse_shared_style_reference_from_decoder;
-        174 => "is_publishable": one kiwi_sparse_bool_value;
-        175 => "export_text_as_svg_text": one kiwi_sparse_bool_value;
-        176 => "is_soft_deleted_style": one kiwi_sparse_bool_value;
-        177 => "is_non_updateable": one kiwi_sparse_bool_value;
-        178 => "scroll_contracted_state": one decode_sparse_scroll_contracted_state_from_decoder;
-        179 => "contracted_size": one decode_sparse_vector_from_decoder;
-        180 => "fixed_children_divider": one kiwi_sparse_string_value;
-        181 => "transition_preserve_scroll": one kiwi_sparse_bool_value;
-        182 => "connection_type": one decode_sparse_connection_type_from_decoder;
-        183 => "connection_url": one kiwi_sparse_string_value;
-        184 => "prototype_device": one decode_sparse_prototype_device_from_decoder;
-        185 => "inherit_fill_style_id_for_stroke": one decode_sparse_guid_from_decoder;
-        186 => "scroll_behavior": one decode_sparse_scroll_behavior_from_decoder;
-        187 => "interaction_type": one decode_sparse_interaction_type_from_decoder;
-        188 => "transition_timeout": one kiwi_sparse_float_value;
-        189 => "interaction_maintained": one kiwi_sparse_bool_value;
-        190 => "interaction_duration": one kiwi_sparse_float_value;
-        191 => "style_description": one kiwi_sparse_string_value;
-        192 => "destination_is_overlay": one kiwi_sparse_bool_value;
-        193 => "background_paints": repeated decode_sparse_paint_from_decoder;
-        194 => "inherit_fill_style_id_for_background": one decode_sparse_guid_from_decoder;
-        195 => "arc_data": one decode_sparse_arc_data_from_decoder;
-        196 => "derived_symbol_data_layout_version": one kiwi_sparse_int_value;
-        197 => "navigation_type": one decode_sparse_navigation_type_from_decoder;
-        198 => "overlay_position_type": one decode_sparse_overlay_position_type_from_decoder;
-        199 => "overlay_relative_position": one decode_sparse_vector_from_decoder;
-        200 => "overlay_background_interaction": one decode_sparse_overlay_background_interaction_from_decoder;
-        201 => "overlay_background_appearance": one decode_sparse_overlay_background_appearance_from_decoder;
-        202 => "font_version": one kiwi_sparse_string_value;
-        203 => "text_user_layout_version": one kiwi_sparse_uint_value;
-        204 => "plugin_data": repeated decode_sparse_plugin_data_from_decoder;
-        205 => "toggled_on_ot_features": repeated decode_sparse_open_type_feature_from_decoder;
-        206 => "toggled_off_ot_features": repeated decode_sparse_open_type_feature_from_decoder;
-        207 => "transition_should_smart_animate": one kiwi_sparse_bool_value;
-        208 => "stack_align": one decode_sparse_stack_align_from_decoder;
-        209 => "stack_horizontal_padding": one kiwi_sparse_float_value;
-        210 => "stack_vertical_padding": one kiwi_sparse_float_value;
-        211 => "stack_width": one decode_sparse_stack_size_from_decoder;
-        212 => "stack_height": one decode_sparse_stack_size_from_decoder;
-        213 => "override_key": one decode_sparse_guid_from_decoder;
-        214 => "publish_file": one kiwi_sparse_string_value;
-        215 => "publish_id": one decode_sparse_guid_from_decoder;
-        216 => "component_key": one kiwi_sparse_string_value;
-        217 => "is_c2": one kiwi_sparse_bool_value;
-        218 => "published_version": one kiwi_sparse_string_value;
-        219 => "plugin_relaunch_data": repeated decode_sparse_plugin_relaunch_data_from_decoder;
-        220 => "container_supports_fill_stroke_and_corners": one kiwi_sparse_bool_value;
-        221 => "stack_counter_sizing": one decode_sparse_stack_size_from_decoder;
-        222 => "containers_support_fill_stroke_and_corners": one kiwi_sparse_bool_value;
-        223 => "hyperlink": one decode_sparse_hyperlink_from_decoder;
-        224 => "key_trigger": one decode_sparse_key_trigger_from_decoder;
-        225 => "is_state_group": one kiwi_sparse_bool_value;
-        226 => "prototype_interactions": repeated decode_sparse_prototype_interaction_from_decoder;
-        227 => "voice_event_phrase": one kiwi_sparse_string_value;
-        228 => "force_unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
-        229 => "stack_primary_sizing": one decode_sparse_stack_size_from_decoder;
-        230 => "stack_primary_align_items": one decode_sparse_stack_justify_from_decoder;
-        231 => "stack_counter_align_items": one decode_sparse_stack_align_from_decoder;
-        232 => "stack_child_primary_grow": one kiwi_sparse_float_value;
-        233 => "stack_padding_right": one kiwi_sparse_float_value;
-        234 => "stack_padding_bottom": one kiwi_sparse_float_value;
-        235 => "ancestor_path_before_deletion": repeated decode_sparse_guid_from_decoder;
-        236 => "stack_child_align_self": one decode_sparse_stack_counter_align_from_decoder;
-        237 => "symbol_links": repeated decode_sparse_symbol_link_from_decoder;
-        238 => "state_group_property_value_orders": repeated decode_sparse_state_group_property_value_order_from_decoder;
-        239 => "text_list_data": one decode_sparse_text_list_data_from_decoder;
-        240 => "node_generation_data": one decode_sparse_node_generation_data_from_decoder;
-        241 => "shape_with_text_type": one decode_sparse_shape_with_text_type_from_decoder;
-        242 => "connector_start": one decode_sparse_connector_endpoint_from_decoder;
-        243 => "connector_end": one decode_sparse_connector_endpoint_from_decoder;
-        244 => "connector_line_style": one decode_sparse_connector_line_style_from_decoder;
-        245 => "connector_start_cap": one decode_sparse_stroke_cap_from_decoder;
-        246 => "connector_end_cap": one decode_sparse_stroke_cap_from_decoder;
-        247 => "shape_user_height": one kiwi_sparse_float_value;
-        248 => "override_stash": repeated decode_sparse_instance_override_stash_from_decoder;
-        249 => "prototype_starting_point": one decode_sparse_prototype_starting_point_from_decoder;
-        250 => "override_stash_v2": repeated decode_sparse_instance_override_stash_v2_from_decoder;
-        251 => "internal_enum_for_test": one decode_sparse_internal_enum_for_test_from_decoder;
-        252 => "origin_component_key": one kiwi_sparse_string_value;
-        253 => "connector_control_points": repeated decode_sparse_connector_control_point_from_decoder;
-        254 => "derived_immutable_frame_data": one decode_sparse_derived_immutable_frame_data_from_decoder;
-        255 => "connector_text_midpoint": one decode_sparse_connector_text_midpoint_from_decoder;
-        256 => "library_move_info": one decode_sparse_library_move_info_from_decoder;
-        257 => "internal_data_for_test": one decode_sparse_internal_data_for_test_from_decoder;
-        258 => "use_absolute_bounds": one kiwi_sparse_bool_value;
-        259 => "code_block_language": one decode_sparse_code_block_language_from_decoder;
-        260 => "font_variations": repeated decode_sparse_font_variation_from_decoder;
-        261 => "detach_optical_size_from_font_size": one kiwi_sparse_bool_value;
-        262 => "widget_metadata": one decode_sparse_widget_metadata_from_decoder;
-        263 => "widget_events": repeated decode_sparse_widget_event_from_decoder;
-        264 => "list_spacing": one kiwi_sparse_float_value;
-        265 => "widget_property_menu_items": repeated decode_sparse_widget_property_menu_item_from_decoder;
-        266 => "component_prop_defs": repeated decode_sparse_component_prop_def_from_decoder;
-        267 => "component_prop_refs": repeated decode_sparse_component_prop_ref_from_decoder;
-        268 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
-        269 => "stack_positioning": one decode_sparse_stack_positioning_from_decoder;
-        270 => "embed_data": one decode_sparse_embed_data_from_decoder;
-        271 => "stack_reverse_z_index": one kiwi_sparse_bool_value;
-        272 => "rich_media_data": one decode_sparse_rich_media_data_from_decoder;
-        273 => "widget_synced_state": one decode_sparse_multiplayer_map_from_decoder;
-        274 => "widget_sync_cursor": one kiwi_sparse_uint_value;
-        275 => "widget_derived_subtree_cursor": one decode_sparse_widget_derived_subtree_cursor_from_decoder;
-        276 => "widget_cached_ancestor": one decode_sparse_widget_pointer_from_decoder;
-        277 => "rendered_synced_state": one decode_sparse_multiplayer_map_from_decoder;
-        278 => "link_preview_data": one decode_sparse_link_preview_data_from_decoder;
-        279 => "text_bidi_version": one kiwi_sparse_uint_value;
-        280 => "text_truncation": one decode_sparse_text_truncation_from_decoder;
-        281 => "library_move_history": repeated decode_sparse_library_move_history_item_from_decoder;
-        282 => "shape_truncates": one kiwi_sparse_bool_value;
-        283 => "section_contents_hidden": one kiwi_sparse_bool_value;
-        284 => "simplify_instance_panels": one kiwi_sparse_bool_value;
-        285 => "widget_input_behavior": one decode_sparse_widget_input_behavior_from_decoder;
-        286 => "widget_tooltip": one kiwi_sparse_string_value;
-        287 => "border_top_hidden": one kiwi_sparse_bool_value;
-        288 => "border_bottom_hidden": one kiwi_sparse_bool_value;
-        289 => "border_left_hidden": one kiwi_sparse_bool_value;
-        290 => "border_right_hidden": one kiwi_sparse_bool_value;
-        291 => "widget_hover_style": one decode_sparse_widget_hover_style_from_decoder;
-        292 => "has_had_rtl_text": one kiwi_sparse_bool_value;
-        293 => "is_widget_stickable": one kiwi_sparse_bool_value;
-        294 => "borders_take_space": one kiwi_sparse_bool_value;
-        295 => "border_top_weight": one kiwi_sparse_float_value;
-        296 => "border_bottom_weight": one kiwi_sparse_float_value;
-        297 => "border_left_weight": one kiwi_sparse_float_value;
-        298 => "border_right_weight": one kiwi_sparse_float_value;
-        299 => "border_stroke_weights_independent": one kiwi_sparse_bool_value;
-        300 => "video_playback": one decode_sparse_video_playback_from_decoder;
-        301 => "stamp_data": one decode_sparse_stamp_data_from_decoder;
-        302 => "accessible_html_tag": one decode_sparse_html_tag_from_decoder;
-        303 => "aria_role": one decode_sparse_aria_role_from_decoder;
-        304 => "accessible_label": one kiwi_sparse_string_value;
-        305 => "props_are_bubbled": one kiwi_sparse_bool_value;
-        306 => "variable_data": one decode_sparse_variable_data_from_decoder;
-        307 => "variable_consumption_map": one decode_sparse_variable_data_map_from_decoder;
-        308 => "table_row_positions": one decode_sparse_table_row_column_position_map_from_decoder;
-        309 => "table_column_positions": one decode_sparse_table_row_column_position_map_from_decoder;
-        310 => "table_row_heights": one decode_sparse_table_row_column_size_map_from_decoder;
-        311 => "table_column_widths": one decode_sparse_table_row_column_size_map_from_decoder;
-        312 => "variable_set_modes": repeated decode_sparse_variable_set_mode_from_decoder;
-        313 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder;
-        314 => "variable_resolved_type": one decode_sparse_variable_resolved_data_type_from_decoder;
-        315 => "variable_data_values": one decode_sparse_variable_data_values_from_decoder;
-        316 => "variable_mode_by_set_map": one decode_sparse_variable_mode_by_set_map_from_decoder;
-        317 => "mask_type": one decode_sparse_mask_type_from_decoder;
-        318 => "description": one kiwi_sparse_string_value;
-        319 => "key": one kiwi_sparse_string_value;
-        320 => "sort_position": one kiwi_sparse_string_value;
-        321 => "override_level": one kiwi_sparse_int_value;
-        322 => "leading_trim": one decode_sparse_leading_trim_from_decoder;
-        323 => "stack_wrap": one decode_sparse_stack_wrap_from_decoder;
-        324 => "stack_counter_spacing": one kiwi_sparse_float_value;
-        325 => "min_size": one decode_sparse_optional_vector_from_decoder;
-        326 => "max_size": one decode_sparse_optional_vector_from_decoder;
-        327 => "agenda_position_map": one decode_sparse_agenda_position_map_from_decoder;
-        328 => "agenda_metadata_map": one decode_sparse_agenda_metadata_map_from_decoder;
-        329 => "migration_status": one decode_sparse_migration_status_from_decoder;
-        330 => "is_soft_deleted": one kiwi_sparse_bool_value;
-        331 => "edit_info": one decode_sparse_edit_info_from_decoder;
-        332 => "style_id_for_fill": one decode_sparse_style_id_from_decoder;
-        333 => "style_id_for_stroke_fill": one decode_sparse_style_id_from_decoder;
-        334 => "style_id_for_text": one decode_sparse_style_id_from_decoder;
-        335 => "style_id_for_effect": one decode_sparse_style_id_from_decoder;
-        336 => "style_id_for_grid": one decode_sparse_style_id_from_decoder;
-        337 => "hanging_punctuation": one kiwi_sparse_bool_value;
-        338 => "derived_immutable_frame_data_version": one decode_sparse_multiplayer_field_version_from_decoder;
-        339 => "hanging_list": one kiwi_sparse_bool_value;
-        340 => "mention": one decode_sparse_mention_from_decoder;
-        341 => "color_profile": one decode_sparse_color_profile_from_decoder;
-        342 => "detached_symbol_id": one decode_sparse_symbol_id_from_decoder;
-        343 => "stack_counter_align_content": one decode_sparse_stack_counter_align_content_from_decoder;
-        344 => "is_snake_game_board": one kiwi_sparse_bool_value;
-        345 => "ojans_super_secret_node_field": one decode_sparse_shared_style_master_data_from_decoder;
-        346 => "child_reading_direction": one decode_sparse_child_reading_direction_from_decoder;
-        347 => "reading_index": one kiwi_sparse_string_value;
-        348 => "sev_moonlit_lily_data": one decode_sparse_shared_style_master_data_from_decoder;
-        349 => "document_color_profile": one decode_sparse_document_color_profile_from_decoder;
-        350 => "variable_token_name": one kiwi_sparse_string_value;
-        351 => "max_lines": one kiwi_sparse_int_value;
-        352 => "section_status": one decode_sparse_section_status_from_decoder;
-        353 => "variable_scopes": repeated decode_sparse_variable_scope_from_decoder;
-        354 => "developer_related_links": repeated decode_sparse_developer_related_link_from_decoder;
-        355 => "section_status_info": one decode_sparse_section_status_info_from_decoder;
-        356 => "slide_active_theme_lib_key": one kiwi_sparse_string_value;
-        357 => "aria_attributes": one decode_sparse_aria_attributes_map_from_decoder;
-        358 => "code_syntax": one decode_sparse_code_syntax_map_from_decoder;
-        359 => "derived_text_data": one decode_sparse_derived_text_data_from_decoder;
-        360 => "should_hide_cursors_on_widget_hover": one kiwi_sparse_bool_value;
-        361 => "handoff_status_map": one decode_sparse_handoff_status_map_from_decoder;
-        362 => "layout_root": one decode_sparse_guid_from_decoder;
-        363 => "diagram_parent_id": one decode_sparse_guid_from_decoder;
-        364 => "layout_position": one kiwi_sparse_string_value;
-        365 => "edit_scope_info": one decode_sparse_edit_scope_info_from_decoder;
-        366 => "diagram_layout_rule_type": one decode_sparse_diagram_layout_rule_type_from_decoder;
-        367 => "diagram_parent_index": one decode_sparse_diagram_parent_index_from_decoder;
-        368 => "diagram_layout_paused": one decode_sparse_diagram_layout_paused_from_decoder;
-        369 => "annotations": repeated decode_sparse_annotation_from_decoder;
-        370 => "section_preset_info": one decode_sparse_section_preset_info_from_decoder;
-        371 => "interactive_slide_config_data": one decode_sparse_multiplayer_map_from_decoder;
-        372 => "interactive_slide_participant_data": one decode_sparse_multiplayer_map_from_decoder;
-        373 => "connector_type": one decode_sparse_connector_type_from_decoder;
-        374 => "semantic_weight": one decode_sparse_semantic_weight_from_decoder;
-        375 => "semantic_italic": one decode_sparse_semantic_italic_from_decoder;
-        376 => "is_override_over_text_style": one kiwi_sparse_bool_value;
-        377 => "backing_variable_set_id": one decode_sparse_variable_set_id_from_decoder;
-        378 => "backing_variable_id": one decode_sparse_variable_id_or_variable_override_id_from_decoder;
-        379 => "theme_id": one decode_sparse_theme_id_from_decoder;
-        380 => "is_page_divider": one kiwi_sparse_bool_value;
-        381 => "slide_theme_data": one decode_sparse_slide_theme_data_from_decoder;
-        382 => "module_type": one decode_sparse_module_type_from_decoder;
-        383 => "file_asset_ids": one decode_sparse_asset_id_map_from_decoder;
-        384 => "measurements": repeated decode_sparse_annotation_measurement_from_decoder;
-        385 => "is_collection_extendable": one kiwi_sparse_bool_value;
-        386 => "root_variable_key": one kiwi_sparse_string_value;
-        387 => "is_responsive_set": one kiwi_sparse_bool_value;
-        388 => "paste_source": one decode_sparse_paste_source_from_decoder;
-        389 => "slide_speaker_notes": one kiwi_sparse_string_value;
-        390 => "slide_theme_map": one decode_sparse_slide_theme_map_from_decoder;
-        391 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder;
-        392 => "slide_thumbnail_hash": one kiwi_sparse_string_value;
-        393 => "slide_template_file_key": one kiwi_sparse_string_value;
-        394 => "nested_instance_resize_enabled": one kiwi_sparse_bool_value;
-        395 => "source_library_key": one kiwi_sparse_string_value;
-        396 => "text_explicit_layout_version": one kiwi_sparse_uint_value;
-        397 => "page_type": one decode_sparse_editor_type_from_decoder;
-        398 => "default_responsive_set_id": one decode_sparse_guid_from_decoder;
-        399 => "user_facing_version": one kiwi_sparse_string_value;
-        400 => "responsive_set_settings": one decode_sparse_responsive_set_settings_from_decoder;
-        401 => "widget_input_text_node_type": one decode_sparse_widget_input_text_node_type_from_decoder;
-        402 => "flapp_type": one decode_sparse_flapp_type_from_decoder;
-        403 => "are_slides_manually_indented": one kiwi_sparse_bool_value;
-        404 => "behaviors": one decode_sparse_node_behaviors_from_decoder;
-        405 => "ai_edited_node_change_field_numbers": repeated kiwi_sparse_uint_value;
-        406 => "sorted_moving_child_indices": repeated kiwi_sparse_int_value;
-        407 => "first_draft_data": one decode_sparse_first_draft_data_from_decoder;
-        408 => "ai_edit_scope_label": one kiwi_sparse_string_value;
-        409 => "platform_shape_definition": one decode_sparse_platform_shape_definition_from_decoder;
-        410 => "is_skipped_slide": one kiwi_sparse_bool_value;
-        411 => "text_decoration_fill_paints": repeated decode_sparse_paint_from_decoder;
-        412 => "text_decoration_skip_ink": one kiwi_sparse_bool_value;
-        413 => "text_underline_offset": one decode_sparse_number_from_decoder;
-        414 => "source_code": one kiwi_sparse_string_value;
-        415 => "text_decoration_thickness": one decode_sparse_number_from_decoder;
-        416 => "text_decoration_style": one decode_sparse_text_decoration_style_from_decoder;
-        417 => "responsive_text_style_variants": repeated decode_sparse_responsive_text_style_variant_from_decoder;
-        418 => "first_draft_kit_element_data": one decode_sparse_first_draft_kit_element_data_from_decoder;
-        419 => "cms_selector": one decode_sparse_cms_selector_from_decoder;
-        420 => "cms_consumption_map": one decode_sparse_cms_consumption_map_from_decoder;
-        421 => "cooper_revert_data": one decode_sparse_cooper_revert_data_from_decoder;
-        422 => "hub_file_attribution": one decode_sparse_hub_file_attribution_from_decoder;
-        423 => "target_aspect_ratio": one decode_sparse_optional_vector_from_decoder;
-        424 => "rotation_origin": one decode_sparse_vector_from_decoder;
-        425 => "vector_operation_version": one kiwi_sparse_uint_value;
-        426 => "object_animations": repeated decode_sparse_prototype_interaction_from_decoder;
-        427 => "belongs_to_code_library_id": one decode_sparse_code_library_id_from_decoder;
-        428 => "exported_from_code_file_id": one decode_sparse_code_file_id_from_decoder;
-        429 => "backing_code_component_id": one decode_sparse_code_component_id_from_decoder;
-        430 => "code_export_name": one kiwi_sparse_string_value;
-        431 => "code_snapshot_state": one decode_sparse_code_snapshot_state_from_decoder;
-        432 => "text_path_start": one decode_sparse_text_path_start_from_decoder;
-        433 => "code_block_theme": one decode_sparse_code_block_theme_from_decoder;
-        434 => "lock_mode": one decode_sparse_lock_mode_from_decoder;
-        435 => "grid_rows": one decode_sparse_guid_position_map_from_decoder;
-        436 => "grid_columns": one decode_sparse_guid_position_map_from_decoder;
-        437 => "grid_row_gap": one kiwi_sparse_float_value;
-        438 => "grid_column_gap": one kiwi_sparse_float_value;
-        439 => "grid_row_anchor": one decode_sparse_guid_from_decoder;
-        440 => "grid_column_anchor": one decode_sparse_guid_from_decoder;
-        441 => "grid_row_span": one kiwi_sparse_uint_value;
-        442 => "grid_column_span": one kiwi_sparse_uint_value;
-        443 => "slide_number": one decode_sparse_slide_number_from_decoder;
-        444 => "collaborative_source_code": one decode_sparse_collaborative_plain_text_from_decoder;
-        445 => "parameter_consumption_map": one decode_sparse_variable_data_map_from_decoder;
-        446 => "stroke_brush_guid": one decode_sparse_guid_from_decoder;
-        447 => "variable_width_points": repeated decode_sparse_variable_width_point_from_decoder;
-        448 => "dynamic_stroke_settings": one decode_sparse_dynamic_stroke_settings_from_decoder;
-        449 => "scatter_stroke_settings": one decode_sparse_scatter_stroke_settings_from_decoder;
-        450 => "stretch_stroke_settings": one decode_sparse_stretch_stroke_settings_from_decoder;
-        451 => "chat_messages": repeated decode_sparse_node_chat_message_from_decoder;
-        452 => "brush_type": one decode_sparse_brush_type_from_decoder;
-        453 => "annotation_categories": one decode_sparse_annotation_categories_from_decoder;
-        454 => "managed_string_data": one decode_sparse_managed_string_data_from_decoder;
-        455 => "transform_modifiers": repeated decode_sparse_transform_modifier_from_decoder;
-        456 => "slide_number_separator": one kiwi_sparse_string_value;
-        457 => "primary_responsive_node_id": one decode_sparse_guid_from_decoder;
-        458 => "is_primary_breakpoint": one kiwi_sparse_bool_value;
-        459 => "code_snapshot": one decode_sparse_code_snapshot_from_decoder;
-        460 => "cms_rich_text_style_map": one decode_sparse_cms_rich_text_style_map_from_decoder;
-        461 => "cooper_template_data": one decode_sparse_cooper_template_data_from_decoder;
-        462 => "multi_edit_glue_id": one decode_sparse_guid_from_decoder;
-        463 => "is_slot": one kiwi_sparse_bool_value;
-        464 => "overridden_variable_id": one decode_sparse_variable_id_from_decoder;
-        465 => "is_code_behavior": one kiwi_sparse_bool_value;
-        466 => "thumbnail_info": one decode_sparse_thumbnail_info_from_decoder;
-        467 => "imported_code_files": one decode_sparse_imported_code_files_from_decoder;
-        468 => "code_file_canvas_node_id": one decode_sparse_canvas_node_id_from_decoder;
-        469 => "auto_fork_code": one kiwi_sparse_bool_value;
-        470 => "has_been_manually_renamed": one kiwi_sparse_bool_value;
-        471 => "code_created_from_design": one kiwi_sparse_bool_value;
-        472 => "code_file_path": one kiwi_sparse_string_value;
-        473 => "image_imports": one decode_sparse_image_import_map_from_decoder;
-        474 => "grid_columns_sizing": one decode_sparse_guid_grid_track_size_map_from_decoder;
-        475 => "grid_rows_sizing": one decode_sparse_guid_grid_track_size_map_from_decoder;
-        476 => "grid_child_vertical_align": one decode_sparse_grid_child_align_from_decoder;
-        477 => "grid_child_horizontal_align": one decode_sparse_grid_child_align_from_decoder;
-        478 => "code_behavior_data": one decode_sparse_code_behavior_data_from_decoder;
-        479 => "connector_bezier_control_points": repeated decode_sparse_connector_control_point_from_decoder;
-        480 => "code_snapshot_invalidated_at": one kiwi_sparse_uint_value;
-        481 => "code_created_from_design_node_id": one decode_sparse_canvas_node_id_from_decoder;
-        482 => "stroke_seed": one kiwi_sparse_uint64_value;
-        483 => "variant_prop_specs": repeated decode_sparse_variant_prop_spec_from_decoder;
-        484 => "code_chat_messages_key": one kiwi_sparse_string_value;
-        485 => "chat_compression_state": one decode_sparse_node_chat_compression_state_from_decoder;
-        486 => "is_embedded_prototype": one kiwi_sparse_bool_value;
-        487 => "is_main_code_component": one kiwi_sparse_bool_value;
-        488 => "scatter_brush_transforms": repeated decode_sparse_matrix_from_decoder;
-        489 => "jsx_props": one decode_sparse_multiplayer_map_from_decoder;
-        490 => "is_decorative_image": one kiwi_sparse_bool_value;
-        491 => "jsx_data": one decode_sparse_jsx_data_from_decoder;
-        492 => "derived_jsx_data": one decode_sparse_derived_jsx_data_from_decoder;
-        493 => "stable_key": one kiwi_sparse_string_value;
-        494 => "ai_canvas_prompt": one decode_sparse_ai_canvas_prompt_from_decoder;
-        495 => "is_slot_content": one kiwi_sparse_bool_value;
-        496 => "ai_chat_thread": one decode_sparse_ai_chat_thread_from_decoder;
-        497 => "stroke_cap_size": one decode_sparse_number_from_decoder;
-        498 => "is_entrypoint_code_file": one kiwi_sparse_bool_value;
-        499 => "backing_node_id": one decode_sparse_canvas_node_id_from_decoder;
-        500 => "derived_breakpoint_data": one decode_sparse_derived_breakpoint_data_from_decoder;
-        501 => "breakpoint_min_width": one kiwi_sparse_float_value;
-        502 => "component_or_state_group_key": one kiwi_sparse_string_value;
-        503 => "component_or_state_group_version": one kiwi_sparse_uint_value;
-        504 => "source_code_library_key": one kiwi_sparse_string_value;
-        505 => "interpolation_type": one decode_sparse_interpolation_type_from_decoder;
-        506 => "timeline_position": one kiwi_sparse_int64_value;
-        507 => "keyframe_value": one decode_sparse_keyframe_value_data_from_decoder;
-        508 => "bezier_handles": one decode_sparse_bezier_handles_from_decoder;
-        509 => "keyframe_operation": one decode_sparse_keyframe_operation_from_decoder;
-        510 => "timeline_position_type": one decode_sparse_timeline_position_type_from_decoder;
-        511 => "clip_id": one decode_sparse_guid_from_decoder;
-        512 => "timeline_duration": one kiwi_sparse_uint64_value;
-        513 => "timeline_offset": one kiwi_sparse_int64_value;
-        514 => "playback_style": one decode_sparse_playback_style_from_decoder;
-        515 => "source_code_library_keys": repeated kiwi_sparse_string_value;
-        516 => "code_object_type": one decode_sparse_code_object_type_from_decoder;
-        517 => "inherited_variable_ids": one decode_sparse_inherited_variables_data_from_decoder;
-        518 => "make_library_component_id": one kiwi_sparse_string_value;
-        519 => "code_library_format": one kiwi_sparse_uint_value;
-        520 => "should_hide_preview_for_make_kit_creation": one kiwi_sparse_bool_value;
-        521 => "animation_presets": one decode_sparse_animation_presets_from_decoder;
-        522 => "is_breakpoint_in_focus": one kiwi_sparse_bool_value;
-        523 => "motion_transform": one decode_sparse_trss_transform2_d_from_decoder;
-        524 => "used_make_libraries": repeated decode_sparse_used_make_library_from_decoder;
-        525 => "code_examples": repeated decode_sparse_code_example_from_decoder;
-        526 => "transition_overrides": one decode_sparse_transition_override_data_from_decoder;
-        527 => "is_code_preview_playing_on_canvas": one kiwi_sparse_bool_value;
-        528 => "buzz_approval_requests": one decode_sparse_buzz_approval_requests_from_decoder;
-        529 => "buzz_approval_node_status_info": one decode_sparse_buzz_approval_node_status_info_from_decoder;
-        530 => "is_stroke_paint_derived": one kiwi_sparse_bool_value;
-        531 => "code_preview_settings": one decode_sparse_prototype_device_from_decoder;
-        532 => "code_embed_info": one decode_sparse_code_embed_info_from_decoder;
-        533 => "connector_version": one kiwi_sparse_int_value;
-        534 => "source_code_collaborative_text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder;
-        535 => "easing_data": one decode_sparse_easing_data_from_decoder;
-        536 => "mime_type": one kiwi_sparse_string_value;
-        537 => "blob_ref": one kiwi_sparse_bytes_value;
-        538 => "table_merged_cells": one decode_sparse_table_merged_cell_map_from_decoder;
-        539 => "repeater_symbol_id": one decode_sparse_symbol_id_from_decoder;
-        540 => "repeater_cms_override_data": one decode_sparse_repeater_cms_override_data_from_decoder;
-        541 => "repeater_override_data": one decode_sparse_repeater_override_data_from_decoder;
-        542 => "path_trim": one decode_sparse_optional_vector_from_decoder;
-        543 => "timeline_disabled": one kiwi_sparse_bool_value;
-        544 => "use_legacy_smart_animate": one kiwi_sparse_bool_value;
-        545 => "is_clip": one kiwi_sparse_bool_value;
-        546 => "is_embed_code_layer": one kiwi_sparse_bool_value;
-        547 => "code_component_description": one kiwi_sparse_string_value;
-        548 => "page_status": one kiwi_sparse_string_value;
-        549 => "repeater_symbol_override_data": one decode_sparse_repeater_symbol_override_data_from_decoder;
-        550 => "fallback_glyphs": one kiwi_sparse_bool_value;
-        551 => "is_make_kit": one kiwi_sparse_bool_value;
-        552 => "timeline_definitions": one decode_sparse_timeline_definitions_map_from_decoder;
-        553 => "timeline_assignments": one decode_sparse_timeline_assignments_map_from_decoder;
-        554 => "stroke_offset": one kiwi_sparse_float_value;
-        555 => "grid_auto_tracks": one decode_sparse_grid_auto_tracks_from_decoder;
-        556 => "grid_reflow_enabled": one kiwi_sparse_bool_value;
-        557 => "source_control_config": one decode_sparse_source_control_config_from_decoder;
-        558 => "code_source_info": one decode_sparse_code_source_info_from_decoder;
-        559 => "spec_block_type": one decode_sparse_spec_block_type_from_decoder;
-        560 => "spec_block_content": one decode_sparse_collaborative_plain_text_from_decoder;
-        561 => "spec_code_block_language": one kiwi_sparse_string_value;
-        562 => "spec_block_table_alignment": one kiwi_sparse_string_value;
-        563 => "spec_block_indent_level": one kiwi_sparse_int_value;
-        564 => "offset_fill_mask_geometry": repeated decode_sparse_path_from_decoder;
-        565 => "placeholder": one kiwi_sparse_bool_value;
-        566 => "timing_display_unit": one decode_sparse_variable_timing_display_unit_from_decoder;
-        567 => "disable_jit_dst": one kiwi_sparse_bool_value;
-        568 => "tools": one decode_sparse_tools_from_decoder;
-        569 => "custom_effects": one decode_sparse_custom_effects_from_decoder;
-        570 => "transform3d": one decode_sparse_transform3d_from_decoder;
-        571 => "stroke_data": one decode_sparse_stroke_data_from_decoder;
-        572 => "scene3d": one decode_sparse_scene3d_from_decoder;
-        573 => "presentation_outlines": one decode_sparse_multiplayer_map_from_decoder;
-        574 => "stack_layout_version": one kiwi_sparse_uint_value;
-        575 => "spec_image_hash": one kiwi_sparse_string_value;
-        576 => "spec_width": one kiwi_sparse_int_value;
-        577 => "spec_height": one kiwi_sparse_int_value;
-        578 => "spec_block_table_row_heights": one decode_sparse_table_row_column_size_map_from_decoder;
-        579 => "spec_block_table_column_widths": one decode_sparse_table_row_column_size_map_from_decoder;
-        580 => "style_animations": repeated decode_sparse_style_animation_from_decoder;
-        581 => "partial_paste_annotation": one decode_sparse_partial_paste_annotation_from_decoder;
-        582 => "style_ids_for_animation": repeated decode_sparse_style_id_for_animation_from_decoder;
-        583 => "backing_animation_preset_id": one decode_sparse_animation_preset_id_from_decoder;
-        584 => "placeholder_client_lifecycle_id": one kiwi_sparse_string_value;
-        585 => "placeholder_invalidate_at": one kiwi_sparse_int_value;
-        586 => "keyframe_value_ref": one decode_sparse_variable_data_from_decoder;
-        587 => "transform_origin": one decode_sparse_transform_origin_from_decoder;
-        588 => "custom_tool_artifact_ref": one decode_sparse_custom_tool_artifact_ref_from_decoder;
-        589 => "code_snapshot_layers": one decode_sparse_code_snapshot_layers_from_decoder;
-        590 => "spec_embed_url": one kiwi_sparse_string_value;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "phase": one decode_sparse_node_phase_from_decoder; one kiwi_skip_uint_value;
+        3 => "parent_index": one decode_sparse_parent_index_from_decoder; one skip_parent_index_from_decoder;
+        4 => "type": one decode_sparse_node_type_from_decoder; one kiwi_skip_uint_value;
+        5 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        6 => "visible": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        7 => "locked": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        8 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        9 => "blend_mode": one decode_sparse_blend_mode_from_decoder; one kiwi_skip_uint_value;
+        10 => "count": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        11 => "size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        12 => "transform": one decode_sparse_matrix_from_decoder; one skip_matrix_from_decoder;
+        13 => "dash_pattern": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        14 => "auto_rename": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        15 => "background_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        16 => "mask": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        17 => "export_contents_only": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        18 => "mask_is_outline": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        19 => "background_opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        20 => "corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        21 => "font_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        22 => "paragraph_indent": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        23 => "paragraph_spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        24 => "star_inner_scale": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        25 => "miter_limit": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        26 => "stroke_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        27 => "text_tracking": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        28 => "horizontal_constraint": one decode_sparse_constraint_type_from_decoder; one kiwi_skip_uint_value;
+        29 => "stroke_align": one decode_sparse_stroke_align_from_decoder; one kiwi_skip_uint_value;
+        30 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder; one kiwi_skip_uint_value;
+        31 => "stroke_join": one decode_sparse_stroke_join_from_decoder; one kiwi_skip_uint_value;
+        32 => "text_align_horizontal": one decode_sparse_text_align_horizontal_from_decoder; one kiwi_skip_uint_value;
+        33 => "text_align_vertical": one decode_sparse_text_align_vertical_from_decoder; one kiwi_skip_uint_value;
+        34 => "text_case": one decode_sparse_text_case_from_decoder; one kiwi_skip_uint_value;
+        35 => "text_decoration": one decode_sparse_text_decoration_from_decoder; one kiwi_skip_uint_value;
+        36 => "boolean_operation": one decode_sparse_boolean_operation_from_decoder; one kiwi_skip_uint_value;
+        37 => "vertical_constraint": one decode_sparse_constraint_type_from_decoder; one kiwi_skip_uint_value;
+        38 => "fill_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
+        39 => "stroke_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
+        40 => "line_height": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
+        41 => "font_name": one decode_sparse_font_name_from_decoder; one skip_font_name_from_decoder;
+        42 => "text_data": one decode_sparse_text_data_from_decoder; one skip_text_data_from_decoder;
+        43 => "effects": repeated decode_sparse_effect_from_decoder; repeated skip_effect_from_decoder;
+        44 => "handle_mirroring": one decode_sparse_vector_mirror_from_decoder; one kiwi_skip_uint_value;
+        45 => "export_settings": repeated decode_sparse_export_settings_from_decoder; repeated skip_export_settings_from_decoder;
+        46 => "text_auto_resize": one decode_sparse_text_auto_resize_from_decoder; one kiwi_skip_uint_value;
+        47 => "layout_grids": repeated decode_sparse_layout_grid_from_decoder; repeated skip_layout_grid_from_decoder;
+        48 => "vector_data": one decode_sparse_vector_data_from_decoder; one skip_vector_data_from_decoder;
+        49 => "style_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        50 => "background_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        51 => "fill_geometry": repeated decode_sparse_path_from_decoder; repeated skip_path_from_decoder;
+        52 => "stroke_geometry": repeated decode_sparse_path_from_decoder; repeated skip_path_from_decoder;
+        53 => "guid_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        54 => "phase_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        55 => "parent_index_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        56 => "type_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        57 => "name_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        58 => "visible_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        59 => "locked_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        60 => "opacity_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        61 => "blend_mode_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        62 => "count_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        63 => "size_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        64 => "transform_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        65 => "dash_pattern_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        66 => "auto_rename_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        67 => "background_enabled_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        68 => "mask_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        69 => "export_contents_only_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        70 => "mask_is_outline_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        71 => "background_opacity_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        72 => "corner_radius_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        73 => "font_size_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        74 => "paragraph_indent_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        75 => "paragraph_spacing_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        76 => "star_inner_scale_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        77 => "miter_limit_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        78 => "stroke_weight_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        79 => "text_tracking_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        80 => "horizontal_constraint_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        81 => "stroke_align_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        82 => "stroke_cap_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        83 => "stroke_join_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        84 => "text_align_horizontal_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        85 => "text_align_vertical_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        86 => "text_case_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        87 => "text_decoration_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        88 => "boolean_operation_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        89 => "vertical_constraint_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        90 => "fill_paints_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        91 => "stroke_paints_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        92 => "line_height_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        93 => "font_name_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        94 => "text_data_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        95 => "effects_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        96 => "handle_mirroring_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        97 => "export_settings_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        98 => "text_auto_resize_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        99 => "layout_grids_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        100 => "vector_data_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        101 => "style_id_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        102 => "background_color_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        103 => "fill_geometry_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        104 => "stroke_geometry_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        105 => "stack_mode": one decode_sparse_stack_mode_from_decoder; one kiwi_skip_uint_value;
+        106 => "stack_mode_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        107 => "stack_spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        108 => "stack_spacing_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        109 => "stack_padding": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        110 => "stack_padding_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        111 => "guid_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        112 => "guid_path_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        113 => "symbol_data": one decode_sparse_symbol_data_from_decoder; one skip_symbol_data_from_decoder;
+        114 => "symbol_data_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        115 => "frame_mask_disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        116 => "frame_mask_disabled_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        117 => "resize_to_fit": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        118 => "resize_to_fit_tag": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        119 => "export_background_disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        120 => "stack_counter_align": one decode_sparse_stack_counter_align_from_decoder; one kiwi_skip_uint_value;
+        121 => "stack_justify": one decode_sparse_stack_justify_from_decoder; one kiwi_skip_uint_value;
+        122 => "shared_symbol_reference": one decode_sparse_shared_symbol_reference_from_decoder; one skip_shared_symbol_reference_from_decoder;
+        123 => "is_symbol_publishable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        124 => "shared_symbol_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
+        125 => "derived_symbol_data": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
+        126 => "shared_symbol_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        127 => "font_variant_common_ligatures": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        128 => "font_variant_contextual_ligatures": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        129 => "font_variant_discretionary_ligatures": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        130 => "font_variant_historical_ligatures": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        131 => "font_variant_ordinal": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        132 => "font_variant_slashed_zero": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        133 => "font_variant_numeric_figure": one decode_sparse_font_variant_numeric_figure_from_decoder; one kiwi_skip_uint_value;
+        134 => "font_variant_numeric_spacing": one decode_sparse_font_variant_numeric_spacing_from_decoder; one kiwi_skip_uint_value;
+        135 => "font_variant_numeric_fraction": one decode_sparse_font_variant_numeric_fraction_from_decoder; one kiwi_skip_uint_value;
+        136 => "font_variant_caps": one decode_sparse_font_variant_caps_from_decoder; one kiwi_skip_uint_value;
+        137 => "font_variant_position": one decode_sparse_font_variant_position_from_decoder; one kiwi_skip_uint_value;
+        138 => "guides": repeated decode_sparse_guide_from_decoder; repeated skip_guide_from_decoder;
+        139 => "transition_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        140 => "prototype_start_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        141 => "prototype_background_color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        142 => "internal_only": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        143 => "overridden_symbol_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        144 => "symbol_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        145 => "rectangle_top_left_corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        146 => "rectangle_top_right_corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        147 => "rectangle_bottom_left_corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        148 => "rectangle_bottom_right_corner_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        149 => "rectangle_corner_radii_independent": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        150 => "rectangle_corner_tool_independent": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        151 => "proportions_constrained": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        152 => "shared_component_master_data": one decode_sparse_shared_component_master_data_from_decoder; one skip_shared_component_master_data_from_decoder;
+        153 => "transition_info": one decode_sparse_transition_info_from_decoder; one skip_transition_info_from_decoder;
+        154 => "transition_type": one decode_sparse_transition_type_from_decoder; one kiwi_skip_uint_value;
+        155 => "transition_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        156 => "easing_type": one decode_sparse_easing_type_from_decoder; one kiwi_skip_uint_value;
+        157 => "is_fill_style": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        158 => "inherit_fill_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        159 => "scroll_direction": one decode_sparse_scroll_direction_from_decoder; one kiwi_skip_uint_value;
+        160 => "corner_smoothing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        161 => "is_stroke_style": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        162 => "inherit_stroke_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        163 => "style_type": one decode_sparse_style_type_from_decoder; one kiwi_skip_uint_value;
+        164 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
+        165 => "letter_spacing": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
+        166 => "scroll_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        167 => "inherit_text_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        168 => "inherit_export_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        169 => "inherit_effect_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        170 => "inherit_grid_style_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        171 => "version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        172 => "shared_style_master_data": one decode_sparse_shared_style_master_data_from_decoder; one skip_shared_style_master_data_from_decoder;
+        173 => "shared_style_reference": one decode_sparse_shared_style_reference_from_decoder; one skip_shared_style_reference_from_decoder;
+        174 => "is_publishable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        175 => "export_text_as_svg_text": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        176 => "is_soft_deleted_style": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        177 => "is_non_updateable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        178 => "scroll_contracted_state": one decode_sparse_scroll_contracted_state_from_decoder; one kiwi_skip_uint_value;
+        179 => "contracted_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        180 => "fixed_children_divider": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        181 => "transition_preserve_scroll": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        182 => "connection_type": one decode_sparse_connection_type_from_decoder; one kiwi_skip_uint_value;
+        183 => "connection_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        184 => "prototype_device": one decode_sparse_prototype_device_from_decoder; one skip_prototype_device_from_decoder;
+        185 => "inherit_fill_style_id_for_stroke": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        186 => "scroll_behavior": one decode_sparse_scroll_behavior_from_decoder; one kiwi_skip_uint_value;
+        187 => "interaction_type": one decode_sparse_interaction_type_from_decoder; one kiwi_skip_uint_value;
+        188 => "transition_timeout": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        189 => "interaction_maintained": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        190 => "interaction_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        191 => "style_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        192 => "destination_is_overlay": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        193 => "background_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
+        194 => "inherit_fill_style_id_for_background": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        195 => "arc_data": one decode_sparse_arc_data_from_decoder; one skip_arc_data_from_decoder;
+        196 => "derived_symbol_data_layout_version": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        197 => "navigation_type": one decode_sparse_navigation_type_from_decoder; one kiwi_skip_uint_value;
+        198 => "overlay_position_type": one decode_sparse_overlay_position_type_from_decoder; one kiwi_skip_uint_value;
+        199 => "overlay_relative_position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        200 => "overlay_background_interaction": one decode_sparse_overlay_background_interaction_from_decoder; one kiwi_skip_uint_value;
+        201 => "overlay_background_appearance": one decode_sparse_overlay_background_appearance_from_decoder; one skip_overlay_background_appearance_from_decoder;
+        202 => "font_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        203 => "text_user_layout_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        204 => "plugin_data": repeated decode_sparse_plugin_data_from_decoder; repeated skip_plugin_data_from_decoder;
+        205 => "toggled_on_ot_features": repeated decode_sparse_open_type_feature_from_decoder; repeated kiwi_skip_uint_value;
+        206 => "toggled_off_ot_features": repeated decode_sparse_open_type_feature_from_decoder; repeated kiwi_skip_uint_value;
+        207 => "transition_should_smart_animate": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        208 => "stack_align": one decode_sparse_stack_align_from_decoder; one kiwi_skip_uint_value;
+        209 => "stack_horizontal_padding": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        210 => "stack_vertical_padding": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        211 => "stack_width": one decode_sparse_stack_size_from_decoder; one kiwi_skip_uint_value;
+        212 => "stack_height": one decode_sparse_stack_size_from_decoder; one kiwi_skip_uint_value;
+        213 => "override_key": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        214 => "publish_file": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        215 => "publish_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        216 => "component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        217 => "is_c2": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        218 => "published_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        219 => "plugin_relaunch_data": repeated decode_sparse_plugin_relaunch_data_from_decoder; repeated skip_plugin_relaunch_data_from_decoder;
+        220 => "container_supports_fill_stroke_and_corners": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        221 => "stack_counter_sizing": one decode_sparse_stack_size_from_decoder; one kiwi_skip_uint_value;
+        222 => "containers_support_fill_stroke_and_corners": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        223 => "hyperlink": one decode_sparse_hyperlink_from_decoder; one skip_hyperlink_from_decoder;
+        224 => "key_trigger": one decode_sparse_key_trigger_from_decoder; one skip_key_trigger_from_decoder;
+        225 => "is_state_group": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        226 => "prototype_interactions": repeated decode_sparse_prototype_interaction_from_decoder; repeated skip_prototype_interaction_from_decoder;
+        227 => "voice_event_phrase": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        228 => "force_unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder; repeated skip_guid_path_mapping_from_decoder;
+        229 => "stack_primary_sizing": one decode_sparse_stack_size_from_decoder; one kiwi_skip_uint_value;
+        230 => "stack_primary_align_items": one decode_sparse_stack_justify_from_decoder; one kiwi_skip_uint_value;
+        231 => "stack_counter_align_items": one decode_sparse_stack_align_from_decoder; one kiwi_skip_uint_value;
+        232 => "stack_child_primary_grow": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        233 => "stack_padding_right": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        234 => "stack_padding_bottom": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        235 => "ancestor_path_before_deletion": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
+        236 => "stack_child_align_self": one decode_sparse_stack_counter_align_from_decoder; one kiwi_skip_uint_value;
+        237 => "symbol_links": repeated decode_sparse_symbol_link_from_decoder; repeated skip_symbol_link_from_decoder;
+        238 => "state_group_property_value_orders": repeated decode_sparse_state_group_property_value_order_from_decoder; repeated skip_state_group_property_value_order_from_decoder;
+        239 => "text_list_data": one decode_sparse_text_list_data_from_decoder; one skip_text_list_data_from_decoder;
+        240 => "node_generation_data": one decode_sparse_node_generation_data_from_decoder; one skip_node_generation_data_from_decoder;
+        241 => "shape_with_text_type": one decode_sparse_shape_with_text_type_from_decoder; one kiwi_skip_uint_value;
+        242 => "connector_start": one decode_sparse_connector_endpoint_from_decoder; one skip_connector_endpoint_from_decoder;
+        243 => "connector_end": one decode_sparse_connector_endpoint_from_decoder; one skip_connector_endpoint_from_decoder;
+        244 => "connector_line_style": one decode_sparse_connector_line_style_from_decoder; one kiwi_skip_uint_value;
+        245 => "connector_start_cap": one decode_sparse_stroke_cap_from_decoder; one kiwi_skip_uint_value;
+        246 => "connector_end_cap": one decode_sparse_stroke_cap_from_decoder; one kiwi_skip_uint_value;
+        247 => "shape_user_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        248 => "override_stash": repeated decode_sparse_instance_override_stash_from_decoder; repeated skip_instance_override_stash_from_decoder;
+        249 => "prototype_starting_point": one decode_sparse_prototype_starting_point_from_decoder; one skip_prototype_starting_point_from_decoder;
+        250 => "override_stash_v2": repeated decode_sparse_instance_override_stash_v2_from_decoder; repeated skip_instance_override_stash_v2_from_decoder;
+        251 => "internal_enum_for_test": one decode_sparse_internal_enum_for_test_from_decoder; one kiwi_skip_uint_value;
+        252 => "origin_component_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        253 => "connector_control_points": repeated decode_sparse_connector_control_point_from_decoder; repeated skip_connector_control_point_from_decoder;
+        254 => "derived_immutable_frame_data": one decode_sparse_derived_immutable_frame_data_from_decoder; one skip_derived_immutable_frame_data_from_decoder;
+        255 => "connector_text_midpoint": one decode_sparse_connector_text_midpoint_from_decoder; one skip_connector_text_midpoint_from_decoder;
+        256 => "library_move_info": one decode_sparse_library_move_info_from_decoder; one skip_library_move_info_from_decoder;
+        257 => "internal_data_for_test": one decode_sparse_internal_data_for_test_from_decoder; one skip_internal_data_for_test_from_decoder;
+        258 => "use_absolute_bounds": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        259 => "code_block_language": one decode_sparse_code_block_language_from_decoder; one kiwi_skip_uint_value;
+        260 => "font_variations": repeated decode_sparse_font_variation_from_decoder; repeated skip_font_variation_from_decoder;
+        261 => "detach_optical_size_from_font_size": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        262 => "widget_metadata": one decode_sparse_widget_metadata_from_decoder; one skip_widget_metadata_from_decoder;
+        263 => "widget_events": repeated decode_sparse_widget_event_from_decoder; repeated kiwi_skip_uint_value;
+        264 => "list_spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        265 => "widget_property_menu_items": repeated decode_sparse_widget_property_menu_item_from_decoder; repeated skip_widget_property_menu_item_from_decoder;
+        266 => "component_prop_defs": repeated decode_sparse_component_prop_def_from_decoder; repeated skip_component_prop_def_from_decoder;
+        267 => "component_prop_refs": repeated decode_sparse_component_prop_ref_from_decoder; repeated skip_component_prop_ref_from_decoder;
+        268 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder; repeated skip_component_prop_assignment_from_decoder;
+        269 => "stack_positioning": one decode_sparse_stack_positioning_from_decoder; one kiwi_skip_uint_value;
+        270 => "embed_data": one decode_sparse_embed_data_from_decoder; one skip_embed_data_from_decoder;
+        271 => "stack_reverse_z_index": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        272 => "rich_media_data": one decode_sparse_rich_media_data_from_decoder; one skip_rich_media_data_from_decoder;
+        273 => "widget_synced_state": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
+        274 => "widget_sync_cursor": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        275 => "widget_derived_subtree_cursor": one decode_sparse_widget_derived_subtree_cursor_from_decoder; one skip_widget_derived_subtree_cursor_from_decoder;
+        276 => "widget_cached_ancestor": one decode_sparse_widget_pointer_from_decoder; one skip_widget_pointer_from_decoder;
+        277 => "rendered_synced_state": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
+        278 => "link_preview_data": one decode_sparse_link_preview_data_from_decoder; one skip_link_preview_data_from_decoder;
+        279 => "text_bidi_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        280 => "text_truncation": one decode_sparse_text_truncation_from_decoder; one kiwi_skip_uint_value;
+        281 => "library_move_history": repeated decode_sparse_library_move_history_item_from_decoder; repeated skip_library_move_history_item_from_decoder;
+        282 => "shape_truncates": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        283 => "section_contents_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        284 => "simplify_instance_panels": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        285 => "widget_input_behavior": one decode_sparse_widget_input_behavior_from_decoder; one kiwi_skip_uint_value;
+        286 => "widget_tooltip": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        287 => "border_top_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        288 => "border_bottom_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        289 => "border_left_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        290 => "border_right_hidden": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        291 => "widget_hover_style": one decode_sparse_widget_hover_style_from_decoder; one skip_widget_hover_style_from_decoder;
+        292 => "has_had_rtl_text": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        293 => "is_widget_stickable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        294 => "borders_take_space": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        295 => "border_top_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        296 => "border_bottom_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        297 => "border_left_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        298 => "border_right_weight": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        299 => "border_stroke_weights_independent": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        300 => "video_playback": one decode_sparse_video_playback_from_decoder; one skip_video_playback_from_decoder;
+        301 => "stamp_data": one decode_sparse_stamp_data_from_decoder; one skip_stamp_data_from_decoder;
+        302 => "accessible_html_tag": one decode_sparse_html_tag_from_decoder; one kiwi_skip_uint_value;
+        303 => "aria_role": one decode_sparse_aria_role_from_decoder; one kiwi_skip_uint_value;
+        304 => "accessible_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        305 => "props_are_bubbled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        306 => "variable_data": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        307 => "variable_consumption_map": one decode_sparse_variable_data_map_from_decoder; one skip_variable_data_map_from_decoder;
+        308 => "table_row_positions": one decode_sparse_table_row_column_position_map_from_decoder; one skip_table_row_column_position_map_from_decoder;
+        309 => "table_column_positions": one decode_sparse_table_row_column_position_map_from_decoder; one skip_table_row_column_position_map_from_decoder;
+        310 => "table_row_heights": one decode_sparse_table_row_column_size_map_from_decoder; one skip_table_row_column_size_map_from_decoder;
+        311 => "table_column_widths": one decode_sparse_table_row_column_size_map_from_decoder; one skip_table_row_column_size_map_from_decoder;
+        312 => "variable_set_modes": repeated decode_sparse_variable_set_mode_from_decoder; repeated skip_variable_set_mode_from_decoder;
+        313 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
+        314 => "variable_resolved_type": one decode_sparse_variable_resolved_data_type_from_decoder; one kiwi_skip_uint_value;
+        315 => "variable_data_values": one decode_sparse_variable_data_values_from_decoder; one skip_variable_data_values_from_decoder;
+        316 => "variable_mode_by_set_map": one decode_sparse_variable_mode_by_set_map_from_decoder; one skip_variable_mode_by_set_map_from_decoder;
+        317 => "mask_type": one decode_sparse_mask_type_from_decoder; one kiwi_skip_uint_value;
+        318 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        319 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        320 => "sort_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        321 => "override_level": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        322 => "leading_trim": one decode_sparse_leading_trim_from_decoder; one kiwi_skip_uint_value;
+        323 => "stack_wrap": one decode_sparse_stack_wrap_from_decoder; one kiwi_skip_uint_value;
+        324 => "stack_counter_spacing": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        325 => "min_size": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
+        326 => "max_size": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
+        327 => "agenda_position_map": one decode_sparse_agenda_position_map_from_decoder; one skip_agenda_position_map_from_decoder;
+        328 => "agenda_metadata_map": one decode_sparse_agenda_metadata_map_from_decoder; one skip_agenda_metadata_map_from_decoder;
+        329 => "migration_status": one decode_sparse_migration_status_from_decoder; one skip_migration_status_from_decoder;
+        330 => "is_soft_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        331 => "edit_info": one decode_sparse_edit_info_from_decoder; one skip_edit_info_from_decoder;
+        332 => "style_id_for_fill": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        333 => "style_id_for_stroke_fill": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        334 => "style_id_for_text": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        335 => "style_id_for_effect": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        336 => "style_id_for_grid": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        337 => "hanging_punctuation": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        338 => "derived_immutable_frame_data_version": one decode_sparse_multiplayer_field_version_from_decoder; one skip_multiplayer_field_version_from_decoder;
+        339 => "hanging_list": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        340 => "mention": one decode_sparse_mention_from_decoder; one skip_mention_from_decoder;
+        341 => "color_profile": one decode_sparse_color_profile_from_decoder; one kiwi_skip_uint_value;
+        342 => "detached_symbol_id": one decode_sparse_symbol_id_from_decoder; one skip_symbol_id_from_decoder;
+        343 => "stack_counter_align_content": one decode_sparse_stack_counter_align_content_from_decoder; one kiwi_skip_uint_value;
+        344 => "is_snake_game_board": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        345 => "ojans_super_secret_node_field": one decode_sparse_shared_style_master_data_from_decoder; one skip_shared_style_master_data_from_decoder;
+        346 => "child_reading_direction": one decode_sparse_child_reading_direction_from_decoder; one kiwi_skip_uint_value;
+        347 => "reading_index": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        348 => "sev_moonlit_lily_data": one decode_sparse_shared_style_master_data_from_decoder; one skip_shared_style_master_data_from_decoder;
+        349 => "document_color_profile": one decode_sparse_document_color_profile_from_decoder; one kiwi_skip_uint_value;
+        350 => "variable_token_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        351 => "max_lines": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        352 => "section_status": one decode_sparse_section_status_from_decoder; one kiwi_skip_uint_value;
+        353 => "variable_scopes": repeated decode_sparse_variable_scope_from_decoder; repeated kiwi_skip_uint_value;
+        354 => "developer_related_links": repeated decode_sparse_developer_related_link_from_decoder; repeated skip_developer_related_link_from_decoder;
+        355 => "section_status_info": one decode_sparse_section_status_info_from_decoder; one skip_section_status_info_from_decoder;
+        356 => "slide_active_theme_lib_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        357 => "aria_attributes": one decode_sparse_aria_attributes_map_from_decoder; one skip_aria_attributes_map_from_decoder;
+        358 => "code_syntax": one decode_sparse_code_syntax_map_from_decoder; one skip_code_syntax_map_from_decoder;
+        359 => "derived_text_data": one decode_sparse_derived_text_data_from_decoder; one skip_derived_text_data_from_decoder;
+        360 => "should_hide_cursors_on_widget_hover": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        361 => "handoff_status_map": one decode_sparse_handoff_status_map_from_decoder; one skip_handoff_status_map_from_decoder;
+        362 => "layout_root": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        363 => "diagram_parent_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        364 => "layout_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        365 => "edit_scope_info": one decode_sparse_edit_scope_info_from_decoder; one skip_edit_scope_info_from_decoder;
+        366 => "diagram_layout_rule_type": one decode_sparse_diagram_layout_rule_type_from_decoder; one kiwi_skip_uint_value;
+        367 => "diagram_parent_index": one decode_sparse_diagram_parent_index_from_decoder; one skip_diagram_parent_index_from_decoder;
+        368 => "diagram_layout_paused": one decode_sparse_diagram_layout_paused_from_decoder; one kiwi_skip_uint_value;
+        369 => "annotations": repeated decode_sparse_annotation_from_decoder; repeated skip_annotation_from_decoder;
+        370 => "section_preset_info": one decode_sparse_section_preset_info_from_decoder; one skip_section_preset_info_from_decoder;
+        371 => "interactive_slide_config_data": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
+        372 => "interactive_slide_participant_data": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
+        373 => "connector_type": one decode_sparse_connector_type_from_decoder; one kiwi_skip_uint_value;
+        374 => "semantic_weight": one decode_sparse_semantic_weight_from_decoder; one kiwi_skip_uint_value;
+        375 => "semantic_italic": one decode_sparse_semantic_italic_from_decoder; one kiwi_skip_uint_value;
+        376 => "is_override_over_text_style": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        377 => "backing_variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
+        378 => "backing_variable_id": one decode_sparse_variable_id_or_variable_override_id_from_decoder; one skip_variable_id_or_variable_override_id_from_decoder;
+        379 => "theme_id": one decode_sparse_theme_id_from_decoder; one skip_theme_id_from_decoder;
+        380 => "is_page_divider": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        381 => "slide_theme_data": one decode_sparse_slide_theme_data_from_decoder; one skip_slide_theme_data_from_decoder;
+        382 => "module_type": one decode_sparse_module_type_from_decoder; one kiwi_skip_uint_value;
+        383 => "file_asset_ids": one decode_sparse_asset_id_map_from_decoder; one skip_asset_id_map_from_decoder;
+        384 => "measurements": repeated decode_sparse_annotation_measurement_from_decoder; repeated skip_annotation_measurement_from_decoder;
+        385 => "is_collection_extendable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        386 => "root_variable_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        387 => "is_responsive_set": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        388 => "paste_source": one decode_sparse_paste_source_from_decoder; one skip_paste_source_from_decoder;
+        389 => "slide_speaker_notes": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        390 => "slide_theme_map": one decode_sparse_slide_theme_map_from_decoder; one skip_slide_theme_map_from_decoder;
+        391 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder; one kiwi_skip_uint_value;
+        392 => "slide_thumbnail_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        393 => "slide_template_file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        394 => "nested_instance_resize_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        395 => "source_library_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        396 => "text_explicit_layout_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        397 => "page_type": one decode_sparse_editor_type_from_decoder; one kiwi_skip_uint_value;
+        398 => "default_responsive_set_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        399 => "user_facing_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        400 => "responsive_set_settings": one decode_sparse_responsive_set_settings_from_decoder; one skip_responsive_set_settings_from_decoder;
+        401 => "widget_input_text_node_type": one decode_sparse_widget_input_text_node_type_from_decoder; one kiwi_skip_uint_value;
+        402 => "flapp_type": one decode_sparse_flapp_type_from_decoder; one kiwi_skip_uint_value;
+        403 => "are_slides_manually_indented": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        404 => "behaviors": one decode_sparse_node_behaviors_from_decoder; one skip_node_behaviors_from_decoder;
+        405 => "ai_edited_node_change_field_numbers": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        406 => "sorted_moving_child_indices": repeated kiwi_sparse_int_value; repeated kiwi_skip_int_value;
+        407 => "first_draft_data": one decode_sparse_first_draft_data_from_decoder; one skip_first_draft_data_from_decoder;
+        408 => "ai_edit_scope_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        409 => "platform_shape_definition": one decode_sparse_platform_shape_definition_from_decoder; one skip_platform_shape_definition_from_decoder;
+        410 => "is_skipped_slide": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        411 => "text_decoration_fill_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
+        412 => "text_decoration_skip_ink": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        413 => "text_underline_offset": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
+        414 => "source_code": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        415 => "text_decoration_thickness": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
+        416 => "text_decoration_style": one decode_sparse_text_decoration_style_from_decoder; one kiwi_skip_uint_value;
+        417 => "responsive_text_style_variants": repeated decode_sparse_responsive_text_style_variant_from_decoder; repeated skip_responsive_text_style_variant_from_decoder;
+        418 => "first_draft_kit_element_data": one decode_sparse_first_draft_kit_element_data_from_decoder; one skip_first_draft_kit_element_data_from_decoder;
+        419 => "cms_selector": one decode_sparse_cms_selector_from_decoder; one skip_cms_selector_from_decoder;
+        420 => "cms_consumption_map": one decode_sparse_cms_consumption_map_from_decoder; one skip_cms_consumption_map_from_decoder;
+        421 => "cooper_revert_data": one decode_sparse_cooper_revert_data_from_decoder; one skip_cooper_revert_data_from_decoder;
+        422 => "hub_file_attribution": one decode_sparse_hub_file_attribution_from_decoder; one skip_hub_file_attribution_from_decoder;
+        423 => "target_aspect_ratio": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
+        424 => "rotation_origin": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        425 => "vector_operation_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        426 => "object_animations": repeated decode_sparse_prototype_interaction_from_decoder; repeated skip_prototype_interaction_from_decoder;
+        427 => "belongs_to_code_library_id": one decode_sparse_code_library_id_from_decoder; one skip_code_library_id_from_decoder;
+        428 => "exported_from_code_file_id": one decode_sparse_code_file_id_from_decoder; one skip_code_file_id_from_decoder;
+        429 => "backing_code_component_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
+        430 => "code_export_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        431 => "code_snapshot_state": one decode_sparse_code_snapshot_state_from_decoder; one kiwi_skip_uint_value;
+        432 => "text_path_start": one decode_sparse_text_path_start_from_decoder; one skip_text_path_start_from_decoder;
+        433 => "code_block_theme": one decode_sparse_code_block_theme_from_decoder; one kiwi_skip_uint_value;
+        434 => "lock_mode": one decode_sparse_lock_mode_from_decoder; one kiwi_skip_uint_value;
+        435 => "grid_rows": one decode_sparse_guid_position_map_from_decoder; one skip_guid_position_map_from_decoder;
+        436 => "grid_columns": one decode_sparse_guid_position_map_from_decoder; one skip_guid_position_map_from_decoder;
+        437 => "grid_row_gap": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        438 => "grid_column_gap": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        439 => "grid_row_anchor": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        440 => "grid_column_anchor": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        441 => "grid_row_span": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        442 => "grid_column_span": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        443 => "slide_number": one decode_sparse_slide_number_from_decoder; one kiwi_skip_uint_value;
+        444 => "collaborative_source_code": one decode_sparse_collaborative_plain_text_from_decoder; one skip_collaborative_plain_text_from_decoder;
+        445 => "parameter_consumption_map": one decode_sparse_variable_data_map_from_decoder; one skip_variable_data_map_from_decoder;
+        446 => "stroke_brush_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        447 => "variable_width_points": repeated decode_sparse_variable_width_point_from_decoder; repeated skip_variable_width_point_from_decoder;
+        448 => "dynamic_stroke_settings": one decode_sparse_dynamic_stroke_settings_from_decoder; one skip_dynamic_stroke_settings_from_decoder;
+        449 => "scatter_stroke_settings": one decode_sparse_scatter_stroke_settings_from_decoder; one skip_scatter_stroke_settings_from_decoder;
+        450 => "stretch_stroke_settings": one decode_sparse_stretch_stroke_settings_from_decoder; one skip_stretch_stroke_settings_from_decoder;
+        451 => "chat_messages": repeated decode_sparse_node_chat_message_from_decoder; repeated skip_node_chat_message_from_decoder;
+        452 => "brush_type": one decode_sparse_brush_type_from_decoder; one kiwi_skip_uint_value;
+        453 => "annotation_categories": one decode_sparse_annotation_categories_from_decoder; one skip_annotation_categories_from_decoder;
+        454 => "managed_string_data": one decode_sparse_managed_string_data_from_decoder; one skip_managed_string_data_from_decoder;
+        455 => "transform_modifiers": repeated decode_sparse_transform_modifier_from_decoder; repeated skip_transform_modifier_from_decoder;
+        456 => "slide_number_separator": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        457 => "primary_responsive_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        458 => "is_primary_breakpoint": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        459 => "code_snapshot": one decode_sparse_code_snapshot_from_decoder; one skip_code_snapshot_from_decoder;
+        460 => "cms_rich_text_style_map": one decode_sparse_cms_rich_text_style_map_from_decoder; one skip_cms_rich_text_style_map_from_decoder;
+        461 => "cooper_template_data": one decode_sparse_cooper_template_data_from_decoder; one skip_cooper_template_data_from_decoder;
+        462 => "multi_edit_glue_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        463 => "is_slot": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        464 => "overridden_variable_id": one decode_sparse_variable_id_from_decoder; one skip_variable_id_from_decoder;
+        465 => "is_code_behavior": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        466 => "thumbnail_info": one decode_sparse_thumbnail_info_from_decoder; one skip_thumbnail_info_from_decoder;
+        467 => "imported_code_files": one decode_sparse_imported_code_files_from_decoder; one skip_imported_code_files_from_decoder;
+        468 => "code_file_canvas_node_id": one decode_sparse_canvas_node_id_from_decoder; one skip_canvas_node_id_from_decoder;
+        469 => "auto_fork_code": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        470 => "has_been_manually_renamed": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        471 => "code_created_from_design": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        472 => "code_file_path": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        473 => "image_imports": one decode_sparse_image_import_map_from_decoder; one skip_image_import_map_from_decoder;
+        474 => "grid_columns_sizing": one decode_sparse_guid_grid_track_size_map_from_decoder; one skip_guid_grid_track_size_map_from_decoder;
+        475 => "grid_rows_sizing": one decode_sparse_guid_grid_track_size_map_from_decoder; one skip_guid_grid_track_size_map_from_decoder;
+        476 => "grid_child_vertical_align": one decode_sparse_grid_child_align_from_decoder; one kiwi_skip_uint_value;
+        477 => "grid_child_horizontal_align": one decode_sparse_grid_child_align_from_decoder; one kiwi_skip_uint_value;
+        478 => "code_behavior_data": one decode_sparse_code_behavior_data_from_decoder; one skip_code_behavior_data_from_decoder;
+        479 => "connector_bezier_control_points": repeated decode_sparse_connector_control_point_from_decoder; repeated skip_connector_control_point_from_decoder;
+        480 => "code_snapshot_invalidated_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        481 => "code_created_from_design_node_id": one decode_sparse_canvas_node_id_from_decoder; one skip_canvas_node_id_from_decoder;
+        482 => "stroke_seed": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        483 => "variant_prop_specs": repeated decode_sparse_variant_prop_spec_from_decoder; repeated skip_variant_prop_spec_from_decoder;
+        484 => "code_chat_messages_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        485 => "chat_compression_state": one decode_sparse_node_chat_compression_state_from_decoder; one skip_node_chat_compression_state_from_decoder;
+        486 => "is_embedded_prototype": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        487 => "is_main_code_component": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        488 => "scatter_brush_transforms": repeated decode_sparse_matrix_from_decoder; repeated skip_matrix_from_decoder;
+        489 => "jsx_props": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
+        490 => "is_decorative_image": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        491 => "jsx_data": one decode_sparse_jsx_data_from_decoder; one skip_jsx_data_from_decoder;
+        492 => "derived_jsx_data": one decode_sparse_derived_jsx_data_from_decoder; one skip_derived_jsx_data_from_decoder;
+        493 => "stable_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        494 => "ai_canvas_prompt": one decode_sparse_ai_canvas_prompt_from_decoder; one skip_ai_canvas_prompt_from_decoder;
+        495 => "is_slot_content": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        496 => "ai_chat_thread": one decode_sparse_ai_chat_thread_from_decoder; one skip_ai_chat_thread_from_decoder;
+        497 => "stroke_cap_size": one decode_sparse_number_from_decoder; one skip_number_from_decoder;
+        498 => "is_entrypoint_code_file": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        499 => "backing_node_id": one decode_sparse_canvas_node_id_from_decoder; one skip_canvas_node_id_from_decoder;
+        500 => "derived_breakpoint_data": one decode_sparse_derived_breakpoint_data_from_decoder; one skip_derived_breakpoint_data_from_decoder;
+        501 => "breakpoint_min_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        502 => "component_or_state_group_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        503 => "component_or_state_group_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        504 => "source_code_library_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        505 => "interpolation_type": one decode_sparse_interpolation_type_from_decoder; one kiwi_skip_uint_value;
+        506 => "timeline_position": one kiwi_sparse_int64_value; one kiwi_skip_int64_value;
+        507 => "keyframe_value": one decode_sparse_keyframe_value_data_from_decoder; one skip_keyframe_value_data_from_decoder;
+        508 => "bezier_handles": one decode_sparse_bezier_handles_from_decoder; one skip_bezier_handles_from_decoder;
+        509 => "keyframe_operation": one decode_sparse_keyframe_operation_from_decoder; one kiwi_skip_uint_value;
+        510 => "timeline_position_type": one decode_sparse_timeline_position_type_from_decoder; one kiwi_skip_uint_value;
+        511 => "clip_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        512 => "timeline_duration": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        513 => "timeline_offset": one kiwi_sparse_int64_value; one kiwi_skip_int64_value;
+        514 => "playback_style": one decode_sparse_playback_style_from_decoder; one kiwi_skip_uint_value;
+        515 => "source_code_library_keys": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
+        516 => "code_object_type": one decode_sparse_code_object_type_from_decoder; one kiwi_skip_uint_value;
+        517 => "inherited_variable_ids": one decode_sparse_inherited_variables_data_from_decoder; one skip_inherited_variables_data_from_decoder;
+        518 => "make_library_component_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        519 => "code_library_format": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        520 => "should_hide_preview_for_make_kit_creation": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        521 => "animation_presets": one decode_sparse_animation_presets_from_decoder; one skip_animation_presets_from_decoder;
+        522 => "is_breakpoint_in_focus": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        523 => "motion_transform": one decode_sparse_trss_transform2_d_from_decoder; one skip_trss_transform2_d_from_decoder;
+        524 => "used_make_libraries": repeated decode_sparse_used_make_library_from_decoder; repeated skip_used_make_library_from_decoder;
+        525 => "code_examples": repeated decode_sparse_code_example_from_decoder; repeated skip_code_example_from_decoder;
+        526 => "transition_overrides": one decode_sparse_transition_override_data_from_decoder; one skip_transition_override_data_from_decoder;
+        527 => "is_code_preview_playing_on_canvas": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        528 => "buzz_approval_requests": one decode_sparse_buzz_approval_requests_from_decoder; one skip_buzz_approval_requests_from_decoder;
+        529 => "buzz_approval_node_status_info": one decode_sparse_buzz_approval_node_status_info_from_decoder; one skip_buzz_approval_node_status_info_from_decoder;
+        530 => "is_stroke_paint_derived": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        531 => "code_preview_settings": one decode_sparse_prototype_device_from_decoder; one skip_prototype_device_from_decoder;
+        532 => "code_embed_info": one decode_sparse_code_embed_info_from_decoder; one skip_code_embed_info_from_decoder;
+        533 => "connector_version": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        534 => "source_code_collaborative_text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder; repeated skip_collaborative_text_op_id_from_decoder;
+        535 => "easing_data": one decode_sparse_easing_data_from_decoder; one skip_easing_data_from_decoder;
+        536 => "mime_type": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        537 => "blob_ref": one kiwi_sparse_bytes_value; bytes kiwi_skip_bytes_value;
+        538 => "table_merged_cells": one decode_sparse_table_merged_cell_map_from_decoder; one skip_table_merged_cell_map_from_decoder;
+        539 => "repeater_symbol_id": one decode_sparse_symbol_id_from_decoder; one skip_symbol_id_from_decoder;
+        540 => "repeater_cms_override_data": one decode_sparse_repeater_cms_override_data_from_decoder; one skip_repeater_cms_override_data_from_decoder;
+        541 => "repeater_override_data": one decode_sparse_repeater_override_data_from_decoder; one skip_repeater_override_data_from_decoder;
+        542 => "path_trim": one decode_sparse_optional_vector_from_decoder; one skip_optional_vector_from_decoder;
+        543 => "timeline_disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        544 => "use_legacy_smart_animate": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        545 => "is_clip": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        546 => "is_embed_code_layer": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        547 => "code_component_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        548 => "page_status": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        549 => "repeater_symbol_override_data": one decode_sparse_repeater_symbol_override_data_from_decoder; one skip_repeater_symbol_override_data_from_decoder;
+        550 => "fallback_glyphs": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        551 => "is_make_kit": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        552 => "timeline_definitions": one decode_sparse_timeline_definitions_map_from_decoder; one skip_timeline_definitions_map_from_decoder;
+        553 => "timeline_assignments": one decode_sparse_timeline_assignments_map_from_decoder; one skip_timeline_assignments_map_from_decoder;
+        554 => "stroke_offset": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        555 => "grid_auto_tracks": one decode_sparse_grid_auto_tracks_from_decoder; one kiwi_skip_uint_value;
+        556 => "grid_reflow_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        557 => "source_control_config": one decode_sparse_source_control_config_from_decoder; one skip_source_control_config_from_decoder;
+        558 => "code_source_info": one decode_sparse_code_source_info_from_decoder; one skip_code_source_info_from_decoder;
+        559 => "spec_block_type": one decode_sparse_spec_block_type_from_decoder; one kiwi_skip_uint_value;
+        560 => "spec_block_content": one decode_sparse_collaborative_plain_text_from_decoder; one skip_collaborative_plain_text_from_decoder;
+        561 => "spec_code_block_language": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        562 => "spec_block_table_alignment": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        563 => "spec_block_indent_level": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        564 => "offset_fill_mask_geometry": repeated decode_sparse_path_from_decoder; repeated skip_path_from_decoder;
+        565 => "placeholder": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        566 => "timing_display_unit": one decode_sparse_variable_timing_display_unit_from_decoder; one kiwi_skip_uint_value;
+        567 => "disable_jit_dst": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        568 => "tools": one decode_sparse_tools_from_decoder; one skip_tools_from_decoder;
+        569 => "custom_effects": one decode_sparse_custom_effects_from_decoder; one skip_custom_effects_from_decoder;
+        570 => "transform3d": one decode_sparse_transform3d_from_decoder; one skip_transform3d_from_decoder;
+        571 => "stroke_data": one decode_sparse_stroke_data_from_decoder; one skip_stroke_data_from_decoder;
+        572 => "scene3d": one decode_sparse_scene3d_from_decoder; one skip_scene3d_from_decoder;
+        573 => "presentation_outlines": one decode_sparse_multiplayer_map_from_decoder; one skip_multiplayer_map_from_decoder;
+        574 => "stack_layout_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        575 => "spec_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        576 => "spec_width": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        577 => "spec_height": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        578 => "spec_block_table_row_heights": one decode_sparse_table_row_column_size_map_from_decoder; one skip_table_row_column_size_map_from_decoder;
+        579 => "spec_block_table_column_widths": one decode_sparse_table_row_column_size_map_from_decoder; one skip_table_row_column_size_map_from_decoder;
+        580 => "style_animations": repeated decode_sparse_style_animation_from_decoder; repeated skip_style_animation_from_decoder;
+        581 => "partial_paste_annotation": one decode_sparse_partial_paste_annotation_from_decoder; one skip_partial_paste_annotation_from_decoder;
+        582 => "style_ids_for_animation": repeated decode_sparse_style_id_for_animation_from_decoder; repeated skip_style_id_for_animation_from_decoder;
+        583 => "backing_animation_preset_id": one decode_sparse_animation_preset_id_from_decoder; one skip_animation_preset_id_from_decoder;
+        584 => "placeholder_client_lifecycle_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        585 => "placeholder_invalidate_at": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        586 => "keyframe_value_ref": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        587 => "transform_origin": one decode_sparse_transform_origin_from_decoder; one skip_transform_origin_from_decoder;
+        588 => "custom_tool_artifact_ref": one decode_sparse_custom_tool_artifact_ref_from_decoder; one skip_custom_tool_artifact_ref_from_decoder;
+        589 => "code_snapshot_layers": one decode_sparse_code_snapshot_layers_from_decoder; one skip_code_snapshot_layers_from_decoder;
+        590 => "spec_embed_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -4681,166 +4803,176 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_git_repo_ref_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_git_repo_ref_from_decoder;
+    skip_fn skip_git_repo_ref_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GitRepoRef";
     definition "GitRepoRef";
     capacity 4;
     fields [
-        1 => "provider": one decode_sparse_git_repo_ref_provider_from_decoder;
-        2 => "git_repo": one kiwi_sparse_string_value;
-        3 => "git_ref": one kiwi_sparse_string_value;
+        1 => "provider": one decode_sparse_git_repo_ref_provider_from_decoder; one kiwi_skip_uint_value;
+        2 => "git_repo": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "git_ref": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_source_control_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_source_control_config_from_decoder;
+    skip_fn skip_source_control_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SourceControlConfig";
     definition "SourceControlConfig";
     capacity 3;
     fields [
-        1 => "origin": one decode_sparse_git_repo_ref_from_decoder;
-        2 => "upstream": one decode_sparse_git_repo_ref_from_decoder;
+        1 => "origin": one decode_sparse_git_repo_ref_from_decoder; one skip_git_repo_ref_from_decoder;
+        2 => "upstream": one decode_sparse_git_repo_ref_from_decoder; one skip_git_repo_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_snapshot_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_snapshot_from_decoder;
+    skip_fn skip_code_snapshot_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeSnapshot";
     definition "CodeSnapshot";
     capacity 8;
     fields [
-        1 => "paints": repeated decode_sparse_paint_from_decoder;
-        2 => "offset": one decode_sparse_vector_from_decoder;
-        3 => "layout_size": one decode_sparse_vector_from_decoder;
-        4 => "device_pixel_ratio": one kiwi_sparse_uint_value;
-        5 => "canvas_size": one decode_sparse_vector_from_decoder;
-        6 => "state": one decode_sparse_code_snapshot_state_from_decoder;
-        7 => "invalidated_at": one kiwi_sparse_uint_value;
+        1 => "paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
+        2 => "offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        3 => "layout_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        4 => "device_pixel_ratio": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        5 => "canvas_size": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        6 => "state": one decode_sparse_code_snapshot_state_from_decoder; one kiwi_skip_uint_value;
+        7 => "invalidated_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_output_layer_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_output_layer_from_decoder;
+    skip_fn skip_code_output_layer_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeOutputLayer";
     definition "CodeOutputLayer";
     capacity 2;
     fields [
-        1 => "node": one decode_sparse_node_change_from_decoder;
+        1 => "node": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_snapshot_layers_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_snapshot_layers_from_decoder;
+    skip_fn skip_code_snapshot_layers_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeSnapshotLayers";
     definition "CodeSnapshotLayers";
     capacity 4;
     fields [
-        1 => "state": one decode_sparse_code_snapshot_state_from_decoder;
-        2 => "invalidated_at": one kiwi_sparse_uint_value;
-        3 => "layers": repeated decode_sparse_code_output_layer_from_decoder;
+        1 => "state": one decode_sparse_code_snapshot_state_from_decoder; one kiwi_skip_uint_value;
+        2 => "invalidated_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "layers": repeated decode_sparse_code_output_layer_from_decoder; repeated skip_code_output_layer_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_behavior_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_behavior_data_from_decoder;
+    skip_fn skip_code_behavior_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeBehaviorData";
     definition "CodeBehaviorData";
     capacity 6;
     fields [
-        1 => "name": one kiwi_sparse_string_value;
-        2 => "icon": one kiwi_sparse_string_value;
-        3 => "node_types": repeated kiwi_sparse_string_value;
-        4 => "category": one kiwi_sparse_string_value;
-        5 => "api_version": one kiwi_sparse_uint_value;
+        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "icon": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "node_types": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
+        4 => "category": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "api_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_example_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_example_from_decoder;
+    skip_fn skip_code_example_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeExample";
     definition "CodeExample";
     capacity 3;
     fields [
-        1 => "example_name": one kiwi_sparse_string_value;
-        2 => "code_export_name": one kiwi_sparse_string_value;
+        1 => "example_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "code_export_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_used_make_library_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_used_make_library_from_decoder;
+    skip_fn skip_used_make_library_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.UsedMakeLibrary";
     definition "UsedMakeLibrary";
     capacity 2;
     fields [
-        1 => "make_library_id": one kiwi_sparse_string_value;
+        1 => "make_library_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cookie_banner_text_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cookie_banner_text_from_decoder;
+    skip_fn skip_cookie_banner_text_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CookieBannerText";
     definition "CookieBannerText";
     capacity 19;
     fields [
-        1 => "banner_header": one kiwi_sparse_string_value;
-        2 => "banner_disclaimer_explicit": one kiwi_sparse_string_value;
-        3 => "banner_disclaimer_implicit": one kiwi_sparse_string_value;
-        4 => "policy_label": one kiwi_sparse_string_value;
-        5 => "accept_text": one kiwi_sparse_string_value;
-        6 => "acknowledge_text": one kiwi_sparse_string_value;
-        7 => "manage_text": one kiwi_sparse_string_value;
-        8 => "reject_text": one kiwi_sparse_string_value;
-        9 => "necessary_text": one kiwi_sparse_string_value;
-        10 => "necessary_description": one kiwi_sparse_string_value;
-        11 => "analytics_text": one kiwi_sparse_string_value;
-        12 => "analytics_description": one kiwi_sparse_string_value;
-        13 => "preferences_text": one kiwi_sparse_string_value;
-        14 => "preferences_description": one kiwi_sparse_string_value;
-        15 => "marketing_text": one kiwi_sparse_string_value;
-        16 => "marketing_description": one kiwi_sparse_string_value;
-        17 => "save_label": one kiwi_sparse_string_value;
-        18 => "trigger_label": one kiwi_sparse_string_value;
+        1 => "banner_header": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "banner_disclaimer_explicit": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "banner_disclaimer_implicit": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "policy_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "accept_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        6 => "acknowledge_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        7 => "manage_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        8 => "reject_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        9 => "necessary_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        10 => "necessary_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        11 => "analytics_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        12 => "analytics_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        13 => "preferences_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        14 => "preferences_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        15 => "marketing_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        16 => "marketing_description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        17 => "save_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        18 => "trigger_label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cookie_banner_settings_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cookie_banner_settings_from_decoder;
+    skip_fn skip_cookie_banner_settings_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CookieBannerSettings";
     definition "CookieBannerSettings";
     capacity 12;
     fields [
-        1 => "enabled": one kiwi_sparse_bool_value;
-        2 => "component_type": one decode_sparse_cookie_banner_component_type_from_decoder;
-        3 => "x_alignment": one decode_sparse_cookie_x_alignment_from_decoder;
-        4 => "y_alignment": one decode_sparse_cookie_y_alignment_from_decoder;
-        5 => "trigger_x_alignment": one decode_sparse_cookie_x_alignment_from_decoder;
-        6 => "trigger_y_alignment": one decode_sparse_cookie_y_alignment_from_decoder;
-        7 => "trigger_component_type": one decode_sparse_trigger_component_type_from_decoder;
-        8 => "policy_url": one kiwi_sparse_string_value;
-        9 => "text": one decode_sparse_cookie_banner_text_from_decoder;
-        10 => "policy_link": one decode_sparse_guid_from_decoder;
-        11 => "locale": one kiwi_sparse_string_value;
+        1 => "enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "component_type": one decode_sparse_cookie_banner_component_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "x_alignment": one decode_sparse_cookie_x_alignment_from_decoder; one kiwi_skip_uint_value;
+        4 => "y_alignment": one decode_sparse_cookie_y_alignment_from_decoder; one kiwi_skip_uint_value;
+        5 => "trigger_x_alignment": one decode_sparse_cookie_x_alignment_from_decoder; one kiwi_skip_uint_value;
+        6 => "trigger_y_alignment": one decode_sparse_cookie_y_alignment_from_decoder; one kiwi_skip_uint_value;
+        7 => "trigger_component_type": one decode_sparse_trigger_component_type_from_decoder; one kiwi_skip_uint_value;
+        8 => "policy_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        9 => "text": one decode_sparse_cookie_banner_text_from_decoder; one skip_cookie_banner_text_from_decoder;
+        10 => "policy_link": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        11 => "locale": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -4886,35 +5018,36 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_responsive_set_settings_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_responsive_set_settings_from_decoder;
+    skip_fn skip_responsive_set_settings_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ResponsiveSetSettings";
     definition "ResponsiveSetSettings";
     capacity 22;
     fields [
-        1 => "title": one kiwi_sparse_string_value;
-        2 => "description": one kiwi_sparse_string_value;
-        3 => "scaling_mode": one decode_sparse_responsive_scaling_mode_from_decoder;
-        4 => "scaling_min_font_size": one kiwi_sparse_float_value;
-        5 => "scaling_max_font_size": one kiwi_sparse_float_value;
-        6 => "scaling_min_layout_width": one kiwi_sparse_float_value;
-        7 => "scaling_max_layout_width": one kiwi_sparse_float_value;
-        8 => "lang": one kiwi_sparse_string_value;
-        9 => "favicon_hash": one kiwi_sparse_string_value;
-        10 => "social_image_hash": one kiwi_sparse_string_value;
-        11 => "google_analytics_id": one kiwi_sparse_string_value;
-        12 => "block_search_indexing": one kiwi_sparse_bool_value;
-        13 => "custom_code_head_start": one kiwi_sparse_string_value;
-        14 => "custom_code_head_end": one kiwi_sparse_string_value;
-        15 => "custom_code_body_start": one kiwi_sparse_string_value;
-        16 => "custom_code_body_end": one kiwi_sparse_string_value;
-        17 => "favicon_id": one decode_sparse_guid_from_decoder;
-        18 => "social_image_id": one decode_sparse_guid_from_decoder;
-        19 => "add_bypass_links": one kiwi_sparse_bool_value;
-        20 => "ignore_reduced_motion": one kiwi_sparse_bool_value;
-        21 => "cookie_banner": one decode_sparse_cookie_banner_settings_from_decoder;
+        1 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "scaling_mode": one decode_sparse_responsive_scaling_mode_from_decoder; one kiwi_skip_uint_value;
+        4 => "scaling_min_font_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "scaling_max_font_size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        6 => "scaling_min_layout_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        7 => "scaling_max_layout_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        8 => "lang": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        9 => "favicon_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        10 => "social_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        11 => "google_analytics_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        12 => "block_search_indexing": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        13 => "custom_code_head_start": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        14 => "custom_code_head_end": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        15 => "custom_code_body_start": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        16 => "custom_code_body_end": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        17 => "favicon_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        18 => "social_image_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        19 => "add_bypass_links": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        20 => "ignore_reduced_motion": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        21 => "cookie_banner": one decode_sparse_cookie_banner_settings_from_decoder; one skip_cookie_banner_settings_from_decoder;
     ]
 }
 
@@ -4928,31 +5061,33 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_selector_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_selector_from_decoder;
+    skip_fn skip_cms_selector_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSSelector";
     definition "CMSSelector";
     capacity 5;
     fields [
-        1 => "cms_collection_id": one kiwi_sparse_string_value;
-        2 => "filter_criteria": one decode_sparse_cms_filter_critera_from_decoder;
-        3 => "sorts": repeated decode_sparse_cms_selector_sort_from_decoder;
-        4 => "limit": one kiwi_sparse_uint_value;
+        1 => "cms_collection_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "filter_criteria": one decode_sparse_cms_filter_critera_from_decoder; one skip_cms_filter_critera_from_decoder;
+        3 => "sorts": repeated decode_sparse_cms_selector_sort_from_decoder; repeated skip_cms_selector_sort_from_decoder;
+        4 => "limit": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_filter_critera_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_filter_critera_from_decoder;
+    skip_fn skip_cms_filter_critera_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSFilterCritera";
     definition "CMSFilterCritera";
     capacity 3;
     fields [
-        1 => "match_type": one decode_sparse_cms_filter_criteria_match_type_from_decoder;
-        2 => "filters": repeated decode_sparse_cms_selector_filter_from_decoder;
+        1 => "match_type": one decode_sparse_cms_filter_criteria_match_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "filters": repeated decode_sparse_cms_selector_filter_from_decoder; repeated skip_cms_selector_filter_from_decoder;
     ]
 }
 
@@ -4966,17 +5101,18 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_selector_filter_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_selector_filter_from_decoder;
+    skip_fn skip_cms_selector_filter_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSSelectorFilter";
     definition "CMSSelectorFilter";
     capacity 4;
     fields [
-        1 => "cms_field_id": one kiwi_sparse_string_value;
-        2 => "op": one decode_sparse_cms_selector_filter_operator_from_decoder;
-        3 => "comparison_value": one kiwi_sparse_string_value;
+        1 => "cms_field_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "op": one decode_sparse_cms_selector_filter_operator_from_decoder; one kiwi_skip_uint_value;
+        3 => "comparison_value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -4989,16 +5125,17 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_selector_sort_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_selector_sort_from_decoder;
+    skip_fn skip_cms_selector_sort_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSSelectorSort";
     definition "CMSSelectorSort";
     capacity 3;
     fields [
-        1 => "cms_field_id": one kiwi_sparse_string_value;
-        2 => "order_by": one decode_sparse_cms_field_order_by_from_decoder;
+        1 => "cms_field_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "order_by": one decode_sparse_cms_field_order_by_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -5012,28 +5149,30 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_consumption_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_consumption_map_from_decoder;
+    skip_fn skip_cms_consumption_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSConsumptionMap";
     definition "CMSConsumptionMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_cms_consumption_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_cms_consumption_map_entry_from_decoder; repeated skip_cms_consumption_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_consumption_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_consumption_map_entry_from_decoder;
+    skip_fn skip_cms_consumption_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSConsumptionMapEntry";
     definition "CMSConsumptionMapEntry";
     capacity 3;
     fields [
-        1 => "consumption_field": one decode_sparse_cms_consumption_field_from_decoder;
-        2 => "cms_field_id": one kiwi_sparse_string_value;
+        1 => "consumption_field": one decode_sparse_cms_consumption_field_from_decoder; one kiwi_skip_uint_value;
+        2 => "cms_field_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -5047,28 +5186,30 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_rich_text_style_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_rich_text_style_map_from_decoder;
+    skip_fn skip_cms_rich_text_style_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSRichTextStyleMap";
     definition "CMSRichTextStyleMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_cms_rich_text_style_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_cms_rich_text_style_entry_from_decoder; repeated skip_cms_rich_text_style_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_rich_text_style_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_rich_text_style_entry_from_decoder;
+    skip_fn skip_cms_rich_text_style_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSRichTextStyleEntry";
     definition "CMSRichTextStyleEntry";
     capacity 3;
     fields [
-        1 => "style_class": one decode_sparse_cms_rich_text_style_class_from_decoder;
-        2 => "text_descriptor": one decode_sparse_cms_rich_text_descriptor_from_decoder;
+        1 => "style_class": one decode_sparse_cms_rich_text_style_class_from_decoder; one kiwi_skip_uint_value;
+        2 => "text_descriptor": one decode_sparse_cms_rich_text_descriptor_from_decoder; one skip_cms_rich_text_descriptor_from_decoder;
     ]
 }
 
@@ -5089,118 +5230,127 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_rich_text_descriptor_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_rich_text_descriptor_from_decoder;
+    skip_fn skip_cms_rich_text_descriptor_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSRichTextDescriptor";
     definition "CMSRichTextDescriptor";
     capacity 3;
     fields [
-        1 => "text_style_id": one decode_sparse_style_id_from_decoder;
-        2 => "font_name_variants": repeated decode_sparse_font_name_from_decoder;
+        1 => "text_style_id": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        2 => "font_name_variants": repeated decode_sparse_font_name_from_decoder; repeated skip_font_name_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_repeater_cms_override_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_repeater_cms_override_data_from_decoder;
+    skip_fn skip_repeater_cms_override_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.RepeaterCmsOverrideData";
     definition "RepeaterCmsOverrideData";
     capacity 2;
     fields [
-        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_repeater_override_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_repeater_override_data_from_decoder;
+    skip_fn skip_repeater_override_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.RepeaterOverrideData";
     definition "RepeaterOverrideData";
     capacity 2;
     fields [
-        1 => "parent_index_overrides": repeated decode_sparse_node_change_from_decoder;
+        1 => "parent_index_overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_repeater_symbol_override_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_repeater_symbol_override_data_from_decoder;
+    skip_fn skip_repeater_symbol_override_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.RepeaterSymbolOverrideData";
     definition "RepeaterSymbolOverrideData";
     capacity 2;
     fields [
-        1 => "overrides_by_position": repeated decode_sparse_repeater_position_overrides_from_decoder;
+        1 => "overrides_by_position": repeated decode_sparse_repeater_position_overrides_from_decoder; repeated skip_repeater_position_overrides_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_repeater_position_overrides_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_repeater_position_overrides_from_decoder;
+    skip_fn skip_repeater_position_overrides_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.RepeaterPositionOverrides";
     definition "RepeaterPositionOverrides";
     capacity 3;
     fields [
-        1 => "position": one decode_sparse_parent_index_from_decoder;
-        2 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        1 => "position": one decode_sparse_parent_index_from_decoder; one skip_parent_index_from_decoder;
+        2 => "overrides": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_inherited_variables_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_inherited_variables_data_from_decoder;
+    skip_fn skip_inherited_variables_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InheritedVariablesData";
     definition "InheritedVariablesData";
     capacity 2;
     fields [
-        1 => "variable_ids": repeated decode_sparse_inherited_variable_entry_from_decoder;
+        1 => "variable_ids": repeated decode_sparse_inherited_variable_entry_from_decoder; repeated skip_inherited_variable_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_inherited_variable_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_inherited_variable_entry_from_decoder;
+    skip_fn skip_inherited_variable_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InheritedVariableEntry";
     definition "InheritedVariableEntry";
     capacity 2;
     fields [
-        1 => "variable_id": one decode_sparse_variable_id_from_decoder;
+        1 => "variable_id": one decode_sparse_variable_id_from_decoder; one skip_variable_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_hub_file_attribution_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_hub_file_attribution_from_decoder;
+    skip_fn skip_hub_file_attribution_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.HubFileAttribution";
     definition "HubFileAttribution";
     capacity 3;
     fields [
-        1 => "hub_file_id": one kiwi_sparse_string_value;
-        2 => "hub_file_name": one kiwi_sparse_string_value;
+        1 => "hub_file_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "hub_file_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_data_from_decoder;
+    skip_fn skip_managed_string_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringData";
     definition "ManagedStringData";
     capacity 6;
     fields [
-        1 => "key": one kiwi_sparse_string_value;
-        2 => "context": one kiwi_sparse_string_value;
-        3 => "locale": one kiwi_sparse_string_value;
-        4 => "content": one decode_sparse_managed_string_node_from_decoder;
-        5 => "content_schema": one decode_sparse_managed_string_content_schema_from_decoder;
+        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "context": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "locale": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "content": one decode_sparse_managed_string_node_from_decoder; one skip_managed_string_node_from_decoder;
+        5 => "content_schema": one decode_sparse_managed_string_content_schema_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -5225,43 +5375,46 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_node_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_node_from_decoder;
+    skip_fn skip_managed_string_node_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringNode";
     definition "ManagedStringNode";
     capacity 6;
     fields [
-        1 => "type": one decode_sparse_managed_string_node_type_from_decoder;
-        2 => "text_node_data": one decode_sparse_managed_string_text_node_data_from_decoder;
-        3 => "concatenate_node_data": one decode_sparse_managed_string_concatenate_ast_node_data_from_decoder;
-        4 => "plural_node_data": one decode_sparse_managed_string_plural_ast_node_data_from_decoder;
-        5 => "placeholder_node_data": one decode_sparse_managed_string_placeholder_ast_node_data_from_decoder;
+        1 => "type": one decode_sparse_managed_string_node_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "text_node_data": one decode_sparse_managed_string_text_node_data_from_decoder; one skip_managed_string_text_node_data_from_decoder;
+        3 => "concatenate_node_data": one decode_sparse_managed_string_concatenate_ast_node_data_from_decoder; one skip_managed_string_concatenate_ast_node_data_from_decoder;
+        4 => "plural_node_data": one decode_sparse_managed_string_plural_ast_node_data_from_decoder; one skip_managed_string_plural_ast_node_data_from_decoder;
+        5 => "placeholder_node_data": one decode_sparse_managed_string_placeholder_ast_node_data_from_decoder; one skip_managed_string_placeholder_ast_node_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_text_node_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_text_node_data_from_decoder;
+    skip_fn skip_managed_string_text_node_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringTextNodeData";
     definition "ManagedStringTextNodeData";
     capacity 2;
     fields [
-        1 => "value": one kiwi_sparse_string_value;
+        1 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_concatenate_ast_node_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_concatenate_ast_node_data_from_decoder;
+    skip_fn skip_managed_string_concatenate_ast_node_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringConcatenateAstNodeData";
     definition "ManagedStringConcatenateAstNodeData";
     capacity 2;
     fields [
-        1 => "values": repeated decode_sparse_managed_string_node_from_decoder;
+        1 => "values": repeated decode_sparse_managed_string_node_from_decoder; repeated skip_managed_string_node_from_decoder;
     ]
 }
 
@@ -5279,29 +5432,31 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_plural_ast_node_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_plural_ast_node_data_from_decoder;
+    skip_fn skip_managed_string_plural_ast_node_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringPluralAstNodeData";
     definition "ManagedStringPluralAstNodeData";
     capacity 3;
     fields [
-        1 => "identifier": one kiwi_sparse_string_value;
-        2 => "conditions": repeated decode_sparse_managed_string_plural_type_map_entry_from_decoder;
+        1 => "identifier": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "conditions": repeated decode_sparse_managed_string_plural_type_map_entry_from_decoder; repeated skip_managed_string_plural_type_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_plural_type_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_plural_type_map_entry_from_decoder;
+    skip_fn skip_managed_string_plural_type_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringPluralTypeMapEntry";
     definition "ManagedStringPluralTypeMapEntry";
     capacity 3;
     fields [
-        1 => "key": one decode_sparse_managed_string_plural_type_from_decoder;
-        2 => "value": one decode_sparse_managed_string_node_from_decoder;
+        1 => "key": one decode_sparse_managed_string_plural_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "value": one decode_sparse_managed_string_node_from_decoder; one skip_managed_string_node_from_decoder;
     ]
 }
 
@@ -5317,46 +5472,49 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_placeholder_ast_node_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_placeholder_ast_node_data_from_decoder;
+    skip_fn skip_managed_string_placeholder_ast_node_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringPlaceholderAstNodeData";
     definition "ManagedStringPlaceholderAstNodeData";
     capacity 4;
     fields [
-        1 => "identifier": one kiwi_sparse_string_value;
-        2 => "format_type": one decode_sparse_managed_string_format_type_from_decoder;
-        3 => "format_pattern": one kiwi_sparse_string_value;
+        1 => "identifier": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "format_type": one decode_sparse_managed_string_format_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "format_pattern": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cooper_revert_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cooper_revert_data_from_decoder;
+    skip_fn skip_cooper_revert_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CooperRevertData";
     definition "CooperRevertData";
     capacity 2;
     fields [
-        1 => "original_values": one decode_sparse_node_change_from_decoder;
+        1 => "original_values": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_video_playback_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_video_playback_from_decoder;
+    skip_fn skip_video_playback_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VideoPlayback";
     definition "VideoPlayback";
     capacity 7;
     fields [
-        1 => "autoplay": one kiwi_sparse_bool_value;
-        2 => "media_loop": one kiwi_sparse_bool_value;
-        3 => "muted": one kiwi_sparse_bool_value;
-        4 => "show_controls": one kiwi_sparse_bool_value;
-        5 => "start_time_ms": one kiwi_sparse_uint_value;
-        6 => "end_time_ms": one kiwi_sparse_uint_value;
+        1 => "autoplay": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "media_loop": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "muted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "show_controls": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "start_time_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        6 => "end_time_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
@@ -5390,84 +5548,90 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_widget_hover_style_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_widget_hover_style_from_decoder;
+    skip_fn skip_widget_hover_style_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.WidgetHoverStyle";
     definition "WidgetHoverStyle";
     capacity 7;
     fields [
-        1 => "fill_paints": repeated decode_sparse_paint_from_decoder;
-        2 => "stroke_paints": repeated decode_sparse_paint_from_decoder;
-        3 => "opacity": one kiwi_sparse_float_value;
-        4 => "are_fill_paints_set": one kiwi_sparse_bool_value;
-        5 => "are_stroke_paints_set": one kiwi_sparse_bool_value;
-        6 => "is_opacity_set": one kiwi_sparse_bool_value;
+        1 => "fill_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
+        2 => "stroke_paints": repeated decode_sparse_paint_from_decoder; repeated skip_paint_from_decoder;
+        3 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "are_fill_paints_set": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "are_stroke_paints_set": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "is_opacity_set": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_widget_derived_subtree_cursor_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_widget_derived_subtree_cursor_from_decoder;
+    skip_fn skip_widget_derived_subtree_cursor_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.WidgetDerivedSubtreeCursor";
     definition "WidgetDerivedSubtreeCursor";
     capacity 3;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value;
-        2 => "counter": one kiwi_sparse_uint_value;
+        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "counter": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_multiplayer_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_multiplayer_map_from_decoder;
+    skip_fn skip_multiplayer_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.MultiplayerMap";
     definition "MultiplayerMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_multiplayer_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_multiplayer_map_entry_from_decoder; repeated skip_multiplayer_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_multiplayer_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_multiplayer_map_entry_from_decoder;
+    skip_fn skip_multiplayer_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.MultiplayerMapEntry";
     definition "MultiplayerMapEntry";
     capacity 3;
     fields [
-        1 => "key": one kiwi_sparse_string_value;
-        2 => "value": one kiwi_sparse_string_value;
+        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_data_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_data_map_from_decoder;
+    skip_fn skip_variable_data_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableDataMap";
     definition "VariableDataMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_variable_data_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_variable_data_map_entry_from_decoder; repeated skip_variable_data_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_data_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_data_map_entry_from_decoder;
+    skip_fn skip_variable_data_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableDataMapEntry";
     definition "VariableDataMapEntry";
     capacity 4;
     fields [
-        1 => "node_field": one kiwi_sparse_uint_value;
-        2 => "variable_data": one decode_sparse_variable_data_from_decoder;
-        3 => "variable_field": one decode_sparse_variable_field_from_decoder;
+        1 => "node_field": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "variable_data": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        3 => "variable_field": one decode_sparse_variable_field_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -5545,207 +5709,223 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_mode_by_set_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_mode_by_set_map_from_decoder;
+    skip_fn skip_variable_mode_by_set_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableModeBySetMap";
     definition "VariableModeBySetMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_variable_mode_by_set_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_variable_mode_by_set_map_entry_from_decoder; repeated skip_variable_mode_by_set_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_mode_by_set_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_mode_by_set_map_entry_from_decoder;
+    skip_fn skip_variable_mode_by_set_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableModeBySetMapEntry";
     definition "VariableModeBySetMapEntry";
     capacity 4;
     fields [
-        1 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder;
-        2 => "variable_mode_id": one decode_sparse_guid_from_decoder;
-        3 => "variable_set_extension_id": one decode_sparse_variable_set_id_from_decoder;
+        1 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
+        2 => "variable_mode_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "variable_set_extension_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_syntax_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_syntax_map_from_decoder;
+    skip_fn skip_code_syntax_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeSyntaxMap";
     definition "CodeSyntaxMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_code_syntax_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_code_syntax_map_entry_from_decoder; repeated skip_code_syntax_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_syntax_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_syntax_map_entry_from_decoder;
+    skip_fn skip_code_syntax_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeSyntaxMapEntry";
     definition "CodeSyntaxMapEntry";
     capacity 3;
     fields [
-        1 => "platform": one decode_sparse_code_syntax_platform_from_decoder;
-        2 => "value": one kiwi_sparse_string_value;
+        1 => "platform": one decode_sparse_code_syntax_platform_from_decoder; one kiwi_skip_uint_value;
+        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_table_merged_cell_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_table_merged_cell_map_from_decoder;
+    skip_fn skip_table_merged_cell_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TableMergedCellMap";
     definition "TableMergedCellMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_table_merged_cell_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_table_merged_cell_map_entry_from_decoder; repeated skip_table_merged_cell_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_table_merged_cell_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_table_merged_cell_map_entry_from_decoder;
+    skip_fn skip_table_merged_cell_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TableMergedCellMapEntry";
     definition "TableMergedCellMapEntry";
     capacity 5;
     fields [
-        1 => "row_id": one decode_sparse_guid_from_decoder;
-        2 => "col_id": one decode_sparse_guid_from_decoder;
-        3 => "row_span": one kiwi_sparse_int_value;
-        4 => "col_span": one kiwi_sparse_int_value;
+        1 => "row_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "col_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "row_span": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        4 => "col_span": one kiwi_sparse_int_value; one kiwi_skip_int_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_table_row_column_position_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_table_row_column_position_map_from_decoder;
+    skip_fn skip_table_row_column_position_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TableRowColumnPositionMap";
     definition "TableRowColumnPositionMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_table_row_column_position_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_table_row_column_position_map_entry_from_decoder; repeated skip_table_row_column_position_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_table_row_column_position_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_table_row_column_position_map_entry_from_decoder;
+    skip_fn skip_table_row_column_position_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TableRowColumnPositionMapEntry";
     definition "TableRowColumnPositionMapEntry";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "position": one kiwi_sparse_string_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_guid_position_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_guid_position_map_from_decoder;
+    skip_fn skip_guid_position_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GUIDPositionMap";
     definition "GUIDPositionMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_guid_position_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_guid_position_map_entry_from_decoder; repeated skip_guid_position_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_guid_position_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_guid_position_map_entry_from_decoder;
+    skip_fn skip_guid_position_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GUIDPositionMapEntry";
     definition "GUIDPositionMapEntry";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "position": one kiwi_sparse_string_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_guid_grid_track_size_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_guid_grid_track_size_map_from_decoder;
+    skip_fn skip_guid_grid_track_size_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GUIDGridTrackSizeMap";
     definition "GUIDGridTrackSizeMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_guid_grid_track_size_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_guid_grid_track_size_map_entry_from_decoder; repeated skip_guid_grid_track_size_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_guid_grid_track_size_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_guid_grid_track_size_map_entry_from_decoder;
+    skip_fn skip_guid_grid_track_size_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GUIDGridTrackSizeMapEntry";
     definition "GUIDGridTrackSizeMapEntry";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "track_size": one decode_sparse_grid_track_size_from_decoder;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "track_size": one decode_sparse_grid_track_size_from_decoder; one skip_grid_track_size_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_object_animation_list_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_object_animation_list_from_decoder;
+    skip_fn skip_object_animation_list_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ObjectAnimationList";
     definition "ObjectAnimationList";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_object_animation_list_item_from_decoder;
+        1 => "entries": repeated decode_sparse_object_animation_list_item_from_decoder; repeated skip_object_animation_list_item_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_object_animation_list_item_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_object_animation_list_item_from_decoder;
+    skip_fn skip_object_animation_list_item_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ObjectAnimationListItem";
     definition "ObjectAnimationListItem";
     capacity 3;
     fields [
-        1 => "target_node_id": one decode_sparse_guid_from_decoder;
-        2 => "animation": one decode_sparse_prototype_action_from_decoder;
+        1 => "target_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "animation": one decode_sparse_prototype_action_from_decoder; one skip_prototype_action_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_grid_track_size_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_grid_track_size_from_decoder;
+    skip_fn skip_grid_track_size_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GridTrackSize";
     definition "GridTrackSize";
     capacity 3;
     fields [
-        1 => "min_sizing": one decode_sparse_grid_track_sizing_function_from_decoder;
-        2 => "max_sizing": one decode_sparse_grid_track_sizing_function_from_decoder;
+        1 => "min_sizing": one decode_sparse_grid_track_sizing_function_from_decoder; one skip_grid_track_sizing_function_from_decoder;
+        2 => "max_sizing": one decode_sparse_grid_track_sizing_function_from_decoder; one skip_grid_track_sizing_function_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_grid_track_sizing_function_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_grid_track_sizing_function_from_decoder;
+    skip_fn skip_grid_track_sizing_function_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GridTrackSizingFunction";
     definition "GridTrackSizingFunction";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_grid_track_sizing_type_from_decoder;
-        2 => "value": one kiwi_sparse_float_value;
+        1 => "type": one decode_sparse_grid_track_sizing_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
@@ -5760,53 +5940,57 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_table_row_column_size_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_table_row_column_size_map_from_decoder;
+    skip_fn skip_table_row_column_size_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TableRowColumnSizeMap";
     definition "TableRowColumnSizeMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_table_row_column_size_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_table_row_column_size_map_entry_from_decoder; repeated skip_table_row_column_size_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_table_row_column_size_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_table_row_column_size_map_entry_from_decoder;
+    skip_fn skip_table_row_column_size_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TableRowColumnSizeMapEntry";
     definition "TableRowColumnSizeMapEntry";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "size": one kiwi_sparse_float_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "size": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agenda_position_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agenda_position_map_from_decoder;
+    skip_fn skip_agenda_position_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgendaPositionMap";
     definition "AgendaPositionMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_agenda_position_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_agenda_position_map_entry_from_decoder; repeated skip_agenda_position_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agenda_position_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agenda_position_map_entry_from_decoder;
+    skip_fn skip_agenda_position_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgendaPositionMapEntry";
     definition "AgendaPositionMapEntry";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "position": one kiwi_sparse_string_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -5820,82 +6004,88 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agenda_metadata_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agenda_metadata_map_from_decoder;
+    skip_fn skip_agenda_metadata_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgendaMetadataMap";
     definition "AgendaMetadataMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_agenda_metadata_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_agenda_metadata_map_entry_from_decoder; repeated skip_agenda_metadata_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agenda_metadata_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agenda_metadata_map_entry_from_decoder;
+    skip_fn skip_agenda_metadata_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgendaMetadataMapEntry";
     definition "AgendaMetadataMapEntry";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "data": one decode_sparse_agenda_metadata_from_decoder;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "data": one decode_sparse_agenda_metadata_from_decoder; one skip_agenda_metadata_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agenda_metadata_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agenda_metadata_from_decoder;
+    skip_fn skip_agenda_metadata_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgendaMetadata";
     definition "AgendaMetadata";
     capacity 7;
     fields [
-        1 => "name": one kiwi_sparse_string_value;
-        2 => "type": one decode_sparse_agenda_item_type_from_decoder;
-        3 => "target_node_id": one decode_sparse_guid_from_decoder;
-        4 => "timer_info": one decode_sparse_agenda_timer_info_from_decoder;
-        5 => "vote_info": one decode_sparse_agenda_vote_info_from_decoder;
-        6 => "music_info": one decode_sparse_agenda_music_info_from_decoder;
+        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "type": one decode_sparse_agenda_item_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "target_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "timer_info": one decode_sparse_agenda_timer_info_from_decoder; one skip_agenda_timer_info_from_decoder;
+        5 => "vote_info": one decode_sparse_agenda_vote_info_from_decoder; one skip_agenda_vote_info_from_decoder;
+        6 => "music_info": one decode_sparse_agenda_music_info_from_decoder; one skip_agenda_music_info_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agenda_timer_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agenda_timer_info_from_decoder;
+    skip_fn skip_agenda_timer_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgendaTimerInfo";
     definition "AgendaTimerInfo";
     capacity 2;
     fields [
-        1 => "timer_length": one kiwi_sparse_uint_value;
+        1 => "timer_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agenda_vote_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agenda_vote_info_from_decoder;
+    skip_fn skip_agenda_vote_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgendaVoteInfo";
     definition "AgendaVoteInfo";
     capacity 2;
     fields [
-        1 => "vote_count": one kiwi_sparse_uint_value;
+        1 => "vote_count": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agenda_music_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agenda_music_info_from_decoder;
+    skip_fn skip_agenda_music_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgendaMusicInfo";
     definition "AgendaMusicInfo";
     capacity 3;
     fields [
-        1 => "song_id": one kiwi_sparse_string_value;
-        2 => "start_time_ms": one kiwi_sparse_uint_value;
+        1 => "song_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "start_time_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
@@ -5931,19 +6121,20 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_component_prop_ref_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_component_prop_ref_from_decoder;
+    skip_fn skip_component_prop_ref_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ComponentPropRef";
     definition "ComponentPropRef";
     capacity 6;
     fields [
-        1 => "node_field": one kiwi_sparse_uint_value;
-        2 => "def_id": one decode_sparse_guid_from_decoder;
-        3 => "zombie_fallback_name": one kiwi_sparse_string_value;
-        4 => "component_prop_node_field": one decode_sparse_component_prop_node_field_from_decoder;
-        5 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "node_field": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "zombie_fallback_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "component_prop_node_field": one decode_sparse_component_prop_node_field_from_decoder; one kiwi_skip_uint_value;
+        5 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -5960,156 +6151,166 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_component_prop_assignment_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_component_prop_assignment_from_decoder;
+    skip_fn skip_component_prop_assignment_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ComponentPropAssignment";
     definition "ComponentPropAssignment";
     capacity 5;
     fields [
-        1 => "def_id": one decode_sparse_guid_from_decoder;
-        2 => "value": one decode_sparse_component_prop_value_from_decoder;
-        3 => "var_value": one decode_sparse_variable_data_from_decoder;
-        4 => "legacy_derived_text_data": one decode_sparse_derived_text_data_from_decoder;
+        1 => "def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "value": one decode_sparse_component_prop_value_from_decoder; one skip_component_prop_value_from_decoder;
+        3 => "var_value": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        4 => "legacy_derived_text_data": one decode_sparse_derived_text_data_from_decoder; one skip_derived_text_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_component_prop_def_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_component_prop_def_from_decoder;
+    skip_fn skip_component_prop_def_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ComponentPropDef";
     definition "ComponentPropDef";
     capacity 14;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "name": one kiwi_sparse_string_value;
-        3 => "initial_value": one decode_sparse_component_prop_value_from_decoder;
-        4 => "sort_position": one kiwi_sparse_string_value;
-        5 => "parent_prop_def_id": one decode_sparse_guid_from_decoder;
-        6 => "type": one decode_sparse_component_prop_type_from_decoder;
-        7 => "is_deleted": one kiwi_sparse_bool_value;
-        8 => "preferred_values": one decode_sparse_component_prop_preferred_values_from_decoder;
-        9 => "var_value": one decode_sparse_variable_data_from_decoder;
-        10 => "parameter_config": one decode_sparse_parameter_config_from_decoder;
-        11 => "description": one kiwi_sparse_string_value;
-        12 => "slot_prop_config": one decode_sparse_slot_prop_config_from_decoder;
-        13 => "color_array_config": one decode_sparse_color_array_config_from_decoder;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "initial_value": one decode_sparse_component_prop_value_from_decoder; one skip_component_prop_value_from_decoder;
+        4 => "sort_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "parent_prop_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        6 => "type": one decode_sparse_component_prop_type_from_decoder; one kiwi_skip_uint_value;
+        7 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        8 => "preferred_values": one decode_sparse_component_prop_preferred_values_from_decoder; one skip_component_prop_preferred_values_from_decoder;
+        9 => "var_value": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        10 => "parameter_config": one decode_sparse_parameter_config_from_decoder; one skip_parameter_config_from_decoder;
+        11 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        12 => "slot_prop_config": one decode_sparse_slot_prop_config_from_decoder; one skip_slot_prop_config_from_decoder;
+        13 => "color_array_config": one decode_sparse_color_array_config_from_decoder; one skip_color_array_config_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_component_prop_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_component_prop_value_from_decoder;
+    skip_fn skip_component_prop_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ComponentPropValue";
     definition "ComponentPropValue";
     capacity 13;
     fields [
-        1 => "bool_value": one kiwi_sparse_bool_value;
-        2 => "text_value": one decode_sparse_text_data_from_decoder;
-        3 => "guid_value": one decode_sparse_guid_from_decoder;
-        4 => "float_value": one kiwi_sparse_float_value;
-        5 => "easing_data": one decode_sparse_easing_data_from_decoder;
-        6 => "vector_value": one decode_sparse_vector_from_decoder;
-        7 => "line_value": one decode_sparse_line_from_decoder;
-        8 => "circle_value": one decode_sparse_circle_from_decoder;
-        9 => "rotation3_d_value": one decode_sparse_rotation3_d_from_decoder;
-        10 => "circle_point_value": one decode_sparse_circle_point_from_decoder;
-        11 => "gradient_value": one decode_sparse_gradient_from_decoder;
-        12 => "color_point_value": one decode_sparse_color_point_from_decoder;
+        1 => "bool_value": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "text_value": one decode_sparse_text_data_from_decoder; one skip_text_data_from_decoder;
+        3 => "guid_value": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "float_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "easing_data": one decode_sparse_easing_data_from_decoder; one skip_easing_data_from_decoder;
+        6 => "vector_value": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        7 => "line_value": one decode_sparse_line_from_decoder; one skip_line_from_decoder;
+        8 => "circle_value": one decode_sparse_circle_from_decoder; one skip_circle_from_decoder;
+        9 => "rotation3_d_value": one decode_sparse_rotation3_d_from_decoder; one skip_rotation3_d_from_decoder;
+        10 => "circle_point_value": one decode_sparse_circle_point_from_decoder; one skip_circle_point_from_decoder;
+        11 => "gradient_value": one decode_sparse_gradient_from_decoder; one skip_gradient_from_decoder;
+        12 => "color_point_value": one decode_sparse_color_point_from_decoder; one skip_color_point_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_timeline_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_timeline_data_from_decoder;
+    skip_fn skip_timeline_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TimelineData";
     definition "TimelineData";
     capacity 5;
     fields [
-        1 => "duration_us": one kiwi_sparse_uint64_value;
-        2 => "default_timeline": one kiwi_sparse_bool_value;
-        3 => "parent_timeline_def_id": one decode_sparse_guid_from_decoder;
-        4 => "playback_style": one decode_sparse_playback_style_from_decoder;
+        1 => "duration_us": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        2 => "default_timeline": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "parent_timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "playback_style": one decode_sparse_playback_style_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_timeline_definitions_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_timeline_definitions_map_from_decoder;
+    skip_fn skip_timeline_definitions_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TimelineDefinitionsMap";
     definition "TimelineDefinitionsMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_timeline_definitions_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_timeline_definitions_map_entry_from_decoder; repeated skip_timeline_definitions_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_timeline_definitions_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_timeline_definitions_map_entry_from_decoder;
+    skip_fn skip_timeline_definitions_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TimelineDefinitionsMapEntry";
     definition "TimelineDefinitionsMapEntry";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "data": one decode_sparse_timeline_data_from_decoder;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "data": one decode_sparse_timeline_data_from_decoder; one skip_timeline_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_timeline_assignment_key_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_timeline_assignment_key_from_decoder;
+    skip_fn skip_timeline_assignment_key_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TimelineAssignmentKey";
     definition "TimelineAssignmentKey";
     capacity 3;
     fields [
-        1 => "assigned_timeline_id": one decode_sparse_guid_from_decoder;
-        2 => "containing_timeline_id": one decode_sparse_guid_from_decoder;
+        1 => "assigned_timeline_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "containing_timeline_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_timeline_binding_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_timeline_binding_data_from_decoder;
+    skip_fn skip_timeline_binding_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TimelineBindingData";
     definition "TimelineBindingData";
     capacity 3;
     fields [
-        1 => "offset_us": one kiwi_sparse_int64_value;
-        2 => "disabled": one kiwi_sparse_bool_value;
+        1 => "offset_us": one kiwi_sparse_int64_value; one kiwi_skip_int64_value;
+        2 => "disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_timeline_assignments_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_timeline_assignments_map_from_decoder;
+    skip_fn skip_timeline_assignments_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TimelineAssignmentsMap";
     definition "TimelineAssignmentsMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_timeline_assignments_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_timeline_assignments_map_entry_from_decoder; repeated skip_timeline_assignments_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_timeline_assignments_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_timeline_assignments_map_entry_from_decoder;
+    skip_fn skip_timeline_assignments_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TimelineAssignmentsMapEntry";
     definition "TimelineAssignmentsMapEntry";
     capacity 3;
     fields [
-        1 => "key": one decode_sparse_timeline_assignment_key_from_decoder;
-        2 => "value": one decode_sparse_timeline_binding_data_from_decoder;
+        1 => "key": one decode_sparse_timeline_assignment_key_from_decoder; one skip_timeline_assignment_key_from_decoder;
+        2 => "value": one decode_sparse_timeline_binding_data_from_decoder; one skip_timeline_binding_data_from_decoder;
     ]
 }
 
@@ -6138,40 +6339,42 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_component_prop_preferred_values_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_component_prop_preferred_values_from_decoder;
+    skip_fn skip_component_prop_preferred_values_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ComponentPropPreferredValues";
     definition "ComponentPropPreferredValues";
     capacity 3;
     fields [
-        1 => "string_values": repeated kiwi_sparse_string_value;
-        2 => "instance_swap_values": repeated decode_sparse_instance_swap_preferred_value_from_decoder;
+        1 => "string_values": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
+        2 => "instance_swap_values": repeated decode_sparse_instance_swap_preferred_value_from_decoder; repeated skip_instance_swap_preferred_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_parameter_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_parameter_config_from_decoder;
+    skip_fn skip_parameter_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ParameterConfig";
     definition "ParameterConfig";
     capacity 14;
     fields [
-        1 => "number_prop_config": one decode_sparse_number_prop_config_from_decoder;
-        2 => "control": one decode_sparse_parameter_config_control_from_decoder;
-        3 => "slider_config": one decode_sparse_slider_config_from_decoder;
-        4 => "label": one decode_sparse_variable_data_from_decoder;
-        5 => "input_config": one decode_sparse_input_config_from_decoder;
-        6 => "select_config": one decode_sparse_select_config_from_decoder;
-        7 => "point_config": one decode_sparse_point_config_from_decoder;
-        8 => "line_config": one decode_sparse_line_config_from_decoder;
-        9 => "point_radius_config": one decode_sparse_point_radius_config_from_decoder;
-        10 => "rotation3_d_config": one decode_sparse_rotation3_d_config_from_decoder;
-        11 => "circle_point_config": one decode_sparse_circle_point_config_from_decoder;
-        12 => "color_point_config": one decode_sparse_color_point_config_from_decoder;
-        13 => "show_divider_above": one kiwi_sparse_bool_value;
+        1 => "number_prop_config": one decode_sparse_number_prop_config_from_decoder; one skip_number_prop_config_from_decoder;
+        2 => "control": one decode_sparse_parameter_config_control_from_decoder; one kiwi_skip_uint_value;
+        3 => "slider_config": one decode_sparse_slider_config_from_decoder; one skip_slider_config_from_decoder;
+        4 => "label": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        5 => "input_config": one decode_sparse_input_config_from_decoder; one skip_input_config_from_decoder;
+        6 => "select_config": one decode_sparse_select_config_from_decoder; one skip_select_config_from_decoder;
+        7 => "point_config": one decode_sparse_point_config_from_decoder; one skip_point_config_from_decoder;
+        8 => "line_config": one decode_sparse_line_config_from_decoder; one skip_line_config_from_decoder;
+        9 => "point_radius_config": one decode_sparse_point_radius_config_from_decoder; one skip_point_radius_config_from_decoder;
+        10 => "rotation3_d_config": one decode_sparse_rotation3_d_config_from_decoder; one skip_rotation3_d_config_from_decoder;
+        11 => "circle_point_config": one decode_sparse_circle_point_config_from_decoder; one skip_circle_point_config_from_decoder;
+        12 => "color_point_config": one decode_sparse_color_point_config_from_decoder; one skip_color_point_config_from_decoder;
+        13 => "show_divider_above": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -6187,32 +6390,34 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_input_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_input_config_from_decoder;
+    skip_fn skip_input_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InputConfig";
     definition "InputConfig";
     capacity 4;
     fields [
-        1 => "unit": one decode_sparse_variable_data_from_decoder;
-        2 => "min": one decode_sparse_variable_data_from_decoder;
-        3 => "max": one decode_sparse_variable_data_from_decoder;
+        1 => "unit": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        2 => "min": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        3 => "max": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_slider_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_slider_config_from_decoder;
+    skip_fn skip_slider_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SliderConfig";
     definition "SliderConfig";
     capacity 5;
     fields [
-        1 => "min": one decode_sparse_variable_data_from_decoder;
-        2 => "max": one decode_sparse_variable_data_from_decoder;
-        3 => "step": one decode_sparse_variable_data_from_decoder;
-        4 => "unit": one decode_sparse_variable_data_from_decoder;
+        1 => "min": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        2 => "max": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        3 => "step": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        4 => "unit": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
@@ -6227,261 +6432,280 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_point_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_point_config_from_decoder;
+    skip_fn skip_point_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PointConfig";
     definition "PointConfig";
     capacity 3;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder;
-        2 => "unit": one decode_sparse_number_units_from_decoder;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
+        2 => "unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_line_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_line_from_decoder;
+    skip_fn skip_line_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Line";
     definition "Line";
     capacity 3;
     fields [
-        1 => "a": one decode_sparse_vector_from_decoder;
-        2 => "b": one decode_sparse_vector_from_decoder;
+        1 => "a": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        2 => "b": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_line_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_line_config_from_decoder;
+    skip_fn skip_line_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.LineConfig";
     definition "LineConfig";
     capacity 3;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder;
-        2 => "unit": one decode_sparse_number_units_from_decoder;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
+        2 => "unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_circle_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_circle_from_decoder;
+    skip_fn skip_circle_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Circle";
     definition "Circle";
     capacity 3;
     fields [
-        1 => "center": one decode_sparse_vector_from_decoder;
-        2 => "radius": one kiwi_sparse_float_value;
+        1 => "center": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        2 => "radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_point_radius_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_point_radius_config_from_decoder;
+    skip_fn skip_point_radius_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PointRadiusConfig";
     definition "PointRadiusConfig";
     capacity 6;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder;
-        2 => "position_unit": one decode_sparse_number_units_from_decoder;
-        3 => "radius_unit": one decode_sparse_number_units_from_decoder;
-        4 => "min_radius": one kiwi_sparse_float_value;
-        5 => "max_radius": one kiwi_sparse_float_value;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
+        2 => "position_unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
+        3 => "radius_unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
+        4 => "min_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "max_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_rotation3_d_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_rotation3_d_from_decoder;
+    skip_fn skip_rotation3_d_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Rotation3D";
     definition "Rotation3D";
     capacity 5;
     fields [
-        1 => "x": one kiwi_sparse_float_value;
-        2 => "y": one kiwi_sparse_float_value;
-        3 => "z": one kiwi_sparse_float_value;
-        4 => "translate_z": one kiwi_sparse_float_value;
+        1 => "x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "z": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "translate_z": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_rotation3_d_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_rotation3_d_config_from_decoder;
+    skip_fn skip_rotation3_d_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Rotation3DConfig";
     definition "Rotation3DConfig";
     capacity 2;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_circle_point_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_circle_point_from_decoder;
+    skip_fn skip_circle_point_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CirclePoint";
     definition "CirclePoint";
     capacity 4;
     fields [
-        1 => "center": one decode_sparse_vector_from_decoder;
-        2 => "radius": one kiwi_sparse_float_value;
-        3 => "angle": one kiwi_sparse_float_value;
+        1 => "center": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        2 => "radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "angle": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_circle_point_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_circle_point_config_from_decoder;
+    skip_fn skip_circle_point_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CirclePointConfig";
     definition "CirclePointConfig";
     capacity 6;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder;
-        2 => "position_unit": one decode_sparse_number_units_from_decoder;
-        3 => "radius_unit": one decode_sparse_number_units_from_decoder;
-        4 => "min_radius": one kiwi_sparse_float_value;
-        5 => "max_radius": one kiwi_sparse_float_value;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
+        2 => "position_unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
+        3 => "radius_unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
+        4 => "min_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "max_radius": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_color_point_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_color_point_from_decoder;
+    skip_fn skip_color_point_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ColorPoint";
     definition "ColorPoint";
     capacity 3;
     fields [
-        1 => "point": one decode_sparse_vector_from_decoder;
-        2 => "color": one decode_sparse_variable_data_from_decoder;
+        1 => "point": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        2 => "color": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_color_point_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_color_point_config_from_decoder;
+    skip_fn skip_color_point_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ColorPointConfig";
     definition "ColorPointConfig";
     capacity 3;
     fields [
-        1 => "mode": one decode_sparse_point_mode_from_decoder;
-        2 => "unit": one decode_sparse_number_units_from_decoder;
+        1 => "mode": one decode_sparse_point_mode_from_decoder; one kiwi_skip_uint_value;
+        2 => "unit": one decode_sparse_number_units_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_gradient_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_gradient_from_decoder;
+    skip_fn skip_gradient_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Gradient";
     definition "Gradient";
     capacity 2;
     fields [
-        1 => "stops": repeated decode_sparse_gradient_stop_from_decoder;
+        1 => "stops": repeated decode_sparse_gradient_stop_from_decoder; repeated skip_gradient_stop_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_gradient_stop_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_gradient_stop_from_decoder;
+    skip_fn skip_gradient_stop_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.GradientStop";
     definition "GradientStop";
     capacity 3;
     fields [
-        1 => "position": one kiwi_sparse_float_value;
-        2 => "color": one decode_sparse_variable_data_from_decoder;
+        1 => "position": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "color": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_select_option_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_select_option_from_decoder;
+    skip_fn skip_select_option_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SelectOption";
     definition "SelectOption";
     capacity 3;
     fields [
-        1 => "value": one decode_sparse_variable_data_from_decoder;
-        2 => "label": one kiwi_sparse_string_value;
+        1 => "value": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        2 => "label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_select_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_select_config_from_decoder;
+    skip_fn skip_select_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SelectConfig";
     definition "SelectConfig";
     capacity 2;
     fields [
-        1 => "options": repeated decode_sparse_select_option_from_decoder;
+        1 => "options": repeated decode_sparse_select_option_from_decoder; repeated skip_select_option_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_color_array_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_color_array_config_from_decoder;
+    skip_fn skip_color_array_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ColorArrayConfig";
     definition "ColorArrayConfig";
     capacity 3;
     fields [
-        1 => "min_length": one kiwi_sparse_uint_value;
-        2 => "max_length": one kiwi_sparse_uint_value;
+        1 => "min_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "max_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_slot_prop_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_slot_prop_config_from_decoder;
+    skip_fn skip_slot_prop_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SlotPropConfig";
     definition "SlotPropConfig";
     capacity 6;
     fields [
-        1 => "stretch_child_on_insert": one kiwi_sparse_bool_value;
-        2 => "display_by_default": one kiwi_sparse_bool_value;
-        3 => "min_children": one kiwi_sparse_uint_value;
-        4 => "max_children": one kiwi_sparse_uint_value;
-        5 => "allow_preferred_values_only": one kiwi_sparse_bool_value;
+        1 => "stretch_child_on_insert": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "display_by_default": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "min_children": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "max_children": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        5 => "allow_preferred_values_only": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_number_prop_config_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_number_prop_config_from_decoder;
+    skip_fn skip_number_prop_config_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NumberPropConfig";
     definition "NumberPropConfig";
     capacity 5;
     fields [
-        1 => "control": one decode_sparse_parameter_config_control_from_decoder;
-        2 => "min": one decode_sparse_variable_data_from_decoder;
-        3 => "max": one decode_sparse_variable_data_from_decoder;
-        4 => "step": one decode_sparse_variable_data_from_decoder;
+        1 => "control": one decode_sparse_parameter_config_control_from_decoder; one kiwi_skip_uint_value;
+        2 => "min": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        3 => "max": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        4 => "step": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_instance_swap_preferred_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_instance_swap_preferred_value_from_decoder;
+    skip_fn skip_instance_swap_preferred_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InstanceSwapPreferredValue";
     definition "InstanceSwapPreferredValue";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_instance_swap_preferred_value_type_from_decoder;
-        2 => "key": one kiwi_sparse_string_value;
+        1 => "type": one decode_sparse_instance_swap_preferred_value_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -6519,19 +6743,20 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_widget_metadata_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_widget_metadata_from_decoder;
+    skip_fn skip_widget_metadata_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.WidgetMetadata";
     definition "WidgetMetadata";
     capacity 6;
     fields [
-        1 => "plugin_id": one kiwi_sparse_string_value;
-        2 => "plugin_version_id": one kiwi_sparse_string_value;
-        3 => "widget_name": one kiwi_sparse_string_value;
-        4 => "is_resizable": one kiwi_sparse_bool_value;
-        5 => "is_rotatable": one kiwi_sparse_bool_value;
+        1 => "plugin_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "plugin_version_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "widget_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "is_resizable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "is_rotatable": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -6550,16 +6775,17 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_widget_property_menu_selector_option_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_widget_property_menu_selector_option_from_decoder;
+    skip_fn skip_widget_property_menu_selector_option_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.WidgetPropertyMenuSelectorOption";
     definition "WidgetPropertyMenuSelectorOption";
     capacity 3;
     fields [
-        1 => "option": one kiwi_sparse_string_value;
-        2 => "tooltip": one kiwi_sparse_string_value;
+        1 => "option": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "tooltip": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -6573,23 +6799,24 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_widget_property_menu_item_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_widget_property_menu_item_from_decoder;
+    skip_fn skip_widget_property_menu_item_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.WidgetPropertyMenuItem";
     definition "WidgetPropertyMenuItem";
     capacity 10;
     fields [
-        1 => "property_name": one kiwi_sparse_string_value;
-        2 => "tooltip": one kiwi_sparse_string_value;
-        3 => "item_type": one decode_sparse_widget_property_menu_item_type_from_decoder;
-        4 => "icon": one kiwi_sparse_string_value;
-        5 => "options": repeated decode_sparse_widget_property_menu_selector_option_from_decoder;
-        6 => "selected_option": one kiwi_sparse_string_value;
-        7 => "is_toggled": one kiwi_sparse_bool_value;
-        8 => "href": one kiwi_sparse_string_value;
-        9 => "allow_custom_color": one kiwi_sparse_bool_value;
+        1 => "property_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "tooltip": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "item_type": one decode_sparse_widget_property_menu_item_type_from_decoder; one kiwi_skip_uint_value;
+        4 => "icon": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "options": repeated decode_sparse_widget_property_menu_selector_option_from_decoder; repeated skip_widget_property_menu_selector_option_from_decoder;
+        6 => "selected_option": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        7 => "is_toggled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        8 => "href": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        9 => "allow_custom_color": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -6671,28 +6898,30 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_internal_data_for_test_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_internal_data_for_test_from_decoder;
+    skip_fn skip_internal_data_for_test_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InternalDataForTest";
     definition "InternalDataForTest";
     capacity 2;
     fields [
-        1 => "test_field_a": one kiwi_sparse_int_value;
+        1 => "test_field_a": one kiwi_sparse_int_value; one kiwi_skip_int_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_state_group_property_value_order_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_state_group_property_value_order_from_decoder;
+    skip_fn skip_state_group_property_value_order_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StateGroupPropertyValueOrder";
     definition "StateGroupPropertyValueOrder";
     capacity 3;
     fields [
-        1 => "property": one kiwi_sparse_string_value;
-        2 => "values": repeated kiwi_sparse_string_value;
+        1 => "property": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "values": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
     ]
 }
 
@@ -6708,45 +6937,48 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_partial_paste_annotation_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_partial_paste_annotation_from_decoder;
+    skip_fn skip_partial_paste_annotation_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PartialPasteAnnotation";
     definition "PartialPasteAnnotation";
     capacity 4;
     fields [
-        1 => "is_partial": one kiwi_sparse_bool_value;
-        2 => "annotated_at": one kiwi_sparse_uint64_value;
-        3 => "error_state": one decode_sparse_backfill_error_from_decoder;
+        1 => "is_partial": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "annotated_at": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        3 => "error_state": one decode_sparse_backfill_error_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variant_prop_spec_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variant_prop_spec_from_decoder;
+    skip_fn skip_variant_prop_spec_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariantPropSpec";
     definition "VariantPropSpec";
     capacity 3;
     fields [
-        1 => "prop_def_id": one decode_sparse_guid_from_decoder;
-        2 => "value": one kiwi_sparse_string_value;
+        1 => "prop_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_text_list_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_text_list_data_from_decoder;
+    skip_fn skip_text_list_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TextListData";
     definition "TextListData";
     capacity 5;
     fields [
-        1 => "list_id": one kiwi_sparse_int_value;
-        2 => "bullet_type": one decode_sparse_bullet_type_from_decoder;
-        3 => "indentation_level": one kiwi_sparse_int_value;
-        4 => "line_number": one kiwi_sparse_int_value;
+        1 => "list_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        2 => "bullet_type": one decode_sparse_bullet_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "indentation_level": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        4 => "line_number": one kiwi_sparse_int_value; one kiwi_skip_int_value;
     ]
 }
 
@@ -6762,36 +6994,38 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_text_line_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_text_line_data_from_decoder;
+    skip_fn skip_text_line_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TextLineData";
     definition "TextLineData";
     capacity 11;
     fields [
-        1 => "line_type": one decode_sparse_line_type_from_decoder;
-        2 => "indentation_level": one kiwi_sparse_int_value;
-        3 => "directionality": one decode_sparse_directionality_from_decoder;
-        4 => "directionality_intent": one decode_sparse_directionality_intent_from_decoder;
-        5 => "downgrade_style_id": one kiwi_sparse_int_value;
-        6 => "consistency_style_id": one kiwi_sparse_int_value;
-        7 => "list_start_offset": one kiwi_sparse_int_value;
-        8 => "is_first_line_of_list": one kiwi_sparse_bool_value;
-        9 => "source_directionality": one decode_sparse_source_directionality_from_decoder;
-        10 => "style_id": one kiwi_sparse_int_value;
+        1 => "line_type": one decode_sparse_line_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "indentation_level": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        3 => "directionality": one decode_sparse_directionality_from_decoder; one kiwi_skip_uint_value;
+        4 => "directionality_intent": one decode_sparse_directionality_intent_from_decoder; one kiwi_skip_uint_value;
+        5 => "downgrade_style_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        6 => "consistency_style_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        7 => "list_start_offset": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        8 => "is_first_line_of_list": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        9 => "source_directionality": one decode_sparse_source_directionality_from_decoder; one kiwi_skip_uint_value;
+        10 => "style_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_derived_text_line_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_derived_text_line_data_from_decoder;
+    skip_fn skip_derived_text_line_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.DerivedTextLineData";
     definition "DerivedTextLineData";
     capacity 2;
     fields [
-        1 => "directionality": one decode_sparse_directionality_from_decoder;
+        1 => "directionality": one decode_sparse_directionality_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -6839,116 +7073,121 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_prototype_interaction_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_prototype_interaction_from_decoder;
+    skip_fn skip_prototype_interaction_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PrototypeInteraction";
     definition "PrototypeInteraction";
     capacity 6;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "event": one decode_sparse_prototype_event_from_decoder;
-        3 => "actions": repeated decode_sparse_prototype_action_from_decoder;
-        4 => "is_deleted": one kiwi_sparse_bool_value;
-        5 => "state_management_version": one kiwi_sparse_int_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "event": one decode_sparse_prototype_event_from_decoder; one skip_prototype_event_from_decoder;
+        3 => "actions": repeated decode_sparse_prototype_action_from_decoder; repeated skip_prototype_action_from_decoder;
+        4 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "state_management_version": one kiwi_sparse_int_value; one kiwi_skip_int_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_prototype_event_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_prototype_event_from_decoder;
+    skip_fn skip_prototype_event_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PrototypeEvent";
     definition "PrototypeEvent";
     capacity 8;
     fields [
-        1 => "interaction_type": one decode_sparse_interaction_type_from_decoder;
-        2 => "interaction_maintained": one kiwi_sparse_bool_value;
-        3 => "interaction_duration": one kiwi_sparse_float_value;
-        4 => "key_trigger": one decode_sparse_key_trigger_from_decoder;
-        5 => "voice_event_phrase": one kiwi_sparse_string_value;
-        6 => "transition_timeout": one kiwi_sparse_float_value;
-        7 => "media_hit_time": one kiwi_sparse_float_value;
+        1 => "interaction_type": one decode_sparse_interaction_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "interaction_maintained": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "interaction_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "key_trigger": one decode_sparse_key_trigger_from_decoder; one skip_key_trigger_from_decoder;
+        5 => "voice_event_phrase": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        6 => "transition_timeout": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        7 => "media_hit_time": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_prototype_variable_target_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_prototype_variable_target_from_decoder;
+    skip_fn skip_prototype_variable_target_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PrototypeVariableTarget";
     definition "PrototypeVariableTarget";
     capacity 3;
     fields [
-        1 => "id": one decode_sparse_variable_id_from_decoder;
-        2 => "node_field_alias": one decode_sparse_node_field_alias_from_decoder;
+        1 => "id": one decode_sparse_variable_id_from_decoder; one skip_variable_id_from_decoder;
+        2 => "node_field_alias": one decode_sparse_node_field_alias_from_decoder; one skip_node_field_alias_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_conditional_actions_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_conditional_actions_from_decoder;
+    skip_fn skip_conditional_actions_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ConditionalActions";
     definition "ConditionalActions";
     capacity 3;
     fields [
-        1 => "actions": repeated decode_sparse_prototype_action_from_decoder;
-        2 => "condition": one decode_sparse_variable_data_from_decoder;
+        1 => "actions": repeated decode_sparse_prototype_action_from_decoder; repeated skip_prototype_action_from_decoder;
+        2 => "condition": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_prototype_action_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_prototype_action_from_decoder;
+    skip_fn skip_prototype_action_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PrototypeAction";
     definition "PrototypeAction";
     capacity 43;
     fields [
-        1 => "transition_node_id": one decode_sparse_guid_from_decoder;
-        2 => "transition_type": one decode_sparse_transition_type_from_decoder;
-        3 => "transition_duration": one kiwi_sparse_float_value;
-        4 => "easing_type": one decode_sparse_easing_type_from_decoder;
-        5 => "transition_timeout": one kiwi_sparse_float_value;
-        6 => "transition_should_smart_animate": one kiwi_sparse_bool_value;
-        7 => "connection_type": one decode_sparse_connection_type_from_decoder;
-        8 => "connection_url": one kiwi_sparse_string_value;
-        9 => "overlay_relative_position": one decode_sparse_vector_from_decoder;
-        10 => "navigation_type": one decode_sparse_navigation_type_from_decoder;
-        11 => "transition_preserve_scroll": one kiwi_sparse_bool_value;
-        12 => "easing_function": repeated kiwi_sparse_float_value;
-        13 => "extra_scroll_offset": one decode_sparse_vector_from_decoder;
-        14 => "target_variable_id": one decode_sparse_guid_from_decoder;
-        15 => "target_variable_value": one decode_sparse_variable_any_value_from_decoder;
-        16 => "media_action": one decode_sparse_media_action_from_decoder;
-        17 => "transition_reset_video_position": one kiwi_sparse_bool_value;
-        18 => "open_url_in_new_tab": one kiwi_sparse_bool_value;
-        19 => "target_variable": one decode_sparse_prototype_variable_target_from_decoder;
-        20 => "target_variable_data": one decode_sparse_variable_data_from_decoder;
-        21 => "media_skip_to_time": one kiwi_sparse_float_value;
-        22 => "media_skip_by_amount": one kiwi_sparse_float_value;
-        23 => "conditions": repeated decode_sparse_variable_data_from_decoder;
-        24 => "conditional_actions": repeated decode_sparse_conditional_actions_from_decoder;
-        25 => "transition_reset_scroll_position": one kiwi_sparse_bool_value;
-        26 => "transition_reset_interactive_components": one kiwi_sparse_bool_value;
-        27 => "target_variable_set_id": one decode_sparse_variable_set_id_from_decoder;
-        28 => "target_variable_mode_id": one decode_sparse_guid_from_decoder;
-        29 => "target_variable_set_key": one kiwi_sparse_string_value;
-        30 => "animation_type": one decode_sparse_animation_type_from_decoder;
-        31 => "animation_target_id": one decode_sparse_guid_from_decoder;
-        32 => "animation_phase": one decode_sparse_animation_phase_from_decoder;
-        33 => "animation_state": one decode_sparse_animation_state_from_decoder;
-        34 => "link_param": one decode_sparse_variable_data_from_decoder;
-        35 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder;
-        36 => "media_playback_rate": one kiwi_sparse_float_value;
-        37 => "simple_link": one kiwi_sparse_bool_value;
-        38 => "variable_set_target_extension_id": one decode_sparse_variable_set_id_from_decoder;
-        39 => "animation_timeline_action": one decode_sparse_animation_timeline_action_from_decoder;
-        40 => "animation_skip_to_time": one kiwi_sparse_float_value;
-        41 => "animation_timeline_def_id": one decode_sparse_guid_from_decoder;
-        42 => "transition_overrides_enabled": one kiwi_sparse_bool_value;
+        1 => "transition_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "transition_type": one decode_sparse_transition_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "transition_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "easing_type": one decode_sparse_easing_type_from_decoder; one kiwi_skip_uint_value;
+        5 => "transition_timeout": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        6 => "transition_should_smart_animate": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        7 => "connection_type": one decode_sparse_connection_type_from_decoder; one kiwi_skip_uint_value;
+        8 => "connection_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        9 => "overlay_relative_position": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        10 => "navigation_type": one decode_sparse_navigation_type_from_decoder; one kiwi_skip_uint_value;
+        11 => "transition_preserve_scroll": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        12 => "easing_function": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        13 => "extra_scroll_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        14 => "target_variable_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        15 => "target_variable_value": one decode_sparse_variable_any_value_from_decoder; one skip_variable_any_value_from_decoder;
+        16 => "media_action": one decode_sparse_media_action_from_decoder; one kiwi_skip_uint_value;
+        17 => "transition_reset_video_position": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        18 => "open_url_in_new_tab": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        19 => "target_variable": one decode_sparse_prototype_variable_target_from_decoder; one skip_prototype_variable_target_from_decoder;
+        20 => "target_variable_data": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        21 => "media_skip_to_time": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        22 => "media_skip_by_amount": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        23 => "conditions": repeated decode_sparse_variable_data_from_decoder; repeated skip_variable_data_from_decoder;
+        24 => "conditional_actions": repeated decode_sparse_conditional_actions_from_decoder; repeated skip_conditional_actions_from_decoder;
+        25 => "transition_reset_scroll_position": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        26 => "transition_reset_interactive_components": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        27 => "target_variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
+        28 => "target_variable_mode_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        29 => "target_variable_set_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        30 => "animation_type": one decode_sparse_animation_type_from_decoder; one kiwi_skip_uint_value;
+        31 => "animation_target_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        32 => "animation_phase": one decode_sparse_animation_phase_from_decoder; one kiwi_skip_uint_value;
+        33 => "animation_state": one decode_sparse_animation_state_from_decoder; one skip_animation_state_from_decoder;
+        34 => "link_param": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        35 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder; one skip_cms_item_page_target_from_decoder;
+        36 => "media_playback_rate": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        37 => "simple_link": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        38 => "variable_set_target_extension_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
+        39 => "animation_timeline_action": one decode_sparse_animation_timeline_action_from_decoder; one kiwi_skip_uint_value;
+        40 => "animation_skip_to_time": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        41 => "animation_timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        42 => "transition_overrides_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -6976,30 +7215,32 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_animation_state_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_animation_state_from_decoder;
+    skip_fn skip_animation_state_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnimationState";
     definition "AnimationState";
     capacity 3;
     fields [
-        1 => "opacity": one kiwi_sparse_float_value;
-        2 => "transform": one decode_sparse_matrix_from_decoder;
+        1 => "opacity": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "transform": one decode_sparse_matrix_from_decoder; one skip_matrix_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_prototype_starting_point_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_prototype_starting_point_from_decoder;
+    skip_fn skip_prototype_starting_point_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PrototypeStartingPoint";
     definition "PrototypeStartingPoint";
     capacity 4;
     fields [
-        1 => "name": one kiwi_sparse_string_value;
-        2 => "description": one kiwi_sparse_string_value;
-        3 => "position": one kiwi_sparse_string_value;
+        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -7016,45 +7257,48 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_key_trigger_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_key_trigger_from_decoder;
+    skip_fn skip_key_trigger_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.KeyTrigger";
     definition "KeyTrigger";
     capacity 3;
     fields [
-        1 => "key_codes": repeated kiwi_sparse_int_value;
-        2 => "trigger_device": one decode_sparse_trigger_device_from_decoder;
+        1 => "key_codes": repeated kiwi_sparse_int_value; repeated kiwi_skip_int_value;
+        2 => "trigger_device": one decode_sparse_trigger_device_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_hyperlink_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_hyperlink_from_decoder;
+    skip_fn skip_hyperlink_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Hyperlink";
     definition "Hyperlink";
     capacity 5;
     fields [
-        1 => "url": one kiwi_sparse_string_value;
-        2 => "guid": one decode_sparse_guid_from_decoder;
-        3 => "open_in_new_tab": one kiwi_sparse_bool_value;
-        4 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder;
+        1 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "open_in_new_tab": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder; one skip_cms_item_page_target_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_item_page_target_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_item_page_target_from_decoder;
+    skip_fn skip_cms_item_page_target_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSItemPageTarget";
     definition "CMSItemPageTarget";
     capacity 4;
     fields [
-        1 => "node_id": one decode_sparse_guid_from_decoder;
-        2 => "cms_item_id": one kiwi_sparse_string_value;
-        3 => "field_schema_id": one kiwi_sparse_string_value;
+        1 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "cms_item_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "field_schema_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -7069,111 +7313,117 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_mention_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_mention_from_decoder;
+    skip_fn skip_mention_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Mention";
     definition "Mention";
     capacity 9;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "mentioned_user_id": one kiwi_sparse_string_value;
-        3 => "mentioned_by_user_id": one kiwi_sparse_string_value;
-        4 => "file_key": one kiwi_sparse_string_value;
-        5 => "source": one decode_sparse_mention_source_from_decoder;
-        6 => "mentioned_user_id_int": one kiwi_sparse_uint64_value;
-        7 => "mentioned_by_user_id_int": one kiwi_sparse_uint64_value;
-        8 => "mentioned_user_group_id": one kiwi_sparse_string_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "mentioned_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "mentioned_by_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "source": one decode_sparse_mention_source_from_decoder; one kiwi_skip_uint_value;
+        6 => "mentioned_user_id_int": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        7 => "mentioned_by_user_id_int": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        8 => "mentioned_user_group_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_embed_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_embed_data_from_decoder;
+    skip_fn skip_embed_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EmbedData";
     definition "EmbedData";
     capacity 15;
     fields [
-        1 => "url": one kiwi_sparse_string_value;
-        2 => "src_url": one kiwi_sparse_string_value;
-        3 => "title": one kiwi_sparse_string_value;
-        4 => "thumbnail_url": one kiwi_sparse_string_value;
-        5 => "width": one kiwi_sparse_float_value;
-        6 => "height": one kiwi_sparse_float_value;
-        7 => "embed_type": one kiwi_sparse_string_value;
-        8 => "thumbnail_image_hash": one kiwi_sparse_string_value;
-        9 => "favicon_image_hash": one kiwi_sparse_string_value;
-        10 => "provider": one kiwi_sparse_string_value;
-        11 => "original_text": one kiwi_sparse_string_value;
-        12 => "description": one kiwi_sparse_string_value;
-        13 => "embed_version_id": one kiwi_sparse_string_value;
-        14 => "is_published_site": one kiwi_sparse_bool_value;
+        1 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "src_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "thumbnail_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        6 => "height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        7 => "embed_type": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        8 => "thumbnail_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        9 => "favicon_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        10 => "provider": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        11 => "original_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        12 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        13 => "embed_version_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        14 => "is_published_site": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_stamp_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_stamp_data_from_decoder;
+    skip_fn skip_stamp_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StampData";
     definition "StampData";
     capacity 4;
     fields [
-        1 => "user_id": one kiwi_sparse_string_value;
-        2 => "voting_session_id": one kiwi_sparse_string_value;
-        3 => "stamped_by_user_id": one kiwi_sparse_string_value;
+        1 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "voting_session_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "stamped_by_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_link_preview_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_link_preview_data_from_decoder;
+    skip_fn skip_link_preview_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.LinkPreviewData";
     definition "LinkPreviewData";
     capacity 9;
     fields [
-        1 => "url": one kiwi_sparse_string_value;
-        2 => "title": one kiwi_sparse_string_value;
-        3 => "provider": one kiwi_sparse_string_value;
-        4 => "description": one kiwi_sparse_string_value;
-        5 => "thumbnail_image_hash": one kiwi_sparse_string_value;
-        6 => "favicon_image_hash": one kiwi_sparse_string_value;
-        7 => "thumbnail_image_width": one kiwi_sparse_float_value;
-        8 => "thumbnail_image_height": one kiwi_sparse_float_value;
+        1 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "title": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "provider": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "description": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "thumbnail_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        6 => "favicon_image_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        7 => "thumbnail_image_width": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        8 => "thumbnail_image_height": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_viewport_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_viewport_from_decoder;
+    skip_fn skip_viewport_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Viewport";
     definition "Viewport";
     capacity 5;
     fields [
-        1 => "canvas_space_bounds": one decode_sparse_rect_from_decoder;
-        2 => "pixel_preview": one kiwi_sparse_bool_value;
-        3 => "pixel_density": one kiwi_sparse_float_value;
-        4 => "canvas_guid": one decode_sparse_guid_from_decoder;
+        1 => "canvas_space_bounds": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
+        2 => "pixel_preview": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "pixel_density": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "canvas_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_mouse_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_mouse_from_decoder;
+    skip_fn skip_mouse_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Mouse";
     definition "Mouse";
     capacity 6;
     fields [
-        1 => "cursor": one decode_sparse_mouse_cursor_from_decoder;
-        2 => "canvas_space_location": one decode_sparse_vector_from_decoder;
-        3 => "canvas_space_selection_box": one decode_sparse_rect_from_decoder;
-        4 => "canvas_guid": one decode_sparse_guid_from_decoder;
-        5 => "cursor_hidden_reason": one kiwi_sparse_uint_value;
+        1 => "cursor": one decode_sparse_mouse_cursor_from_decoder; one kiwi_skip_uint_value;
+        2 => "canvas_space_location": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        3 => "canvas_space_selection_box": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
+        4 => "canvas_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        5 => "cursor_hidden_reason": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
@@ -7214,91 +7464,97 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_triggered_overlay_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_triggered_overlay_data_from_decoder;
+    skip_fn skip_triggered_overlay_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TriggeredOverlayData";
     definition "TriggeredOverlayData";
     capacity 6;
     fields [
-        1 => "overlay_guid": one decode_sparse_guid_from_decoder;
-        2 => "hotspot_guid": one decode_sparse_guid_from_decoder;
-        3 => "swap_guid": one decode_sparse_guid_from_decoder;
-        4 => "prototype_interaction_guid": one decode_sparse_guid_from_decoder;
-        5 => "hotspot_blueprint_id": one decode_sparse_guid_path_from_decoder;
+        1 => "overlay_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "hotspot_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "swap_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "prototype_interaction_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        5 => "hotspot_blueprint_id": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_triggered_set_variable_action_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_triggered_set_variable_action_data_from_decoder;
+    skip_fn skip_triggered_set_variable_action_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TriggeredSetVariableActionData";
     definition "TriggeredSetVariableActionData";
     capacity 5;
     fields [
-        1 => "node_for_finding_topmost_screen_id": one decode_sparse_guid_from_decoder;
-        2 => "target_variable_id": one kiwi_sparse_string_value;
-        3 => "target_variable_data": one kiwi_sparse_string_value;
-        4 => "resolved_variable_modes": one kiwi_sparse_string_value;
+        1 => "node_for_finding_topmost_screen_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "target_variable_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "target_variable_data": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "resolved_variable_modes": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_triggered_set_variable_mode_action_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_triggered_set_variable_mode_action_data_from_decoder;
+    skip_fn skip_triggered_set_variable_mode_action_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TriggeredSetVariableModeActionData";
     definition "TriggeredSetVariableModeActionData";
     capacity 5;
     fields [
-        1 => "node_for_finding_topmost_screen_id": one decode_sparse_guid_from_decoder;
-        2 => "target_variable_set_key": one kiwi_sparse_string_value;
-        3 => "target_variable_mode_id": one kiwi_sparse_string_value;
-        4 => "target_variable_set_id": one decode_sparse_variable_set_id_from_decoder;
+        1 => "node_for_finding_topmost_screen_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "target_variable_set_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "target_variable_mode_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "target_variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_video_state_change_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_video_state_change_data_from_decoder;
+    skip_fn skip_video_state_change_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VideoStateChangeData";
     definition "VideoStateChangeData";
     capacity 6;
     fields [
-        1 => "target_node_id": one decode_sparse_guid_from_decoder;
-        2 => "is_playing": one kiwi_sparse_bool_value;
-        3 => "is_playing_sound": one kiwi_sparse_bool_value;
-        4 => "current_times": repeated kiwi_sparse_uint_value;
-        5 => "action_taken_timestamp": one kiwi_sparse_uint_value;
+        1 => "target_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "is_playing": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "is_playing_sound": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "current_times": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        5 => "action_taken_timestamp": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_embedded_prototype_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_embedded_prototype_data_from_decoder;
+    skip_fn skip_embedded_prototype_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EmbeddedPrototypeData";
     definition "EmbeddedPrototypeData";
     capacity 3;
     fields [
-        1 => "node_id": one decode_sparse_guid_from_decoder;
-        2 => "session_id": one kiwi_sparse_uint_value;
+        1 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_presented_state_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_presented_state_from_decoder;
+    skip_fn skip_presented_state_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PresentedState";
     definition "PresentedState";
     capacity 3;
     fields [
-        1 => "base_screen_id": one decode_sparse_guid_from_decoder;
-        2 => "overlays": repeated decode_sparse_triggered_overlay_data_from_decoder;
+        1 => "base_screen_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "overlays": repeated decode_sparse_triggered_overlay_data_from_decoder; repeated skip_triggered_overlay_data_from_decoder;
     ]
 }
 
@@ -7312,69 +7568,73 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_top_level_playback_change_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_top_level_playback_change_from_decoder;
+    skip_fn skip_top_level_playback_change_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TopLevelPlaybackChange";
     definition "TopLevelPlaybackChange";
     capacity 8;
     fields [
-        1 => "old_state": one decode_sparse_presented_state_from_decoder;
-        2 => "new_state": one decode_sparse_presented_state_from_decoder;
-        3 => "hotspot_blueprint_id": one decode_sparse_guid_path_from_decoder;
-        4 => "interaction_id": one decode_sparse_guid_from_decoder;
-        5 => "is_hotspot_in_new_presented_state": one kiwi_sparse_bool_value;
-        6 => "direction": one decode_sparse_transition_direction_from_decoder;
-        7 => "instance_stable_path": one decode_sparse_guid_path_from_decoder;
+        1 => "old_state": one decode_sparse_presented_state_from_decoder; one skip_presented_state_from_decoder;
+        2 => "new_state": one decode_sparse_presented_state_from_decoder; one skip_presented_state_from_decoder;
+        3 => "hotspot_blueprint_id": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        4 => "interaction_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        5 => "is_hotspot_in_new_presented_state": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        6 => "direction": one decode_sparse_transition_direction_from_decoder; one kiwi_skip_uint_value;
+        7 => "instance_stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_instance_state_change_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_instance_state_change_from_decoder;
+    skip_fn skip_instance_state_change_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InstanceStateChange";
     definition "InstanceStateChange";
     capacity 6;
     fields [
-        1 => "state_id": one decode_sparse_guid_from_decoder;
-        2 => "interaction_id": one decode_sparse_guid_from_decoder;
-        3 => "hotspot_stable_path": one decode_sparse_guid_path_from_decoder;
-        4 => "instance_stable_path": one decode_sparse_guid_path_from_decoder;
-        5 => "phase": one decode_sparse_playback_change_phase_from_decoder;
+        1 => "state_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "interaction_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "hotspot_stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        4 => "instance_stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        5 => "phase": one decode_sparse_playback_change_phase_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_text_cursor_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_text_cursor_from_decoder;
+    skip_fn skip_text_cursor_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TextCursor";
     definition "TextCursor";
     capacity 4;
     fields [
-        1 => "selection_box": one decode_sparse_rect_from_decoder;
-        2 => "canvas_guid": one decode_sparse_guid_from_decoder;
-        3 => "text_node_guid": one decode_sparse_guid_from_decoder;
+        1 => "selection_box": one decode_sparse_rect_from_decoder; one skip_rect_from_decoder;
+        2 => "canvas_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "text_node_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_text_selection_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_text_selection_from_decoder;
+    skip_fn skip_text_selection_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TextSelection";
     definition "TextSelection";
     capacity 8;
     fields [
-        1 => "selection_boxes": repeated decode_sparse_rect_from_decoder;
-        2 => "canvas_guid": one decode_sparse_guid_from_decoder;
-        3 => "text_node_guid": one decode_sparse_guid_from_decoder;
-        4 => "text_selection_range": one decode_sparse_vector_from_decoder;
-        5 => "text_node_or_containing_if_guid": one decode_sparse_guid_from_decoder;
-        6 => "table_cell_row_id": one decode_sparse_guid_from_decoder;
-        7 => "table_cell_col_id": one decode_sparse_guid_from_decoder;
+        1 => "selection_boxes": repeated decode_sparse_rect_from_decoder; repeated skip_rect_from_decoder;
+        2 => "canvas_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "text_node_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "text_selection_range": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        5 => "text_node_or_containing_if_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        6 => "table_cell_row_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        7 => "table_cell_col_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
@@ -7389,115 +7649,123 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_playback_change_keyframe_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_playback_change_keyframe_from_decoder;
+    skip_fn skip_playback_change_keyframe_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PlaybackChangeKeyframe";
     definition "PlaybackChangeKeyframe";
     capacity 4;
     fields [
-        1 => "phase": one decode_sparse_playback_change_phase_from_decoder;
-        2 => "progress": one kiwi_sparse_float_value;
-        3 => "timestamp": one kiwi_sparse_float_value;
+        1 => "phase": one decode_sparse_playback_change_phase_from_decoder; one kiwi_skip_uint_value;
+        2 => "progress": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "timestamp": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_state_mapping_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_state_mapping_from_decoder;
+    skip_fn skip_state_mapping_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StateMapping";
     definition "StateMapping";
     capacity 5;
     fields [
-        1 => "stable_path": one decode_sparse_guid_path_from_decoder;
-        2 => "last_top_level_change": one decode_sparse_top_level_playback_change_from_decoder;
-        3 => "last_top_level_change_status": one decode_sparse_playback_change_keyframe_from_decoder;
-        4 => "timestamp": one kiwi_sparse_float_value;
+        1 => "stable_path": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        2 => "last_top_level_change": one decode_sparse_top_level_playback_change_from_decoder; one skip_top_level_playback_change_from_decoder;
+        3 => "last_top_level_change_status": one decode_sparse_playback_change_keyframe_from_decoder; one skip_playback_change_keyframe_from_decoder;
+        4 => "timestamp": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_scroll_mapping_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_scroll_mapping_from_decoder;
+    skip_fn skip_scroll_mapping_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ScrollMapping";
     definition "ScrollMapping";
     capacity 4;
     fields [
-        1 => "blueprint_id": one decode_sparse_guid_path_from_decoder;
-        2 => "overlay_index": one kiwi_sparse_uint_value;
-        3 => "scroll_offset": one decode_sparse_vector_from_decoder;
+        1 => "blueprint_id": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        2 => "overlay_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "scroll_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_playback_update_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_playback_update_from_decoder;
+    skip_fn skip_playback_update_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PlaybackUpdate";
     definition "PlaybackUpdate";
     capacity 8;
     fields [
-        1 => "last_top_level_change": one decode_sparse_top_level_playback_change_from_decoder;
-        2 => "last_top_level_change_status": one decode_sparse_playback_change_keyframe_from_decoder;
-        3 => "scroll_mappings": repeated decode_sparse_scroll_mapping_from_decoder;
-        4 => "timestamp": one kiwi_sparse_float_value;
-        5 => "pointer_location": one decode_sparse_vector_from_decoder;
-        6 => "is_top_level_frame_change": one kiwi_sparse_bool_value;
-        7 => "state_mappings": repeated decode_sparse_state_mapping_from_decoder;
+        1 => "last_top_level_change": one decode_sparse_top_level_playback_change_from_decoder; one skip_top_level_playback_change_from_decoder;
+        2 => "last_top_level_change_status": one decode_sparse_playback_change_keyframe_from_decoder; one skip_playback_change_keyframe_from_decoder;
+        3 => "scroll_mappings": repeated decode_sparse_scroll_mapping_from_decoder; repeated skip_scroll_mapping_from_decoder;
+        4 => "timestamp": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "pointer_location": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        6 => "is_top_level_frame_change": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        7 => "state_mappings": repeated decode_sparse_state_mapping_from_decoder; repeated skip_state_mapping_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_chat_message_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_chat_message_from_decoder;
+    skip_fn skip_chat_message_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ChatMessage";
     definition "ChatMessage";
     capacity 3;
     fields [
-        1 => "text": one kiwi_sparse_string_value;
-        2 => "previous_text": one kiwi_sparse_string_value;
+        1 => "text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "previous_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_voice_metadata_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_voice_metadata_from_decoder;
+    skip_fn skip_voice_metadata_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VoiceMetadata";
     definition "VoiceMetadata";
     capacity 2;
     fields [
-        1 => "connected_call_id": one kiwi_sparse_string_value;
+        1 => "connected_call_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_april_fun_cursor_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_april_fun_cursor_from_decoder;
+    skip_fn skip_april_fun_cursor_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AprilFunCursor";
     definition "AprilFunCursor";
     capacity 3;
     fields [
-        1 => "id": one kiwi_sparse_string_value;
-        2 => "trail_enabled": one kiwi_sparse_bool_value;
+        1 => "id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "trail_enabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_april_fun_fig_pal_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_april_fun_fig_pal_from_decoder;
+    skip_fn skip_april_fun_fig_pal_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AprilFunFigPal";
     definition "AprilFunFigPal";
     capacity 3;
     fields [
-        1 => "customization": one kiwi_sparse_string_value;
-        2 => "name": one kiwi_sparse_string_value;
+        1 => "customization": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -7536,129 +7804,135 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_agent_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_agent_info_from_decoder;
+    skip_fn skip_agent_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AgentInfo";
     definition "AgentInfo";
     capacity 4;
     fields [
-        1 => "name": one kiwi_sparse_string_value;
-        2 => "logo": one kiwi_sparse_string_value;
-        3 => "oauth_client_id": one kiwi_sparse_string_value;
+        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "logo": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "oauth_client_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_user_change_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_user_change_from_decoder;
+    skip_fn skip_user_change_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.UserChange";
     definition "UserChange";
     capacity 47;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value;
-        2 => "connected": one kiwi_sparse_bool_value;
-        3 => "name": one kiwi_sparse_string_value;
-        4 => "color": one decode_sparse_color_from_decoder;
-        5 => "image_url": one kiwi_sparse_string_value;
-        6 => "viewport": one decode_sparse_viewport_from_decoder;
-        7 => "mouse": one decode_sparse_mouse_from_decoder;
-        8 => "selection": repeated decode_sparse_guid_from_decoder;
-        9 => "observing": repeated kiwi_sparse_uint_value;
-        10 => "device_name": one kiwi_sparse_string_value;
-        11 => "recent_clicks": repeated decode_sparse_click_from_decoder;
-        12 => "scroll_positions": repeated decode_sparse_scroll_position_from_decoder;
-        13 => "triggered_overlays": repeated decode_sparse_triggered_overlay_from_decoder;
-        14 => "user_id": one kiwi_sparse_string_value;
-        15 => "last_triggered_hotspot": one decode_sparse_guid_from_decoder;
-        16 => "last_triggered_prototype_interaction_id": one decode_sparse_guid_from_decoder;
-        17 => "triggered_overlays_data": repeated decode_sparse_triggered_overlay_data_from_decoder;
-        18 => "playback_updates": repeated decode_sparse_playback_update_from_decoder;
-        19 => "chat_message": one decode_sparse_chat_message_from_decoder;
-        20 => "voice_metadata": one decode_sparse_voice_metadata_from_decoder;
-        21 => "can_write": one kiwi_sparse_bool_value;
-        22 => "high_five_status": one kiwi_sparse_bool_value;
-        23 => "instance_state_changes": repeated decode_sparse_instance_state_change_from_decoder;
-        24 => "text_cursor": one decode_sparse_text_cursor_from_decoder;
-        25 => "text_selection": one decode_sparse_text_selection_from_decoder;
-        26 => "connected_at_time_s": one kiwi_sparse_uint_value;
-        27 => "focus_on_text_cursor": one kiwi_sparse_bool_value;
-        28 => "heartbeat": one decode_sparse_heartbeat_from_decoder;
-        29 => "triggered_set_variable_action_data": repeated decode_sparse_triggered_set_variable_action_data_from_decoder;
-        30 => "video_state_change_data": repeated decode_sparse_video_state_change_data_from_decoder;
-        31 => "client_id": one kiwi_sparse_string_value;
-        32 => "focused_slide_id": one decode_sparse_guid_from_decoder;
-        33 => "triggered_set_variable_mode_action_data": repeated decode_sparse_triggered_set_variable_mode_action_data_from_decoder;
-        34 => "april_fun_cursor": one decode_sparse_april_fun_cursor_from_decoder;
-        35 => "embedded_prototype_data": repeated decode_sparse_embedded_prototype_data_from_decoder;
-        36 => "active_slides_embeddable_prototype": one decode_sparse_guid_from_decoder;
-        37 => "active_code_component_id": one decode_sparse_guid_from_decoder;
-        38 => "last_triggered_object_animation_index": one kiwi_sparse_uint_value;
-        39 => "april_fun_fig_pal": one decode_sparse_april_fun_fig_pal_from_decoder;
-        40 => "collaborative_text_selection": one decode_sparse_collaborative_text_selection_from_decoder;
-        41 => "sites_view_state": one decode_sparse_sites_view_state_from_decoder;
-        42 => "node_chat_exchanges": repeated decode_sparse_node_chat_exchange_from_decoder;
-        43 => "active_embedded_prototypes": repeated decode_sparse_guid_from_decoder;
-        44 => "stable_session_id": one kiwi_sparse_string_value;
-        45 => "design_full_page_view_state": one decode_sparse_design_full_page_view_state_from_decoder;
-        46 => "agent_info": one decode_sparse_agent_info_from_decoder;
+        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "connected": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        3 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "color": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        5 => "image_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        6 => "viewport": one decode_sparse_viewport_from_decoder; one skip_viewport_from_decoder;
+        7 => "mouse": one decode_sparse_mouse_from_decoder; one skip_mouse_from_decoder;
+        8 => "selection": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
+        9 => "observing": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
+        10 => "device_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        11 => "recent_clicks": repeated decode_sparse_click_from_decoder; repeated skip_click_from_decoder;
+        12 => "scroll_positions": repeated decode_sparse_scroll_position_from_decoder; repeated skip_scroll_position_from_decoder;
+        13 => "triggered_overlays": repeated decode_sparse_triggered_overlay_from_decoder; repeated skip_triggered_overlay_from_decoder;
+        14 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        15 => "last_triggered_hotspot": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        16 => "last_triggered_prototype_interaction_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        17 => "triggered_overlays_data": repeated decode_sparse_triggered_overlay_data_from_decoder; repeated skip_triggered_overlay_data_from_decoder;
+        18 => "playback_updates": repeated decode_sparse_playback_update_from_decoder; repeated skip_playback_update_from_decoder;
+        19 => "chat_message": one decode_sparse_chat_message_from_decoder; one skip_chat_message_from_decoder;
+        20 => "voice_metadata": one decode_sparse_voice_metadata_from_decoder; one skip_voice_metadata_from_decoder;
+        21 => "can_write": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        22 => "high_five_status": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        23 => "instance_state_changes": repeated decode_sparse_instance_state_change_from_decoder; repeated skip_instance_state_change_from_decoder;
+        24 => "text_cursor": one decode_sparse_text_cursor_from_decoder; one skip_text_cursor_from_decoder;
+        25 => "text_selection": one decode_sparse_text_selection_from_decoder; one skip_text_selection_from_decoder;
+        26 => "connected_at_time_s": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        27 => "focus_on_text_cursor": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        28 => "heartbeat": one decode_sparse_heartbeat_from_decoder; one kiwi_skip_uint_value;
+        29 => "triggered_set_variable_action_data": repeated decode_sparse_triggered_set_variable_action_data_from_decoder; repeated skip_triggered_set_variable_action_data_from_decoder;
+        30 => "video_state_change_data": repeated decode_sparse_video_state_change_data_from_decoder; repeated skip_video_state_change_data_from_decoder;
+        31 => "client_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        32 => "focused_slide_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        33 => "triggered_set_variable_mode_action_data": repeated decode_sparse_triggered_set_variable_mode_action_data_from_decoder; repeated skip_triggered_set_variable_mode_action_data_from_decoder;
+        34 => "april_fun_cursor": one decode_sparse_april_fun_cursor_from_decoder; one skip_april_fun_cursor_from_decoder;
+        35 => "embedded_prototype_data": repeated decode_sparse_embedded_prototype_data_from_decoder; repeated skip_embedded_prototype_data_from_decoder;
+        36 => "active_slides_embeddable_prototype": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        37 => "active_code_component_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        38 => "last_triggered_object_animation_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        39 => "april_fun_fig_pal": one decode_sparse_april_fun_fig_pal_from_decoder; one skip_april_fun_fig_pal_from_decoder;
+        40 => "collaborative_text_selection": one decode_sparse_collaborative_text_selection_from_decoder; one skip_collaborative_text_selection_from_decoder;
+        41 => "sites_view_state": one decode_sparse_sites_view_state_from_decoder; one kiwi_skip_uint_value;
+        42 => "node_chat_exchanges": repeated decode_sparse_node_chat_exchange_from_decoder; repeated skip_node_chat_exchange_from_decoder;
+        43 => "active_embedded_prototypes": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
+        44 => "stable_session_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        45 => "design_full_page_view_state": one decode_sparse_design_full_page_view_state_from_decoder; one kiwi_skip_uint_value;
+        46 => "agent_info": one decode_sparse_agent_info_from_decoder; one skip_agent_info_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_interactive_slide_element_change_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_interactive_slide_element_change_from_decoder;
+    skip_fn skip_interactive_slide_element_change_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.InteractiveSlideElementChange";
     definition "InteractiveSlideElementChange";
     capacity 5;
     fields [
-        1 => "user_id": one kiwi_sparse_string_value;
-        2 => "anonymous_user_id": one kiwi_sparse_string_value;
-        3 => "node_id": one decode_sparse_guid_from_decoder;
-        4 => "response_data": one kiwi_sparse_string_value;
+        1 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "anonymous_user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "response_data": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_status_change_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_status_change_from_decoder;
+    skip_fn skip_node_status_change_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeStatusChange";
     definition "NodeStatusChange";
     capacity 3;
     fields [
-        1 => "node_ids": repeated decode_sparse_guid_from_decoder;
-        2 => "status_info": one decode_sparse_section_status_info_from_decoder;
+        1 => "node_ids": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
+        2 => "status_info": one decode_sparse_section_status_info_from_decoder; one skip_section_status_info_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_buzz_approval_asset_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_buzz_approval_asset_entry_from_decoder;
+    skip_fn skip_buzz_approval_asset_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.BuzzApprovalAssetEntry";
     definition "BuzzApprovalAssetEntry";
     capacity 3;
     fields [
-        1 => "asset_node_id": one decode_sparse_guid_from_decoder;
-        2 => "approved": one kiwi_sparse_bool_value;
+        1 => "asset_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "approved": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_buzz_approval_change_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_buzz_approval_change_from_decoder;
+    skip_fn skip_buzz_approval_change_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.BuzzApprovalChange";
     definition "BuzzApprovalChange";
     capacity 4;
     fields [
-        1 => "asset_entries": repeated decode_sparse_buzz_approval_asset_entry_from_decoder;
-        2 => "canvas_grid_node_id": one decode_sparse_guid_from_decoder;
-        3 => "request_id": one kiwi_sparse_string_value;
+        1 => "asset_entries": repeated decode_sparse_buzz_approval_asset_entry_from_decoder; repeated skip_buzz_approval_asset_entry_from_decoder;
+        2 => "canvas_grid_node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "request_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -7683,120 +7957,128 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_scene_graph_query_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_scene_graph_query_from_decoder;
+    skip_fn skip_scene_graph_query_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SceneGraphQuery";
     definition "SceneGraphQuery";
     capacity 4;
     fields [
-        1 => "starting_node": one decode_sparse_guid_from_decoder;
-        2 => "depth": one kiwi_sparse_uint_value;
-        3 => "behavior": one decode_sparse_scene_graph_query_behavior_from_decoder;
+        1 => "starting_node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "depth": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "behavior": one decode_sparse_scene_graph_query_behavior_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_changes_metadata_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_changes_metadata_from_decoder;
+    skip_fn skip_node_changes_metadata_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeChangesMetadata";
     definition "NodeChangesMetadata";
     capacity 2;
     fields [
-        1 => "blobs_field_offset": one kiwi_sparse_uint_value;
+        1 => "blobs_field_offset": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cursor_reaction_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cursor_reaction_from_decoder;
+    skip_fn skip_cursor_reaction_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CursorReaction";
     definition "CursorReaction";
     capacity 2;
     fields [
-        1 => "image_url": one kiwi_sparse_string_value;
+        1 => "image_url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_timer_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_timer_info_from_decoder;
+    skip_fn skip_timer_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TimerInfo";
     definition "TimerInfo";
     capacity 9;
     fields [
-        1 => "is_paused": one kiwi_sparse_bool_value;
-        2 => "time_remaining_ms": one kiwi_sparse_uint_value;
-        3 => "total_time_ms": one kiwi_sparse_uint_value;
-        4 => "timer_id": one kiwi_sparse_uint_value;
-        5 => "set_by": one kiwi_sparse_string_value;
-        6 => "song_id": one kiwi_sparse_uint_value;
-        7 => "last_received_song_timestamp_ms": one kiwi_sparse_uint_value;
-        8 => "song_uuid": one kiwi_sparse_string_value;
+        1 => "is_paused": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "time_remaining_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "total_time_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "timer_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        5 => "set_by": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        6 => "song_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        7 => "last_received_song_timestamp_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        8 => "song_uuid": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_music_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_music_info_from_decoder;
+    skip_fn skip_music_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.MusicInfo";
     definition "MusicInfo";
     capacity 6;
     fields [
-        1 => "is_paused": one kiwi_sparse_bool_value;
-        2 => "message_id": one kiwi_sparse_uint_value;
-        3 => "song_id": one kiwi_sparse_string_value;
-        4 => "last_received_song_timestamp_ms": one kiwi_sparse_uint_value;
-        5 => "is_stopped": one kiwi_sparse_bool_value;
+        1 => "is_paused": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "message_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "song_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "last_received_song_timestamp_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        5 => "is_stopped": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_presenter_nomination_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_presenter_nomination_from_decoder;
+    skip_fn skip_presenter_nomination_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PresenterNomination";
     definition "PresenterNomination";
     capacity 3;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value;
-        2 => "is_cancelled": one kiwi_sparse_bool_value;
+        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "is_cancelled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_presenter_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_presenter_info_from_decoder;
+    skip_fn skip_presenter_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PresenterInfo";
     definition "PresenterInfo";
     capacity 4;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value;
-        2 => "nomination": one decode_sparse_presenter_nomination_from_decoder;
-        3 => "is_reconnected": one kiwi_sparse_bool_value;
+        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "nomination": one decode_sparse_presenter_nomination_from_decoder; one skip_presenter_nomination_from_decoder;
+        3 => "is_reconnected": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_client_broadcast_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_client_broadcast_from_decoder;
+    skip_fn skip_client_broadcast_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ClientBroadcast";
     definition "ClientBroadcast";
     capacity 7;
     fields [
-        1 => "session_id": one kiwi_sparse_uint_value;
-        2 => "cursor_reaction": one decode_sparse_cursor_reaction_from_decoder;
-        3 => "timer": one decode_sparse_timer_info_from_decoder;
-        4 => "presenter": one decode_sparse_presenter_info_from_decoder;
-        5 => "prototype_presenter": one decode_sparse_presenter_info_from_decoder;
-        6 => "music": one decode_sparse_music_info_from_decoder;
+        1 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "cursor_reaction": one decode_sparse_cursor_reaction_from_decoder; one skip_cursor_reaction_from_decoder;
+        3 => "timer": one decode_sparse_timer_info_from_decoder; one skip_timer_info_from_decoder;
+        4 => "presenter": one decode_sparse_presenter_info_from_decoder; one skip_presenter_info_from_decoder;
+        5 => "prototype_presenter": one decode_sparse_presenter_info_from_decoder; one skip_presenter_info_from_decoder;
+        6 => "music": one decode_sparse_music_info_from_decoder; one skip_music_info_from_decoder;
     ]
 }
 
@@ -7810,74 +8092,76 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_message_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_message_from_decoder;
+    skip_fn skip_message_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Message";
     definition "Message";
     capacity 46;
     fields [
-        1 => "type": one decode_sparse_message_type_from_decoder;
-        2 => "session_id": one kiwi_sparse_uint_value;
-        3 => "ack_id": one kiwi_sparse_uint_value;
-        4 => "node_changes": repeated decode_sparse_node_change_from_decoder;
-        5 => "user_changes": repeated decode_sparse_user_change_from_decoder;
-        6 => "blobs": repeated decode_sparse_blob_from_decoder;
-        7 => "signal_name": one kiwi_sparse_string_value;
-        8 => "access": one decode_sparse_access_from_decoder;
-        9 => "style_set_name": one kiwi_sparse_string_value;
-        10 => "style_set_type": one decode_sparse_style_set_type_from_decoder;
-        11 => "style_set_content_type": one decode_sparse_style_set_content_type_from_decoder;
-        12 => "paste_id": one kiwi_sparse_int_value;
-        13 => "paste_offset": one decode_sparse_vector_from_decoder;
-        14 => "paste_file_key": one kiwi_sparse_string_value;
-        15 => "signal_payload": one kiwi_sparse_string_value;
-        16 => "scene_graph_queries": repeated decode_sparse_scene_graph_query_from_decoder;
-        17 => "node_changes_metadata": one decode_sparse_node_changes_metadata_from_decoder;
-        18 => "file_version": one kiwi_sparse_uint_value;
-        19 => "paste_is_partially_outside_enclosing_frame": one kiwi_sparse_bool_value;
-        20 => "paste_page_id": one decode_sparse_guid_from_decoder;
-        21 => "is_cut": one kiwi_sparse_bool_value;
-        22 => "local_undo_stack": repeated decode_sparse_message_from_decoder;
-        23 => "local_redo_stack": repeated decode_sparse_message_from_decoder;
-        24 => "broadcasts": repeated decode_sparse_client_broadcast_from_decoder;
-        25 => "reconnect_sequence_number": one kiwi_sparse_uint_value;
-        26 => "paste_branch_source_file_key": one kiwi_sparse_string_value;
-        27 => "paste_editor_type": one decode_sparse_editor_type_from_decoder;
-        28 => "post_sync_actions": one kiwi_sparse_string_value;
-        29 => "published_asset_guids": repeated decode_sparse_guid_from_decoder;
-        30 => "blob_base_index": one kiwi_sparse_uint_value;
-        31 => "dirty_from_initial_load": one kiwi_sparse_bool_value;
-        32 => "interactive_slide_element_change": one decode_sparse_interactive_slide_element_change_from_decoder;
-        33 => "clipboard_selection_regions": repeated decode_sparse_clipboard_selection_region_from_decoder;
-        34 => "encoded_offsets_index": one decode_sparse_encoded_offsets_index_from_decoder;
-        35 => "has_repeating_content": one kiwi_sparse_bool_value;
-        36 => "node_status_change": one decode_sparse_node_status_change_from_decoder;
-        37 => "is_retransmission": one kiwi_sparse_bool_value;
-        38 => "sent_timestamp": one kiwi_sparse_uint64_value;
-        39 => "annotation_categories": repeated decode_sparse_annotation_category_from_decoder;
-        40 => "client_rendered_metadata": one decode_sparse_client_rendered_metadata_from_decoder;
-        41 => "paste_asset_type": one decode_sparse_paste_asset_type_from_decoder;
-        42 => "stable_session_id": one kiwi_sparse_string_value;
-        43 => "object_animations": one decode_sparse_object_animation_list_from_decoder;
-        44 => "buzz_approval_change": one decode_sparse_buzz_approval_change_from_decoder;
-        45 => "scene_graph_query_mode": one decode_sparse_scene_graph_query_mode_from_decoder;
+        1 => "type": one decode_sparse_message_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "session_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "ack_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "node_changes": repeated decode_sparse_node_change_from_decoder; repeated skip_node_change_from_decoder;
+        5 => "user_changes": repeated decode_sparse_user_change_from_decoder; repeated skip_user_change_from_decoder;
+        6 => "blobs": repeated decode_sparse_blob_from_decoder; repeated skip_blob_from_decoder;
+        7 => "signal_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        8 => "access": one decode_sparse_access_from_decoder; one kiwi_skip_uint_value;
+        9 => "style_set_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        10 => "style_set_type": one decode_sparse_style_set_type_from_decoder; one kiwi_skip_uint_value;
+        11 => "style_set_content_type": one decode_sparse_style_set_content_type_from_decoder; one kiwi_skip_uint_value;
+        12 => "paste_id": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        13 => "paste_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        14 => "paste_file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        15 => "signal_payload": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        16 => "scene_graph_queries": repeated decode_sparse_scene_graph_query_from_decoder; repeated skip_scene_graph_query_from_decoder;
+        17 => "node_changes_metadata": one decode_sparse_node_changes_metadata_from_decoder; one skip_node_changes_metadata_from_decoder;
+        18 => "file_version": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        19 => "paste_is_partially_outside_enclosing_frame": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        20 => "paste_page_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        21 => "is_cut": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        22 => "local_undo_stack": repeated decode_sparse_message_from_decoder; repeated skip_message_from_decoder;
+        23 => "local_redo_stack": repeated decode_sparse_message_from_decoder; repeated skip_message_from_decoder;
+        24 => "broadcasts": repeated decode_sparse_client_broadcast_from_decoder; repeated skip_client_broadcast_from_decoder;
+        25 => "reconnect_sequence_number": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        26 => "paste_branch_source_file_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        27 => "paste_editor_type": one decode_sparse_editor_type_from_decoder; one kiwi_skip_uint_value;
+        28 => "post_sync_actions": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        29 => "published_asset_guids": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
+        30 => "blob_base_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        31 => "dirty_from_initial_load": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        32 => "interactive_slide_element_change": one decode_sparse_interactive_slide_element_change_from_decoder; one skip_interactive_slide_element_change_from_decoder;
+        33 => "clipboard_selection_regions": repeated decode_sparse_clipboard_selection_region_from_decoder; repeated skip_clipboard_selection_region_from_decoder;
+        34 => "encoded_offsets_index": one decode_sparse_encoded_offsets_index_from_decoder; one skip_encoded_offsets_index_from_decoder;
+        35 => "has_repeating_content": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        36 => "node_status_change": one decode_sparse_node_status_change_from_decoder; one skip_node_status_change_from_decoder;
+        37 => "is_retransmission": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        38 => "sent_timestamp": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        39 => "annotation_categories": repeated decode_sparse_annotation_category_from_decoder; repeated skip_annotation_category_from_decoder;
+        40 => "client_rendered_metadata": one decode_sparse_client_rendered_metadata_from_decoder; one skip_client_rendered_metadata_from_decoder;
+        41 => "paste_asset_type": one decode_sparse_paste_asset_type_from_decoder; one kiwi_skip_uint_value;
+        42 => "stable_session_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        43 => "object_animations": one decode_sparse_object_animation_list_from_decoder; one skip_object_animation_list_from_decoder;
+        44 => "buzz_approval_change": one decode_sparse_buzz_approval_change_from_decoder; one skip_buzz_approval_change_from_decoder;
+        45 => "scene_graph_query_mode": one decode_sparse_scene_graph_query_mode_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_encoded_offsets_index_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_encoded_offsets_index_from_decoder;
+    skip_fn skip_encoded_offsets_index_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EncodedOffsetsIndex";
     definition "EncodedOffsetsIndex";
     capacity 5;
     fields [
-        1 => "node_changes_field_offset": one kiwi_sparse_uint_value;
-        2 => "node_changes_field_length": one kiwi_sparse_uint_value;
-        3 => "blobs_field_offset": one kiwi_sparse_uint_value;
-        4 => "node_change_offsets": repeated decode_sparse_guid_and_encoded_offset_from_decoder;
+        1 => "node_changes_field_offset": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "node_changes_field_length": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        3 => "blobs_field_offset": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "node_change_offsets": repeated decode_sparse_guid_and_encoded_offset_from_decoder; repeated skip_guid_and_encoded_offset_from_decoder;
     ]
 }
 
@@ -7903,16 +8187,17 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_rich_media_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_rich_media_data_from_decoder;
+    skip_fn skip_rich_media_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.RichMediaData";
     definition "RichMediaData";
     capacity 3;
     fields [
-        1 => "media_hash": one kiwi_sparse_string_value;
-        2 => "rich_media_type": one decode_sparse_rich_media_type_from_decoder;
+        1 => "media_hash": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "rich_media_type": one decode_sparse_rich_media_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -7988,43 +8273,44 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_any_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_any_value_from_decoder;
+    skip_fn skip_variable_any_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableAnyValue";
     definition "VariableAnyValue";
     capacity 30;
     fields [
-        1 => "bool_value": one kiwi_sparse_bool_value;
-        2 => "text_value": one kiwi_sparse_string_value;
-        3 => "float_value": one kiwi_sparse_float_value;
-        4 => "alias": one decode_sparse_variable_id_from_decoder;
-        5 => "color_value": one decode_sparse_color_from_decoder;
-        6 => "expression_value": one decode_sparse_expression_from_decoder;
-        7 => "map_value": one decode_sparse_variable_map_from_decoder;
-        8 => "symbol_id_value": one decode_sparse_symbol_id_from_decoder;
-        9 => "font_style_value": one decode_sparse_variable_font_style_from_decoder;
-        10 => "text_data_value": one decode_sparse_text_data_from_decoder;
-        11 => "node_field_alias_value": one decode_sparse_node_field_alias_from_decoder;
-        12 => "cms_alias_value": one decode_sparse_cms_alias_from_decoder;
-        13 => "prop_ref_value": one decode_sparse_prop_ref_value_from_decoder;
-        14 => "image_value": one decode_sparse_image_parameter_value_from_decoder;
-        15 => "managed_string_alias_value": one decode_sparse_managed_string_alias_from_decoder;
-        16 => "link_value": one decode_sparse_hyperlink_from_decoder;
-        17 => "js_runtime_alias_value": one decode_sparse_js_runtime_alias_from_decoder;
-        18 => "slot_content_id_value": one decode_sparse_slot_content_id_from_decoder;
-        19 => "keyframe_track_id_value": one decode_sparse_keyframe_track_id_from_decoder;
-        20 => "keyframe_track_parameter_value": one decode_sparse_keyframe_track_parameter_value_from_decoder;
-        21 => "easing_value": one decode_sparse_easing_data_from_decoder;
-        22 => "vector_value": one decode_sparse_vector_from_decoder;
-        23 => "color_array_value": one decode_sparse_color_array_from_decoder;
-        24 => "line_value": one decode_sparse_line_from_decoder;
-        25 => "circle_value": one decode_sparse_circle_from_decoder;
-        26 => "rotation3_d_value": one decode_sparse_rotation3_d_from_decoder;
-        27 => "circle_point_value": one decode_sparse_circle_point_from_decoder;
-        28 => "gradient_value": one decode_sparse_gradient_from_decoder;
-        29 => "color_point_value": one decode_sparse_color_point_from_decoder;
+        1 => "bool_value": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "text_value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "float_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "alias": one decode_sparse_variable_id_from_decoder; one skip_variable_id_from_decoder;
+        5 => "color_value": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        6 => "expression_value": one decode_sparse_expression_from_decoder; one skip_expression_from_decoder;
+        7 => "map_value": one decode_sparse_variable_map_from_decoder; one skip_variable_map_from_decoder;
+        8 => "symbol_id_value": one decode_sparse_symbol_id_from_decoder; one skip_symbol_id_from_decoder;
+        9 => "font_style_value": one decode_sparse_variable_font_style_from_decoder; one skip_variable_font_style_from_decoder;
+        10 => "text_data_value": one decode_sparse_text_data_from_decoder; one skip_text_data_from_decoder;
+        11 => "node_field_alias_value": one decode_sparse_node_field_alias_from_decoder; one skip_node_field_alias_from_decoder;
+        12 => "cms_alias_value": one decode_sparse_cms_alias_from_decoder; one skip_cms_alias_from_decoder;
+        13 => "prop_ref_value": one decode_sparse_prop_ref_value_from_decoder; one skip_prop_ref_value_from_decoder;
+        14 => "image_value": one decode_sparse_image_parameter_value_from_decoder; one skip_image_parameter_value_from_decoder;
+        15 => "managed_string_alias_value": one decode_sparse_managed_string_alias_from_decoder; one skip_managed_string_alias_from_decoder;
+        16 => "link_value": one decode_sparse_hyperlink_from_decoder; one skip_hyperlink_from_decoder;
+        17 => "js_runtime_alias_value": one decode_sparse_js_runtime_alias_from_decoder; one skip_js_runtime_alias_from_decoder;
+        18 => "slot_content_id_value": one decode_sparse_slot_content_id_from_decoder; one skip_slot_content_id_from_decoder;
+        19 => "keyframe_track_id_value": one decode_sparse_keyframe_track_id_from_decoder; one skip_keyframe_track_id_from_decoder;
+        20 => "keyframe_track_parameter_value": one decode_sparse_keyframe_track_parameter_value_from_decoder; one skip_keyframe_track_parameter_value_from_decoder;
+        21 => "easing_value": one decode_sparse_easing_data_from_decoder; one skip_easing_data_from_decoder;
+        22 => "vector_value": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        23 => "color_array_value": one decode_sparse_color_array_from_decoder; one skip_color_array_from_decoder;
+        24 => "line_value": one decode_sparse_line_from_decoder; one skip_line_from_decoder;
+        25 => "circle_value": one decode_sparse_circle_from_decoder; one skip_circle_from_decoder;
+        26 => "rotation3_d_value": one decode_sparse_rotation3_d_from_decoder; one skip_rotation3_d_from_decoder;
+        27 => "circle_point_value": one decode_sparse_circle_point_from_decoder; one skip_circle_point_from_decoder;
+        28 => "gradient_value": one decode_sparse_gradient_from_decoder; one skip_gradient_from_decoder;
+        29 => "color_point_value": one decode_sparse_color_point_from_decoder; one skip_color_point_from_decoder;
     ]
 }
 
@@ -8056,127 +8342,136 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_expression_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_expression_from_decoder;
+    skip_fn skip_expression_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Expression";
     definition "Expression";
     capacity 3;
     fields [
-        1 => "expression_function": one decode_sparse_expression_function_from_decoder;
-        2 => "expression_arguments": repeated decode_sparse_variable_data_from_decoder;
+        1 => "expression_function": one decode_sparse_expression_function_from_decoder; one kiwi_skip_uint_value;
+        2 => "expression_arguments": repeated decode_sparse_variable_data_from_decoder; repeated skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_map_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_map_value_from_decoder;
+    skip_fn skip_variable_map_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableMapValue";
     definition "VariableMapValue";
     capacity 4;
     fields [
-        1 => "key": one kiwi_sparse_string_value;
-        2 => "value": one decode_sparse_variable_data_from_decoder;
-        3 => "guid_key": one decode_sparse_guid_from_decoder;
+        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "value": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        3 => "guid_key": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_map_from_decoder;
+    skip_fn skip_variable_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableMap";
     definition "VariableMap";
     capacity 2;
     fields [
-        1 => "values": repeated decode_sparse_variable_map_value_from_decoder;
+        1 => "values": repeated decode_sparse_variable_map_value_from_decoder; repeated skip_variable_map_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_color_array_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_color_array_from_decoder;
+    skip_fn skip_color_array_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ColorArray";
     definition "ColorArray";
     capacity 2;
     fields [
-        1 => "colors": repeated decode_sparse_variable_data_from_decoder;
+        1 => "colors": repeated decode_sparse_variable_data_from_decoder; repeated skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_font_style_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_font_style_from_decoder;
+    skip_fn skip_variable_font_style_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableFontStyle";
     definition "VariableFontStyle";
     capacity 4;
     fields [
-        1 => "as_string": one decode_sparse_variable_data_from_decoder;
-        2 => "as_float": one decode_sparse_variable_data_from_decoder;
-        3 => "as_variations": one decode_sparse_variable_data_from_decoder;
+        1 => "as_string": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        2 => "as_float": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        3 => "as_variations": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_image_parameter_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_image_parameter_value_from_decoder;
+    skip_fn skip_image_parameter_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ImageParameterValue";
     definition "ImageParameterValue";
     capacity 8;
     fields [
-        1 => "image": one decode_sparse_image_from_decoder;
-        2 => "image_thumbnail": one decode_sparse_image_from_decoder;
-        3 => "alt_text": one kiwi_sparse_string_value;
-        4 => "original_image_height": one kiwi_sparse_uint_value;
-        5 => "original_image_width": one kiwi_sparse_uint_value;
-        6 => "animated_image": one decode_sparse_image_from_decoder;
-        7 => "animation_frame": one kiwi_sparse_uint_value;
+        1 => "image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
+        2 => "image_thumbnail": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
+        3 => "alt_text": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "original_image_height": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        5 => "original_image_width": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        6 => "animated_image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
+        7 => "animation_frame": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_thumbnail_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_thumbnail_info_from_decoder;
+    skip_fn skip_thumbnail_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ThumbnailInfo";
     definition "ThumbnailInfo";
     capacity 3;
     fields [
-        1 => "node_id": one decode_sparse_guid_from_decoder;
-        2 => "thumbnail_version": one kiwi_sparse_string_value;
+        1 => "node_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "thumbnail_version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_ai_canvas_prompt_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_ai_canvas_prompt_from_decoder;
+    skip_fn skip_ai_canvas_prompt_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AiCanvasPrompt";
     definition "AiCanvasPrompt";
     capacity 4;
     fields [
-        1 => "user_prompt": one kiwi_sparse_string_value;
-        2 => "author_id": one kiwi_sparse_string_value;
-        3 => "parent_node_ids": repeated decode_sparse_guid_from_decoder;
+        1 => "user_prompt": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "author_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "parent_node_ids": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_field_alias_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_field_alias_from_decoder;
+    skip_fn skip_node_field_alias_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeFieldAlias";
     definition "NodeFieldAlias";
     capacity 4;
     fields [
-        1 => "stable_path_to_node": one decode_sparse_guid_path_from_decoder;
-        2 => "node_field": one decode_sparse_node_field_alias_type_from_decoder;
-        3 => "index_or_key": one kiwi_sparse_string_value;
+        1 => "stable_path_to_node": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
+        2 => "node_field": one decode_sparse_node_field_alias_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "index_or_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -8190,215 +8485,231 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cms_alias_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cms_alias_from_decoder;
+    skip_fn skip_cms_alias_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CMSAlias";
     definition "CMSAlias";
     capacity 5;
     fields [
-        1 => "collection_id": one kiwi_sparse_string_value;
-        2 => "item_id": one kiwi_sparse_string_value;
-        3 => "field_id": one kiwi_sparse_string_value;
-        4 => "type": one decode_sparse_variable_data_type_from_decoder;
+        1 => "collection_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "item_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "field_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "type": one decode_sparse_variable_data_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_js_runtime_alias_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_js_runtime_alias_from_decoder;
+    skip_fn skip_js_runtime_alias_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.JsRuntimeAlias";
     definition "JsRuntimeAlias";
     capacity 2;
     fields [
-        1 => "lookup_key": one kiwi_sparse_string_value;
+        1 => "lookup_key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_prop_ref_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_prop_ref_value_from_decoder;
+    skip_fn skip_prop_ref_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PropRefValue";
     definition "PropRefValue";
     capacity 2;
     fields [
-        1 => "def_id": one decode_sparse_guid_from_decoder;
+        1 => "def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_id_from_decoder;
+    skip_fn skip_managed_string_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringId";
     definition "ManagedStringId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_placeholder_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_placeholder_map_entry_from_decoder;
+    skip_fn skip_managed_string_placeholder_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringPlaceholderMapEntry";
     definition "ManagedStringPlaceholderMapEntry";
     capacity 3;
     fields [
-        1 => "key": one kiwi_sparse_string_value;
-        2 => "value": one kiwi_sparse_string_value;
+        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_slot_content_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_slot_content_id_from_decoder;
+    skip_fn skip_slot_content_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SlotContentId";
     definition "SlotContentId";
     capacity 2;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_managed_string_alias_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_managed_string_alias_from_decoder;
+    skip_fn skip_managed_string_alias_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManagedStringAlias";
     definition "ManagedStringAlias";
     capacity 3;
     fields [
-        1 => "managed_string_id": one decode_sparse_managed_string_id_from_decoder;
-        2 => "placeholder_values": repeated decode_sparse_managed_string_placeholder_map_entry_from_decoder;
+        1 => "managed_string_id": one decode_sparse_managed_string_id_from_decoder; one skip_managed_string_id_from_decoder;
+        2 => "placeholder_values": repeated decode_sparse_managed_string_placeholder_map_entry_from_decoder; repeated skip_managed_string_placeholder_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_keyframe_track_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_keyframe_track_id_from_decoder;
+    skip_fn skip_keyframe_track_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.KeyframeTrackId";
     definition "KeyframeTrackId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_animation_preset_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_animation_preset_id_from_decoder;
+    skip_fn skip_animation_preset_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnimationPresetId";
     definition "AnimationPresetId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_tool_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_tool_id_from_decoder;
+    skip_fn skip_tool_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ToolId";
     definition "ToolId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_custom_effect_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_custom_effect_id_from_decoder;
+    skip_fn skip_custom_effect_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CustomEffectId";
     definition "CustomEffectId";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder; one skip_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_trss_transform2_d_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_trss_transform2_d_from_decoder;
+    skip_fn skip_trss_transform2_d_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TRSSTransform2D";
     definition "TRSSTransform2D";
     capacity 5;
     fields [
-        1 => "translation": one decode_sparse_vector_from_decoder;
-        2 => "rotation": one kiwi_sparse_float_value;
-        3 => "scale": one decode_sparse_vector_from_decoder;
-        4 => "shear_x": one kiwi_sparse_float_value;
+        1 => "translation": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        2 => "rotation": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "scale": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        4 => "shear_x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_data_from_decoder;
+    skip_fn skip_variable_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableData";
     definition "VariableData";
     capacity 4;
     fields [
-        1 => "value": one decode_sparse_variable_any_value_from_decoder;
-        2 => "data_type": one decode_sparse_variable_data_type_from_decoder;
-        3 => "resolved_data_type": one decode_sparse_variable_resolved_data_type_from_decoder;
+        1 => "value": one decode_sparse_variable_any_value_from_decoder; one skip_variable_any_value_from_decoder;
+        2 => "data_type": one decode_sparse_variable_data_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "resolved_data_type": one decode_sparse_variable_resolved_data_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_set_mode_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_set_mode_from_decoder;
+    skip_fn skip_variable_set_mode_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableSetMode";
     definition "VariableSetMode";
     capacity 6;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "name": one kiwi_sparse_string_value;
-        3 => "sort_position": one kiwi_sparse_string_value;
-        4 => "parent_variable_set_id": one decode_sparse_variable_set_id_from_decoder;
-        5 => "parent_mode_id": one decode_sparse_guid_from_decoder;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "sort_position": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "parent_variable_set_id": one decode_sparse_variable_set_id_from_decoder; one skip_variable_set_id_from_decoder;
+        5 => "parent_mode_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_data_values_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_data_values_from_decoder;
+    skip_fn skip_variable_data_values_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableDataValues";
     definition "VariableDataValues";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_variable_data_values_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_variable_data_values_entry_from_decoder; repeated skip_variable_data_values_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_data_values_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_data_values_entry_from_decoder;
+    skip_fn skip_variable_data_values_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableDataValuesEntry";
     definition "VariableDataValuesEntry";
     capacity 3;
     fields [
-        1 => "mode_id": one decode_sparse_guid_from_decoder;
-        2 => "variable_data": one decode_sparse_variable_data_from_decoder;
+        1 => "mode_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "variable_data": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
@@ -8433,18 +8744,19 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_keyframe_any_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_keyframe_any_value_from_decoder;
+    skip_fn skip_keyframe_any_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.KeyframeAnyValue";
     definition "KeyframeAnyValue";
     capacity 5;
     fields [
-        1 => "float_value": one kiwi_sparse_float_value;
-        2 => "color_value": one decode_sparse_color_from_decoder;
-        3 => "text_data_value": one decode_sparse_text_data_from_decoder;
-        4 => "vector_value": one decode_sparse_vector_from_decoder;
+        1 => "float_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "color_value": one decode_sparse_color_from_decoder; one skip_color_from_decoder;
+        3 => "text_data_value": one decode_sparse_text_data_from_decoder; one skip_text_data_from_decoder;
+        4 => "vector_value": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
     ]
 }
 
@@ -8461,16 +8773,17 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_keyframe_value_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_keyframe_value_data_from_decoder;
+    skip_fn skip_keyframe_value_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.KeyframeValueData";
     definition "KeyframeValueData";
     capacity 3;
     fields [
-        1 => "value": one decode_sparse_keyframe_any_value_from_decoder;
-        2 => "value_type": one decode_sparse_keyframe_value_type_from_decoder;
+        1 => "value": one decode_sparse_keyframe_any_value_from_decoder; one skip_keyframe_any_value_from_decoder;
+        2 => "value_type": one decode_sparse_keyframe_value_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -8485,245 +8798,263 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_manual_keyframe_track_parameter_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_manual_keyframe_track_parameter_from_decoder;
+    skip_fn skip_manual_keyframe_track_parameter_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ManualKeyframeTrackParameter";
     definition "ManualKeyframeTrackParameter";
     capacity 3;
     fields [
-        1 => "keyframe_track_id": one decode_sparse_keyframe_track_id_from_decoder;
-        2 => "timeline_def_id": one decode_sparse_guid_from_decoder;
+        1 => "keyframe_track_id": one decode_sparse_keyframe_track_id_from_decoder; one skip_keyframe_track_id_from_decoder;
+        2 => "timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_animation_preset_keyframe_track_parameter_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_animation_preset_keyframe_track_parameter_from_decoder;
+    skip_fn skip_animation_preset_keyframe_track_parameter_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnimationPresetKeyframeTrackParameter";
     definition "AnimationPresetKeyframeTrackParameter";
     capacity 4;
     fields [
-        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder;
-        2 => "keyframe_track_id": one decode_sparse_keyframe_track_id_from_decoder;
-        3 => "timeline_def_id": one decode_sparse_guid_from_decoder;
+        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder; one skip_animation_preset_id_from_decoder;
+        2 => "keyframe_track_id": one decode_sparse_keyframe_track_id_from_decoder; one skip_keyframe_track_id_from_decoder;
+        3 => "timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_keyframe_track_any_parameter_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_keyframe_track_any_parameter_from_decoder;
+    skip_fn skip_keyframe_track_any_parameter_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.KeyframeTrackAnyParameter";
     definition "KeyframeTrackAnyParameter";
     capacity 4;
     fields [
-        1 => "manual": one decode_sparse_manual_keyframe_track_parameter_from_decoder;
-        2 => "animation_preset": one decode_sparse_animation_preset_keyframe_track_parameter_from_decoder;
-        3 => "animation_style_binding_id": one decode_sparse_guid_from_decoder;
+        1 => "manual": one decode_sparse_manual_keyframe_track_parameter_from_decoder; one skip_manual_keyframe_track_parameter_from_decoder;
+        2 => "animation_preset": one decode_sparse_animation_preset_keyframe_track_parameter_from_decoder; one skip_animation_preset_keyframe_track_parameter_from_decoder;
+        3 => "animation_style_binding_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_keyframe_track_parameter_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_keyframe_track_parameter_from_decoder;
+    skip_fn skip_keyframe_track_parameter_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.KeyframeTrackParameter";
     definition "KeyframeTrackParameter";
     capacity 3;
     fields [
-        1 => "value": one decode_sparse_keyframe_track_any_parameter_from_decoder;
-        2 => "type": one decode_sparse_keyframe_track_parameter_type_from_decoder;
+        1 => "value": one decode_sparse_keyframe_track_any_parameter_from_decoder; one skip_keyframe_track_any_parameter_from_decoder;
+        2 => "type": one decode_sparse_keyframe_track_parameter_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_keyframe_track_parameter_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_keyframe_track_parameter_value_from_decoder;
+    skip_fn skip_keyframe_track_parameter_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.KeyframeTrackParameterValue";
     definition "KeyframeTrackParameterValue";
     capacity 2;
     fields [
-        1 => "parameters": repeated decode_sparse_keyframe_track_parameter_from_decoder;
+        1 => "parameters": repeated decode_sparse_keyframe_track_parameter_from_decoder; repeated skip_keyframe_track_parameter_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_animation_presets_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_animation_presets_from_decoder;
+    skip_fn skip_animation_presets_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnimationPresets";
     definition "AnimationPresets";
     capacity 2;
     fields [
-        1 => "presets": repeated decode_sparse_animation_preset_data_from_decoder;
+        1 => "presets": repeated decode_sparse_animation_preset_data_from_decoder; repeated skip_animation_preset_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_animation_preset_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_animation_preset_data_from_decoder;
+    skip_fn skip_animation_preset_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AnimationPresetData";
     definition "AnimationPresetData";
     capacity 3;
     fields [
-        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder;
-        2 => "timeline_def_id": one decode_sparse_guid_from_decoder;
+        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder; one skip_animation_preset_id_from_decoder;
+        2 => "timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_style_animation_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_style_animation_from_decoder;
+    skip_fn skip_style_animation_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StyleAnimation";
     definition "StyleAnimation";
     capacity 2;
     fields [
-        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder;
+        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder; one skip_animation_preset_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_style_id_for_animation_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_style_id_for_animation_from_decoder;
+    skip_fn skip_style_id_for_animation_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.StyleIdForAnimation";
     definition "StyleIdForAnimation";
     capacity 5;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "timeline_def_id": one decode_sparse_guid_from_decoder;
-        3 => "animation_style_id": one decode_sparse_style_id_from_decoder;
-        4 => "timeline_offset": one kiwi_sparse_int64_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "timeline_def_id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "animation_style_id": one decode_sparse_style_id_from_decoder; one skip_style_id_from_decoder;
+        4 => "timeline_offset": one kiwi_sparse_int64_value; one kiwi_skip_int64_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_tools_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_tools_from_decoder;
+    skip_fn skip_tools_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.Tools";
     definition "Tools";
     capacity 2;
     fields [
-        1 => "tools": repeated decode_sparse_tool_data_from_decoder;
+        1 => "tools": repeated decode_sparse_tool_data_from_decoder; repeated skip_tool_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_tool_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_tool_data_from_decoder;
+    skip_fn skip_tool_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ToolData";
     definition "ToolData";
     capacity 4;
     fields [
-        1 => "tool_id": one decode_sparse_tool_id_from_decoder;
-        2 => "backing_code_component_id": one decode_sparse_code_component_id_from_decoder;
-        3 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
+        1 => "tool_id": one decode_sparse_tool_id_from_decoder; one skip_tool_id_from_decoder;
+        2 => "backing_code_component_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
+        3 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder; repeated skip_component_prop_assignment_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_custom_effects_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_custom_effects_from_decoder;
+    skip_fn skip_custom_effects_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CustomEffects";
     definition "CustomEffects";
     capacity 2;
     fields [
-        1 => "custom_effects": repeated decode_sparse_custom_effect_data_from_decoder;
+        1 => "custom_effects": repeated decode_sparse_custom_effect_data_from_decoder; repeated skip_custom_effect_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_custom_effect_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_custom_effect_data_from_decoder;
+    skip_fn skip_custom_effect_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CustomEffectData";
     definition "CustomEffectData";
     capacity 2;
     fields [
-        1 => "custom_effect_id": one decode_sparse_custom_effect_id_from_decoder;
+        1 => "custom_effect_id": one decode_sparse_custom_effect_id_from_decoder; one skip_custom_effect_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_spring_params_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_spring_params_from_decoder;
+    skip_fn skip_spring_params_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SpringParams";
     definition "SpringParams";
     capacity 4;
     fields [
-        1 => "stiffness": one kiwi_sparse_float_value;
-        2 => "damping": one kiwi_sparse_float_value;
-        3 => "mass": one kiwi_sparse_float_value;
+        1 => "stiffness": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "damping": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "mass": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transition_easing_any_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transition_easing_any_value_from_decoder;
+    skip_fn skip_transition_easing_any_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransitionEasingAnyValue";
     definition "TransitionEasingAnyValue";
     capacity 3;
     fields [
-        1 => "spring_easing": one decode_sparse_spring_params_from_decoder;
-        2 => "bezier_easing": one decode_sparse_bezier_handles_from_decoder;
+        1 => "spring_easing": one decode_sparse_spring_params_from_decoder; one skip_spring_params_from_decoder;
+        2 => "bezier_easing": one decode_sparse_bezier_handles_from_decoder; one skip_bezier_handles_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_easing_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_easing_data_from_decoder;
+    skip_fn skip_easing_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EasingData";
     definition "EasingData";
     capacity 3;
     fields [
-        1 => "easing_type": one decode_sparse_easing_type_from_decoder;
-        2 => "easing_value": one decode_sparse_transition_easing_any_value_from_decoder;
+        1 => "easing_type": one decode_sparse_easing_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "easing_value": one decode_sparse_transition_easing_any_value_from_decoder; one skip_transition_easing_any_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transition_override_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transition_override_from_decoder;
+    skip_fn skip_transition_override_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransitionOverride";
     definition "TransitionOverride";
     capacity 11;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "duration": one kiwi_sparse_float_value;
-        3 => "duration_var": one decode_sparse_variable_data_from_decoder;
-        4 => "delay": one kiwi_sparse_float_value;
-        5 => "delay_var": one decode_sparse_variable_data_from_decoder;
-        6 => "easing": one decode_sparse_easing_data_from_decoder;
-        7 => "easing_var": one decode_sparse_variable_data_from_decoder;
-        8 => "created_at_ms": one kiwi_sparse_uint64_value;
-        9 => "interaction_i_ds": repeated decode_sparse_guid_from_decoder;
-        10 => "disabled": one kiwi_sparse_bool_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "duration_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        4 => "delay": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "delay_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        6 => "easing": one decode_sparse_easing_data_from_decoder; one skip_easing_data_from_decoder;
+        7 => "easing_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        8 => "created_at_ms": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        9 => "interaction_i_ds": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
+        10 => "disabled": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transition_override_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transition_override_data_from_decoder;
+    skip_fn skip_transition_override_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransitionOverrideData";
     definition "TransitionOverrideData";
     capacity 3;
     fields [
-        1 => "all": repeated decode_sparse_transition_override_from_decoder;
-        2 => "property_overrides": one decode_sparse_transition_override_prop_map_from_decoder;
+        1 => "all": repeated decode_sparse_transition_override_from_decoder; repeated skip_transition_override_from_decoder;
+        2 => "property_overrides": one decode_sparse_transition_override_prop_map_from_decoder; one skip_transition_override_prop_map_from_decoder;
     ]
 }
 
@@ -8753,18 +9084,19 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transition_override_binding_location_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transition_override_binding_location_from_decoder;
+    skip_fn skip_transition_override_binding_location_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransitionOverrideBindingLocation";
     definition "TransitionOverrideBindingLocation";
     capacity 5;
     fields [
-        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder;
-        2 => "parameter_field_value": one kiwi_sparse_int_value;
-        3 => "index": one kiwi_sparse_int_value;
-        4 => "effect_parametrized_field_value": one kiwi_sparse_int_value;
+        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder; one kiwi_skip_uint_value;
+        2 => "parameter_field_value": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        3 => "index": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        4 => "effect_parametrized_field_value": one kiwi_sparse_int_value; one kiwi_skip_int_value;
     ]
 }
 
@@ -8798,45 +9130,48 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_contents_keyframe_binding_location_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_contents_keyframe_binding_location_from_decoder;
+    skip_fn skip_node_contents_keyframe_binding_location_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeContentsKeyframeBindingLocation";
     definition "NodeContentsKeyframeBindingLocation";
     capacity 5;
     fields [
-        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder;
-        2 => "parameter_field_value": one decode_sparse_variable_field_from_decoder;
-        3 => "index": one kiwi_sparse_int_value;
-        4 => "effect_parametrized_field_value": one decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder;
+        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder; one kiwi_skip_uint_value;
+        2 => "parameter_field_value": one decode_sparse_variable_field_from_decoder; one kiwi_skip_uint_value;
+        3 => "index": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        4 => "effect_parametrized_field_value": one decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transition_override_prop_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transition_override_prop_map_from_decoder;
+    skip_fn skip_transition_override_prop_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransitionOverridePropMap";
     definition "TransitionOverridePropMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_transition_override_prop_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_transition_override_prop_map_entry_from_decoder; repeated skip_transition_override_prop_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_transition_override_prop_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_transition_override_prop_map_entry_from_decoder;
+    skip_fn skip_transition_override_prop_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.TransitionOverridePropMapEntry";
     definition "TransitionOverridePropMapEntry";
     capacity 5;
     fields [
-        1 => "prop": one decode_sparse_transition_override_prop_from_decoder;
-        2 => "overrides": repeated decode_sparse_transition_override_from_decoder;
-        3 => "binding_location": one decode_sparse_transition_override_binding_location_from_decoder;
-        4 => "node_contents_binding_location": one decode_sparse_node_contents_keyframe_binding_location_from_decoder;
+        1 => "prop": one decode_sparse_transition_override_prop_from_decoder; one kiwi_skip_uint_value;
+        2 => "overrides": repeated decode_sparse_transition_override_from_decoder; repeated skip_transition_override_from_decoder;
+        3 => "binding_location": one decode_sparse_transition_override_binding_location_from_decoder; one skip_transition_override_binding_location_from_decoder;
+        4 => "node_contents_binding_location": one decode_sparse_node_contents_keyframe_binding_location_from_decoder; one skip_node_contents_keyframe_binding_location_from_decoder;
     ]
 }
 
@@ -8851,15 +9186,16 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_optional_vector_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_optional_vector_from_decoder;
+    skip_fn skip_optional_vector_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.OptionalVector";
     definition "OptionalVector";
     capacity 2;
     fields [
-        1 => "value": one decode_sparse_vector_from_decoder;
+        1 => "value": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
     ]
 }
 
@@ -9052,15 +9388,16 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_migration_status_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_migration_status_from_decoder;
+    skip_fn skip_migration_status_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.MigrationStatus";
     definition "MigrationStatus";
     capacity 2;
     fields [
-        1 => "dsd_cleanup": one kiwi_sparse_bool_value;
+        1 => "dsd_cleanup": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -9096,19 +9433,20 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_aria_attribute_any_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_aria_attribute_any_value_from_decoder;
+    skip_fn skip_aria_attribute_any_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ARIAAttributeAnyValue";
     definition "ARIAAttributeAnyValue";
     capacity 6;
     fields [
-        1 => "bool_value": one kiwi_sparse_bool_value;
-        2 => "string_value": one kiwi_sparse_string_value;
-        3 => "float_value": one kiwi_sparse_float_value;
-        4 => "int_value": one kiwi_sparse_int_value;
-        5 => "string_array_value": repeated kiwi_sparse_string_value;
+        1 => "bool_value": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        2 => "string_value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "float_value": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "int_value": one kiwi_sparse_int_value; one kiwi_skip_int_value;
+        5 => "string_array_value": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
     ]
 }
 
@@ -9125,118 +9463,127 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_aria_attribute_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_aria_attribute_data_from_decoder;
+    skip_fn skip_aria_attribute_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ARIAAttributeData";
     definition "ARIAAttributeData";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_aria_attribute_data_type_from_decoder;
-        2 => "value": one decode_sparse_aria_attribute_any_value_from_decoder;
+        1 => "type": one decode_sparse_aria_attribute_data_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "value": one decode_sparse_aria_attribute_any_value_from_decoder; one skip_aria_attribute_any_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_aria_attributes_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_aria_attributes_map_from_decoder;
+    skip_fn skip_aria_attributes_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ARIAAttributesMap";
     definition "ARIAAttributesMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_aria_attributes_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_aria_attributes_map_entry_from_decoder; repeated skip_aria_attributes_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_aria_attributes_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_aria_attributes_map_entry_from_decoder;
+    skip_fn skip_aria_attributes_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ARIAAttributesMapEntry";
     definition "ARIAAttributesMapEntry";
     capacity 3;
     fields [
-        1 => "attribute": one kiwi_sparse_string_value;
-        2 => "value": one decode_sparse_aria_attribute_data_from_decoder;
+        1 => "attribute": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "value": one decode_sparse_aria_attribute_data_from_decoder; one skip_aria_attribute_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_handoff_status_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_handoff_status_map_entry_from_decoder;
+    skip_fn skip_handoff_status_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.HandoffStatusMapEntry";
     definition "HandoffStatusMapEntry";
     capacity 3;
     fields [
-        1 => "guid": one decode_sparse_guid_from_decoder;
-        2 => "handoff_status": one decode_sparse_section_status_info_from_decoder;
+        1 => "guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "handoff_status": one decode_sparse_section_status_info_from_decoder; one skip_section_status_info_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_handoff_status_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_handoff_status_map_from_decoder;
+    skip_fn skip_handoff_status_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.HandoffStatusMap";
     definition "HandoffStatusMap";
     capacity 2;
     fields [
-        1 => "entries": repeated decode_sparse_handoff_status_map_entry_from_decoder;
+        1 => "entries": repeated decode_sparse_handoff_status_map_entry_from_decoder; repeated skip_handoff_status_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_edit_scope_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_edit_scope_info_from_decoder;
+    skip_fn skip_edit_scope_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EditScopeInfo";
     definition "EditScopeInfo";
     capacity 3;
     fields [
-        1 => "edit_scope_stacks": repeated decode_sparse_edit_scope_stack_from_decoder;
-        2 => "snapshots": repeated decode_sparse_edit_scope_snapshot_from_decoder;
+        1 => "edit_scope_stacks": repeated decode_sparse_edit_scope_stack_from_decoder; repeated skip_edit_scope_stack_from_decoder;
+        2 => "snapshots": repeated decode_sparse_edit_scope_snapshot_from_decoder; repeated skip_edit_scope_snapshot_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_edit_scope_snapshot_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_edit_scope_snapshot_from_decoder;
+    skip_fn skip_edit_scope_snapshot_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EditScopeSnapshot";
     definition "EditScopeSnapshot";
     capacity 3;
     fields [
-        1 => "frames": repeated decode_sparse_edit_scope_stack_from_decoder;
-        2 => "node_change_field_numbers": repeated kiwi_sparse_uint_value;
+        1 => "frames": repeated decode_sparse_edit_scope_stack_from_decoder; repeated skip_edit_scope_stack_from_decoder;
+        2 => "node_change_field_numbers": repeated kiwi_sparse_uint_value; repeated kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_edit_scope_stack_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_edit_scope_stack_from_decoder;
+    skip_fn skip_edit_scope_stack_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EditScopeStack";
     definition "EditScopeStack";
     capacity 2;
     fields [
-        1 => "stack": repeated decode_sparse_edit_scope_from_decoder;
+        1 => "stack": repeated decode_sparse_edit_scope_from_decoder; repeated skip_edit_scope_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_edit_scope_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_edit_scope_from_decoder;
+    skip_fn skip_edit_scope_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.EditScope";
     definition "EditScope";
     capacity 4;
     fields [
-        1 => "type": one decode_sparse_edit_scope_type_from_decoder;
-        2 => "label": one kiwi_sparse_string_value;
-        3 => "editor_type": one decode_sparse_editor_type_from_decoder;
+        1 => "type": one decode_sparse_edit_scope_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "label": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "editor_type": one decode_sparse_editor_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -9288,34 +9635,36 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_section_preset_info_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_section_preset_info_from_decoder;
+    skip_fn skip_section_preset_info_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SectionPresetInfo";
     definition "SectionPresetInfo";
     capacity 5;
     fields [
-        1 => "shelf_id": one kiwi_sparse_uint64_value;
-        2 => "template_id": one kiwi_sparse_uint64_value;
-        3 => "template_name": one kiwi_sparse_string_value;
-        4 => "state": one decode_sparse_section_preset_state_from_decoder;
+        1 => "shelf_id": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        2 => "template_id": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
+        3 => "template_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "state": one decode_sparse_section_preset_state_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_clipboard_selection_region_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_clipboard_selection_region_from_decoder;
+    skip_fn skip_clipboard_selection_region_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ClipboardSelectionRegion";
     definition "ClipboardSelectionRegion";
     capacity 6;
     fields [
-        1 => "parent": one decode_sparse_guid_from_decoder;
-        2 => "nodes": repeated decode_sparse_guid_from_decoder;
-        3 => "enclosing_frame_offset": one decode_sparse_vector_from_decoder;
-        4 => "paste_is_partially_outside_enclosing_frame": one kiwi_sparse_bool_value;
-        5 => "focus_type": one decode_sparse_selection_region_focus_type_from_decoder;
+        1 => "parent": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "nodes": repeated decode_sparse_guid_from_decoder; repeated skip_guid_from_decoder;
+        3 => "enclosing_frame_offset": one decode_sparse_vector_from_decoder; one skip_vector_from_decoder;
+        4 => "paste_is_partially_outside_enclosing_frame": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        5 => "focus_type": one decode_sparse_selection_region_focus_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -9330,29 +9679,31 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_first_draft_kit_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_first_draft_kit_from_decoder;
+    skip_fn skip_first_draft_kit_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.FirstDraftKit";
     definition "FirstDraftKit";
     capacity 3;
     fields [
-        1 => "key": one kiwi_sparse_string_value;
-        2 => "type": one decode_sparse_first_draft_kit_type_from_decoder;
+        1 => "key": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "type": one decode_sparse_first_draft_kit_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_first_draft_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_first_draft_data_from_decoder;
+    skip_fn skip_first_draft_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.FirstDraftData";
     definition "FirstDraftData";
     capacity 3;
     fields [
-        1 => "generation_id": one kiwi_sparse_string_value;
-        2 => "kit": one decode_sparse_first_draft_kit_from_decoder;
+        1 => "generation_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "kit": one decode_sparse_first_draft_kit_from_decoder; one skip_first_draft_kit_from_decoder;
     ]
 }
 
@@ -9367,15 +9718,16 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_first_draft_kit_element_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_first_draft_kit_element_data_from_decoder;
+    skip_fn skip_first_draft_kit_element_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.FirstDraftKitElementData";
     definition "FirstDraftKitElementData";
     capacity 2;
     fields [
-        1 => "type": one decode_sparse_first_draft_kit_element_type_from_decoder;
+        1 => "type": one decode_sparse_first_draft_kit_element_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
@@ -9402,68 +9754,72 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_platform_shape_property_map_entry_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_platform_shape_property_map_entry_from_decoder;
+    skip_fn skip_platform_shape_property_map_entry_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PlatformShapePropertyMapEntry";
     definition "PlatformShapePropertyMapEntry";
     capacity 3;
     fields [
-        1 => "property": one decode_sparse_platform_shape_property_from_decoder;
-        2 => "node_paths": repeated decode_sparse_guid_path_from_decoder;
+        1 => "property": one decode_sparse_platform_shape_property_from_decoder; one kiwi_skip_uint_value;
+        2 => "node_paths": repeated decode_sparse_guid_path_from_decoder; repeated skip_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_platform_shape_definition_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_platform_shape_definition_from_decoder;
+    skip_fn skip_platform_shape_definition_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PlatformShapeDefinition";
     definition "PlatformShapeDefinition";
     capacity 4;
     fields [
-        1 => "property_map_entries": repeated decode_sparse_platform_shape_property_map_entry_from_decoder;
-        2 => "behavior_type": one decode_sparse_platform_shape_behavior_type_from_decoder;
-        3 => "thumbnail_node": one decode_sparse_guid_path_from_decoder;
+        1 => "property_map_entries": repeated decode_sparse_platform_shape_property_map_entry_from_decoder; repeated skip_platform_shape_property_map_entry_from_decoder;
+        2 => "behavior_type": one decode_sparse_platform_shape_behavior_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "thumbnail_node": one decode_sparse_guid_path_from_decoder; one skip_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_behaviors_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_behaviors_from_decoder;
+    skip_fn skip_node_behaviors_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeBehaviors";
     definition "NodeBehaviors";
     capacity 11;
     fields [
-        1 => "link": one decode_sparse_link_behavior_from_decoder;
-        2 => "appear": one decode_sparse_appear_behavior_from_decoder;
-        3 => "hover": one decode_sparse_hover_behavior_from_decoder;
-        4 => "press": one decode_sparse_press_behavior_from_decoder;
-        5 => "focus": one decode_sparse_focus_behavior_from_decoder;
-        6 => "scroll_parallax": one decode_sparse_scroll_parallax_behavior_from_decoder;
-        7 => "scroll_transform": one decode_sparse_scroll_transform_behavior_from_decoder;
-        8 => "cursor": one decode_sparse_cursor_behavior_from_decoder;
-        9 => "marquee": one decode_sparse_marquee_behavior_from_decoder;
-        10 => "code": repeated decode_sparse_code_behavior_from_decoder;
+        1 => "link": one decode_sparse_link_behavior_from_decoder; one skip_link_behavior_from_decoder;
+        2 => "appear": one decode_sparse_appear_behavior_from_decoder; one skip_appear_behavior_from_decoder;
+        3 => "hover": one decode_sparse_hover_behavior_from_decoder; one skip_hover_behavior_from_decoder;
+        4 => "press": one decode_sparse_press_behavior_from_decoder; one skip_press_behavior_from_decoder;
+        5 => "focus": one decode_sparse_focus_behavior_from_decoder; one skip_focus_behavior_from_decoder;
+        6 => "scroll_parallax": one decode_sparse_scroll_parallax_behavior_from_decoder; one skip_scroll_parallax_behavior_from_decoder;
+        7 => "scroll_transform": one decode_sparse_scroll_transform_behavior_from_decoder; one skip_scroll_transform_behavior_from_decoder;
+        8 => "cursor": one decode_sparse_cursor_behavior_from_decoder; one skip_cursor_behavior_from_decoder;
+        9 => "marquee": one decode_sparse_marquee_behavior_from_decoder; one skip_marquee_behavior_from_decoder;
+        10 => "code": repeated decode_sparse_code_behavior_from_decoder; repeated skip_code_behavior_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_behavior_transition_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_behavior_transition_from_decoder;
+    skip_fn skip_behavior_transition_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.BehaviorTransition";
     definition "BehaviorTransition";
     capacity 7;
     fields [
-        1 => "easing_type": one decode_sparse_easing_type_from_decoder;
-        2 => "easing_function": repeated kiwi_sparse_float_value;
-        3 => "transition_duration": one kiwi_sparse_float_value;
-        4 => "delay": one kiwi_sparse_float_value;
-        5 => "transition_duration_var": one decode_sparse_variable_data_from_decoder;
-        6 => "delay_var": one decode_sparse_variable_data_from_decoder;
+        1 => "easing_type": one decode_sparse_easing_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "easing_function": repeated kiwi_sparse_float_value; repeated kiwi_skip_float_value;
+        3 => "transition_duration": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "delay": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        5 => "transition_duration_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        6 => "delay_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
     ]
 }
 
@@ -9491,82 +9847,87 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_appear_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_appear_behavior_from_decoder;
+    skip_fn skip_appear_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AppearBehavior";
     definition "AppearBehavior";
     capacity 11;
     fields [
-        1 => "trigger": one decode_sparse_appear_behavior_trigger_from_decoder;
-        2 => "direction": one decode_sparse_relative_direction_from_decoder;
-        3 => "other_layer": one decode_sparse_guid_from_decoder;
-        4 => "enter_transition": one decode_sparse_behavior_transition_from_decoder;
-        5 => "enter_state": one decode_sparse_node_change_from_decoder;
-        6 => "exit_transition": one decode_sparse_behavior_transition_from_decoder;
-        7 => "exit_state": one decode_sparse_node_change_from_decoder;
-        8 => "plays_once": one kiwi_sparse_bool_value;
-        9 => "plays_once_var": one decode_sparse_variable_data_from_decoder;
-        10 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "trigger": one decode_sparse_appear_behavior_trigger_from_decoder; one kiwi_skip_uint_value;
+        2 => "direction": one decode_sparse_relative_direction_from_decoder; one kiwi_skip_uint_value;
+        3 => "other_layer": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "enter_transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
+        5 => "enter_state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
+        6 => "exit_transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
+        7 => "exit_state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
+        8 => "plays_once": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        9 => "plays_once_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        10 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_hover_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_hover_behavior_from_decoder;
+    skip_fn skip_hover_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.HoverBehavior";
     definition "HoverBehavior";
     capacity 4;
     fields [
-        1 => "transition": one decode_sparse_behavior_transition_from_decoder;
-        2 => "state": one decode_sparse_node_change_from_decoder;
-        3 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
+        2 => "state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
+        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_press_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_press_behavior_from_decoder;
+    skip_fn skip_press_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.PressBehavior";
     definition "PressBehavior";
     capacity 4;
     fields [
-        1 => "transition": one decode_sparse_behavior_transition_from_decoder;
-        2 => "state": one decode_sparse_node_change_from_decoder;
-        3 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
+        2 => "state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
+        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_focus_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_focus_behavior_from_decoder;
+    skip_fn skip_focus_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.FocusBehavior";
     definition "FocusBehavior";
     capacity 4;
     fields [
-        1 => "transition": one decode_sparse_behavior_transition_from_decoder;
-        2 => "state": one decode_sparse_node_change_from_decoder;
-        3 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
+        2 => "state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
+        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_scroll_parallax_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_scroll_parallax_behavior_from_decoder;
+    skip_fn skip_scroll_parallax_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ScrollParallaxBehavior";
     definition "ScrollParallaxBehavior";
     capacity 6;
     fields [
-        1 => "axis": one decode_sparse_scroll_direction_from_decoder;
-        2 => "speed": one kiwi_sparse_float_value;
-        3 => "relative_to_page": one kiwi_sparse_bool_value;
-        4 => "speed_var": one decode_sparse_variable_data_from_decoder;
-        5 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "axis": one decode_sparse_scroll_direction_from_decoder; one kiwi_skip_uint_value;
+        2 => "speed": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "relative_to_page": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "speed_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        5 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
@@ -9581,85 +9942,90 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_scroll_transform_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_scroll_transform_behavior_from_decoder;
+    skip_fn skip_scroll_transform_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ScrollTransformBehavior";
     definition "ScrollTransformBehavior";
     capacity 10;
     fields [
-        1 => "trigger": one decode_sparse_scroll_transform_behavior_trigger_from_decoder;
-        2 => "other_layer": one decode_sparse_guid_from_decoder;
-        3 => "transition": one decode_sparse_behavior_transition_from_decoder;
-        4 => "from_state": one decode_sparse_node_change_from_decoder;
-        5 => "to_state": one decode_sparse_node_change_from_decoder;
-        6 => "plays_once": one kiwi_sparse_bool_value;
-        7 => "plays_once_var": one kiwi_sparse_bool_value;
-        8 => "plays_once_var2": one decode_sparse_variable_data_from_decoder;
-        9 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "trigger": one decode_sparse_scroll_transform_behavior_trigger_from_decoder; one kiwi_skip_uint_value;
+        2 => "other_layer": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        3 => "transition": one decode_sparse_behavior_transition_from_decoder; one skip_behavior_transition_from_decoder;
+        4 => "from_state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
+        5 => "to_state": one decode_sparse_node_change_from_decoder; one skip_node_change_from_decoder;
+        6 => "plays_once": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        7 => "plays_once_var": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        8 => "plays_once_var2": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        9 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cursor_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cursor_behavior_from_decoder;
+    skip_fn skip_cursor_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CursorBehavior";
     definition "CursorBehavior";
     capacity 5;
     fields [
-        1 => "hotspot_x": one kiwi_sparse_float_value;
-        2 => "hotspot_y": one kiwi_sparse_float_value;
-        3 => "cursor_guid": one decode_sparse_guid_from_decoder;
-        4 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "hotspot_x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "hotspot_y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "cursor_guid": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_marquee_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_marquee_behavior_from_decoder;
+    skip_fn skip_marquee_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.MarqueeBehavior";
     definition "MarqueeBehavior";
     capacity 8;
     fields [
-        1 => "direction": one decode_sparse_relative_direction_from_decoder;
-        2 => "speed": one kiwi_sparse_float_value;
-        3 => "should_loop_infinitely": one kiwi_sparse_bool_value;
-        4 => "speed_var": one decode_sparse_variable_data_from_decoder;
-        5 => "should_loop_infinitely_var": one decode_sparse_variable_data_from_decoder;
-        6 => "pause_on_hover": one decode_sparse_variable_data_from_decoder;
-        7 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "direction": one decode_sparse_relative_direction_from_decoder; one kiwi_skip_uint_value;
+        2 => "speed": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "should_loop_infinitely": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "speed_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        5 => "should_loop_infinitely_var": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        6 => "pause_on_hover": one decode_sparse_variable_data_from_decoder; one skip_variable_data_from_decoder;
+        7 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_code_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_code_behavior_from_decoder;
+    skip_fn skip_code_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CodeBehavior";
     definition "CodeBehavior";
     capacity 4;
     fields [
-        1 => "code_component_id": one decode_sparse_code_component_id_from_decoder;
-        2 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
-        3 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "code_component_id": one decode_sparse_code_component_id_from_decoder; one skip_code_component_id_from_decoder;
+        2 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder; repeated skip_component_prop_assignment_from_decoder;
+        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_client_rendered_metadata_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_client_rendered_metadata_from_decoder;
+    skip_fn skip_client_rendered_metadata_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ClientRenderedMetadata";
     definition "ClientRenderedMetadata";
     capacity 5;
     fields [
-        1 => "load_id": one kiwi_sparse_string_value;
-        2 => "tracking_session_id": one kiwi_sparse_string_value;
-        3 => "tracking_session_sequence_id": one kiwi_sparse_uint_value;
-        4 => "reconnect_id": one kiwi_sparse_string_value;
+        1 => "load_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "tracking_session_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "tracking_session_sequence_id": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        4 => "reconnect_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -9673,44 +10039,47 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_link_behavior_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_link_behavior_from_decoder;
+    skip_fn skip_link_behavior_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.LinkBehavior";
     definition "LinkBehavior";
     capacity 5;
     fields [
-        1 => "type": one decode_sparse_link_behavior_type_from_decoder;
-        2 => "url": one kiwi_sparse_string_value;
-        3 => "page": one decode_sparse_guid_from_decoder;
-        4 => "open_in_new_window": one kiwi_sparse_bool_value;
+        1 => "type": one decode_sparse_link_behavior_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "url": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "page": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        4 => "open_in_new_window": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_variable_id_or_variable_override_id_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_variable_id_or_variable_override_id_from_decoder;
+    skip_fn skip_variable_id_or_variable_override_id_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.VariableIdOrVariableOverrideId";
     definition "VariableIdOrVariableOverrideId";
     capacity 3;
     fields [
-        1 => "variable_id": one decode_sparse_variable_id_from_decoder;
-        2 => "variable_override_id": one decode_sparse_variable_override_id_from_decoder;
+        1 => "variable_id": one decode_sparse_variable_id_from_decoder; one skip_variable_id_from_decoder;
+        2 => "variable_override_id": one decode_sparse_variable_override_id_from_decoder; one skip_variable_override_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_slide_theme_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_slide_theme_data_from_decoder;
+    skip_fn skip_slide_theme_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.SlideThemeData";
     definition "SlideThemeData";
     capacity 3;
     fields [
-        1 => "theme_id": one decode_sparse_theme_id_from_decoder;
-        2 => "version": one kiwi_sparse_string_value;
+        1 => "theme_id": one decode_sparse_theme_id_from_decoder; one skip_theme_id_from_decoder;
+        2 => "version": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
@@ -9740,105 +10109,112 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_chat_message_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_chat_message_from_decoder;
+    skip_fn skip_node_chat_message_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeChatMessage";
     definition "NodeChatMessage";
     capacity 9;
     fields [
-        1 => "id": one decode_sparse_guid_from_decoder;
-        2 => "type": one decode_sparse_node_chat_message_type_from_decoder;
-        3 => "user_id": one kiwi_sparse_string_value;
-        4 => "text_content": one kiwi_sparse_string_value;
-        5 => "sent_at": one kiwi_sparse_uint_value;
-        6 => "tool_calls": repeated decode_sparse_node_chat_tool_call_from_decoder;
-        7 => "tool_results": repeated decode_sparse_node_chat_tool_result_from_decoder;
-        8 => "sent_at64": one kiwi_sparse_uint64_value;
+        1 => "id": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "type": one decode_sparse_node_chat_message_type_from_decoder; one kiwi_skip_uint_value;
+        3 => "user_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        4 => "text_content": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "sent_at": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        6 => "tool_calls": repeated decode_sparse_node_chat_tool_call_from_decoder; repeated skip_node_chat_tool_call_from_decoder;
+        7 => "tool_results": repeated decode_sparse_node_chat_tool_result_from_decoder; repeated skip_node_chat_tool_result_from_decoder;
+        8 => "sent_at64": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_chat_tool_call_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_chat_tool_call_from_decoder;
+    skip_fn skip_node_chat_tool_call_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeChatToolCall";
     definition "NodeChatToolCall";
     capacity 4;
     fields [
-        1 => "tool_call_id": one kiwi_sparse_string_value;
-        2 => "tool_name": one kiwi_sparse_string_value;
-        3 => "args_json": one kiwi_sparse_string_value;
+        1 => "tool_call_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "tool_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "args_json": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_chat_tool_result_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_chat_tool_result_from_decoder;
+    skip_fn skip_node_chat_tool_result_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeChatToolResult";
     definition "NodeChatToolResult";
     capacity 4;
     fields [
-        1 => "tool_call_id": one kiwi_sparse_string_value;
-        2 => "tool_name": one kiwi_sparse_string_value;
-        3 => "result_json": one kiwi_sparse_string_value;
+        1 => "tool_call_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "tool_name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "result_json": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_chat_exchange_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_chat_exchange_from_decoder;
+    skip_fn skip_node_chat_exchange_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeChatExchange";
     definition "NodeChatExchange";
     capacity 5;
     fields [
-        1 => "node": one decode_sparse_guid_from_decoder;
-        2 => "messages": repeated decode_sparse_node_chat_message_from_decoder;
-        3 => "is_typing": one kiwi_sparse_bool_value;
-        4 => "file_updates": repeated decode_sparse_file_update_from_decoder;
+        1 => "node": one decode_sparse_guid_from_decoder; one skip_guid_from_decoder;
+        2 => "messages": repeated decode_sparse_node_chat_message_from_decoder; repeated skip_node_chat_message_from_decoder;
+        3 => "is_typing": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
+        4 => "file_updates": repeated decode_sparse_file_update_from_decoder; repeated skip_file_update_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_node_chat_compression_state_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_node_chat_compression_state_from_decoder;
+    skip_fn skip_node_chat_compression_state_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.NodeChatCompressionState";
     definition "NodeChatCompressionState";
     capacity 3;
     fields [
-        1 => "start_index": one kiwi_sparse_uint_value;
-        2 => "summary": one kiwi_sparse_string_value;
+        1 => "start_index": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "summary": one kiwi_sparse_string_value; one kiwi_skip_string_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_file_update_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_file_update_from_decoder;
+    skip_fn skip_file_update_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.FileUpdate";
     definition "FileUpdate";
     capacity 4;
     fields [
-        1 => "name": one kiwi_sparse_string_value;
-        2 => "contents": one kiwi_sparse_string_value;
-        3 => "is_deleted": one kiwi_sparse_bool_value;
+        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "contents": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        3 => "is_deleted": one kiwi_sparse_bool_value; one kiwi_skip_bool_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_ai_chat_content_part_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_ai_chat_content_part_from_decoder;
+    skip_fn skip_ai_chat_content_part_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AIChatContentPart";
     definition "AIChatContentPart";
     capacity 3;
     fields [
-        1 => "type": one decode_sparse_ai_chat_content_part_type_from_decoder;
-        2 => "value": one decode_sparse_ai_chat_content_part_any_value_from_decoder;
+        1 => "type": one decode_sparse_ai_chat_content_part_type_from_decoder; one kiwi_skip_uint_value;
+        2 => "value": one decode_sparse_ai_chat_content_part_any_value_from_decoder; one skip_ai_chat_content_part_any_value_from_decoder;
     ]
 }
 
@@ -9853,16 +10229,17 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_ai_chat_content_part_any_value_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_ai_chat_content_part_any_value_from_decoder;
+    skip_fn skip_ai_chat_content_part_any_value_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AIChatContentPartAnyValue";
     definition "AIChatContentPartAnyValue";
     capacity 3;
     fields [
-        1 => "text_value": one kiwi_sparse_string_value;
-        2 => "selected_node_ids": repeated kiwi_sparse_string_value;
+        1 => "text_value": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "selected_node_ids": repeated kiwi_sparse_string_value; repeated kiwi_skip_string_value;
     ]
 }
 
@@ -9878,31 +10255,33 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_ai_chat_message_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_ai_chat_message_from_decoder;
+    skip_fn skip_ai_chat_message_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AIChatMessage";
     definition "AIChatMessage";
     capacity 6;
     fields [
-        1 => "created_at_ms": one kiwi_sparse_uint_value;
-        2 => "role": one decode_sparse_ai_chat_message_role_from_decoder;
-        3 => "content": repeated decode_sparse_ai_chat_content_part_from_decoder;
-        4 => "client_id": one kiwi_sparse_string_value;
-        5 => "created_at_ms64": one kiwi_sparse_uint64_value;
+        1 => "created_at_ms": one kiwi_sparse_uint_value; one kiwi_skip_uint_value;
+        2 => "role": one decode_sparse_ai_chat_message_role_from_decoder; one kiwi_skip_uint_value;
+        3 => "content": repeated decode_sparse_ai_chat_content_part_from_decoder; repeated skip_ai_chat_content_part_from_decoder;
+        4 => "client_id": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        5 => "created_at_ms64": one kiwi_sparse_uint64_value; one kiwi_skip_uint64_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_ai_chat_thread_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_ai_chat_thread_from_decoder;
+    skip_fn skip_ai_chat_thread_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.AIChatThread";
     definition "AIChatThread";
     capacity 2;
     fields [
-        1 => "messages": repeated decode_sparse_ai_chat_message_from_decoder;
+        1 => "messages": repeated decode_sparse_ai_chat_message_from_decoder; repeated skip_ai_chat_message_from_decoder;
     ]
 }
 
@@ -9979,40 +10358,43 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_cooper_template_data_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_cooper_template_data_from_decoder;
+    skip_fn skip_cooper_template_data_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.CooperTemplateData";
     definition "CooperTemplateData";
     capacity 2;
     fields [
-        1 => "type": one decode_sparse_cooper_template_type_from_decoder;
+        1 => "type": one decode_sparse_cooper_template_type_from_decoder; one kiwi_skip_uint_value;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_image_import_map_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_image_import_map_from_decoder;
+    skip_fn skip_image_import_map_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ImageImportMap";
     definition "ImageImportMap";
     capacity 2;
     fields [
-        1 => "imports": repeated decode_sparse_image_import_from_decoder;
+        1 => "imports": repeated decode_sparse_image_import_from_decoder; repeated skip_image_import_from_decoder;
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_image_import_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_image_import_from_decoder;
+    skip_fn skip_image_import_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.ImageImport";
     definition "ImageImport";
     capacity 3;
     fields [
-        1 => "name": one kiwi_sparse_string_value;
-        2 => "image": one decode_sparse_image_from_decoder;
+        1 => "name": one kiwi_sparse_string_value; one kiwi_skip_string_value;
+        2 => "image": one decode_sparse_image_from_decoder; one skip_image_from_decoder;
     ]
 }
 
@@ -10027,18 +10409,19 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_descriptor_decoder! {
-    fn decode_sparse_bezier_handles_from_decoder;
+kiwi_sparse_skip_message_descriptor_decoder! {
+    sparse_fn decode_sparse_bezier_handles_from_decoder;
+    skip_fn skip_bezier_handles_from_decoder;
     env env;
     decoder decoder;
     module "Elixir.Figler.Schema.BezierHandles";
     definition "BezierHandles";
     capacity 5;
     fields [
-        1 => "p1x": one kiwi_sparse_float_value;
-        2 => "p1y": one kiwi_sparse_float_value;
-        3 => "p2x": one kiwi_sparse_float_value;
-        4 => "p2y": one kiwi_sparse_float_value;
+        1 => "p1x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        2 => "p1y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        3 => "p2x": one kiwi_sparse_float_value; one kiwi_skip_float_value;
+        4 => "p2y": one kiwi_sparse_float_value; one kiwi_skip_float_value;
     ]
 }
 
@@ -10123,17 +10506,6 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_message_decoder! {
-    fn skip_color_stop_var_from_decoder;
-    decoder decoder;
-    definition "ColorStopVar";
-    fields [
-        1 => one skip_color_from_decoder;
-        2 => one skip_variable_data_from_decoder;
-        3 => one kiwi_skip_float_value;
-    ]
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_matrix_from_decoder;
     decoder decoder;
@@ -10175,32 +10547,6 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_message_decoder! {
-    fn skip_code_source_info_from_decoder;
-    decoder decoder;
-    definition "CodeSourceInfo";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_guid_from_decoder;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_string_value;
-        6 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_custom_tool_artifact_ref_from_decoder;
-    decoder decoder;
-    definition "CustomToolArtifactRef";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-    ]
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_export_constraint_from_decoder;
     decoder decoder;
@@ -10227,37 +10573,6 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_message_decoder! {
-    fn skip_image_from_decoder;
-    decoder decoder;
-    definition "Image";
-    fields [
-        1 => bytes kiwi_skip_bytes_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_video_from_decoder;
-    decoder decoder;
-    definition "Video";
-    fields [
-        1 => bytes kiwi_skip_bytes_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_paste_source_from_decoder;
-    decoder decoder;
-    definition "PasteSource";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_guid_from_decoder;
-    ]
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_filter_color_adjust_from_decoder;
     decoder decoder;
@@ -10270,480 +10585,6 @@ kiwi_skip_struct_decoder! {
         one kiwi_skip_float_value;
         one kiwi_skip_float_value;
         one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_paint_filter_message_from_decoder;
-    decoder decoder;
-    definition "PaintFilterMessage";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_float_value;
-        6 => one kiwi_skip_float_value;
-        7 => one kiwi_skip_float_value;
-        8 => one kiwi_skip_float_value;
-        9 => one kiwi_skip_float_value;
-        10 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_paint_from_decoder;
-    decoder decoder;
-    definition "Paint";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_color_from_decoder;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_uint_value;
-        6 => repeated skip_color_stop_from_decoder;
-        7 => one skip_matrix_from_decoder;
-        8 => one skip_image_from_decoder;
-        9 => one skip_image_from_decoder;
-        16 => one skip_image_from_decoder;
-        17 => one kiwi_skip_uint_value;
-        10 => one kiwi_skip_uint_value;
-        22 => one kiwi_skip_bool_value;
-        11 => one kiwi_skip_float_value;
-        12 => one kiwi_skip_float_value;
-        13 => one skip_filter_color_adjust_from_decoder;
-        14 => one skip_paint_filter_message_from_decoder;
-        15 => repeated kiwi_skip_uint_value;
-        18 => one skip_video_from_decoder;
-        19 => one kiwi_skip_uint_value;
-        20 => one kiwi_skip_uint_value;
-        38 => one skip_variable_data_from_decoder;
-        21 => one skip_variable_data_from_decoder;
-        31 => one skip_variable_data_from_decoder;
-        23 => repeated skip_color_stop_var_from_decoder;
-        24 => one kiwi_skip_string_value;
-        25 => bytes kiwi_skip_bytes_value;
-        26 => one skip_guid_from_decoder;
-        27 => one kiwi_skip_float_value;
-        37 => one skip_vector_from_decoder;
-        28 => one kiwi_skip_uint_value;
-        29 => one kiwi_skip_uint_value;
-        30 => one kiwi_skip_uint_value;
-        32 => one skip_guid_from_decoder;
-        33 => one kiwi_skip_string_value;
-        34 => one kiwi_skip_uint_value;
-        35 => one kiwi_skip_float_value;
-        36 => one skip_vector_from_decoder;
-        39 => one skip_code_component_id_from_decoder;
-        40 => repeated skip_component_prop_assignment_from_decoder;
-        41 => one kiwi_skip_uint_value;
-        42 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_font_meta_data_from_decoder;
-    decoder decoder;
-    definition "FontMetaData";
-    fields [
-        1 => one skip_font_name_from_decoder;
-        2 => one kiwi_skip_float_value;
-        3 => bytes kiwi_skip_bytes_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_int_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_font_variation_from_decoder;
-    decoder decoder;
-    definition "FontVariation";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_text_data_from_decoder;
-    decoder decoder;
-    definition "TextData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => repeated kiwi_skip_uint_value;
-        3 => repeated skip_node_change_from_decoder;
-        12 => repeated skip_text_line_data_from_decoder;
-        8 => one kiwi_skip_uint_value;
-        10 => repeated skip_font_name_from_decoder;
-        17 => one kiwi_skip_float_value;
-        4 => one skip_vector_from_decoder;
-        5 => repeated skip_baseline_from_decoder;
-        6 => repeated skip_glyph_from_decoder;
-        7 => repeated skip_decoration_from_decoder;
-        16 => repeated skip_blockquote_from_decoder;
-        9 => repeated skip_font_meta_data_from_decoder;
-        11 => repeated skip_hyperlink_box_from_decoder;
-        13 => one kiwi_skip_int_value;
-        14 => one kiwi_skip_float_value;
-        15 => repeated kiwi_skip_float_value;
-        18 => repeated skip_mention_box_from_decoder;
-        19 => repeated skip_derived_text_line_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_derived_text_data_from_decoder;
-    decoder decoder;
-    definition "DerivedTextData";
-    fields [
-        1 => one skip_vector_from_decoder;
-        2 => repeated skip_baseline_from_decoder;
-        3 => repeated skip_glyph_from_decoder;
-        4 => repeated skip_decoration_from_decoder;
-        5 => repeated skip_blockquote_from_decoder;
-        6 => repeated skip_font_meta_data_from_decoder;
-        7 => repeated skip_hyperlink_box_from_decoder;
-        8 => one kiwi_skip_int_value;
-        9 => one kiwi_skip_float_value;
-        10 => repeated kiwi_skip_float_value;
-        11 => repeated skip_mention_box_from_decoder;
-        12 => repeated skip_derived_text_line_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_hyperlink_box_from_decoder;
-    decoder decoder;
-    definition "HyperlinkBox";
-    fields [
-        1 => one skip_rect_from_decoder;
-        2 => one kiwi_skip_string_value;
-        3 => one skip_guid_from_decoder;
-        5 => one skip_cms_item_page_target_from_decoder;
-        6 => one kiwi_skip_bool_value;
-        4 => one kiwi_skip_int_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_mention_box_from_decoder;
-    decoder decoder;
-    definition "MentionBox";
-    fields [
-        1 => one skip_rect_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_baseline_from_decoder;
-    decoder decoder;
-    definition "Baseline";
-    fields [
-        1 => one skip_vector_from_decoder;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_float_value;
-        7 => one kiwi_skip_float_value;
-        8 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_uint_value;
-        6 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_glyph_from_decoder;
-    decoder decoder;
-    definition "Glyph";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_vector_from_decoder;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_uint_value;
-        6 => one kiwi_skip_float_value;
-        7 => repeated kiwi_skip_uint_value;
-        8 => one kiwi_skip_uint_value;
-        9 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_decoration_from_decoder;
-    decoder decoder;
-    definition "Decoration";
-    fields [
-        1 => repeated skip_rect_from_decoder;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_blockquote_from_decoder;
-    decoder decoder;
-    definition "Blockquote";
-    fields [
-        1 => one skip_rect_from_decoder;
-        2 => one skip_rect_from_decoder;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_vector_data_from_decoder;
-    decoder decoder;
-    definition "VectorData";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_vector_from_decoder;
-        3 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_text_path_start_from_decoder;
-    decoder decoder;
-    definition "TextPathStart";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_guid_path_from_decoder;
-    decoder decoder;
-    definition "GUIDPath";
-    fields [
-        1 => repeated skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_symbol_data_from_decoder;
-    decoder decoder;
-    definition "SymbolData";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => repeated skip_node_change_from_decoder;
-        3 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_guid_path_mapping_from_decoder;
-    decoder decoder;
-    definition "GUIDPathMapping";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_guid_path_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_derived_breakpoint_data_from_decoder;
-    decoder decoder;
-    definition "DerivedBreakpointData";
-    fields [
-        1 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_generation_data_from_decoder;
-    decoder decoder;
-    definition "NodeGenerationData";
-    fields [
-        1 => repeated skip_node_change_from_decoder;
-        2 => one kiwi_skip_bool_value;
-        3 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_derived_immutable_frame_data_from_decoder;
-    decoder decoder;
-    definition "DerivedImmutableFrameData";
-    fields [
-        1 => repeated skip_node_change_from_decoder;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_jsx_data_from_decoder;
-    decoder decoder;
-    definition "JsxData";
-    fields [
-        1 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_derived_jsx_data_from_decoder;
-    decoder decoder;
-    definition "DerivedJsxData";
-    fields [
-        1 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_asset_id_map_from_decoder;
-    decoder decoder;
-    definition "AssetIdMap";
-    fields [
-        1 => repeated skip_asset_id_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_asset_id_entry_from_decoder;
-    decoder decoder;
-    definition "AssetIdEntry";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_asset_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_asset_ref_from_decoder;
-    decoder decoder;
-    definition "AssetRef";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_asset_id_from_decoder;
-    decoder decoder;
-    definition "AssetId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-        3 => one skip_state_group_id_from_decoder;
-        4 => one skip_style_id_from_decoder;
-        5 => one skip_symbol_id_from_decoder;
-        6 => one skip_variable_id_from_decoder;
-        7 => one skip_variable_set_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_state_group_id_from_decoder;
-    decoder decoder;
-    definition "StateGroupId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_style_id_from_decoder;
-    decoder decoder;
-    definition "StyleId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_symbol_id_from_decoder;
-    decoder decoder;
-    definition "SymbolId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_id_from_decoder;
-    decoder decoder;
-    definition "VariableID";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_override_id_from_decoder;
-    decoder decoder;
-    definition "VariableOverrideId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_set_id_from_decoder;
-    decoder decoder;
-    definition "VariableSetID";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_theme_id_from_decoder;
-    decoder decoder;
-    definition "ThemeID";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_library_id_from_decoder;
-    decoder decoder;
-    definition "CodeLibraryId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_file_id_from_decoder;
-    decoder decoder;
-    definition "CodeFileId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_component_id_from_decoder;
-    decoder decoder;
-    definition "CodeComponentId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_canvas_node_id_from_decoder;
-    decoder decoder;
-    definition "CanvasNodeId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_symbol_id_from_decoder;
-        3 => one skip_state_group_id_from_decoder;
     ]
 }
 
@@ -10762,271 +10603,6 @@ kiwi_skip_struct_decoder! {
     fields [
         one kiwi_skip_uint_value;
         one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
-    decoder decoder;
-    definition "CollaborativeTextStrippedOpRunWithIDs";
-    fields [
-        1 => one skip_collaborative_text_op_id_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => repeated skip_collaborative_text_op_id_from_decoder;
-        4 => repeated skip_collaborative_text_op_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_collaborative_text_stripped_op_run_with_loc_from_decoder;
-    decoder decoder;
-    definition "CollaborativeTextStrippedOpRunWithLoc";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_index_range_from_decoder;
-        3 => one kiwi_skip_bool_value;
-        4 => one skip_index_range_from_decoder;
-        5 => one skip_index_range_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_collaborative_text_op_run_from_decoder;
-    decoder decoder;
-    definition "CollaborativeTextOpRun";
-    fields [
-        1 => one skip_collaborative_text_op_id_from_decoder;
-        2 => repeated skip_collaborative_text_op_id_from_decoder;
-        3 => one kiwi_skip_uint_value;
-        4 => one skip_index_range_from_decoder;
-        5 => one kiwi_skip_bool_value;
-        6 => one kiwi_skip_string_value;
-        7 => repeated skip_collaborative_text_op_id_from_decoder;
-        8 => one skip_index_range_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_collaborative_plain_text_from_decoder;
-    decoder decoder;
-    definition "CollaborativePlainText";
-    fields [
-        1 => repeated skip_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
-        2 => repeated skip_collaborative_text_stripped_op_run_with_loc_from_decoder;
-        3 => bytes kiwi_skip_bytes_value;
-        4 => repeated skip_collaborative_text_op_run_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_collaborative_text_selection_from_decoder;
-    decoder decoder;
-    definition "CollaborativeTextSelection";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one skip_index_range_from_decoder;
-        4 => one kiwi_skip_bool_value;
-        5 => repeated skip_collaborative_text_op_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_responsive_text_style_variant_from_decoder;
-    decoder decoder;
-    definition "ResponsiveTextStyleVariant";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one skip_node_change_from_decoder;
-        3 => one skip_variable_data_from_decoder;
-        4 => one skip_variable_data_from_decoder;
-        5 => one skip_variable_data_from_decoder;
-        6 => one skip_variable_data_from_decoder;
-        7 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_slide_theme_props_from_decoder;
-    decoder decoder;
-    definition "SlideThemeProps";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_variable_set_id_from_decoder;
-        3 => repeated skip_style_id_from_decoder;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_bool_value;
-        6 => one skip_asset_ref_from_decoder;
-        7 => one kiwi_skip_uint_value;
-        8 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_slide_theme_map_from_decoder;
-    decoder decoder;
-    definition "SlideThemeMap";
-    fields [
-        1 => repeated skip_slide_theme_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_slide_theme_map_entry_from_decoder;
-    decoder decoder;
-    definition "SlideThemeMapEntry";
-    fields [
-        1 => one skip_theme_id_from_decoder;
-        2 => one skip_slide_theme_props_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_shared_symbol_reference_from_decoder;
-    decoder decoder;
-    definition "SharedSymbolReference";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_guid_from_decoder;
-        3 => one kiwi_skip_string_value;
-        4 => repeated skip_guid_path_mapping_from_decoder;
-        5 => bytes kiwi_skip_bytes_value;
-        6 => repeated skip_guid_mapping_from_decoder;
-        7 => one kiwi_skip_string_value;
-        8 => repeated skip_guid_path_mapping_from_decoder;
-        9 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_shared_component_master_data_from_decoder;
-    decoder decoder;
-    definition "SharedComponentMasterData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => repeated skip_guid_path_mapping_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_instance_override_stash_from_decoder;
-    decoder decoder;
-    definition "InstanceOverrideStash";
-    fields [
-        1 => one skip_guid_path_from_decoder;
-        2 => one kiwi_skip_string_value;
-        3 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_instance_override_stash_v2_from_decoder;
-    decoder decoder;
-    definition "InstanceOverrideStashV2";
-    fields [
-        1 => one skip_guid_path_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_imported_code_file_entry_from_decoder;
-    decoder decoder;
-    definition "ImportedCodeFileEntry";
-    fields [
-        1 => one skip_code_file_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_imported_code_files_from_decoder;
-    decoder decoder;
-    definition "ImportedCodeFiles";
-    fields [
-        1 => repeated skip_imported_code_file_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_effect_from_decoder;
-    decoder decoder;
-    definition "Effect";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        3 => one skip_vector_from_decoder;
-        4 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_bool_value;
-        6 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_float_value;
-        8 => one kiwi_skip_bool_value;
-        9 => one skip_variable_data_from_decoder;
-        10 => one skip_variable_data_from_decoder;
-        11 => one skip_variable_data_from_decoder;
-        12 => one skip_variable_data_from_decoder;
-        13 => one skip_variable_data_from_decoder;
-        14 => one kiwi_skip_uint_value;
-        15 => one kiwi_skip_uint_value;
-        16 => one kiwi_skip_uint_value;
-        17 => one kiwi_skip_uint_value;
-        18 => one kiwi_skip_uint_value;
-        19 => one kiwi_skip_uint_value;
-        20 => one skip_vector_from_decoder;
-        28 => one skip_vector_from_decoder;
-        21 => one kiwi_skip_float_value;
-        2 => one skip_color_from_decoder;
-        24 => one skip_color_from_decoder;
-        22 => one skip_vector_from_decoder;
-        29 => one kiwi_skip_uint_value;
-        23 => one kiwi_skip_bool_value;
-        25 => one kiwi_skip_float_value;
-        26 => one kiwi_skip_uint_value;
-        27 => one kiwi_skip_float_value;
-        30 => one kiwi_skip_float_value;
-        31 => one kiwi_skip_float_value;
-        32 => one kiwi_skip_float_value;
-        33 => one kiwi_skip_float_value;
-        34 => one kiwi_skip_float_value;
-        35 => one kiwi_skip_float_value;
-        36 => one kiwi_skip_float_value;
-        37 => one skip_variable_data_from_decoder;
-        38 => one skip_variable_data_from_decoder;
-        39 => one skip_variable_data_from_decoder;
-        40 => one skip_variable_data_from_decoder;
-        41 => one skip_variable_data_from_decoder;
-        42 => one skip_variable_data_from_decoder;
-        43 => one skip_code_component_id_from_decoder;
-        44 => repeated skip_component_prop_assignment_from_decoder;
-        45 => one skip_variable_data_from_decoder;
-        46 => one skip_variable_data_from_decoder;
-        47 => one skip_variable_data_from_decoder;
-        48 => one skip_variable_data_from_decoder;
-        49 => one skip_variable_data_from_decoder;
-        50 => one skip_variable_data_from_decoder;
-        51 => one skip_variable_data_from_decoder;
-        52 => one skip_variable_data_from_decoder;
-        53 => one skip_variable_data_from_decoder;
-        54 => one skip_variable_data_from_decoder;
-        55 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transform_modifier_from_decoder;
-    decoder decoder;
-    definition "TransformModifier";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_vector_from_decoder;
-        3 => one kiwi_skip_bool_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_uint_value;
-        6 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_uint_value;
-        8 => one kiwi_skip_uint_value;
-        9 => one kiwi_skip_float_value;
-        10 => one kiwi_skip_float_value;
     ]
 }
 
@@ -11053,62 +10629,6 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_message_decoder! {
-    fn skip_fixed_order_transform3d_from_decoder;
-    decoder decoder;
-    definition "FixedOrderTransform3d";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transform_fn_value_from_decoder;
-    decoder decoder;
-    definition "TransformFnValue";
-    fields [
-        1 => one skip_matrix4f_from_decoder;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transform_fn_from_decoder;
-    decoder decoder;
-    definition "TransformFn";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_transform_fn_value_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transform_schema_value_from_decoder;
-    decoder decoder;
-    definition "TransformSchemaValue";
-    fields [
-        1 => one skip_fixed_order_transform3d_from_decoder;
-        2 => repeated skip_transform_fn_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transform3d_from_decoder;
-    decoder decoder;
-    definition "Transform3d";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_transform_schema_value_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_number_vector2_d_from_decoder;
     decoder decoder;
@@ -11118,2586 +10638,12 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_message_decoder! {
-    fn skip_scene3d_from_decoder;
-    decoder decoder;
-    definition "Scene3d";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one skip_number_vector2_d_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transform_origin_from_decoder;
-    decoder decoder;
-    definition "TransformOrigin";
-    fields [
-        1 => one skip_number_from_decoder;
-        2 => one skip_number_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transition_info_from_decoder;
-    decoder decoder;
-    definition "TransitionInfo";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_prototype_device_from_decoder;
-    decoder decoder;
-    definition "PrototypeDevice";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_vector_from_decoder;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_overlay_background_appearance_from_decoder;
-    decoder decoder;
-    definition "OverlayBackgroundAppearance";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_color_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_export_settings_from_decoder;
-    decoder decoder;
-    definition "ExportSettings";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one skip_export_constraint_from_decoder;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_uint_value;
-        6 => one kiwi_skip_bool_value;
-        7 => one kiwi_skip_bool_value;
-        8 => one kiwi_skip_bool_value;
-        9 => one kiwi_skip_bool_value;
-        10 => one kiwi_skip_uint_value;
-        11 => one kiwi_skip_float_value;
-        12 => one kiwi_skip_bool_value;
-        13 => one kiwi_skip_int_value;
-        14 => one kiwi_skip_int_value;
-        15 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_layout_grid_from_decoder;
-    decoder decoder;
-    definition "LayoutGrid";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_bool_value;
-        4 => one kiwi_skip_int_value;
-        5 => one kiwi_skip_float_value;
-        6 => one kiwi_skip_float_value;
-        7 => one kiwi_skip_float_value;
-        8 => one skip_color_from_decoder;
-        9 => one kiwi_skip_uint_value;
-        10 => one skip_variable_data_from_decoder;
-        11 => one skip_variable_data_from_decoder;
-        12 => one skip_variable_data_from_decoder;
-        13 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_guide_from_decoder;
-    decoder decoder;
-    definition "Guide";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_float_value;
-        3 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_path_from_decoder;
-    decoder decoder;
-    definition "Path";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_dynamic_stroke_settings_from_decoder;
-    decoder decoder;
-    definition "DynamicStrokeSettings";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_scatter_stroke_settings_from_decoder;
-    decoder decoder;
-    definition "ScatterStrokeSettings";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_stretch_stroke_settings_from_decoder;
-    decoder decoder;
-    definition "StretchStrokeSettings";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_stroke_data_from_decoder;
-    decoder decoder;
-    definition "StrokeData";
-    fields [
-        1 => repeated skip_stroke_from_decoder;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_stroke_from_decoder;
-    decoder decoder;
-    definition "Stroke";
-    fields [
-        1 => one kiwi_skip_int_value;
-        2 => one kiwi_skip_float_value;
-        3 => one skip_variable_data_from_decoder;
-        4 => repeated skip_paint_from_decoder;
-        5 => one skip_style_id_from_decoder;
-        6 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_uint_value;
-        8 => one skip_number_from_decoder;
-        9 => one kiwi_skip_uint_value;
-        10 => one kiwi_skip_float_value;
-        11 => repeated kiwi_skip_float_value;
-        12 => one skip_optional_vector_from_decoder;
-        13 => one kiwi_skip_float_value;
-        14 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_width_point_from_decoder;
-    decoder decoder;
-    definition "VariableWidthPoint";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_int_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_shared_style_reference_from_decoder;
-    decoder decoder;
-    definition "SharedStyleReference";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_shared_style_master_data_from_decoder;
-    decoder decoder;
-    definition "SharedStyleMasterData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_arc_data_from_decoder;
-    decoder decoder;
-    definition "ArcData";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_symbol_link_from_decoder;
-    decoder decoder;
-    definition "SymbolLink";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_plugin_data_from_decoder;
-    decoder decoder;
-    definition "PluginData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_plugin_relaunch_data_from_decoder;
-    decoder decoder;
-    definition "PluginRelaunchData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_bool_value;
-        5 => one skip_code_component_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_multiplayer_field_version_from_decoder;
-    decoder decoder;
-    definition "MultiplayerFieldVersion";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_connector_endpoint_from_decoder;
-    decoder decoder;
-    definition "ConnectorEndpoint";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_vector_from_decoder;
-        3 => one kiwi_skip_uint_value;
-        4 => one skip_vector_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_connector_control_point_from_decoder;
-    decoder decoder;
-    definition "ConnectorControlPoint";
-    fields [
-        1 => one skip_vector_from_decoder;
-        2 => one skip_vector_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_connector_text_midpoint_from_decoder;
-    decoder decoder;
-    definition "ConnectorTextMidpoint";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_annotation_property_from_decoder;
-    decoder decoder;
-    definition "AnnotationProperty";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_annotation_category_custom_from_decoder;
-    decoder decoder;
-    definition "AnnotationCategoryCustom";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_color_from_decoder;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_annotation_category_from_decoder;
-    decoder decoder;
-    definition "AnnotationCategory";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one skip_annotation_category_custom_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_annotation_categories_from_decoder;
-    decoder decoder;
-    definition "AnnotationCategories";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => repeated skip_annotation_category_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_annotation_from_decoder;
-    decoder decoder;
-    definition "Annotation";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => repeated skip_annotation_property_from_decoder;
-        3 => one kiwi_skip_string_value;
-        4 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_annotation_measurement_from_decoder;
-    decoder decoder;
-    definition "AnnotationMeasurement";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_guid_from_decoder;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_bool_value;
-        6 => one kiwi_skip_float_value;
-        7 => one kiwi_skip_float_value;
-        8 => one skip_guid_path_from_decoder;
-        9 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_library_move_info_from_decoder;
-    decoder decoder;
-    definition "LibraryMoveInfo";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_library_move_history_item_from_decoder;
-    decoder decoder;
-    definition "LibraryMoveHistoryItem";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_developer_related_link_from_decoder;
-    decoder decoder;
-    definition "DeveloperRelatedLink";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_widget_pointer_from_decoder;
-    decoder decoder;
-    definition "WidgetPointer";
-    fields [
-        1 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_edit_info_from_decoder;
-    decoder decoder;
-    definition "EditInfo";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_section_status_info_from_decoder;
-    decoder decoder;
-    definition "SectionStatusInfo";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_buzz_approval_request_info_from_decoder;
-    decoder decoder;
-    definition "BuzzApprovalRequestInfo";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_uint_value;
-        4 => repeated kiwi_skip_string_value;
-        5 => one kiwi_skip_string_value;
-        6 => one kiwi_skip_string_value;
-        7 => repeated skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_buzz_approval_requests_from_decoder;
-    decoder decoder;
-    definition "BuzzApprovalRequests";
-    fields [
-        1 => repeated skip_buzz_approval_request_info_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_buzz_approval_node_status_info_from_decoder;
-    decoder decoder;
-    definition "BuzzApprovalNodeStatusInfo";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_bool_value;
-        3 => repeated kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_embed_info_from_decoder;
-    decoder decoder;
-    definition "CodeEmbedInfo";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_change_from_decoder;
-    decoder decoder;
-    definition "NodeChange";
-    fields [
-        1 => one skip_guid_from_decoder;
-        53 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        54 => one kiwi_skip_uint_value;
-        3 => one skip_parent_index_from_decoder;
-        55 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_uint_value;
-        56 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_string_value;
-        57 => one kiwi_skip_uint_value;
-        174 => one kiwi_skip_bool_value;
-        318 => one kiwi_skip_string_value;
-        256 => one skip_library_move_info_from_decoder;
-        281 => repeated skip_library_move_history_item_from_decoder;
-        319 => one kiwi_skip_string_value;
-        383 => one skip_asset_id_map_from_decoder;
-        49 => one kiwi_skip_uint_value;
-        101 => one kiwi_skip_uint_value;
-        157 => one kiwi_skip_bool_value;
-        161 => one kiwi_skip_bool_value;
-        376 => one kiwi_skip_bool_value;
-        163 => one kiwi_skip_uint_value;
-        191 => one kiwi_skip_string_value;
-        171 => one kiwi_skip_string_value;
-        399 => one kiwi_skip_string_value;
-        320 => one kiwi_skip_string_value;
-        345 => one skip_shared_style_master_data_from_decoder;
-        348 => one skip_shared_style_master_data_from_decoder;
-        176 => one kiwi_skip_bool_value;
-        177 => one kiwi_skip_bool_value;
-        172 => one skip_shared_style_master_data_from_decoder;
-        173 => one skip_shared_style_reference_from_decoder;
-        158 => one skip_guid_from_decoder;
-        162 => one skip_guid_from_decoder;
-        167 => one skip_guid_from_decoder;
-        168 => one skip_guid_from_decoder;
-        169 => one skip_guid_from_decoder;
-        170 => one skip_guid_from_decoder;
-        185 => one skip_guid_from_decoder;
-        332 => one skip_style_id_from_decoder;
-        333 => one skip_style_id_from_decoder;
-        334 => one skip_style_id_from_decoder;
-        335 => one skip_style_id_from_decoder;
-        336 => one skip_style_id_from_decoder;
-        580 => repeated skip_style_animation_from_decoder;
-        193 => repeated skip_paint_from_decoder;
-        194 => one skip_guid_from_decoder;
-        225 => one kiwi_skip_bool_value;
-        238 => repeated skip_state_group_property_value_order_from_decoder;
-        581 => one skip_partial_paste_annotation_from_decoder;
-        122 => one skip_shared_symbol_reference_from_decoder;
-        123 => one kiwi_skip_bool_value;
-        124 => repeated skip_guid_path_mapping_from_decoder;
-        126 => one kiwi_skip_string_value;
-        152 => one skip_shared_component_master_data_from_decoder;
-        144 => one kiwi_skip_string_value;
-        164 => repeated skip_guid_path_mapping_from_decoder;
-        228 => repeated skip_guid_path_mapping_from_decoder;
-        214 => one kiwi_skip_string_value;
-        395 => one kiwi_skip_string_value;
-        215 => one skip_guid_from_decoder;
-        216 => one kiwi_skip_string_value;
-        217 => one kiwi_skip_bool_value;
-        218 => one kiwi_skip_string_value;
-        252 => one kiwi_skip_string_value;
-        266 => repeated skip_component_prop_def_from_decoder;
-        267 => repeated skip_component_prop_ref_from_decoder;
-        483 => repeated skip_variant_prop_spec_from_decoder;
-        113 => one skip_symbol_data_from_decoder;
-        114 => one kiwi_skip_uint_value;
-        125 => repeated skip_node_change_from_decoder;
-        394 => one kiwi_skip_bool_value;
-        143 => one skip_guid_from_decoder;
-        268 => repeated skip_component_prop_assignment_from_decoder;
-        305 => one kiwi_skip_bool_value;
-        248 => repeated skip_instance_override_stash_from_decoder;
-        250 => repeated skip_instance_override_stash_v2_from_decoder;
-        111 => one skip_guid_path_from_decoder;
-        112 => one kiwi_skip_uint_value;
-        321 => one kiwi_skip_int_value;
-        382 => one kiwi_skip_uint_value;
-        463 => one kiwi_skip_bool_value;
-        495 => one kiwi_skip_bool_value;
-        21 => one kiwi_skip_float_value;
-        73 => one kiwi_skip_uint_value;
-        22 => one kiwi_skip_float_value;
-        74 => one kiwi_skip_uint_value;
-        23 => one kiwi_skip_float_value;
-        75 => one kiwi_skip_uint_value;
-        32 => one kiwi_skip_uint_value;
-        84 => one kiwi_skip_uint_value;
-        33 => one kiwi_skip_uint_value;
-        85 => one kiwi_skip_uint_value;
-        34 => one kiwi_skip_uint_value;
-        86 => one kiwi_skip_uint_value;
-        35 => one kiwi_skip_uint_value;
-        87 => one kiwi_skip_uint_value;
-        40 => one skip_number_from_decoder;
-        92 => one kiwi_skip_uint_value;
-        41 => one skip_font_name_from_decoder;
-        93 => one kiwi_skip_uint_value;
-        42 => one skip_text_data_from_decoder;
-        94 => one kiwi_skip_uint_value;
-        359 => one skip_derived_text_data_from_decoder;
-        127 => one kiwi_skip_bool_value;
-        128 => one kiwi_skip_bool_value;
-        129 => one kiwi_skip_bool_value;
-        130 => one kiwi_skip_bool_value;
-        131 => one kiwi_skip_bool_value;
-        132 => one kiwi_skip_bool_value;
-        133 => one kiwi_skip_uint_value;
-        134 => one kiwi_skip_uint_value;
-        135 => one kiwi_skip_uint_value;
-        136 => one kiwi_skip_uint_value;
-        137 => one kiwi_skip_uint_value;
-        165 => one skip_number_from_decoder;
-        202 => one kiwi_skip_string_value;
-        322 => one kiwi_skip_uint_value;
-        337 => one kiwi_skip_bool_value;
-        339 => one kiwi_skip_bool_value;
-        550 => one kiwi_skip_bool_value;
-        351 => one kiwi_skip_int_value;
-        417 => repeated skip_responsive_text_style_variant_from_decoder;
-        352 => one kiwi_skip_uint_value;
-        355 => one skip_section_status_info_from_decoder;
-        203 => one kiwi_skip_uint_value;
-        396 => one kiwi_skip_uint_value;
-        205 => repeated kiwi_skip_uint_value;
-        206 => repeated kiwi_skip_uint_value;
-        223 => one skip_hyperlink_from_decoder;
-        340 => one skip_mention_from_decoder;
-        260 => repeated skip_font_variation_from_decoder;
-        279 => one kiwi_skip_uint_value;
-        280 => one kiwi_skip_uint_value;
-        292 => one kiwi_skip_bool_value;
-        391 => one kiwi_skip_uint_value;
-        392 => one kiwi_skip_string_value;
-        6 => one kiwi_skip_bool_value;
-        58 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_bool_value;
-        59 => one kiwi_skip_uint_value;
-        434 => one kiwi_skip_uint_value;
-        8 => one kiwi_skip_float_value;
-        60 => one kiwi_skip_uint_value;
-        9 => one kiwi_skip_uint_value;
-        61 => one kiwi_skip_uint_value;
-        11 => one skip_vector_from_decoder;
-        63 => one kiwi_skip_uint_value;
-        12 => one skip_matrix_from_decoder;
-        64 => one kiwi_skip_uint_value;
-        13 => repeated kiwi_skip_float_value;
-        65 => one kiwi_skip_uint_value;
-        16 => one kiwi_skip_bool_value;
-        68 => one kiwi_skip_uint_value;
-        424 => one skip_vector_from_decoder;
-        18 => one kiwi_skip_bool_value;
-        70 => one kiwi_skip_uint_value;
-        317 => one kiwi_skip_uint_value;
-        19 => one kiwi_skip_float_value;
-        71 => one kiwi_skip_uint_value;
-        20 => one kiwi_skip_float_value;
-        72 => one kiwi_skip_uint_value;
-        26 => one kiwi_skip_float_value;
-        78 => one kiwi_skip_uint_value;
-        29 => one kiwi_skip_uint_value;
-        81 => one kiwi_skip_uint_value;
-        30 => one kiwi_skip_uint_value;
-        82 => one kiwi_skip_uint_value;
-        497 => one skip_number_from_decoder;
-        31 => one kiwi_skip_uint_value;
-        83 => one kiwi_skip_uint_value;
-        38 => repeated skip_paint_from_decoder;
-        90 => one kiwi_skip_uint_value;
-        39 => repeated skip_paint_from_decoder;
-        91 => one kiwi_skip_uint_value;
-        43 => repeated skip_effect_from_decoder;
-        95 => one kiwi_skip_uint_value;
-        50 => one skip_color_from_decoder;
-        102 => one kiwi_skip_uint_value;
-        51 => repeated skip_path_from_decoder;
-        103 => one kiwi_skip_uint_value;
-        52 => repeated skip_path_from_decoder;
-        104 => one kiwi_skip_uint_value;
-        564 => repeated skip_path_from_decoder;
-        411 => repeated skip_paint_from_decoder;
-        412 => one kiwi_skip_bool_value;
-        413 => one skip_number_from_decoder;
-        415 => one skip_number_from_decoder;
-        416 => one kiwi_skip_uint_value;
-        455 => repeated skip_transform_modifier_from_decoder;
-        570 => one skip_transform3d_from_decoder;
-        571 => one skip_stroke_data_from_decoder;
-        572 => one skip_scene3d_from_decoder;
-        587 => one skip_transform_origin_from_decoder;
-        145 => one kiwi_skip_float_value;
-        146 => one kiwi_skip_float_value;
-        147 => one kiwi_skip_float_value;
-        148 => one kiwi_skip_float_value;
-        149 => one kiwi_skip_bool_value;
-        150 => one kiwi_skip_bool_value;
-        151 => one kiwi_skip_bool_value;
-        423 => one skip_optional_vector_from_decoder;
-        258 => one kiwi_skip_bool_value;
-        287 => one kiwi_skip_bool_value;
-        288 => one kiwi_skip_bool_value;
-        289 => one kiwi_skip_bool_value;
-        290 => one kiwi_skip_bool_value;
-        294 => one kiwi_skip_bool_value;
-        295 => one kiwi_skip_float_value;
-        296 => one kiwi_skip_float_value;
-        297 => one kiwi_skip_float_value;
-        298 => one kiwi_skip_float_value;
-        299 => one kiwi_skip_bool_value;
-        28 => one kiwi_skip_uint_value;
-        80 => one kiwi_skip_uint_value;
-        105 => one kiwi_skip_uint_value;
-        106 => one kiwi_skip_uint_value;
-        107 => one kiwi_skip_float_value;
-        108 => one kiwi_skip_uint_value;
-        109 => one kiwi_skip_float_value;
-        110 => one kiwi_skip_uint_value;
-        120 => one kiwi_skip_uint_value;
-        121 => one kiwi_skip_uint_value;
-        208 => one kiwi_skip_uint_value;
-        209 => one kiwi_skip_float_value;
-        210 => one kiwi_skip_float_value;
-        211 => one kiwi_skip_uint_value;
-        212 => one kiwi_skip_uint_value;
-        229 => one kiwi_skip_uint_value;
-        230 => one kiwi_skip_uint_value;
-        231 => one kiwi_skip_uint_value;
-        232 => one kiwi_skip_float_value;
-        233 => one kiwi_skip_float_value;
-        234 => one kiwi_skip_float_value;
-        236 => one kiwi_skip_uint_value;
-        269 => one kiwi_skip_uint_value;
-        271 => one kiwi_skip_bool_value;
-        323 => one kiwi_skip_uint_value;
-        324 => one kiwi_skip_float_value;
-        325 => one skip_optional_vector_from_decoder;
-        326 => one skip_optional_vector_from_decoder;
-        343 => one kiwi_skip_uint_value;
-        406 => repeated kiwi_skip_int_value;
-        574 => one kiwi_skip_uint_value;
-        435 => one skip_guid_position_map_from_decoder;
-        436 => one skip_guid_position_map_from_decoder;
-        437 => one kiwi_skip_float_value;
-        438 => one kiwi_skip_float_value;
-        439 => one skip_guid_from_decoder;
-        440 => one skip_guid_from_decoder;
-        441 => one kiwi_skip_uint_value;
-        442 => one kiwi_skip_uint_value;
-        474 => one skip_guid_grid_track_size_map_from_decoder;
-        475 => one skip_guid_grid_track_size_map_from_decoder;
-        476 => one kiwi_skip_uint_value;
-        477 => one kiwi_skip_uint_value;
-        555 => one kiwi_skip_uint_value;
-        556 => one kiwi_skip_bool_value;
-        344 => one kiwi_skip_bool_value;
-        139 => one skip_guid_from_decoder;
-        140 => one skip_guid_from_decoder;
-        141 => one skip_color_from_decoder;
-        153 => one skip_transition_info_from_decoder;
-        154 => one kiwi_skip_uint_value;
-        155 => one kiwi_skip_float_value;
-        156 => one kiwi_skip_uint_value;
-        181 => one kiwi_skip_bool_value;
-        182 => one kiwi_skip_uint_value;
-        183 => one kiwi_skip_string_value;
-        184 => one skip_prototype_device_from_decoder;
-        187 => one kiwi_skip_uint_value;
-        188 => one kiwi_skip_float_value;
-        189 => one kiwi_skip_bool_value;
-        190 => one kiwi_skip_float_value;
-        192 => one kiwi_skip_bool_value;
-        207 => one kiwi_skip_bool_value;
-        226 => repeated skip_prototype_interaction_from_decoder;
-        426 => repeated skip_prototype_interaction_from_decoder;
-        249 => one skip_prototype_starting_point_from_decoder;
-        204 => repeated skip_plugin_data_from_decoder;
-        219 => repeated skip_plugin_relaunch_data_from_decoder;
-        242 => one skip_connector_endpoint_from_decoder;
-        243 => one skip_connector_endpoint_from_decoder;
-        244 => one kiwi_skip_uint_value;
-        245 => one kiwi_skip_uint_value;
-        246 => one kiwi_skip_uint_value;
-        253 => repeated skip_connector_control_point_from_decoder;
-        479 => repeated skip_connector_control_point_from_decoder;
-        255 => one skip_connector_text_midpoint_from_decoder;
-        373 => one kiwi_skip_uint_value;
-        533 => one kiwi_skip_int_value;
-        369 => repeated skip_annotation_from_decoder;
-        384 => repeated skip_annotation_measurement_from_decoder;
-        453 => one skip_annotation_categories_from_decoder;
-        241 => one kiwi_skip_uint_value;
-        247 => one kiwi_skip_float_value;
-        530 => one kiwi_skip_bool_value;
-        254 => one skip_derived_immutable_frame_data_from_decoder;
-        338 => one skip_multiplayer_field_version_from_decoder;
-        240 => one skip_node_generation_data_from_decoder;
-        491 => one skip_jsx_data_from_decoder;
-        492 => one skip_derived_jsx_data_from_decoder;
-        493 => one kiwi_skip_string_value;
-        259 => one kiwi_skip_uint_value;
-        433 => one kiwi_skip_uint_value;
-        278 => one skip_link_preview_data_from_decoder;
-        282 => one kiwi_skip_bool_value;
-        283 => one kiwi_skip_bool_value;
-        300 => one skip_video_playback_from_decoder;
-        301 => one skip_stamp_data_from_decoder;
-        370 => one skip_section_preset_info_from_decoder;
-        409 => one skip_platform_shape_definition_from_decoder;
-        273 => one skip_multiplayer_map_from_decoder;
-        274 => one kiwi_skip_uint_value;
-        275 => one skip_widget_derived_subtree_cursor_from_decoder;
-        276 => one skip_widget_pointer_from_decoder;
-        285 => one kiwi_skip_uint_value;
-        286 => one kiwi_skip_string_value;
-        291 => one skip_widget_hover_style_from_decoder;
-        293 => one kiwi_skip_bool_value;
-        360 => one kiwi_skip_bool_value;
-        262 => one skip_widget_metadata_from_decoder;
-        263 => repeated kiwi_skip_uint_value;
-        265 => repeated skip_widget_property_menu_item_from_decoder;
-        401 => one kiwi_skip_uint_value;
-        489 => one skip_multiplayer_map_from_decoder;
-        308 => one skip_table_row_column_position_map_from_decoder;
-        309 => one skip_table_row_column_position_map_from_decoder;
-        310 => one skip_table_row_column_size_map_from_decoder;
-        311 => one skip_table_row_column_size_map_from_decoder;
-        538 => one skip_table_merged_cell_map_from_decoder;
-        371 => one skip_multiplayer_map_from_decoder;
-        372 => one skip_multiplayer_map_from_decoder;
-        402 => one kiwi_skip_uint_value;
-        486 => one kiwi_skip_bool_value;
-        389 => one kiwi_skip_string_value;
-        410 => one kiwi_skip_bool_value;
-        573 => one skip_multiplayer_map_from_decoder;
-        379 => one skip_theme_id_from_decoder;
-        381 => one skip_slide_theme_data_from_decoder;
-        390 => one skip_slide_theme_map_from_decoder;
-        393 => one kiwi_skip_string_value;
-        443 => one kiwi_skip_uint_value;
-        456 => one kiwi_skip_string_value;
-        363 => one skip_guid_from_decoder;
-        362 => one skip_guid_from_decoder;
-        364 => one kiwi_skip_string_value;
-        366 => one kiwi_skip_uint_value;
-        367 => one skip_diagram_parent_index_from_decoder;
-        368 => one kiwi_skip_uint_value;
-        380 => one kiwi_skip_bool_value;
-        251 => one kiwi_skip_uint_value;
-        257 => one skip_internal_data_for_test_from_decoder;
-        14 => one kiwi_skip_bool_value;
-        66 => one kiwi_skip_uint_value;
-        15 => one kiwi_skip_bool_value;
-        67 => one kiwi_skip_uint_value;
-        17 => one kiwi_skip_bool_value;
-        69 => one kiwi_skip_uint_value;
-        25 => one kiwi_skip_float_value;
-        77 => one kiwi_skip_uint_value;
-        27 => one kiwi_skip_float_value;
-        79 => one kiwi_skip_uint_value;
-        37 => one kiwi_skip_uint_value;
-        89 => one kiwi_skip_uint_value;
-        45 => repeated skip_export_settings_from_decoder;
-        97 => one kiwi_skip_uint_value;
-        46 => one kiwi_skip_uint_value;
-        98 => one kiwi_skip_uint_value;
-        47 => repeated skip_layout_grid_from_decoder;
-        99 => one kiwi_skip_uint_value;
-        115 => one kiwi_skip_bool_value;
-        116 => one kiwi_skip_uint_value;
-        117 => one kiwi_skip_bool_value;
-        118 => one kiwi_skip_uint_value;
-        36 => one kiwi_skip_uint_value;
-        88 => one kiwi_skip_uint_value;
-        44 => one kiwi_skip_uint_value;
-        96 => one kiwi_skip_uint_value;
-        10 => one kiwi_skip_uint_value;
-        62 => one kiwi_skip_uint_value;
-        24 => one kiwi_skip_float_value;
-        76 => one kiwi_skip_uint_value;
-        195 => one skip_arc_data_from_decoder;
-        48 => one skip_vector_data_from_decoder;
-        100 => one kiwi_skip_uint_value;
-        425 => one kiwi_skip_uint_value;
-        432 => one skip_text_path_start_from_decoder;
-        119 => one kiwi_skip_bool_value;
-        138 => repeated skip_guide_from_decoder;
-        142 => one kiwi_skip_bool_value;
-        159 => one kiwi_skip_uint_value;
-        160 => one kiwi_skip_float_value;
-        166 => one skip_vector_from_decoder;
-        175 => one kiwi_skip_bool_value;
-        178 => one kiwi_skip_uint_value;
-        179 => one skip_vector_from_decoder;
-        180 => one kiwi_skip_string_value;
-        186 => one kiwi_skip_uint_value;
-        196 => one kiwi_skip_int_value;
-        197 => one kiwi_skip_uint_value;
-        198 => one kiwi_skip_uint_value;
-        199 => one skip_vector_from_decoder;
-        200 => one kiwi_skip_uint_value;
-        201 => one skip_overlay_background_appearance_from_decoder;
-        213 => one skip_guid_from_decoder;
-        220 => one kiwi_skip_bool_value;
-        221 => one kiwi_skip_uint_value;
-        222 => one kiwi_skip_bool_value;
-        224 => one skip_key_trigger_from_decoder;
-        227 => one kiwi_skip_string_value;
-        235 => repeated skip_guid_from_decoder;
-        237 => repeated skip_symbol_link_from_decoder;
-        239 => one skip_text_list_data_from_decoder;
-        261 => one kiwi_skip_bool_value;
-        264 => one kiwi_skip_float_value;
-        270 => one skip_embed_data_from_decoder;
-        272 => one skip_rich_media_data_from_decoder;
-        277 => one skip_multiplayer_map_from_decoder;
-        284 => one kiwi_skip_bool_value;
-        302 => one kiwi_skip_uint_value;
-        303 => one kiwi_skip_uint_value;
-        357 => one skip_aria_attributes_map_from_decoder;
-        304 => one kiwi_skip_string_value;
-        490 => one kiwi_skip_bool_value;
-        306 => one skip_variable_data_from_decoder;
-        307 => one skip_variable_data_map_from_decoder;
-        316 => one skip_variable_mode_by_set_map_from_decoder;
-        312 => repeated skip_variable_set_mode_from_decoder;
-        313 => one skip_variable_set_id_from_decoder;
-        314 => one kiwi_skip_uint_value;
-        315 => one skip_variable_data_values_from_decoder;
-        350 => one kiwi_skip_string_value;
-        566 => one kiwi_skip_uint_value;
-        353 => repeated kiwi_skip_uint_value;
-        445 => one skip_variable_data_map_from_decoder;
-        358 => one skip_code_syntax_map_from_decoder;
-        388 => one skip_paste_source_from_decoder;
-        397 => one kiwi_skip_uint_value;
-        446 => one skip_guid_from_decoder;
-        482 => one kiwi_skip_uint64_value;
-        447 => repeated skip_variable_width_point_from_decoder;
-        448 => one skip_dynamic_stroke_settings_from_decoder;
-        449 => one skip_scatter_stroke_settings_from_decoder;
-        450 => one skip_stretch_stroke_settings_from_decoder;
-        488 => repeated skip_matrix_from_decoder;
-        452 => one kiwi_skip_uint_value;
-        542 => one skip_optional_vector_from_decoder;
-        554 => one kiwi_skip_float_value;
-        377 => one skip_variable_set_id_from_decoder;
-        464 => one skip_variable_id_from_decoder;
-        378 => one skip_variable_id_or_variable_override_id_from_decoder;
-        385 => one kiwi_skip_bool_value;
-        386 => one kiwi_skip_string_value;
-        517 => one skip_inherited_variables_data_from_decoder;
-        361 => one skip_handoff_status_map_from_decoder;
-        327 => one skip_agenda_position_map_from_decoder;
-        328 => one skip_agenda_metadata_map_from_decoder;
-        329 => one skip_migration_status_from_decoder;
-        330 => one kiwi_skip_bool_value;
-        331 => one skip_edit_info_from_decoder;
-        341 => one kiwi_skip_uint_value;
-        342 => one skip_symbol_id_from_decoder;
-        346 => one kiwi_skip_uint_value;
-        347 => one kiwi_skip_string_value;
-        349 => one kiwi_skip_uint_value;
-        354 => repeated skip_developer_related_link_from_decoder;
-        356 => one kiwi_skip_string_value;
-        365 => one skip_edit_scope_info_from_decoder;
-        374 => one kiwi_skip_uint_value;
-        375 => one kiwi_skip_uint_value;
-        403 => one kiwi_skip_bool_value;
-        387 => one kiwi_skip_bool_value;
-        500 => one skip_derived_breakpoint_data_from_decoder;
-        398 => one skip_guid_from_decoder;
-        458 => one kiwi_skip_bool_value;
-        457 => one skip_guid_from_decoder;
-        462 => one skip_guid_from_decoder;
-        501 => one kiwi_skip_float_value;
-        522 => one kiwi_skip_bool_value;
-        400 => one skip_responsive_set_settings_from_decoder;
-        404 => one skip_node_behaviors_from_decoder;
-        414 => one kiwi_skip_string_value;
-        534 => repeated skip_collaborative_text_op_id_from_decoder;
-        444 => one skip_collaborative_plain_text_from_decoder;
-        427 => one skip_code_library_id_from_decoder;
-        467 => one skip_imported_code_files_from_decoder;
-        468 => one skip_canvas_node_id_from_decoder;
-        498 => one kiwi_skip_bool_value;
-        502 => one kiwi_skip_string_value;
-        503 => one kiwi_skip_uint_value;
-        504 => one kiwi_skip_string_value;
-        515 => repeated kiwi_skip_string_value;
-        524 => repeated skip_used_make_library_from_decoder;
-        518 => one kiwi_skip_string_value;
-        520 => one kiwi_skip_bool_value;
-        551 => one kiwi_skip_bool_value;
-        531 => one skip_prototype_device_from_decoder;
-        525 => repeated skip_code_example_from_decoder;
-        428 => one skip_code_file_id_from_decoder;
-        430 => one kiwi_skip_string_value;
-        547 => one kiwi_skip_string_value;
-        429 => one skip_code_component_id_from_decoder;
-        487 => one kiwi_skip_bool_value;
-        431 => one kiwi_skip_uint_value;
-        451 => repeated skip_node_chat_message_from_decoder;
-        485 => one skip_node_chat_compression_state_from_decoder;
-        496 => one skip_ai_chat_thread_from_decoder;
-        484 => one kiwi_skip_string_value;
-        459 => one skip_code_snapshot_from_decoder;
-        589 => one skip_code_snapshot_layers_from_decoder;
-        480 => one kiwi_skip_uint_value;
-        465 => one kiwi_skip_bool_value;
-        469 => one kiwi_skip_bool_value;
-        470 => one kiwi_skip_bool_value;
-        471 => one kiwi_skip_bool_value;
-        481 => one skip_canvas_node_id_from_decoder;
-        473 => one skip_image_import_map_from_decoder;
-        516 => one kiwi_skip_uint_value;
-        472 => one kiwi_skip_string_value;
-        478 => one skip_code_behavior_data_from_decoder;
-        519 => one kiwi_skip_uint_value;
-        527 => one kiwi_skip_bool_value;
-        532 => one skip_code_embed_info_from_decoder;
-        546 => one kiwi_skip_bool_value;
-        558 => one skip_code_source_info_from_decoder;
-        536 => one kiwi_skip_string_value;
-        537 => bytes kiwi_skip_bytes_value;
-        419 => one skip_cms_selector_from_decoder;
-        420 => one skip_cms_consumption_map_from_decoder;
-        460 => one skip_cms_rich_text_style_map_from_decoder;
-        539 => one skip_symbol_id_from_decoder;
-        540 => one skip_repeater_cms_override_data_from_decoder;
-        549 => one skip_repeater_symbol_override_data_from_decoder;
-        541 => one skip_repeater_override_data_from_decoder;
-        405 => repeated kiwi_skip_uint_value;
-        408 => one kiwi_skip_string_value;
-        407 => one skip_first_draft_data_from_decoder;
-        418 => one skip_first_draft_kit_element_data_from_decoder;
-        421 => one skip_cooper_revert_data_from_decoder;
-        461 => one skip_cooper_template_data_from_decoder;
-        528 => one skip_buzz_approval_requests_from_decoder;
-        529 => one skip_buzz_approval_node_status_info_from_decoder;
-        422 => one skip_hub_file_attribution_from_decoder;
-        454 => one skip_managed_string_data_from_decoder;
-        466 => one skip_thumbnail_info_from_decoder;
-        494 => one skip_ai_canvas_prompt_from_decoder;
-        499 => one skip_canvas_node_id_from_decoder;
-        548 => one kiwi_skip_string_value;
-        523 => one skip_trss_transform2_d_from_decoder;
-        506 => one kiwi_skip_int64_value;
-        507 => one skip_keyframe_value_data_from_decoder;
-        586 => one skip_variable_data_from_decoder;
-        505 => one kiwi_skip_uint_value;
-        508 => one skip_bezier_handles_from_decoder;
-        535 => one skip_easing_data_from_decoder;
-        509 => one kiwi_skip_uint_value;
-        510 => one kiwi_skip_uint_value;
-        545 => one kiwi_skip_bool_value;
-        511 => one skip_guid_from_decoder;
-        512 => one kiwi_skip_uint64_value;
-        513 => one kiwi_skip_int64_value;
-        543 => one kiwi_skip_bool_value;
-        514 => one kiwi_skip_uint_value;
-        552 => one skip_timeline_definitions_map_from_decoder;
-        553 => one skip_timeline_assignments_map_from_decoder;
-        521 => one skip_animation_presets_from_decoder;
-        582 => repeated skip_style_id_for_animation_from_decoder;
-        583 => one skip_animation_preset_id_from_decoder;
-        568 => one skip_tools_from_decoder;
-        569 => one skip_custom_effects_from_decoder;
-        526 => one skip_transition_override_data_from_decoder;
-        544 => one kiwi_skip_bool_value;
-        557 => one skip_source_control_config_from_decoder;
-        559 => one kiwi_skip_uint_value;
-        560 => one skip_collaborative_plain_text_from_decoder;
-        561 => one kiwi_skip_string_value;
-        562 => one kiwi_skip_string_value;
-        563 => one kiwi_skip_int_value;
-        575 => one kiwi_skip_string_value;
-        576 => one kiwi_skip_int_value;
-        577 => one kiwi_skip_int_value;
-        578 => one skip_table_row_column_size_map_from_decoder;
-        579 => one skip_table_row_column_size_map_from_decoder;
-        590 => one kiwi_skip_string_value;
-        565 => one kiwi_skip_bool_value;
-        584 => one kiwi_skip_string_value;
-        585 => one kiwi_skip_int_value;
-        567 => one kiwi_skip_bool_value;
-        588 => one skip_custom_tool_artifact_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_git_repo_ref_from_decoder;
-    decoder decoder;
-    definition "GitRepoRef";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_source_control_config_from_decoder;
-    decoder decoder;
-    definition "SourceControlConfig";
-    fields [
-        1 => one skip_git_repo_ref_from_decoder;
-        2 => one skip_git_repo_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_snapshot_from_decoder;
-    decoder decoder;
-    definition "CodeSnapshot";
-    fields [
-        6 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_uint_value;
-        1 => repeated skip_paint_from_decoder;
-        2 => one skip_vector_from_decoder;
-        3 => one skip_vector_from_decoder;
-        5 => one skip_vector_from_decoder;
-        4 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_output_layer_from_decoder;
-    decoder decoder;
-    definition "CodeOutputLayer";
-    fields [
-        1 => one skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_snapshot_layers_from_decoder;
-    decoder decoder;
-    definition "CodeSnapshotLayers";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => repeated skip_code_output_layer_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_behavior_data_from_decoder;
-    decoder decoder;
-    definition "CodeBehaviorData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => repeated kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_example_from_decoder;
-    decoder decoder;
-    definition "CodeExample";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_used_make_library_from_decoder;
-    decoder decoder;
-    definition "UsedMakeLibrary";
-    fields [
-        1 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cookie_banner_text_from_decoder;
-    decoder decoder;
-    definition "CookieBannerText";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_string_value;
-        6 => one kiwi_skip_string_value;
-        7 => one kiwi_skip_string_value;
-        8 => one kiwi_skip_string_value;
-        9 => one kiwi_skip_string_value;
-        10 => one kiwi_skip_string_value;
-        11 => one kiwi_skip_string_value;
-        12 => one kiwi_skip_string_value;
-        13 => one kiwi_skip_string_value;
-        14 => one kiwi_skip_string_value;
-        15 => one kiwi_skip_string_value;
-        16 => one kiwi_skip_string_value;
-        17 => one kiwi_skip_string_value;
-        18 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cookie_banner_settings_from_decoder;
-    decoder decoder;
-    definition "CookieBannerSettings";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_uint_value;
-        6 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_uint_value;
-        8 => one kiwi_skip_string_value;
-        9 => one skip_cookie_banner_text_from_decoder;
-        10 => one skip_guid_from_decoder;
-        11 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_responsive_set_settings_from_decoder;
-    decoder decoder;
-    definition "ResponsiveSetSettings";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_float_value;
-        6 => one kiwi_skip_float_value;
-        7 => one kiwi_skip_float_value;
-        8 => one kiwi_skip_string_value;
-        9 => one kiwi_skip_string_value;
-        10 => one kiwi_skip_string_value;
-        11 => one kiwi_skip_string_value;
-        12 => one kiwi_skip_bool_value;
-        13 => one kiwi_skip_string_value;
-        14 => one kiwi_skip_string_value;
-        15 => one kiwi_skip_string_value;
-        16 => one kiwi_skip_string_value;
-        17 => one skip_guid_from_decoder;
-        18 => one skip_guid_from_decoder;
-        19 => one kiwi_skip_bool_value;
-        20 => one kiwi_skip_bool_value;
-        21 => one skip_cookie_banner_settings_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_selector_from_decoder;
-    decoder decoder;
-    definition "CMSSelector";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_cms_filter_critera_from_decoder;
-        3 => repeated skip_cms_selector_sort_from_decoder;
-        4 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_filter_critera_from_decoder;
-    decoder decoder;
-    definition "CMSFilterCritera";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => repeated skip_cms_selector_filter_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_selector_filter_from_decoder;
-    decoder decoder;
-    definition "CMSSelectorFilter";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_selector_sort_from_decoder;
-    decoder decoder;
-    definition "CMSSelectorSort";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_consumption_map_from_decoder;
-    decoder decoder;
-    definition "CMSConsumptionMap";
-    fields [
-        1 => repeated skip_cms_consumption_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_consumption_map_entry_from_decoder;
-    decoder decoder;
-    definition "CMSConsumptionMapEntry";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_rich_text_style_map_from_decoder;
-    decoder decoder;
-    definition "CMSRichTextStyleMap";
-    fields [
-        1 => repeated skip_cms_rich_text_style_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_rich_text_style_entry_from_decoder;
-    decoder decoder;
-    definition "CMSRichTextStyleEntry";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_cms_rich_text_descriptor_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_rich_text_descriptor_from_decoder;
-    decoder decoder;
-    definition "CMSRichTextDescriptor";
-    fields [
-        1 => one skip_style_id_from_decoder;
-        2 => repeated skip_font_name_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_repeater_cms_override_data_from_decoder;
-    decoder decoder;
-    definition "RepeaterCmsOverrideData";
-    fields [
-        1 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_repeater_override_data_from_decoder;
-    decoder decoder;
-    definition "RepeaterOverrideData";
-    fields [
-        1 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_repeater_symbol_override_data_from_decoder;
-    decoder decoder;
-    definition "RepeaterSymbolOverrideData";
-    fields [
-        1 => repeated skip_repeater_position_overrides_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_repeater_position_overrides_from_decoder;
-    decoder decoder;
-    definition "RepeaterPositionOverrides";
-    fields [
-        1 => one skip_parent_index_from_decoder;
-        2 => repeated skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_inherited_variables_data_from_decoder;
-    decoder decoder;
-    definition "InheritedVariablesData";
-    fields [
-        1 => repeated skip_inherited_variable_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_inherited_variable_entry_from_decoder;
-    decoder decoder;
-    definition "InheritedVariableEntry";
-    fields [
-        1 => one skip_variable_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_hub_file_attribution_from_decoder;
-    decoder decoder;
-    definition "HubFileAttribution";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_data_from_decoder;
-    decoder decoder;
-    definition "ManagedStringData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one skip_managed_string_node_from_decoder;
-        5 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_node_from_decoder;
-    decoder decoder;
-    definition "ManagedStringNode";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_managed_string_text_node_data_from_decoder;
-        3 => one skip_managed_string_concatenate_ast_node_data_from_decoder;
-        4 => one skip_managed_string_plural_ast_node_data_from_decoder;
-        5 => one skip_managed_string_placeholder_ast_node_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_text_node_data_from_decoder;
-    decoder decoder;
-    definition "ManagedStringTextNodeData";
-    fields [
-        1 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_concatenate_ast_node_data_from_decoder;
-    decoder decoder;
-    definition "ManagedStringConcatenateAstNodeData";
-    fields [
-        1 => repeated skip_managed_string_node_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_plural_ast_node_data_from_decoder;
-    decoder decoder;
-    definition "ManagedStringPluralAstNodeData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => repeated skip_managed_string_plural_type_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_plural_type_map_entry_from_decoder;
-    decoder decoder;
-    definition "ManagedStringPluralTypeMapEntry";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_managed_string_node_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_placeholder_ast_node_data_from_decoder;
-    decoder decoder;
-    definition "ManagedStringPlaceholderAstNodeData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cooper_revert_data_from_decoder;
-    decoder decoder;
-    definition "CooperRevertData";
-    fields [
-        1 => one skip_node_change_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_video_playback_from_decoder;
-    decoder decoder;
-    definition "VideoPlayback";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one kiwi_skip_bool_value;
-        3 => one kiwi_skip_bool_value;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_uint_value;
-        6 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_widget_hover_style_from_decoder;
-    decoder decoder;
-    definition "WidgetHoverStyle";
-    fields [
-        1 => repeated skip_paint_from_decoder;
-        2 => repeated skip_paint_from_decoder;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_bool_value;
-        6 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_widget_derived_subtree_cursor_from_decoder;
-    decoder decoder;
-    definition "WidgetDerivedSubtreeCursor";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_multiplayer_map_from_decoder;
-    decoder decoder;
-    definition "MultiplayerMap";
-    fields [
-        1 => repeated skip_multiplayer_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_multiplayer_map_entry_from_decoder;
-    decoder decoder;
-    definition "MultiplayerMapEntry";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_data_map_from_decoder;
-    decoder decoder;
-    definition "VariableDataMap";
-    fields [
-        1 => repeated skip_variable_data_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_data_map_entry_from_decoder;
-    decoder decoder;
-    definition "VariableDataMapEntry";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_variable_data_from_decoder;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_mode_by_set_map_from_decoder;
-    decoder decoder;
-    definition "VariableModeBySetMap";
-    fields [
-        1 => repeated skip_variable_mode_by_set_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_mode_by_set_map_entry_from_decoder;
-    decoder decoder;
-    definition "VariableModeBySetMapEntry";
-    fields [
-        1 => one skip_variable_set_id_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_variable_set_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_syntax_map_from_decoder;
-    decoder decoder;
-    definition "CodeSyntaxMap";
-    fields [
-        1 => repeated skip_code_syntax_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_syntax_map_entry_from_decoder;
-    decoder decoder;
-    definition "CodeSyntaxMapEntry";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_table_merged_cell_map_from_decoder;
-    decoder decoder;
-    definition "TableMergedCellMap";
-    fields [
-        1 => repeated skip_table_merged_cell_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_table_merged_cell_map_entry_from_decoder;
-    decoder decoder;
-    definition "TableMergedCellMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one kiwi_skip_int_value;
-        4 => one kiwi_skip_int_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_table_row_column_position_map_from_decoder;
-    decoder decoder;
-    definition "TableRowColumnPositionMap";
-    fields [
-        1 => repeated skip_table_row_column_position_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_table_row_column_position_map_entry_from_decoder;
-    decoder decoder;
-    definition "TableRowColumnPositionMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_guid_position_map_from_decoder;
-    decoder decoder;
-    definition "GUIDPositionMap";
-    fields [
-        1 => repeated skip_guid_position_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_guid_position_map_entry_from_decoder;
-    decoder decoder;
-    definition "GUIDPositionMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_guid_grid_track_size_map_from_decoder;
-    decoder decoder;
-    definition "GUIDGridTrackSizeMap";
-    fields [
-        1 => repeated skip_guid_grid_track_size_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_guid_grid_track_size_map_entry_from_decoder;
-    decoder decoder;
-    definition "GUIDGridTrackSizeMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_grid_track_size_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_object_animation_list_from_decoder;
-    decoder decoder;
-    definition "ObjectAnimationList";
-    fields [
-        1 => repeated skip_object_animation_list_item_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_object_animation_list_item_from_decoder;
-    decoder decoder;
-    definition "ObjectAnimationListItem";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_prototype_action_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_grid_track_size_from_decoder;
-    decoder decoder;
-    definition "GridTrackSize";
-    fields [
-        1 => one skip_grid_track_sizing_function_from_decoder;
-        2 => one skip_grid_track_sizing_function_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_grid_track_sizing_function_from_decoder;
-    decoder decoder;
-    definition "GridTrackSizingFunction";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_table_row_column_size_map_from_decoder;
-    decoder decoder;
-    definition "TableRowColumnSizeMap";
-    fields [
-        1 => repeated skip_table_row_column_size_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_table_row_column_size_map_entry_from_decoder;
-    decoder decoder;
-    definition "TableRowColumnSizeMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agenda_position_map_from_decoder;
-    decoder decoder;
-    definition "AgendaPositionMap";
-    fields [
-        1 => repeated skip_agenda_position_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agenda_position_map_entry_from_decoder;
-    decoder decoder;
-    definition "AgendaPositionMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agenda_metadata_map_from_decoder;
-    decoder decoder;
-    definition "AgendaMetadataMap";
-    fields [
-        1 => repeated skip_agenda_metadata_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agenda_metadata_map_entry_from_decoder;
-    decoder decoder;
-    definition "AgendaMetadataMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_agenda_metadata_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agenda_metadata_from_decoder;
-    decoder decoder;
-    definition "AgendaMetadata";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one skip_guid_from_decoder;
-        4 => one skip_agenda_timer_info_from_decoder;
-        5 => one skip_agenda_vote_info_from_decoder;
-        6 => one skip_agenda_music_info_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agenda_timer_info_from_decoder;
-    decoder decoder;
-    definition "AgendaTimerInfo";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agenda_vote_info_from_decoder;
-    decoder decoder;
-    definition "AgendaVoteInfo";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agenda_music_info_from_decoder;
-    decoder decoder;
-    definition "AgendaMusicInfo";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_diagram_parent_index_from_decoder;
     decoder decoder;
     fields [
         one skip_guid_from_decoder;
         one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_component_prop_ref_from_decoder;
-    decoder decoder;
-    definition "ComponentPropRef";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_guid_from_decoder;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_component_prop_assignment_from_decoder;
-    decoder decoder;
-    definition "ComponentPropAssignment";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_component_prop_value_from_decoder;
-        3 => one skip_variable_data_from_decoder;
-        4 => one skip_derived_text_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_component_prop_def_from_decoder;
-    decoder decoder;
-    definition "ComponentPropDef";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-        3 => one skip_component_prop_value_from_decoder;
-        4 => one kiwi_skip_string_value;
-        5 => one skip_guid_from_decoder;
-        6 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_bool_value;
-        8 => one skip_component_prop_preferred_values_from_decoder;
-        9 => one skip_variable_data_from_decoder;
-        10 => one skip_parameter_config_from_decoder;
-        11 => one kiwi_skip_string_value;
-        12 => one skip_slot_prop_config_from_decoder;
-        13 => one skip_color_array_config_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_component_prop_value_from_decoder;
-    decoder decoder;
-    definition "ComponentPropValue";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one skip_text_data_from_decoder;
-        3 => one skip_guid_from_decoder;
-        4 => one kiwi_skip_float_value;
-        5 => one skip_easing_data_from_decoder;
-        6 => one skip_vector_from_decoder;
-        7 => one skip_line_from_decoder;
-        8 => one skip_circle_from_decoder;
-        9 => one skip_rotation3_d_from_decoder;
-        10 => one skip_circle_point_from_decoder;
-        11 => one skip_gradient_from_decoder;
-        12 => one skip_color_point_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_timeline_data_from_decoder;
-    decoder decoder;
-    definition "TimelineData";
-    fields [
-        1 => one kiwi_skip_uint64_value;
-        2 => one kiwi_skip_bool_value;
-        3 => one skip_guid_from_decoder;
-        4 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_timeline_definitions_map_from_decoder;
-    decoder decoder;
-    definition "TimelineDefinitionsMap";
-    fields [
-        1 => repeated skip_timeline_definitions_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_timeline_definitions_map_entry_from_decoder;
-    decoder decoder;
-    definition "TimelineDefinitionsMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_timeline_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_timeline_assignment_key_from_decoder;
-    decoder decoder;
-    definition "TimelineAssignmentKey";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_timeline_binding_data_from_decoder;
-    decoder decoder;
-    definition "TimelineBindingData";
-    fields [
-        1 => one kiwi_skip_int64_value;
-        2 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_timeline_assignments_map_from_decoder;
-    decoder decoder;
-    definition "TimelineAssignmentsMap";
-    fields [
-        1 => repeated skip_timeline_assignments_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_timeline_assignments_map_entry_from_decoder;
-    decoder decoder;
-    definition "TimelineAssignmentsMapEntry";
-    fields [
-        1 => one skip_timeline_assignment_key_from_decoder;
-        2 => one skip_timeline_binding_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_component_prop_preferred_values_from_decoder;
-    decoder decoder;
-    definition "ComponentPropPreferredValues";
-    fields [
-        1 => repeated kiwi_skip_string_value;
-        2 => repeated skip_instance_swap_preferred_value_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_parameter_config_from_decoder;
-    decoder decoder;
-    definition "ParameterConfig";
-    fields [
-        1 => one skip_number_prop_config_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one skip_slider_config_from_decoder;
-        4 => one skip_variable_data_from_decoder;
-        5 => one skip_input_config_from_decoder;
-        6 => one skip_select_config_from_decoder;
-        7 => one skip_point_config_from_decoder;
-        8 => one skip_line_config_from_decoder;
-        9 => one skip_point_radius_config_from_decoder;
-        10 => one skip_rotation3_d_config_from_decoder;
-        11 => one skip_circle_point_config_from_decoder;
-        12 => one skip_color_point_config_from_decoder;
-        13 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_input_config_from_decoder;
-    decoder decoder;
-    definition "InputConfig";
-    fields [
-        1 => one skip_variable_data_from_decoder;
-        2 => one skip_variable_data_from_decoder;
-        3 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_slider_config_from_decoder;
-    decoder decoder;
-    definition "SliderConfig";
-    fields [
-        1 => one skip_variable_data_from_decoder;
-        2 => one skip_variable_data_from_decoder;
-        3 => one skip_variable_data_from_decoder;
-        4 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_point_config_from_decoder;
-    decoder decoder;
-    definition "PointConfig";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_line_from_decoder;
-    decoder decoder;
-    definition "Line";
-    fields [
-        1 => one skip_vector_from_decoder;
-        2 => one skip_vector_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_line_config_from_decoder;
-    decoder decoder;
-    definition "LineConfig";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_circle_from_decoder;
-    decoder decoder;
-    definition "Circle";
-    fields [
-        1 => one skip_vector_from_decoder;
-        2 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_point_radius_config_from_decoder;
-    decoder decoder;
-    definition "PointRadiusConfig";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_rotation3_d_from_decoder;
-    decoder decoder;
-    definition "Rotation3D";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_rotation3_d_config_from_decoder;
-    decoder decoder;
-    definition "Rotation3DConfig";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_circle_point_from_decoder;
-    decoder decoder;
-    definition "CirclePoint";
-    fields [
-        1 => one skip_vector_from_decoder;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_circle_point_config_from_decoder;
-    decoder decoder;
-    definition "CirclePointConfig";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_float_value;
-        5 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_color_point_from_decoder;
-    decoder decoder;
-    definition "ColorPoint";
-    fields [
-        1 => one skip_vector_from_decoder;
-        2 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_color_point_config_from_decoder;
-    decoder decoder;
-    definition "ColorPointConfig";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_gradient_from_decoder;
-    decoder decoder;
-    definition "Gradient";
-    fields [
-        1 => repeated skip_gradient_stop_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_gradient_stop_from_decoder;
-    decoder decoder;
-    definition "GradientStop";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_select_option_from_decoder;
-    decoder decoder;
-    definition "SelectOption";
-    fields [
-        1 => one skip_variable_data_from_decoder;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_select_config_from_decoder;
-    decoder decoder;
-    definition "SelectConfig";
-    fields [
-        1 => repeated skip_select_option_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_color_array_config_from_decoder;
-    decoder decoder;
-    definition "ColorArrayConfig";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_slot_prop_config_from_decoder;
-    decoder decoder;
-    definition "SlotPropConfig";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one kiwi_skip_bool_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_number_prop_config_from_decoder;
-    decoder decoder;
-    definition "NumberPropConfig";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_variable_data_from_decoder;
-        3 => one skip_variable_data_from_decoder;
-        4 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_instance_swap_preferred_value_from_decoder;
-    decoder decoder;
-    definition "InstanceSwapPreferredValue";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_widget_metadata_from_decoder;
-    decoder decoder;
-    definition "WidgetMetadata";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_widget_property_menu_selector_option_from_decoder;
-    decoder decoder;
-    definition "WidgetPropertyMenuSelectorOption";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_widget_property_menu_item_from_decoder;
-    decoder decoder;
-    definition "WidgetPropertyMenuItem";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_string_value;
-        5 => repeated skip_widget_property_menu_selector_option_from_decoder;
-        6 => one kiwi_skip_string_value;
-        7 => one kiwi_skip_bool_value;
-        8 => one kiwi_skip_string_value;
-        9 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_internal_data_for_test_from_decoder;
-    decoder decoder;
-    definition "InternalDataForTest";
-    fields [
-        1 => one kiwi_skip_int_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_state_group_property_value_order_from_decoder;
-    decoder decoder;
-    definition "StateGroupPropertyValueOrder";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => repeated kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_partial_paste_annotation_from_decoder;
-    decoder decoder;
-    definition "PartialPasteAnnotation";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one kiwi_skip_uint64_value;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variant_prop_spec_from_decoder;
-    decoder decoder;
-    definition "VariantPropSpec";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_text_list_data_from_decoder;
-    decoder decoder;
-    definition "TextListData";
-    fields [
-        1 => one kiwi_skip_int_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_int_value;
-        4 => one kiwi_skip_int_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_text_line_data_from_decoder;
-    decoder decoder;
-    definition "TextLineData";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        10 => one kiwi_skip_int_value;
-        2 => one kiwi_skip_int_value;
-        9 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_int_value;
-        6 => one kiwi_skip_int_value;
-        7 => one kiwi_skip_int_value;
-        8 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_derived_text_line_data_from_decoder;
-    decoder decoder;
-    definition "DerivedTextLineData";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_prototype_interaction_from_decoder;
-    decoder decoder;
-    definition "PrototypeInteraction";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_prototype_event_from_decoder;
-        3 => repeated skip_prototype_action_from_decoder;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_int_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_prototype_event_from_decoder;
-    decoder decoder;
-    definition "PrototypeEvent";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_bool_value;
-        3 => one kiwi_skip_float_value;
-        4 => one skip_key_trigger_from_decoder;
-        5 => one kiwi_skip_string_value;
-        6 => one kiwi_skip_float_value;
-        7 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_prototype_variable_target_from_decoder;
-    decoder decoder;
-    definition "PrototypeVariableTarget";
-    fields [
-        1 => one skip_variable_id_from_decoder;
-        2 => one skip_node_field_alias_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_conditional_actions_from_decoder;
-    decoder decoder;
-    definition "ConditionalActions";
-    fields [
-        1 => repeated skip_prototype_action_from_decoder;
-        2 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_prototype_action_from_decoder;
-    decoder decoder;
-    definition "PrototypeAction";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_float_value;
-        6 => one kiwi_skip_bool_value;
-        7 => one kiwi_skip_uint_value;
-        9 => one skip_vector_from_decoder;
-        10 => one kiwi_skip_uint_value;
-        11 => one kiwi_skip_bool_value;
-        12 => repeated kiwi_skip_float_value;
-        13 => one skip_vector_from_decoder;
-        25 => one kiwi_skip_bool_value;
-        26 => one kiwi_skip_bool_value;
-        42 => one kiwi_skip_bool_value;
-        8 => one kiwi_skip_string_value;
-        18 => one kiwi_skip_bool_value;
-        34 => one skip_variable_data_from_decoder;
-        35 => one skip_cms_item_page_target_from_decoder;
-        14 => one skip_guid_from_decoder;
-        15 => one skip_variable_any_value_from_decoder;
-        19 => one skip_prototype_variable_target_from_decoder;
-        20 => one skip_variable_data_from_decoder;
-        16 => one kiwi_skip_uint_value;
-        17 => one kiwi_skip_bool_value;
-        21 => one kiwi_skip_float_value;
-        22 => one kiwi_skip_float_value;
-        36 => one kiwi_skip_float_value;
-        23 => repeated skip_variable_data_from_decoder;
-        24 => repeated skip_conditional_actions_from_decoder;
-        27 => one skip_variable_set_id_from_decoder;
-        28 => one skip_guid_from_decoder;
-        29 => one kiwi_skip_string_value;
-        38 => one skip_variable_set_id_from_decoder;
-        30 => one kiwi_skip_uint_value;
-        31 => one skip_guid_from_decoder;
-        32 => one kiwi_skip_uint_value;
-        33 => one skip_animation_state_from_decoder;
-        37 => one kiwi_skip_bool_value;
-        39 => one kiwi_skip_uint_value;
-        41 => one skip_guid_from_decoder;
-        40 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_animation_state_from_decoder;
-    decoder decoder;
-    definition "AnimationState";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one skip_matrix_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_prototype_starting_point_from_decoder;
-    decoder decoder;
-    definition "PrototypeStartingPoint";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_key_trigger_from_decoder;
-    decoder decoder;
-    definition "KeyTrigger";
-    fields [
-        1 => repeated kiwi_skip_int_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_hyperlink_from_decoder;
-    decoder decoder;
-    definition "Hyperlink";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_guid_from_decoder;
-        4 => one skip_cms_item_page_target_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_item_page_target_from_decoder;
-    decoder decoder;
-    definition "CMSItemPageTarget";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_mention_from_decoder;
-    decoder decoder;
-    definition "Mention";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_uint_value;
-        6 => one kiwi_skip_uint64_value;
-        7 => one kiwi_skip_uint64_value;
-        8 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_embed_data_from_decoder;
-    decoder decoder;
-    definition "EmbedData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_float_value;
-        6 => one kiwi_skip_float_value;
-        7 => one kiwi_skip_string_value;
-        8 => one kiwi_skip_string_value;
-        9 => one kiwi_skip_string_value;
-        10 => one kiwi_skip_string_value;
-        11 => one kiwi_skip_string_value;
-        12 => one kiwi_skip_string_value;
-        13 => one kiwi_skip_string_value;
-        14 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_stamp_data_from_decoder;
-    decoder decoder;
-    definition "StampData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_link_preview_data_from_decoder;
-    decoder decoder;
-    definition "LinkPreviewData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_string_value;
-        6 => one kiwi_skip_string_value;
-        7 => one kiwi_skip_float_value;
-        8 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_viewport_from_decoder;
-    decoder decoder;
-    definition "Viewport";
-    fields [
-        1 => one skip_rect_from_decoder;
-        2 => one kiwi_skip_bool_value;
-        3 => one kiwi_skip_float_value;
-        4 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_mouse_from_decoder;
-    decoder decoder;
-    definition "Mouse";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_vector_from_decoder;
-        3 => one skip_rect_from_decoder;
-        4 => one skip_guid_from_decoder;
-        5 => one kiwi_skip_uint_value;
     ]
 }
 
@@ -13729,1595 +10675,12 @@ kiwi_skip_struct_decoder! {
     ]
 }
 
-kiwi_skip_message_decoder! {
-    fn skip_triggered_overlay_data_from_decoder;
-    decoder decoder;
-    definition "TriggeredOverlayData";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_guid_from_decoder;
-        4 => one skip_guid_from_decoder;
-        5 => one skip_guid_path_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_triggered_set_variable_action_data_from_decoder;
-    decoder decoder;
-    definition "TriggeredSetVariableActionData";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_triggered_set_variable_mode_action_data_from_decoder;
-    decoder decoder;
-    definition "TriggeredSetVariableModeActionData";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one skip_variable_set_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_video_state_change_data_from_decoder;
-    decoder decoder;
-    definition "VideoStateChangeData";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_bool_value;
-        3 => one kiwi_skip_bool_value;
-        4 => repeated kiwi_skip_uint_value;
-        5 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_embedded_prototype_data_from_decoder;
-    decoder decoder;
-    definition "EmbeddedPrototypeData";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_presented_state_from_decoder;
-    decoder decoder;
-    definition "PresentedState";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => repeated skip_triggered_overlay_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_top_level_playback_change_from_decoder;
-    decoder decoder;
-    definition "TopLevelPlaybackChange";
-    fields [
-        1 => one skip_presented_state_from_decoder;
-        2 => one skip_presented_state_from_decoder;
-        3 => one skip_guid_path_from_decoder;
-        4 => one skip_guid_from_decoder;
-        5 => one kiwi_skip_bool_value;
-        6 => one kiwi_skip_uint_value;
-        7 => one skip_guid_path_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_instance_state_change_from_decoder;
-    decoder decoder;
-    definition "InstanceStateChange";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_guid_path_from_decoder;
-        4 => one skip_guid_path_from_decoder;
-        5 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_text_cursor_from_decoder;
-    decoder decoder;
-    definition "TextCursor";
-    fields [
-        1 => one skip_rect_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_text_selection_from_decoder;
-    decoder decoder;
-    definition "TextSelection";
-    fields [
-        1 => repeated skip_rect_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_guid_from_decoder;
-        4 => one skip_vector_from_decoder;
-        5 => one skip_guid_from_decoder;
-        6 => one skip_guid_from_decoder;
-        7 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_playback_change_keyframe_from_decoder;
-    decoder decoder;
-    definition "PlaybackChangeKeyframe";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_state_mapping_from_decoder;
-    decoder decoder;
-    definition "StateMapping";
-    fields [
-        1 => one skip_guid_path_from_decoder;
-        2 => one skip_top_level_playback_change_from_decoder;
-        3 => one skip_playback_change_keyframe_from_decoder;
-        4 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_scroll_mapping_from_decoder;
-    decoder decoder;
-    definition "ScrollMapping";
-    fields [
-        1 => one skip_guid_path_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one skip_vector_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_playback_update_from_decoder;
-    decoder decoder;
-    definition "PlaybackUpdate";
-    fields [
-        1 => one skip_top_level_playback_change_from_decoder;
-        2 => one skip_playback_change_keyframe_from_decoder;
-        3 => repeated skip_scroll_mapping_from_decoder;
-        4 => one kiwi_skip_float_value;
-        5 => one skip_vector_from_decoder;
-        6 => one kiwi_skip_bool_value;
-        7 => repeated skip_state_mapping_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_chat_message_from_decoder;
-    decoder decoder;
-    definition "ChatMessage";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_voice_metadata_from_decoder;
-    decoder decoder;
-    definition "VoiceMetadata";
-    fields [
-        1 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_april_fun_cursor_from_decoder;
-    decoder decoder;
-    definition "AprilFunCursor";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_april_fun_fig_pal_from_decoder;
-    decoder decoder;
-    definition "AprilFunFigPal";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_agent_info_from_decoder;
-    decoder decoder;
-    definition "AgentInfo";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_user_change_from_decoder;
-    decoder decoder;
-    definition "UserChange";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        44 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_bool_value;
-        3 => one kiwi_skip_string_value;
-        4 => one skip_color_from_decoder;
-        5 => one kiwi_skip_string_value;
-        6 => one skip_viewport_from_decoder;
-        7 => one skip_mouse_from_decoder;
-        8 => repeated skip_guid_from_decoder;
-        9 => repeated kiwi_skip_uint_value;
-        10 => one kiwi_skip_string_value;
-        11 => repeated skip_click_from_decoder;
-        12 => repeated skip_scroll_position_from_decoder;
-        13 => repeated skip_triggered_overlay_from_decoder;
-        14 => one kiwi_skip_string_value;
-        15 => one skip_guid_from_decoder;
-        16 => one skip_guid_from_decoder;
-        38 => one kiwi_skip_uint_value;
-        17 => repeated skip_triggered_overlay_data_from_decoder;
-        18 => repeated skip_playback_update_from_decoder;
-        19 => one skip_chat_message_from_decoder;
-        20 => one skip_voice_metadata_from_decoder;
-        21 => one kiwi_skip_bool_value;
-        22 => one kiwi_skip_bool_value;
-        23 => repeated skip_instance_state_change_from_decoder;
-        24 => one skip_text_cursor_from_decoder;
-        25 => one skip_text_selection_from_decoder;
-        26 => one kiwi_skip_uint_value;
-        27 => one kiwi_skip_bool_value;
-        28 => one kiwi_skip_uint_value;
-        29 => repeated skip_triggered_set_variable_action_data_from_decoder;
-        30 => repeated skip_video_state_change_data_from_decoder;
-        31 => one kiwi_skip_string_value;
-        32 => one skip_guid_from_decoder;
-        33 => repeated skip_triggered_set_variable_mode_action_data_from_decoder;
-        34 => one skip_april_fun_cursor_from_decoder;
-        35 => repeated skip_embedded_prototype_data_from_decoder;
-        36 => one skip_guid_from_decoder;
-        43 => repeated skip_guid_from_decoder;
-        37 => one skip_guid_from_decoder;
-        39 => one skip_april_fun_fig_pal_from_decoder;
-        40 => one skip_collaborative_text_selection_from_decoder;
-        41 => one kiwi_skip_uint_value;
-        42 => repeated skip_node_chat_exchange_from_decoder;
-        45 => one kiwi_skip_uint_value;
-        46 => one skip_agent_info_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_interactive_slide_element_change_from_decoder;
-    decoder decoder;
-    definition "InteractiveSlideElementChange";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one skip_guid_from_decoder;
-        4 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_status_change_from_decoder;
-    decoder decoder;
-    definition "NodeStatusChange";
-    fields [
-        1 => repeated skip_guid_from_decoder;
-        2 => one skip_section_status_info_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_buzz_approval_asset_entry_from_decoder;
-    decoder decoder;
-    definition "BuzzApprovalAssetEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_buzz_approval_change_from_decoder;
-    decoder decoder;
-    definition "BuzzApprovalChange";
-    fields [
-        1 => repeated skip_buzz_approval_asset_entry_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_scene_graph_query_from_decoder;
-    decoder decoder;
-    definition "SceneGraphQuery";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_changes_metadata_from_decoder;
-    decoder decoder;
-    definition "NodeChangesMetadata";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cursor_reaction_from_decoder;
-    decoder decoder;
-    definition "CursorReaction";
-    fields [
-        1 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_timer_info_from_decoder;
-    decoder decoder;
-    definition "TimerInfo";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_string_value;
-        6 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_uint_value;
-        8 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_music_info_from_decoder;
-    decoder decoder;
-    definition "MusicInfo";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_presenter_nomination_from_decoder;
-    decoder decoder;
-    definition "PresenterNomination";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_presenter_info_from_decoder;
-    decoder decoder;
-    definition "PresenterInfo";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_presenter_nomination_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_client_broadcast_from_decoder;
-    decoder decoder;
-    definition "ClientBroadcast";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_cursor_reaction_from_decoder;
-        3 => one skip_timer_info_from_decoder;
-        4 => one skip_presenter_info_from_decoder;
-        5 => one skip_presenter_info_from_decoder;
-        6 => one skip_music_info_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_message_from_decoder;
-    decoder decoder;
-    definition "Message";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        42 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_uint_value;
-        37 => one kiwi_skip_bool_value;
-        4 => repeated skip_node_change_from_decoder;
-        5 => repeated skip_user_change_from_decoder;
-        32 => one skip_interactive_slide_element_change_from_decoder;
-        36 => one skip_node_status_change_from_decoder;
-        44 => one skip_buzz_approval_change_from_decoder;
-        6 => repeated skip_blob_from_decoder;
-        30 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_string_value;
-        8 => one kiwi_skip_uint_value;
-        9 => one kiwi_skip_string_value;
-        10 => one kiwi_skip_uint_value;
-        11 => one kiwi_skip_uint_value;
-        12 => one kiwi_skip_int_value;
-        13 => one skip_vector_from_decoder;
-        14 => one kiwi_skip_string_value;
-        15 => one kiwi_skip_string_value;
-        16 => repeated skip_scene_graph_query_from_decoder;
-        17 => one skip_node_changes_metadata_from_decoder;
-        18 => one kiwi_skip_uint_value;
-        19 => one kiwi_skip_bool_value;
-        20 => one skip_guid_from_decoder;
-        21 => one kiwi_skip_bool_value;
-        22 => repeated skip_message_from_decoder;
-        23 => repeated skip_message_from_decoder;
-        24 => repeated skip_client_broadcast_from_decoder;
-        25 => one kiwi_skip_uint_value;
-        26 => one kiwi_skip_string_value;
-        27 => one kiwi_skip_uint_value;
-        28 => one kiwi_skip_string_value;
-        29 => repeated skip_guid_from_decoder;
-        31 => one kiwi_skip_bool_value;
-        33 => repeated skip_clipboard_selection_region_from_decoder;
-        34 => one skip_encoded_offsets_index_from_decoder;
-        35 => one kiwi_skip_bool_value;
-        38 => one kiwi_skip_uint64_value;
-        39 => repeated skip_annotation_category_from_decoder;
-        40 => one skip_client_rendered_metadata_from_decoder;
-        41 => one kiwi_skip_uint_value;
-        43 => one skip_object_animation_list_from_decoder;
-        45 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_encoded_offsets_index_from_decoder;
-    decoder decoder;
-    definition "EncodedOffsetsIndex";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-        4 => repeated skip_guid_and_encoded_offset_from_decoder;
-    ]
-}
-
 kiwi_skip_struct_decoder! {
     fn skip_guid_and_encoded_offset_from_decoder;
     decoder decoder;
     fields [
         one skip_guid_from_decoder;
         one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_rich_media_data_from_decoder;
-    decoder decoder;
-    definition "RichMediaData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_any_value_from_decoder;
-    decoder decoder;
-    definition "VariableAnyValue";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_float_value;
-        4 => one skip_variable_id_from_decoder;
-        5 => one skip_color_from_decoder;
-        6 => one skip_expression_from_decoder;
-        7 => one skip_variable_map_from_decoder;
-        8 => one skip_symbol_id_from_decoder;
-        9 => one skip_variable_font_style_from_decoder;
-        10 => one skip_text_data_from_decoder;
-        11 => one skip_node_field_alias_from_decoder;
-        12 => one skip_cms_alias_from_decoder;
-        13 => one skip_prop_ref_value_from_decoder;
-        14 => one skip_image_parameter_value_from_decoder;
-        15 => one skip_managed_string_alias_from_decoder;
-        16 => one skip_hyperlink_from_decoder;
-        17 => one skip_js_runtime_alias_from_decoder;
-        18 => one skip_slot_content_id_from_decoder;
-        19 => one skip_keyframe_track_id_from_decoder;
-        20 => one skip_keyframe_track_parameter_value_from_decoder;
-        21 => one skip_easing_data_from_decoder;
-        22 => one skip_vector_from_decoder;
-        23 => one skip_color_array_from_decoder;
-        24 => one skip_line_from_decoder;
-        25 => one skip_circle_from_decoder;
-        26 => one skip_rotation3_d_from_decoder;
-        27 => one skip_circle_point_from_decoder;
-        28 => one skip_gradient_from_decoder;
-        29 => one skip_color_point_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_expression_from_decoder;
-    decoder decoder;
-    definition "Expression";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => repeated skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_map_value_from_decoder;
-    decoder decoder;
-    definition "VariableMapValue";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_variable_data_from_decoder;
-        3 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_map_from_decoder;
-    decoder decoder;
-    definition "VariableMap";
-    fields [
-        1 => repeated skip_variable_map_value_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_color_array_from_decoder;
-    decoder decoder;
-    definition "ColorArray";
-    fields [
-        1 => repeated skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_font_style_from_decoder;
-    decoder decoder;
-    definition "VariableFontStyle";
-    fields [
-        1 => one skip_variable_data_from_decoder;
-        2 => one skip_variable_data_from_decoder;
-        3 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_image_parameter_value_from_decoder;
-    decoder decoder;
-    definition "ImageParameterValue";
-    fields [
-        1 => one skip_image_from_decoder;
-        2 => one skip_image_from_decoder;
-        6 => one skip_image_from_decoder;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_uint_value;
-        5 => one kiwi_skip_uint_value;
-        7 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_thumbnail_info_from_decoder;
-    decoder decoder;
-    definition "ThumbnailInfo";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_ai_canvas_prompt_from_decoder;
-    decoder decoder;
-    definition "AiCanvasPrompt";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => repeated skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_field_alias_from_decoder;
-    decoder decoder;
-    definition "NodeFieldAlias";
-    fields [
-        1 => one skip_guid_path_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cms_alias_from_decoder;
-    decoder decoder;
-    definition "CMSAlias";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_js_runtime_alias_from_decoder;
-    decoder decoder;
-    definition "JsRuntimeAlias";
-    fields [
-        1 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_prop_ref_value_from_decoder;
-    decoder decoder;
-    definition "PropRefValue";
-    fields [
-        1 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_id_from_decoder;
-    decoder decoder;
-    definition "ManagedStringId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_placeholder_map_entry_from_decoder;
-    decoder decoder;
-    definition "ManagedStringPlaceholderMapEntry";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_slot_content_id_from_decoder;
-    decoder decoder;
-    definition "SlotContentId";
-    fields [
-        1 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_managed_string_alias_from_decoder;
-    decoder decoder;
-    definition "ManagedStringAlias";
-    fields [
-        1 => one skip_managed_string_id_from_decoder;
-        2 => repeated skip_managed_string_placeholder_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_keyframe_track_id_from_decoder;
-    decoder decoder;
-    definition "KeyframeTrackId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_animation_preset_id_from_decoder;
-    decoder decoder;
-    definition "AnimationPresetId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_tool_id_from_decoder;
-    decoder decoder;
-    definition "ToolId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_custom_effect_id_from_decoder;
-    decoder decoder;
-    definition "CustomEffectId";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_asset_ref_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_trss_transform2_d_from_decoder;
-    decoder decoder;
-    definition "TRSSTransform2D";
-    fields [
-        1 => one skip_vector_from_decoder;
-        2 => one kiwi_skip_float_value;
-        3 => one skip_vector_from_decoder;
-        4 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_data_from_decoder;
-    decoder decoder;
-    definition "VariableData";
-    fields [
-        1 => one skip_variable_any_value_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_set_mode_from_decoder;
-    decoder decoder;
-    definition "VariableSetMode";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-        4 => one skip_variable_set_id_from_decoder;
-        5 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_data_values_from_decoder;
-    decoder decoder;
-    definition "VariableDataValues";
-    fields [
-        1 => repeated skip_variable_data_values_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_data_values_entry_from_decoder;
-    decoder decoder;
-    definition "VariableDataValuesEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_keyframe_any_value_from_decoder;
-    decoder decoder;
-    definition "KeyframeAnyValue";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one skip_color_from_decoder;
-        3 => one skip_text_data_from_decoder;
-        4 => one skip_vector_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_keyframe_value_data_from_decoder;
-    decoder decoder;
-    definition "KeyframeValueData";
-    fields [
-        1 => one skip_keyframe_any_value_from_decoder;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_manual_keyframe_track_parameter_from_decoder;
-    decoder decoder;
-    definition "ManualKeyframeTrackParameter";
-    fields [
-        1 => one skip_keyframe_track_id_from_decoder;
-        2 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_animation_preset_keyframe_track_parameter_from_decoder;
-    decoder decoder;
-    definition "AnimationPresetKeyframeTrackParameter";
-    fields [
-        1 => one skip_animation_preset_id_from_decoder;
-        2 => one skip_keyframe_track_id_from_decoder;
-        3 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_keyframe_track_any_parameter_from_decoder;
-    decoder decoder;
-    definition "KeyframeTrackAnyParameter";
-    fields [
-        1 => one skip_manual_keyframe_track_parameter_from_decoder;
-        2 => one skip_animation_preset_keyframe_track_parameter_from_decoder;
-        3 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_keyframe_track_parameter_from_decoder;
-    decoder decoder;
-    definition "KeyframeTrackParameter";
-    fields [
-        1 => one skip_keyframe_track_any_parameter_from_decoder;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_keyframe_track_parameter_value_from_decoder;
-    decoder decoder;
-    definition "KeyframeTrackParameterValue";
-    fields [
-        1 => repeated skip_keyframe_track_parameter_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_animation_presets_from_decoder;
-    decoder decoder;
-    definition "AnimationPresets";
-    fields [
-        1 => repeated skip_animation_preset_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_animation_preset_data_from_decoder;
-    decoder decoder;
-    definition "AnimationPresetData";
-    fields [
-        1 => one skip_animation_preset_id_from_decoder;
-        2 => one skip_guid_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_style_animation_from_decoder;
-    decoder decoder;
-    definition "StyleAnimation";
-    fields [
-        1 => one skip_animation_preset_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_style_id_for_animation_from_decoder;
-    decoder decoder;
-    definition "StyleIdForAnimation";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_style_id_from_decoder;
-        4 => one kiwi_skip_int64_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_tools_from_decoder;
-    decoder decoder;
-    definition "Tools";
-    fields [
-        1 => repeated skip_tool_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_tool_data_from_decoder;
-    decoder decoder;
-    definition "ToolData";
-    fields [
-        1 => one skip_tool_id_from_decoder;
-        2 => one skip_code_component_id_from_decoder;
-        3 => repeated skip_component_prop_assignment_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_custom_effects_from_decoder;
-    decoder decoder;
-    definition "CustomEffects";
-    fields [
-        1 => repeated skip_custom_effect_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_custom_effect_data_from_decoder;
-    decoder decoder;
-    definition "CustomEffectData";
-    fields [
-        1 => one skip_custom_effect_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_spring_params_from_decoder;
-    decoder decoder;
-    definition "SpringParams";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transition_easing_any_value_from_decoder;
-    decoder decoder;
-    definition "TransitionEasingAnyValue";
-    fields [
-        1 => one skip_spring_params_from_decoder;
-        2 => one skip_bezier_handles_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_easing_data_from_decoder;
-    decoder decoder;
-    definition "EasingData";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_transition_easing_any_value_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transition_override_from_decoder;
-    decoder decoder;
-    definition "TransitionOverride";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_float_value;
-        3 => one skip_variable_data_from_decoder;
-        4 => one kiwi_skip_float_value;
-        5 => one skip_variable_data_from_decoder;
-        6 => one skip_easing_data_from_decoder;
-        7 => one skip_variable_data_from_decoder;
-        8 => one kiwi_skip_uint64_value;
-        9 => repeated skip_guid_from_decoder;
-        10 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transition_override_data_from_decoder;
-    decoder decoder;
-    definition "TransitionOverrideData";
-    fields [
-        1 => repeated skip_transition_override_from_decoder;
-        2 => one skip_transition_override_prop_map_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transition_override_binding_location_from_decoder;
-    decoder decoder;
-    definition "TransitionOverrideBindingLocation";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_int_value;
-        3 => one kiwi_skip_int_value;
-        4 => one kiwi_skip_int_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_contents_keyframe_binding_location_from_decoder;
-    decoder decoder;
-    definition "NodeContentsKeyframeBindingLocation";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_int_value;
-        4 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transition_override_prop_map_from_decoder;
-    decoder decoder;
-    definition "TransitionOverridePropMap";
-    fields [
-        1 => repeated skip_transition_override_prop_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_transition_override_prop_map_entry_from_decoder;
-    decoder decoder;
-    definition "TransitionOverridePropMapEntry";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => repeated skip_transition_override_from_decoder;
-        3 => one skip_transition_override_binding_location_from_decoder;
-        4 => one skip_node_contents_keyframe_binding_location_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_optional_vector_from_decoder;
-    decoder decoder;
-    definition "OptionalVector";
-    fields [
-        1 => one skip_vector_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_migration_status_from_decoder;
-    decoder decoder;
-    definition "MigrationStatus";
-    fields [
-        1 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_aria_attribute_any_value_from_decoder;
-    decoder decoder;
-    definition "ARIAAttributeAnyValue";
-    fields [
-        1 => one kiwi_skip_bool_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_int_value;
-        5 => repeated kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_aria_attribute_data_from_decoder;
-    decoder decoder;
-    definition "ARIAAttributeData";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_aria_attribute_any_value_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_aria_attributes_map_from_decoder;
-    decoder decoder;
-    definition "ARIAAttributesMap";
-    fields [
-        1 => repeated skip_aria_attributes_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_aria_attributes_map_entry_from_decoder;
-    decoder decoder;
-    definition "ARIAAttributesMapEntry";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_aria_attribute_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_handoff_status_map_entry_from_decoder;
-    decoder decoder;
-    definition "HandoffStatusMapEntry";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one skip_section_status_info_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_handoff_status_map_from_decoder;
-    decoder decoder;
-    definition "HandoffStatusMap";
-    fields [
-        1 => repeated skip_handoff_status_map_entry_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_edit_scope_info_from_decoder;
-    decoder decoder;
-    definition "EditScopeInfo";
-    fields [
-        1 => repeated skip_edit_scope_stack_from_decoder;
-        2 => repeated skip_edit_scope_snapshot_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_edit_scope_snapshot_from_decoder;
-    decoder decoder;
-    definition "EditScopeSnapshot";
-    fields [
-        1 => repeated skip_edit_scope_stack_from_decoder;
-        2 => repeated kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_edit_scope_stack_from_decoder;
-    decoder decoder;
-    definition "EditScopeStack";
-    fields [
-        1 => repeated skip_edit_scope_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_edit_scope_from_decoder;
-    decoder decoder;
-    definition "EditScope";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_section_preset_info_from_decoder;
-    decoder decoder;
-    definition "SectionPresetInfo";
-    fields [
-        1 => one kiwi_skip_uint64_value;
-        2 => one kiwi_skip_uint64_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_clipboard_selection_region_from_decoder;
-    decoder decoder;
-    definition "ClipboardSelectionRegion";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => repeated skip_guid_from_decoder;
-        3 => one skip_vector_from_decoder;
-        4 => one kiwi_skip_bool_value;
-        5 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_first_draft_kit_from_decoder;
-    decoder decoder;
-    definition "FirstDraftKit";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_first_draft_data_from_decoder;
-    decoder decoder;
-    definition "FirstDraftData";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_first_draft_kit_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_first_draft_kit_element_data_from_decoder;
-    decoder decoder;
-    definition "FirstDraftKitElementData";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_platform_shape_property_map_entry_from_decoder;
-    decoder decoder;
-    definition "PlatformShapePropertyMapEntry";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => repeated skip_guid_path_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_platform_shape_definition_from_decoder;
-    decoder decoder;
-    definition "PlatformShapeDefinition";
-    fields [
-        1 => repeated skip_platform_shape_property_map_entry_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one skip_guid_path_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_behaviors_from_decoder;
-    decoder decoder;
-    definition "NodeBehaviors";
-    fields [
-        1 => one skip_link_behavior_from_decoder;
-        2 => one skip_appear_behavior_from_decoder;
-        3 => one skip_hover_behavior_from_decoder;
-        4 => one skip_press_behavior_from_decoder;
-        5 => one skip_focus_behavior_from_decoder;
-        6 => one skip_scroll_parallax_behavior_from_decoder;
-        7 => one skip_scroll_transform_behavior_from_decoder;
-        8 => one skip_cursor_behavior_from_decoder;
-        9 => one skip_marquee_behavior_from_decoder;
-        10 => repeated skip_code_behavior_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_behavior_transition_from_decoder;
-    decoder decoder;
-    definition "BehaviorTransition";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => repeated kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_float_value;
-        5 => one skip_variable_data_from_decoder;
-        6 => one skip_variable_data_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_appear_behavior_from_decoder;
-    decoder decoder;
-    definition "AppearBehavior";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => one skip_guid_from_decoder;
-        4 => one skip_behavior_transition_from_decoder;
-        5 => one skip_node_change_from_decoder;
-        6 => one skip_behavior_transition_from_decoder;
-        7 => one skip_node_change_from_decoder;
-        8 => one kiwi_skip_bool_value;
-        9 => one skip_variable_data_from_decoder;
-        10 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_hover_behavior_from_decoder;
-    decoder decoder;
-    definition "HoverBehavior";
-    fields [
-        1 => one skip_behavior_transition_from_decoder;
-        2 => one skip_node_change_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_press_behavior_from_decoder;
-    decoder decoder;
-    definition "PressBehavior";
-    fields [
-        1 => one skip_behavior_transition_from_decoder;
-        2 => one skip_node_change_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_focus_behavior_from_decoder;
-    decoder decoder;
-    definition "FocusBehavior";
-    fields [
-        1 => one skip_behavior_transition_from_decoder;
-        2 => one skip_node_change_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_scroll_parallax_behavior_from_decoder;
-    decoder decoder;
-    definition "ScrollParallaxBehavior";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_bool_value;
-        4 => one skip_variable_data_from_decoder;
-        5 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_scroll_transform_behavior_from_decoder;
-    decoder decoder;
-    definition "ScrollTransformBehavior";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_guid_from_decoder;
-        3 => one skip_behavior_transition_from_decoder;
-        4 => one skip_node_change_from_decoder;
-        5 => one skip_node_change_from_decoder;
-        6 => one kiwi_skip_bool_value;
-        7 => one kiwi_skip_bool_value;
-        8 => one skip_variable_data_from_decoder;
-        9 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cursor_behavior_from_decoder;
-    decoder decoder;
-    definition "CursorBehavior";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one skip_guid_from_decoder;
-        4 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_marquee_behavior_from_decoder;
-    decoder decoder;
-    definition "MarqueeBehavior";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_bool_value;
-        4 => one skip_variable_data_from_decoder;
-        5 => one skip_variable_data_from_decoder;
-        6 => one skip_variable_data_from_decoder;
-        7 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_code_behavior_from_decoder;
-    decoder decoder;
-    definition "CodeBehavior";
-    fields [
-        1 => one skip_code_component_id_from_decoder;
-        2 => repeated skip_component_prop_assignment_from_decoder;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_client_rendered_metadata_from_decoder;
-    decoder decoder;
-    definition "ClientRenderedMetadata";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_uint_value;
-        4 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_link_behavior_from_decoder;
-    decoder decoder;
-    definition "LinkBehavior";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_string_value;
-        3 => one skip_guid_from_decoder;
-        4 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_variable_id_or_variable_override_id_from_decoder;
-    decoder decoder;
-    definition "VariableIdOrVariableOverrideId";
-    fields [
-        1 => one skip_variable_id_from_decoder;
-        2 => one skip_variable_override_id_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_slide_theme_data_from_decoder;
-    decoder decoder;
-    definition "SlideThemeData";
-    fields [
-        1 => one skip_theme_id_from_decoder;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_chat_message_from_decoder;
-    decoder decoder;
-    definition "NodeChatMessage";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => one kiwi_skip_uint_value;
-        3 => one kiwi_skip_string_value;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_uint_value;
-        6 => repeated skip_node_chat_tool_call_from_decoder;
-        7 => repeated skip_node_chat_tool_result_from_decoder;
-        8 => one kiwi_skip_uint64_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_chat_tool_call_from_decoder;
-    decoder decoder;
-    definition "NodeChatToolCall";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_chat_tool_result_from_decoder;
-    decoder decoder;
-    definition "NodeChatToolResult";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_chat_exchange_from_decoder;
-    decoder decoder;
-    definition "NodeChatExchange";
-    fields [
-        1 => one skip_guid_from_decoder;
-        2 => repeated skip_node_chat_message_from_decoder;
-        3 => one kiwi_skip_bool_value;
-        4 => repeated skip_file_update_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_node_chat_compression_state_from_decoder;
-    decoder decoder;
-    definition "NodeChatCompressionState";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_file_update_from_decoder;
-    decoder decoder;
-    definition "FileUpdate";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one kiwi_skip_string_value;
-        3 => one kiwi_skip_bool_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_ai_chat_content_part_from_decoder;
-    decoder decoder;
-    definition "AIChatContentPart";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one skip_ai_chat_content_part_any_value_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_ai_chat_content_part_any_value_from_decoder;
-    decoder decoder;
-    definition "AIChatContentPartAnyValue";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => repeated kiwi_skip_string_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_ai_chat_message_from_decoder;
-    decoder decoder;
-    definition "AIChatMessage";
-    fields [
-        1 => one kiwi_skip_uint_value;
-        2 => one kiwi_skip_uint_value;
-        3 => repeated skip_ai_chat_content_part_from_decoder;
-        4 => one kiwi_skip_string_value;
-        5 => one kiwi_skip_uint64_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_ai_chat_thread_from_decoder;
-    decoder decoder;
-    definition "AIChatThread";
-    fields [
-        1 => repeated skip_ai_chat_message_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_cooper_template_data_from_decoder;
-    decoder decoder;
-    definition "CooperTemplateData";
-    fields [
-        1 => one kiwi_skip_uint_value;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_image_import_map_from_decoder;
-    decoder decoder;
-    definition "ImageImportMap";
-    fields [
-        1 => repeated skip_image_import_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_image_import_from_decoder;
-    decoder decoder;
-    definition "ImageImport";
-    fields [
-        1 => one kiwi_skip_string_value;
-        2 => one skip_image_from_decoder;
-    ]
-}
-
-kiwi_skip_message_decoder! {
-    fn skip_bezier_handles_from_decoder;
-    decoder decoder;
-    definition "BezierHandles";
-    fields [
-        1 => one kiwi_skip_float_value;
-        2 => one kiwi_skip_float_value;
-        3 => one kiwi_skip_float_value;
-        4 => one kiwi_skip_float_value;
     ]
 }
 #[derive(rustler::NifMap)]

@@ -9,7 +9,9 @@
   scanning.
 - Regenerate sparse descriptor declarations and descriptor macros from RustQ
   `@type` / `defrustmacro` support.
-- Reduce checked-in generated native source to about 599 KB / 17,971 lines while
+- Share sparse and skip message descriptor field inventories in generated native
+  Rust.
+- Reduce checked-in generated native source to about 539 KB / 13,343 lines while
   preserving public sparse decode and graph seed performance paths.
 
 ## 0.1.0 - 2026-06-26
