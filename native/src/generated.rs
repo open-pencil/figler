@@ -200,16 +200,11 @@ macro_rules! kiwi_sparse_struct_decoder {
 
 type KiwiSparseDecodeFn = for<'a> fn(Env<'a>, &mut Decoder<'_>) -> NifResult<Term<'a>>;
 
-enum KiwiSparseKind {
-    One(KiwiSparseDecodeFn),
-    Repeated(KiwiSparseDecodeFn),
-    Bytes,
-}
-
 struct KiwiSparseField {
     id: u32,
     name: &'static str,
-    kind: KiwiSparseKind,
+    repeated: bool,
+    decode: KiwiSparseDecodeFn,
 }
 
 
@@ -291,6 +286,21 @@ fn kiwi_sparse_bytes_value<'a>(
 }
 
 
+fn kiwi_sparse_field_value<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    field: &KiwiSparseField,
+) -> NifResult<Term<'a>> {
+    let decode = field.decode;
+    if field.repeated {
+        let values = decoder.read_repeated(|decoder| decode(env, decoder))?;
+        Ok(values.encode(env))
+    } else {
+        decode(env, decoder)
+    }
+}
+
+
 fn kiwi_sparse_message_fields<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
@@ -325,7 +335,7 @@ fn kiwi_sparse_message_fields_remaining<'a>(
             Ok(index) => {
                 let field = fields.get(index).unwrap();
                 keys.push(Atom::from_str(env, field.name).unwrap().encode(env));
-                values.push(kiwi_sparse_kind(env, decoder, &field.kind)?);
+                values.push(kiwi_sparse_field_value(env, decoder, field)?);
                 kiwi_sparse_message_fields_remaining(env, decoder, fields, keys, values)
             }
             Err(_index) => Err(rustler::Error::BadArg),
@@ -334,19 +344,11 @@ fn kiwi_sparse_message_fields_remaining<'a>(
 }
 
 
-fn kiwi_sparse_kind<'a>(env: Env<'a>, decoder: &mut Decoder<'_>, kind: &KiwiSparseKind) -> NifResult<Term<'a>> {
-    match kind {
-        KiwiSparseKind::One(decode) => decode(env, decoder),
-        KiwiSparseKind::Repeated(decode) => Ok(decoder.read_repeated(|decoder| decode(env, decoder))?.encode(env)),
-        KiwiSparseKind::Bytes => kiwi_sparse_bytes_value(env, decoder),
-    }
-}
-
 #[allow(unused_macros)]
-macro_rules! kiwi_sparse_kind {
-    (one $decode:ident) => { KiwiSparseKind::One($decode) };
-    (repeated $decode:ident) => { KiwiSparseKind::Repeated($decode) };
-    (bytes $decode:ident) => { KiwiSparseKind::Bytes };
+macro_rules! kiwi_sparse_repeated {
+    (one) => { false };
+    (repeated) => { true };
+    (bytes) => { false };
 }
 
 #[allow(unused_macros)]
@@ -367,7 +369,7 @@ macro_rules! kiwi_sparse_message_descriptor_decoder {
                 $module_name,
                 $definition_name,
                 $capacity,
-                &[$(KiwiSparseField { id: $field_id, name: $field_name, kind: kiwi_sparse_kind!($field_mode $field_decode) },)*],
+                &[$(KiwiSparseField { id: $field_id, name: $field_name, repeated: kiwi_sparse_repeated!($field_mode), decode: $field_decode },)*],
             )
         }
     };
