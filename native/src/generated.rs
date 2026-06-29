@@ -187,6 +187,132 @@ macro_rules! kiwi_sparse_struct_decoder {
     };
 }
 
+type KiwiSparseDecodeFn = for<'a> fn(Env<'a>, &mut Decoder<'_>) -> NifResult<Term<'a>>;
+
+enum KiwiSparseKind {
+    One(KiwiSparseDecodeFn),
+    Repeated(KiwiSparseDecodeFn),
+    Bytes,
+}
+
+struct KiwiSparseField {
+    id: u32,
+    name: &'static str,
+    kind: KiwiSparseKind,
+}
+
+fn kiwi_sparse_bool_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    Ok(decoder.read_bool()?.encode(env))
+}
+
+fn kiwi_sparse_byte_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    Ok(decoder.read_byte()?.encode(env))
+}
+
+fn kiwi_sparse_float_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    Ok(decoder.read_var_float(env)?.encode(env))
+}
+
+fn kiwi_sparse_int_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    Ok(decoder.read_var_int()?.encode(env))
+}
+
+fn kiwi_sparse_int64_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    Ok(decoder.read_var_int64()?.encode(env))
+}
+
+fn kiwi_sparse_string_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    Ok(decoder.read_string(env)?.encode(env))
+}
+
+fn kiwi_sparse_uint_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    Ok(decoder.read_var_uint()?.encode(env))
+}
+
+fn kiwi_sparse_uint64_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    Ok(decoder.read_var_uint64()?.encode(env))
+}
+
+fn kiwi_sparse_bytes_value<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    decoder.read_byte_array(env)
+}
+
+fn kiwi_sparse_kind<'a>(env: Env<'a>, decoder: &mut Decoder<'_>, kind: &KiwiSparseKind) -> NifResult<Term<'a>> {
+    match kind {
+        KiwiSparseKind::One(decode) => decode(env, decoder),
+        KiwiSparseKind::Repeated(decode) => Ok(decoder.read_repeated(|decoder| decode(env, decoder))?.encode(env)),
+        KiwiSparseKind::Bytes => kiwi_sparse_bytes_value(env, decoder),
+    }
+}
+
+fn kiwi_sparse_message_fields<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    module_name: &str,
+    definition_name: &str,
+    capacity: usize,
+    fields: &[KiwiSparseField],
+) -> NifResult<Term<'a>> {
+    let module_atom = Atom::from_str(env, module_name).unwrap();
+    let module_key_atom = Atom::from_str(env, "__kiwi_module__").unwrap();
+    let mut keys = Vec::with_capacity(capacity);
+    let mut values = Vec::with_capacity(capacity);
+    keys.push(module_key_atom.encode(env));
+    values.push(module_atom.encode(env));
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            field_id => match fields.binary_search_by_key(&field_id, |field| field.id) {
+                Ok(index) => {
+                    let field = &fields[index];
+                    keys.push(Atom::from_str(env, field.name).unwrap().encode(env));
+                    values.push(kiwi_sparse_kind(env, decoder, &field.kind)?);
+                }
+                Err(_) => {
+                    return Err(Error::Term(Box::new(format!(
+                        "unknown field {} while decoding sparse {}",
+                        field_id,
+                        definition_name
+                    ))));
+                }
+            },
+        }
+    }
+    Term::map_from_term_arrays(env, &keys, &values)
+}
+
+#[allow(unused_macros)]
+macro_rules! kiwi_sparse_kind {
+    (one $decode:ident) => { KiwiSparseKind::One($decode) };
+    (repeated $decode:ident) => { KiwiSparseKind::Repeated($decode) };
+    (bytes $decode:ident) => { KiwiSparseKind::Bytes };
+}
+
+#[allow(unused_macros)]
+macro_rules! kiwi_sparse_message_descriptor_decoder {
+    (
+        fn $name:ident;
+        env $env:ident;
+        decoder $decoder:ident;
+        module $module_name:literal;
+        definition $definition_name:literal;
+        capacity $capacity:literal;
+        fields [$($field_id:literal => $field_name:literal: $field_mode:ident $field_decode:ident;)*]
+    ) => {
+        fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+            kiwi_sparse_message_fields(
+                $env,
+                $decoder,
+                $module_name,
+                $definition_name,
+                $capacity,
+                &[$(KiwiSparseField { id: $field_id, name: $field_name, kind: kiwi_sparse_kind!($field_mode $field_decode) },)*],
+            )
+        }
+    };
+}
+
+#[allow(unused_macros)]
 macro_rules! kiwi_sparse_message_decoder {
     (
         fn $name:ident;
@@ -1120,7 +1246,7 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_color_stop_var_from_decoder;
     env env;
     decoder decoder;
@@ -1128,9 +1254,9 @@ kiwi_sparse_message_decoder! {
     definition "ColorStopVar";
     capacity 4;
     fields [
-        1 => "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        2 => "color_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        3 => "position": decoder.read_var_float(env)?.encode(env);
+        1 => "color": one decode_sparse_color_from_decoder;
+        2 => "color_var": one decode_sparse_variable_data_from_decoder;
+        3 => "position": one kiwi_sparse_float_value;
     ]
 }
 
@@ -1299,7 +1425,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_source_info_from_decoder;
     env env;
     decoder decoder;
@@ -1307,12 +1433,12 @@ kiwi_sparse_message_decoder! {
     definition "CodeSourceInfo";
     capacity 7;
     fields [
-        1 => "origin_reference_id": decoder.read_string(env)?.encode(env);
-        2 => "origin_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "linked_snapshot_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "capture_mode": decode_sparse_snapshot_capture_mode_from_decoder(env, decoder)?.encode(env);
-        5 => "source_blob_ref": decoder.read_string(env)?.encode(env);
-        6 => "source_element_id": decoder.read_string(env)?.encode(env);
+        1 => "origin_reference_id": one kiwi_sparse_string_value;
+        2 => "origin_node_id": one decode_sparse_guid_from_decoder;
+        3 => "linked_snapshot_id": one decode_sparse_guid_from_decoder;
+        4 => "capture_mode": one decode_sparse_snapshot_capture_mode_from_decoder;
+        5 => "source_blob_ref": one kiwi_sparse_string_value;
+        6 => "source_element_id": one kiwi_sparse_string_value;
     ]
 }
 
@@ -1333,7 +1459,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_custom_tool_artifact_ref_from_decoder;
     env env;
     decoder decoder;
@@ -1341,10 +1467,10 @@ kiwi_sparse_message_decoder! {
     definition "CustomToolArtifactRef";
     capacity 5;
     fields [
-        1 => "custom_tool_id": decoder.read_string(env)?.encode(env);
-        2 => "custom_tool_version": decoder.read_string(env)?.encode(env);
-        3 => "published_custom_tool_id": decoder.read_string(env)?.encode(env);
-        4 => "published_custom_tool_version_id": decoder.read_string(env)?.encode(env);
+        1 => "custom_tool_id": one kiwi_sparse_string_value;
+        2 => "custom_tool_version": one kiwi_sparse_string_value;
+        3 => "published_custom_tool_id": one kiwi_sparse_string_value;
+        4 => "published_custom_tool_version_id": one kiwi_sparse_string_value;
     ]
 }
 
@@ -1631,7 +1757,7 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_image_from_decoder;
     env env;
     decoder decoder;
@@ -1639,13 +1765,13 @@ kiwi_sparse_message_decoder! {
     definition "Image";
     capacity 4;
     fields [
-        1 => "hash": decoder.read_byte_array(env)?;
-        2 => "name": decoder.read_string(env)?.encode(env);
-        3 => "data_blob": decoder.read_var_uint()?.encode(env);
+        1 => "hash": bytes kiwi_sparse_bytes_value;
+        2 => "name": one kiwi_sparse_string_value;
+        3 => "data_blob": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_video_from_decoder;
     env env;
     decoder decoder;
@@ -1653,12 +1779,12 @@ kiwi_sparse_message_decoder! {
     definition "Video";
     capacity 3;
     fields [
-        1 => "hash": decoder.read_byte_array(env)?;
-        2 => "s3_url": decoder.read_string(env)?.encode(env);
+        1 => "hash": bytes kiwi_sparse_bytes_value;
+        2 => "s3_url": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_paste_source_from_decoder;
     env env;
     decoder decoder;
@@ -1666,8 +1792,8 @@ kiwi_sparse_message_decoder! {
     definition "PasteSource";
     capacity 3;
     fields [
-        1 => "src_file": decoder.read_string(env)?.encode(env);
-        2 => "src_node": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "src_file": one kiwi_sparse_string_value;
+        2 => "src_node": one decode_sparse_guid_from_decoder;
     ]
 }
 
@@ -1689,7 +1815,7 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_paint_filter_message_from_decoder;
     env env;
     decoder decoder;
@@ -1697,20 +1823,20 @@ kiwi_sparse_message_decoder! {
     definition "PaintFilterMessage";
     capacity 11;
     fields [
-        1 => "tint": decoder.read_var_float(env)?.encode(env);
-        2 => "shadows": decoder.read_var_float(env)?.encode(env);
-        3 => "highlights": decoder.read_var_float(env)?.encode(env);
-        4 => "detail": decoder.read_var_float(env)?.encode(env);
-        5 => "exposure": decoder.read_var_float(env)?.encode(env);
-        6 => "vignette": decoder.read_var_float(env)?.encode(env);
-        7 => "temperature": decoder.read_var_float(env)?.encode(env);
-        8 => "vibrance": decoder.read_var_float(env)?.encode(env);
-        9 => "contrast": decoder.read_var_float(env)?.encode(env);
-        10 => "brightness": decoder.read_var_float(env)?.encode(env);
+        1 => "tint": one kiwi_sparse_float_value;
+        2 => "shadows": one kiwi_sparse_float_value;
+        3 => "highlights": one kiwi_sparse_float_value;
+        4 => "detail": one kiwi_sparse_float_value;
+        5 => "exposure": one kiwi_sparse_float_value;
+        6 => "vignette": one kiwi_sparse_float_value;
+        7 => "temperature": one kiwi_sparse_float_value;
+        8 => "vibrance": one kiwi_sparse_float_value;
+        9 => "contrast": one kiwi_sparse_float_value;
+        10 => "brightness": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_paint_from_decoder;
     env env;
     decoder decoder;
@@ -1718,48 +1844,48 @@ kiwi_sparse_message_decoder! {
     definition "Paint";
     capacity 43;
     fields [
-        1 => "type": decode_sparse_paint_type_from_decoder(env, decoder)?.encode(env);
-        2 => "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        3 => "opacity": decoder.read_var_float(env)?.encode(env);
-        4 => "visible": decoder.read_bool()?.encode(env);
-        5 => "blend_mode": decode_sparse_blend_mode_from_decoder(env, decoder)?.encode(env);
-        6 => "stops": decoder.read_repeated(|decoder| decode_sparse_color_stop_from_decoder(env, decoder))?.encode(env);
-        7 => "transform": decode_sparse_matrix_from_decoder(env, decoder)?.encode(env);
-        8 => "image": decode_sparse_image_from_decoder(env, decoder)?.encode(env);
-        9 => "image_thumbnail": decode_sparse_image_from_decoder(env, decoder)?.encode(env);
-        16 => "animated_image": decode_sparse_image_from_decoder(env, decoder)?.encode(env);
-        17 => "animation_frame": decoder.read_var_uint()?.encode(env);
-        10 => "image_scale_mode": decode_sparse_image_scale_mode_from_decoder(env, decoder)?.encode(env);
-        22 => "image_should_color_manage": decoder.read_bool()?.encode(env);
-        11 => "rotation": decoder.read_var_float(env)?.encode(env);
-        12 => "scale": decoder.read_var_float(env)?.encode(env);
-        13 => "filter_color_adjust": decode_sparse_filter_color_adjust_from_decoder(env, decoder)?.encode(env);
-        14 => "paint_filter": decode_sparse_paint_filter_message_from_decoder(env, decoder)?.encode(env);
-        15 => "emoji_code_points": decoder.read_repeated(|decoder| decoder.read_var_uint())?.encode(env);
-        18 => "video": decode_sparse_video_from_decoder(env, decoder)?.encode(env);
-        19 => "original_image_width": decoder.read_var_uint()?.encode(env);
-        20 => "original_image_height": decoder.read_var_uint()?.encode(env);
-        38 => "opacity_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        21 => "color_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        31 => "image_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        23 => "stops_var": decoder.read_repeated(|decoder| decode_sparse_color_stop_var_from_decoder(env, decoder))?.encode(env);
-        24 => "thumb_hash_base64": decoder.read_string(env)?.encode(env);
-        25 => "thumb_hash": decoder.read_byte_array(env)?;
-        26 => "source_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        27 => "spacing": decoder.read_var_float(env)?.encode(env);
-        37 => "pattern_spacing": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        28 => "pattern_tile_type": decode_sparse_pattern_tile_type_from_decoder(env, decoder)?.encode(env);
-        29 => "vertical_alignment": decode_sparse_pattern_alignment_from_decoder(env, decoder)?.encode(env);
-        30 => "horizontal_alignment": decode_sparse_pattern_alignment_from_decoder(env, decoder)?.encode(env);
-        32 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        33 => "alt_text": decoder.read_string(env)?.encode(env);
-        34 => "noise_type": decode_sparse_noise_type_from_decoder(env, decoder)?.encode(env);
-        35 => "density": decoder.read_var_float(env)?.encode(env);
-        36 => "noise_size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        39 => "custom_effect_id": decode_sparse_code_component_id_from_decoder(env, decoder)?.encode(env);
-        40 => "component_prop_assignments": decoder.read_repeated(|decoder| decode_sparse_component_prop_assignment_from_decoder(env, decoder))?.encode(env);
-        41 => "interpolation_color_space": decode_sparse_interpolation_color_space_from_decoder(env, decoder)?.encode(env);
-        42 => "interpolation_hue_method": decode_sparse_interpolation_hue_method_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_paint_type_from_decoder;
+        2 => "color": one decode_sparse_color_from_decoder;
+        3 => "opacity": one kiwi_sparse_float_value;
+        4 => "visible": one kiwi_sparse_bool_value;
+        5 => "blend_mode": one decode_sparse_blend_mode_from_decoder;
+        6 => "stops": repeated decode_sparse_color_stop_from_decoder;
+        7 => "transform": one decode_sparse_matrix_from_decoder;
+        8 => "image": one decode_sparse_image_from_decoder;
+        9 => "image_thumbnail": one decode_sparse_image_from_decoder;
+        10 => "image_scale_mode": one decode_sparse_image_scale_mode_from_decoder;
+        11 => "rotation": one kiwi_sparse_float_value;
+        12 => "scale": one kiwi_sparse_float_value;
+        13 => "filter_color_adjust": one decode_sparse_filter_color_adjust_from_decoder;
+        14 => "paint_filter": one decode_sparse_paint_filter_message_from_decoder;
+        15 => "emoji_code_points": repeated kiwi_sparse_uint_value;
+        16 => "animated_image": one decode_sparse_image_from_decoder;
+        17 => "animation_frame": one kiwi_sparse_uint_value;
+        18 => "video": one decode_sparse_video_from_decoder;
+        19 => "original_image_width": one kiwi_sparse_uint_value;
+        20 => "original_image_height": one kiwi_sparse_uint_value;
+        21 => "color_var": one decode_sparse_variable_data_from_decoder;
+        22 => "image_should_color_manage": one kiwi_sparse_bool_value;
+        23 => "stops_var": repeated decode_sparse_color_stop_var_from_decoder;
+        24 => "thumb_hash_base64": one kiwi_sparse_string_value;
+        25 => "thumb_hash": bytes kiwi_sparse_bytes_value;
+        26 => "source_node_id": one decode_sparse_guid_from_decoder;
+        27 => "spacing": one kiwi_sparse_float_value;
+        28 => "pattern_tile_type": one decode_sparse_pattern_tile_type_from_decoder;
+        29 => "vertical_alignment": one decode_sparse_pattern_alignment_from_decoder;
+        30 => "horizontal_alignment": one decode_sparse_pattern_alignment_from_decoder;
+        31 => "image_var": one decode_sparse_variable_data_from_decoder;
+        32 => "id": one decode_sparse_guid_from_decoder;
+        33 => "alt_text": one kiwi_sparse_string_value;
+        34 => "noise_type": one decode_sparse_noise_type_from_decoder;
+        35 => "density": one kiwi_sparse_float_value;
+        36 => "noise_size": one decode_sparse_vector_from_decoder;
+        37 => "pattern_spacing": one decode_sparse_vector_from_decoder;
+        38 => "opacity_var": one decode_sparse_variable_data_from_decoder;
+        39 => "custom_effect_id": one decode_sparse_code_component_id_from_decoder;
+        40 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
+        41 => "interpolation_color_space": one decode_sparse_interpolation_color_space_from_decoder;
+        42 => "interpolation_hue_method": one decode_sparse_interpolation_hue_method_from_decoder;
     ]
 }
 
@@ -1821,7 +1947,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_font_meta_data_from_decoder;
     env env;
     decoder decoder;
@@ -1829,15 +1955,15 @@ kiwi_sparse_message_decoder! {
     definition "FontMetaData";
     capacity 6;
     fields [
-        1 => "key": decode_sparse_font_name_from_decoder(env, decoder)?.encode(env);
-        2 => "font_line_height": decoder.read_var_float(env)?.encode(env);
-        3 => "font_digest": decoder.read_byte_array(env)?;
-        4 => "font_style": decode_sparse_font_style_from_decoder(env, decoder)?.encode(env);
-        5 => "font_weight": decoder.read_var_int()?.encode(env);
+        1 => "key": one decode_sparse_font_name_from_decoder;
+        2 => "font_line_height": one kiwi_sparse_float_value;
+        3 => "font_digest": bytes kiwi_sparse_bytes_value;
+        4 => "font_style": one decode_sparse_font_style_from_decoder;
+        5 => "font_weight": one kiwi_sparse_int_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_font_variation_from_decoder;
     env env;
     decoder decoder;
@@ -1845,13 +1971,13 @@ kiwi_sparse_message_decoder! {
     definition "FontVariation";
     capacity 4;
     fields [
-        1 => "axis_tag": decoder.read_var_uint()?.encode(env);
-        2 => "axis_name": decoder.read_string(env)?.encode(env);
-        3 => "value": decoder.read_var_float(env)?.encode(env);
+        1 => "axis_tag": one kiwi_sparse_uint_value;
+        2 => "axis_name": one kiwi_sparse_string_value;
+        3 => "value": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_text_data_from_decoder;
     env env;
     decoder decoder;
@@ -1859,29 +1985,29 @@ kiwi_sparse_message_decoder! {
     definition "TextData";
     capacity 20;
     fields [
-        1 => "characters": decoder.read_string(env)?.encode(env);
-        2 => "character_style_i_ds": decoder.read_repeated(|decoder| decoder.read_var_uint())?.encode(env);
-        3 => "style_override_table": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
-        12 => "lines": decoder.read_repeated(|decoder| decode_sparse_text_line_data_from_decoder(env, decoder))?.encode(env);
-        8 => "layout_version": decoder.read_var_uint()?.encode(env);
-        10 => "fallback_fonts": decoder.read_repeated(|decoder| decode_sparse_font_name_from_decoder(env, decoder))?.encode(env);
-        17 => "min_content_height": decoder.read_var_float(env)?.encode(env);
-        4 => "layout_size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        5 => "baselines": decoder.read_repeated(|decoder| decode_sparse_baseline_from_decoder(env, decoder))?.encode(env);
-        6 => "glyphs": decoder.read_repeated(|decoder| decode_sparse_glyph_from_decoder(env, decoder))?.encode(env);
-        7 => "decorations": decoder.read_repeated(|decoder| decode_sparse_decoration_from_decoder(env, decoder))?.encode(env);
-        16 => "blockquotes": decoder.read_repeated(|decoder| decode_sparse_blockquote_from_decoder(env, decoder))?.encode(env);
-        9 => "font_meta_data": decoder.read_repeated(|decoder| decode_sparse_font_meta_data_from_decoder(env, decoder))?.encode(env);
-        11 => "hyperlink_boxes": decoder.read_repeated(|decoder| decode_sparse_hyperlink_box_from_decoder(env, decoder))?.encode(env);
-        13 => "truncation_start_index": decoder.read_var_int()?.encode(env);
-        14 => "truncated_height": decoder.read_var_float(env)?.encode(env);
-        15 => "logical_index_to_character_offset_map": decoder.read_repeated(|decoder| decoder.read_var_float(env))?.encode(env);
-        18 => "mention_boxes": decoder.read_repeated(|decoder| decode_sparse_mention_box_from_decoder(env, decoder))?.encode(env);
-        19 => "derived_lines": decoder.read_repeated(|decoder| decode_sparse_derived_text_line_data_from_decoder(env, decoder))?.encode(env);
+        1 => "characters": one kiwi_sparse_string_value;
+        2 => "character_style_i_ds": repeated kiwi_sparse_uint_value;
+        3 => "style_override_table": repeated decode_sparse_node_change_from_decoder;
+        4 => "layout_size": one decode_sparse_vector_from_decoder;
+        5 => "baselines": repeated decode_sparse_baseline_from_decoder;
+        6 => "glyphs": repeated decode_sparse_glyph_from_decoder;
+        7 => "decorations": repeated decode_sparse_decoration_from_decoder;
+        8 => "layout_version": one kiwi_sparse_uint_value;
+        9 => "font_meta_data": repeated decode_sparse_font_meta_data_from_decoder;
+        10 => "fallback_fonts": repeated decode_sparse_font_name_from_decoder;
+        11 => "hyperlink_boxes": repeated decode_sparse_hyperlink_box_from_decoder;
+        12 => "lines": repeated decode_sparse_text_line_data_from_decoder;
+        13 => "truncation_start_index": one kiwi_sparse_int_value;
+        14 => "truncated_height": one kiwi_sparse_float_value;
+        15 => "logical_index_to_character_offset_map": repeated kiwi_sparse_float_value;
+        16 => "blockquotes": repeated decode_sparse_blockquote_from_decoder;
+        17 => "min_content_height": one kiwi_sparse_float_value;
+        18 => "mention_boxes": repeated decode_sparse_mention_box_from_decoder;
+        19 => "derived_lines": repeated decode_sparse_derived_text_line_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_derived_text_data_from_decoder;
     env env;
     decoder decoder;
@@ -1889,22 +2015,22 @@ kiwi_sparse_message_decoder! {
     definition "DerivedTextData";
     capacity 13;
     fields [
-        1 => "layout_size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        2 => "baselines": decoder.read_repeated(|decoder| decode_sparse_baseline_from_decoder(env, decoder))?.encode(env);
-        3 => "glyphs": decoder.read_repeated(|decoder| decode_sparse_glyph_from_decoder(env, decoder))?.encode(env);
-        4 => "decorations": decoder.read_repeated(|decoder| decode_sparse_decoration_from_decoder(env, decoder))?.encode(env);
-        5 => "blockquotes": decoder.read_repeated(|decoder| decode_sparse_blockquote_from_decoder(env, decoder))?.encode(env);
-        6 => "font_meta_data": decoder.read_repeated(|decoder| decode_sparse_font_meta_data_from_decoder(env, decoder))?.encode(env);
-        7 => "hyperlink_boxes": decoder.read_repeated(|decoder| decode_sparse_hyperlink_box_from_decoder(env, decoder))?.encode(env);
-        8 => "truncation_start_index": decoder.read_var_int()?.encode(env);
-        9 => "truncated_height": decoder.read_var_float(env)?.encode(env);
-        10 => "logical_index_to_character_offset_map": decoder.read_repeated(|decoder| decoder.read_var_float(env))?.encode(env);
-        11 => "mention_boxes": decoder.read_repeated(|decoder| decode_sparse_mention_box_from_decoder(env, decoder))?.encode(env);
-        12 => "derived_lines": decoder.read_repeated(|decoder| decode_sparse_derived_text_line_data_from_decoder(env, decoder))?.encode(env);
+        1 => "layout_size": one decode_sparse_vector_from_decoder;
+        2 => "baselines": repeated decode_sparse_baseline_from_decoder;
+        3 => "glyphs": repeated decode_sparse_glyph_from_decoder;
+        4 => "decorations": repeated decode_sparse_decoration_from_decoder;
+        5 => "blockquotes": repeated decode_sparse_blockquote_from_decoder;
+        6 => "font_meta_data": repeated decode_sparse_font_meta_data_from_decoder;
+        7 => "hyperlink_boxes": repeated decode_sparse_hyperlink_box_from_decoder;
+        8 => "truncation_start_index": one kiwi_sparse_int_value;
+        9 => "truncated_height": one kiwi_sparse_float_value;
+        10 => "logical_index_to_character_offset_map": repeated kiwi_sparse_float_value;
+        11 => "mention_boxes": repeated decode_sparse_mention_box_from_decoder;
+        12 => "derived_lines": repeated decode_sparse_derived_text_line_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_hyperlink_box_from_decoder;
     env env;
     decoder decoder;
@@ -1912,16 +2038,16 @@ kiwi_sparse_message_decoder! {
     definition "HyperlinkBox";
     capacity 7;
     fields [
-        1 => "bounds": decode_sparse_rect_from_decoder(env, decoder)?.encode(env);
-        2 => "url": decoder.read_string(env)?.encode(env);
-        3 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        5 => "cms_target": decode_sparse_cms_item_page_target_from_decoder(env, decoder)?.encode(env);
-        6 => "open_in_new_tab": decoder.read_bool()?.encode(env);
-        4 => "hyperlink_id": decoder.read_var_int()?.encode(env);
+        1 => "bounds": one decode_sparse_rect_from_decoder;
+        2 => "url": one kiwi_sparse_string_value;
+        3 => "guid": one decode_sparse_guid_from_decoder;
+        4 => "hyperlink_id": one kiwi_sparse_int_value;
+        5 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder;
+        6 => "open_in_new_tab": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_mention_box_from_decoder;
     env env;
     decoder decoder;
@@ -1929,15 +2055,15 @@ kiwi_sparse_message_decoder! {
     definition "MentionBox";
     capacity 6;
     fields [
-        1 => "bounds": decode_sparse_rect_from_decoder(env, decoder)?.encode(env);
-        2 => "start_index": decoder.read_var_uint()?.encode(env);
-        3 => "end_index": decoder.read_var_uint()?.encode(env);
-        4 => "is_valid": decoder.read_bool()?.encode(env);
-        5 => "mention_key": decoder.read_var_uint()?.encode(env);
+        1 => "bounds": one decode_sparse_rect_from_decoder;
+        2 => "start_index": one kiwi_sparse_uint_value;
+        3 => "end_index": one kiwi_sparse_uint_value;
+        4 => "is_valid": one kiwi_sparse_bool_value;
+        5 => "mention_key": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_baseline_from_decoder;
     env env;
     decoder decoder;
@@ -1945,18 +2071,18 @@ kiwi_sparse_message_decoder! {
     definition "Baseline";
     capacity 9;
     fields [
-        1 => "position": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        2 => "width": decoder.read_var_float(env)?.encode(env);
-        3 => "line_y": decoder.read_var_float(env)?.encode(env);
-        4 => "line_height": decoder.read_var_float(env)?.encode(env);
-        7 => "line_ascent": decoder.read_var_float(env)?.encode(env);
-        8 => "ignore_leading_trim": decoder.read_var_float(env)?.encode(env);
-        5 => "first_character": decoder.read_var_uint()?.encode(env);
-        6 => "end_character": decoder.read_var_uint()?.encode(env);
+        1 => "position": one decode_sparse_vector_from_decoder;
+        2 => "width": one kiwi_sparse_float_value;
+        3 => "line_y": one kiwi_sparse_float_value;
+        4 => "line_height": one kiwi_sparse_float_value;
+        5 => "first_character": one kiwi_sparse_uint_value;
+        6 => "end_character": one kiwi_sparse_uint_value;
+        7 => "line_ascent": one kiwi_sparse_float_value;
+        8 => "ignore_leading_trim": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_glyph_from_decoder;
     env env;
     decoder decoder;
@@ -1964,19 +2090,19 @@ kiwi_sparse_message_decoder! {
     definition "Glyph";
     capacity 10;
     fields [
-        1 => "commands_blob": decoder.read_var_uint()?.encode(env);
-        2 => "position": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        3 => "style_id": decoder.read_var_uint()?.encode(env);
-        4 => "font_size": decoder.read_var_float(env)?.encode(env);
-        5 => "first_character": decoder.read_var_uint()?.encode(env);
-        6 => "advance": decoder.read_var_float(env)?.encode(env);
-        7 => "emoji_code_points": decoder.read_repeated(|decoder| decoder.read_var_uint())?.encode(env);
-        8 => "emoji_image_set": decode_sparse_emoji_image_set_from_decoder(env, decoder)?.encode(env);
-        9 => "rotation": decoder.read_var_float(env)?.encode(env);
+        1 => "commands_blob": one kiwi_sparse_uint_value;
+        2 => "position": one decode_sparse_vector_from_decoder;
+        3 => "style_id": one kiwi_sparse_uint_value;
+        4 => "font_size": one kiwi_sparse_float_value;
+        5 => "first_character": one kiwi_sparse_uint_value;
+        6 => "advance": one kiwi_sparse_float_value;
+        7 => "emoji_code_points": repeated kiwi_sparse_uint_value;
+        8 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder;
+        9 => "rotation": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_decoration_from_decoder;
     env env;
     decoder decoder;
@@ -1984,12 +2110,12 @@ kiwi_sparse_message_decoder! {
     definition "Decoration";
     capacity 3;
     fields [
-        1 => "rects": decoder.read_repeated(|decoder| decode_sparse_rect_from_decoder(env, decoder))?.encode(env);
-        2 => "style_id": decoder.read_var_uint()?.encode(env);
+        1 => "rects": repeated decode_sparse_rect_from_decoder;
+        2 => "style_id": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_blockquote_from_decoder;
     env env;
     decoder decoder;
@@ -1997,13 +2123,13 @@ kiwi_sparse_message_decoder! {
     definition "Blockquote";
     capacity 4;
     fields [
-        1 => "vertical_bar": decode_sparse_rect_from_decoder(env, decoder)?.encode(env);
-        2 => "quote_mark_bounds": decode_sparse_rect_from_decoder(env, decoder)?.encode(env);
-        3 => "style_id": decoder.read_var_uint()?.encode(env);
+        1 => "vertical_bar": one decode_sparse_rect_from_decoder;
+        2 => "quote_mark_bounds": one decode_sparse_rect_from_decoder;
+        3 => "style_id": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_vector_data_from_decoder;
     env env;
     decoder decoder;
@@ -2011,13 +2137,13 @@ kiwi_sparse_message_decoder! {
     definition "VectorData";
     capacity 4;
     fields [
-        1 => "vector_network_blob": decoder.read_var_uint()?.encode(env);
-        2 => "normalized_size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        3 => "style_override_table": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "vector_network_blob": one kiwi_sparse_uint_value;
+        2 => "normalized_size": one decode_sparse_vector_from_decoder;
+        3 => "style_override_table": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_text_path_start_from_decoder;
     env env;
     decoder decoder;
@@ -2025,12 +2151,12 @@ kiwi_sparse_message_decoder! {
     definition "TextPathStart";
     capacity 3;
     fields [
-        1 => "t_value": decoder.read_var_float(env)?.encode(env);
-        2 => "forward": decoder.read_bool()?.encode(env);
+        1 => "t_value": one kiwi_sparse_float_value;
+        2 => "forward": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_guid_path_from_decoder;
     env env;
     decoder decoder;
@@ -2038,11 +2164,11 @@ kiwi_sparse_message_decoder! {
     definition "GUIDPath";
     capacity 2;
     fields [
-        1 => "guids": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
+        1 => "guids": repeated decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_symbol_data_from_decoder;
     env env;
     decoder decoder;
@@ -2050,13 +2176,13 @@ kiwi_sparse_message_decoder! {
     definition "SymbolData";
     capacity 4;
     fields [
-        1 => "symbol_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "symbol_overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
-        3 => "uniform_scale_factor": decoder.read_var_float(env)?.encode(env);
+        1 => "symbol_id": one decode_sparse_guid_from_decoder;
+        2 => "symbol_overrides": repeated decode_sparse_node_change_from_decoder;
+        3 => "uniform_scale_factor": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_guid_path_mapping_from_decoder;
     env env;
     decoder decoder;
@@ -2064,12 +2190,12 @@ kiwi_sparse_message_decoder! {
     definition "GUIDPathMapping";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "path": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "path": one decode_sparse_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_derived_breakpoint_data_from_decoder;
     env env;
     decoder decoder;
@@ -2077,11 +2203,11 @@ kiwi_sparse_message_decoder! {
     definition "DerivedBreakpointData";
     capacity 2;
     fields [
-        1 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_generation_data_from_decoder;
     env env;
     decoder decoder;
@@ -2089,13 +2215,13 @@ kiwi_sparse_message_decoder! {
     definition "NodeGenerationData";
     capacity 4;
     fields [
-        1 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
-        2 => "use_fine_grained_syncing": decoder.read_bool()?.encode(env);
-        3 => "diff_only_removals": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        2 => "use_fine_grained_syncing": one kiwi_sparse_bool_value;
+        3 => "diff_only_removals": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_derived_immutable_frame_data_from_decoder;
     env env;
     decoder decoder;
@@ -2103,12 +2229,12 @@ kiwi_sparse_message_decoder! {
     definition "DerivedImmutableFrameData";
     capacity 3;
     fields [
-        1 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
-        2 => "version": decoder.read_var_uint()?.encode(env);
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
+        2 => "version": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_jsx_data_from_decoder;
     env env;
     decoder decoder;
@@ -2116,11 +2242,11 @@ kiwi_sparse_message_decoder! {
     definition "JsxData";
     capacity 2;
     fields [
-        1 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_derived_jsx_data_from_decoder;
     env env;
     decoder decoder;
@@ -2128,11 +2254,11 @@ kiwi_sparse_message_decoder! {
     definition "DerivedJsxData";
     capacity 2;
     fields [
-        1 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_asset_id_map_from_decoder;
     env env;
     decoder decoder;
@@ -2140,11 +2266,11 @@ kiwi_sparse_message_decoder! {
     definition "AssetIdMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_asset_id_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_asset_id_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_asset_id_entry_from_decoder;
     env env;
     decoder decoder;
@@ -2152,12 +2278,12 @@ kiwi_sparse_message_decoder! {
     definition "AssetIdEntry";
     capacity 3;
     fields [
-        1 => "asset_key": decoder.read_string(env)?.encode(env);
-        2 => "asset_id": decode_sparse_asset_id_from_decoder(env, decoder)?.encode(env);
+        1 => "asset_key": one kiwi_sparse_string_value;
+        2 => "asset_id": one decode_sparse_asset_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_asset_ref_from_decoder;
     env env;
     decoder decoder;
@@ -2165,12 +2291,12 @@ kiwi_sparse_message_decoder! {
     definition "AssetRef";
     capacity 3;
     fields [
-        1 => "key": decoder.read_string(env)?.encode(env);
-        2 => "version": decoder.read_string(env)?.encode(env);
+        1 => "key": one kiwi_sparse_string_value;
+        2 => "version": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_asset_id_from_decoder;
     env env;
     decoder decoder;
@@ -2178,17 +2304,17 @@ kiwi_sparse_message_decoder! {
     definition "AssetId";
     capacity 8;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
-        3 => "state_group_id": decode_sparse_state_group_id_from_decoder(env, decoder)?.encode(env);
-        4 => "style_id": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        5 => "symbol_id": decode_sparse_symbol_id_from_decoder(env, decoder)?.encode(env);
-        6 => "variable_id": decode_sparse_variable_id_from_decoder(env, decoder)?.encode(env);
-        7 => "variable_set_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
+        3 => "state_group_id": one decode_sparse_state_group_id_from_decoder;
+        4 => "style_id": one decode_sparse_style_id_from_decoder;
+        5 => "symbol_id": one decode_sparse_symbol_id_from_decoder;
+        6 => "variable_id": one decode_sparse_variable_id_from_decoder;
+        7 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_state_group_id_from_decoder;
     env env;
     decoder decoder;
@@ -2196,12 +2322,12 @@ kiwi_sparse_message_decoder! {
     definition "StateGroupId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_style_id_from_decoder;
     env env;
     decoder decoder;
@@ -2209,12 +2335,12 @@ kiwi_sparse_message_decoder! {
     definition "StyleId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_symbol_id_from_decoder;
     env env;
     decoder decoder;
@@ -2222,12 +2348,12 @@ kiwi_sparse_message_decoder! {
     definition "SymbolId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_id_from_decoder;
     env env;
     decoder decoder;
@@ -2235,12 +2361,12 @@ kiwi_sparse_message_decoder! {
     definition "VariableID";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_override_id_from_decoder;
     env env;
     decoder decoder;
@@ -2248,12 +2374,12 @@ kiwi_sparse_message_decoder! {
     definition "VariableOverrideId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_set_id_from_decoder;
     env env;
     decoder decoder;
@@ -2261,12 +2387,12 @@ kiwi_sparse_message_decoder! {
     definition "VariableSetID";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_theme_id_from_decoder;
     env env;
     decoder decoder;
@@ -2274,12 +2400,12 @@ kiwi_sparse_message_decoder! {
     definition "ThemeID";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_library_id_from_decoder;
     env env;
     decoder decoder;
@@ -2287,12 +2413,12 @@ kiwi_sparse_message_decoder! {
     definition "CodeLibraryId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_file_id_from_decoder;
     env env;
     decoder decoder;
@@ -2300,12 +2426,12 @@ kiwi_sparse_message_decoder! {
     definition "CodeFileId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_component_id_from_decoder;
     env env;
     decoder decoder;
@@ -2313,12 +2439,12 @@ kiwi_sparse_message_decoder! {
     definition "CodeComponentId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_canvas_node_id_from_decoder;
     env env;
     decoder decoder;
@@ -2326,9 +2452,9 @@ kiwi_sparse_message_decoder! {
     definition "CanvasNodeId";
     capacity 4;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "symbol_id": decode_sparse_symbol_id_from_decoder(env, decoder)?.encode(env);
-        3 => "state_group_id": decode_sparse_state_group_id_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "symbol_id": one decode_sparse_symbol_id_from_decoder;
+        3 => "state_group_id": one decode_sparse_state_group_id_from_decoder;
     ]
 }
 
@@ -2366,7 +2492,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
     env env;
     decoder decoder;
@@ -2374,14 +2500,14 @@ kiwi_sparse_message_decoder! {
     definition "CollaborativeTextStrippedOpRunWithIDs";
     capacity 5;
     fields [
-        1 => "first_id": decode_sparse_collaborative_text_op_id_from_decoder(env, decoder)?.encode(env);
-        2 => "run_length": decoder.read_var_uint()?.encode(env);
-        3 => "parent_ids": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_op_id_from_decoder(env, decoder))?.encode(env);
-        4 => "rebased_on_op_ids": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_op_id_from_decoder(env, decoder))?.encode(env);
+        1 => "first_id": one decode_sparse_collaborative_text_op_id_from_decoder;
+        2 => "run_length": one kiwi_sparse_uint_value;
+        3 => "parent_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder;
+        4 => "rebased_on_op_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder;
     env env;
     decoder decoder;
@@ -2389,15 +2515,15 @@ kiwi_sparse_message_decoder! {
     definition "CollaborativeTextStrippedOpRunWithLoc";
     capacity 6;
     fields [
-        1 => "type": decode_sparse_collaborative_text_op_type_from_decoder(env, decoder)?.encode(env);
-        2 => "range": decode_sparse_index_range_from_decoder(env, decoder)?.encode(env);
-        3 => "range_should_be_iterated_in_reverse": decoder.read_bool()?.encode(env);
-        4 => "content_bytes_in_buffer": decode_sparse_index_range_from_decoder(env, decoder)?.encode(env);
-        5 => "rebased_range": decode_sparse_index_range_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_collaborative_text_op_type_from_decoder;
+        2 => "range": one decode_sparse_index_range_from_decoder;
+        3 => "range_should_be_iterated_in_reverse": one kiwi_sparse_bool_value;
+        4 => "content_bytes_in_buffer": one decode_sparse_index_range_from_decoder;
+        5 => "rebased_range": one decode_sparse_index_range_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_collaborative_text_op_run_from_decoder;
     env env;
     decoder decoder;
@@ -2405,18 +2531,18 @@ kiwi_sparse_message_decoder! {
     definition "CollaborativeTextOpRun";
     capacity 9;
     fields [
-        1 => "id": decode_sparse_collaborative_text_op_id_from_decoder(env, decoder)?.encode(env);
-        2 => "parent_ids": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_op_id_from_decoder(env, decoder))?.encode(env);
-        3 => "type": decode_sparse_collaborative_text_op_type_from_decoder(env, decoder)?.encode(env);
-        4 => "range": decode_sparse_index_range_from_decoder(env, decoder)?.encode(env);
-        5 => "range_should_be_iterated_in_reverse": decoder.read_bool()?.encode(env);
-        6 => "content": decoder.read_string(env)?.encode(env);
-        7 => "rebased_on_op_ids": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_op_id_from_decoder(env, decoder))?.encode(env);
-        8 => "rebased_range": decode_sparse_index_range_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_collaborative_text_op_id_from_decoder;
+        2 => "parent_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder;
+        3 => "type": one decode_sparse_collaborative_text_op_type_from_decoder;
+        4 => "range": one decode_sparse_index_range_from_decoder;
+        5 => "range_should_be_iterated_in_reverse": one kiwi_sparse_bool_value;
+        6 => "content": one kiwi_sparse_string_value;
+        7 => "rebased_on_op_ids": repeated decode_sparse_collaborative_text_op_id_from_decoder;
+        8 => "rebased_range": one decode_sparse_index_range_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_collaborative_plain_text_from_decoder;
     env env;
     decoder decoder;
@@ -2424,14 +2550,14 @@ kiwi_sparse_message_decoder! {
     definition "CollaborativePlainText";
     capacity 5;
     fields [
-        1 => "history_ops_with_ids": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder(env, decoder))?.encode(env);
-        2 => "history_ops_with_loc": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder(env, decoder))?.encode(env);
-        3 => "history_string_content_buffer": decoder.read_byte_array(env)?;
-        4 => "changes_to_append": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_op_run_from_decoder(env, decoder))?.encode(env);
+        1 => "history_ops_with_ids": repeated decode_sparse_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
+        2 => "history_ops_with_loc": repeated decode_sparse_collaborative_text_stripped_op_run_with_loc_from_decoder;
+        3 => "history_string_content_buffer": bytes kiwi_sparse_bytes_value;
+        4 => "changes_to_append": repeated decode_sparse_collaborative_text_op_run_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_collaborative_text_selection_from_decoder;
     env env;
     decoder decoder;
@@ -2439,15 +2565,15 @@ kiwi_sparse_message_decoder! {
     definition "CollaborativeTextSelection";
     capacity 6;
     fields [
-        1 => "node": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "field": decoder.read_var_uint()?.encode(env);
-        3 => "selected_range": decode_sparse_index_range_from_decoder(env, decoder)?.encode(env);
-        4 => "caret_at_front": decoder.read_bool()?.encode(env);
-        5 => "text_version": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_op_id_from_decoder(env, decoder))?.encode(env);
+        1 => "node": one decode_sparse_guid_from_decoder;
+        2 => "field": one kiwi_sparse_uint_value;
+        3 => "selected_range": one decode_sparse_index_range_from_decoder;
+        4 => "caret_at_front": one kiwi_sparse_bool_value;
+        5 => "text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_responsive_text_style_variant_from_decoder;
     env env;
     decoder decoder;
@@ -2455,13 +2581,13 @@ kiwi_sparse_message_decoder! {
     definition "ResponsiveTextStyleVariant";
     capacity 8;
     fields [
-        1 => "min_width": decoder.read_var_float(env)?.encode(env);
-        2 => "fields": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
-        3 => "variable_font_size": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        4 => "variable_line_height": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        5 => "variable_letter_spacing": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        6 => "variable_paragraph_spacing": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        7 => "name": decoder.read_string(env)?.encode(env);
+        1 => "min_width": one kiwi_sparse_float_value;
+        2 => "fields": one decode_sparse_node_change_from_decoder;
+        3 => "variable_font_size": one decode_sparse_variable_data_from_decoder;
+        4 => "variable_line_height": one decode_sparse_variable_data_from_decoder;
+        5 => "variable_letter_spacing": one decode_sparse_variable_data_from_decoder;
+        6 => "variable_paragraph_spacing": one decode_sparse_variable_data_from_decoder;
+        7 => "name": one kiwi_sparse_string_value;
     ]
 }
 
@@ -2478,7 +2604,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_slide_theme_props_from_decoder;
     env env;
     decoder decoder;
@@ -2486,18 +2612,18 @@ kiwi_sparse_message_decoder! {
     definition "SlideThemeProps";
     capacity 9;
     fields [
-        1 => "theme_version": decoder.read_string(env)?.encode(env);
-        2 => "variable_set_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
-        3 => "text_style_ids": decoder.read_repeated(|decoder| decode_sparse_style_id_from_decoder(env, decoder))?.encode(env);
-        4 => "is_text_color_manually_selected": decoder.read_bool()?.encode(env);
-        5 => "is_border_color_manually_selected": decoder.read_bool()?.encode(env);
-        6 => "subscribed_theme_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
-        7 => "schema_version": decoder.read_var_uint()?.encode(env);
-        8 => "is_generated_from_design": decoder.read_bool()?.encode(env);
+        1 => "theme_version": one kiwi_sparse_string_value;
+        2 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder;
+        3 => "text_style_ids": repeated decode_sparse_style_id_from_decoder;
+        4 => "is_text_color_manually_selected": one kiwi_sparse_bool_value;
+        5 => "is_border_color_manually_selected": one kiwi_sparse_bool_value;
+        6 => "subscribed_theme_ref": one decode_sparse_asset_ref_from_decoder;
+        7 => "schema_version": one kiwi_sparse_uint_value;
+        8 => "is_generated_from_design": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_slide_theme_map_from_decoder;
     env env;
     decoder decoder;
@@ -2505,11 +2631,11 @@ kiwi_sparse_message_decoder! {
     definition "SlideThemeMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_slide_theme_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_slide_theme_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_slide_theme_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -2517,12 +2643,12 @@ kiwi_sparse_message_decoder! {
     definition "SlideThemeMapEntry";
     capacity 3;
     fields [
-        1 => "theme_id": decode_sparse_theme_id_from_decoder(env, decoder)?.encode(env);
-        2 => "theme_props": decode_sparse_slide_theme_props_from_decoder(env, decoder)?.encode(env);
+        1 => "theme_id": one decode_sparse_theme_id_from_decoder;
+        2 => "theme_props": one decode_sparse_slide_theme_props_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_shared_symbol_reference_from_decoder;
     env env;
     decoder decoder;
@@ -2530,19 +2656,19 @@ kiwi_sparse_message_decoder! {
     definition "SharedSymbolReference";
     capacity 10;
     fields [
-        1 => "file_key": decoder.read_string(env)?.encode(env);
-        2 => "symbol_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "version_hash": decoder.read_string(env)?.encode(env);
-        4 => "guid_path_mappings": decoder.read_repeated(|decoder| decode_sparse_guid_path_mapping_from_decoder(env, decoder))?.encode(env);
-        5 => "bytes": decoder.read_byte_array(env)?;
-        6 => "library_guid_to_subscribing_guid": decoder.read_repeated(|decoder| decode_sparse_guid_mapping_from_decoder(env, decoder))?.encode(env);
-        7 => "component_key": decoder.read_string(env)?.encode(env);
-        8 => "unflattening_mappings": decoder.read_repeated(|decoder| decode_sparse_guid_path_mapping_from_decoder(env, decoder))?.encode(env);
-        9 => "is_unflattened": decoder.read_bool()?.encode(env);
+        1 => "file_key": one kiwi_sparse_string_value;
+        2 => "symbol_id": one decode_sparse_guid_from_decoder;
+        3 => "version_hash": one kiwi_sparse_string_value;
+        4 => "guid_path_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
+        5 => "bytes": bytes kiwi_sparse_bytes_value;
+        6 => "library_guid_to_subscribing_guid": repeated decode_sparse_guid_mapping_from_decoder;
+        7 => "component_key": one kiwi_sparse_string_value;
+        8 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
+        9 => "is_unflattened": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_shared_component_master_data_from_decoder;
     env env;
     decoder decoder;
@@ -2550,13 +2676,13 @@ kiwi_sparse_message_decoder! {
     definition "SharedComponentMasterData";
     capacity 4;
     fields [
-        1 => "component_key": decoder.read_string(env)?.encode(env);
-        2 => "publishing_guid_path_to_team_library_guid": decoder.read_repeated(|decoder| decode_sparse_guid_path_mapping_from_decoder(env, decoder))?.encode(env);
-        3 => "is_unflattened": decoder.read_bool()?.encode(env);
+        1 => "component_key": one kiwi_sparse_string_value;
+        2 => "publishing_guid_path_to_team_library_guid": repeated decode_sparse_guid_path_mapping_from_decoder;
+        3 => "is_unflattened": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_instance_override_stash_from_decoder;
     env env;
     decoder decoder;
@@ -2564,13 +2690,13 @@ kiwi_sparse_message_decoder! {
     definition "InstanceOverrideStash";
     capacity 4;
     fields [
-        1 => "override_path_of_swapped_instance": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        2 => "component_key": decoder.read_string(env)?.encode(env);
-        3 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "override_path_of_swapped_instance": one decode_sparse_guid_path_from_decoder;
+        2 => "component_key": one kiwi_sparse_string_value;
+        3 => "overrides": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_instance_override_stash_v2_from_decoder;
     env env;
     decoder decoder;
@@ -2578,13 +2704,13 @@ kiwi_sparse_message_decoder! {
     definition "InstanceOverrideStashV2";
     capacity 4;
     fields [
-        1 => "override_path_of_swapped_instance": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        2 => "local_symbol_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "override_path_of_swapped_instance": one decode_sparse_guid_path_from_decoder;
+        2 => "local_symbol_id": one decode_sparse_guid_from_decoder;
+        3 => "overrides": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_imported_code_file_entry_from_decoder;
     env env;
     decoder decoder;
@@ -2592,11 +2718,11 @@ kiwi_sparse_message_decoder! {
     definition "ImportedCodeFileEntry";
     capacity 2;
     fields [
-        1 => "code_file_id": decode_sparse_code_file_id_from_decoder(env, decoder)?.encode(env);
+        1 => "code_file_id": one decode_sparse_code_file_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_imported_code_files_from_decoder;
     env env;
     decoder decoder;
@@ -2604,7 +2730,7 @@ kiwi_sparse_message_decoder! {
     definition "ImportedCodeFiles";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_imported_code_file_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_imported_code_file_entry_from_decoder;
     ]
 }
 
@@ -2659,7 +2785,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_effect_from_decoder;
     env env;
     decoder decoder;
@@ -2667,61 +2793,61 @@ kiwi_sparse_message_decoder! {
     definition "Effect";
     capacity 56;
     fields [
-        1 => "type": decode_sparse_effect_type_from_decoder(env, decoder)?.encode(env);
-        3 => "offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        4 => "radius": decoder.read_var_float(env)?.encode(env);
-        5 => "visible": decoder.read_bool()?.encode(env);
-        6 => "blend_mode": decode_sparse_blend_mode_from_decoder(env, decoder)?.encode(env);
-        7 => "spread": decoder.read_var_float(env)?.encode(env);
-        8 => "show_shadow_behind_node": decoder.read_bool()?.encode(env);
-        9 => "radius_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        10 => "color_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        11 => "spread_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        12 => "x_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        13 => "y_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        14 => "count": decoder.read_var_uint()?.encode(env);
-        15 => "repeat_type": decode_sparse_repeat_type_from_decoder(env, decoder)?.encode(env);
-        16 => "axis": decode_sparse_effect_axis_from_decoder(env, decoder)?.encode(env);
-        17 => "unit_type": decode_sparse_unit_type_from_decoder(env, decoder)?.encode(env);
-        18 => "order": decode_sparse_repeat_order_from_decoder(env, decoder)?.encode(env);
-        19 => "blur_op_type": decode_sparse_blur_op_type_from_decoder(env, decoder)?.encode(env);
-        20 => "start_offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        28 => "end_offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        21 => "start_radius": decoder.read_var_float(env)?.encode(env);
-        2 => "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        24 => "secondary_color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        22 => "noise_size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        29 => "seed": decoder.read_var_uint()?.encode(env);
-        23 => "clip_to_shape": decoder.read_bool()?.encode(env);
-        25 => "density": decoder.read_var_float(env)?.encode(env);
-        26 => "noise_type": decode_sparse_noise_type_from_decoder(env, decoder)?.encode(env);
-        27 => "opacity": decoder.read_var_float(env)?.encode(env);
-        30 => "refraction_radius": decoder.read_var_float(env)?.encode(env);
-        31 => "specular_angle": decoder.read_var_float(env)?.encode(env);
-        32 => "specular_intensity": decoder.read_var_float(env)?.encode(env);
-        33 => "bevel_size": decoder.read_var_float(env)?.encode(env);
-        34 => "chromatic_aberration": decoder.read_var_float(env)?.encode(env);
-        35 => "reflection_distance": decoder.read_var_float(env)?.encode(env);
-        36 => "refraction_intensity": decoder.read_var_float(env)?.encode(env);
-        37 => "refraction_radius_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        38 => "specular_angle_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        39 => "specular_intensity_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        40 => "chromatic_aberration_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        41 => "splay_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        42 => "refraction_intensity_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        43 => "custom_effect_id": decode_sparse_code_component_id_from_decoder(env, decoder)?.encode(env);
-        44 => "component_prop_assignments": decoder.read_repeated(|decoder| decode_sparse_component_prop_assignment_from_decoder(env, decoder))?.encode(env);
-        45 => "start_radius_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        46 => "start_offset_x_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        47 => "start_offset_y_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        48 => "end_offset_x_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        49 => "end_offset_y_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        50 => "noise_size_x_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        51 => "noise_size_y_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        52 => "density_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        53 => "effect_opacity_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        54 => "secondary_color_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        55 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_effect_type_from_decoder;
+        2 => "color": one decode_sparse_color_from_decoder;
+        3 => "offset": one decode_sparse_vector_from_decoder;
+        4 => "radius": one kiwi_sparse_float_value;
+        5 => "visible": one kiwi_sparse_bool_value;
+        6 => "blend_mode": one decode_sparse_blend_mode_from_decoder;
+        7 => "spread": one kiwi_sparse_float_value;
+        8 => "show_shadow_behind_node": one kiwi_sparse_bool_value;
+        9 => "radius_var": one decode_sparse_variable_data_from_decoder;
+        10 => "color_var": one decode_sparse_variable_data_from_decoder;
+        11 => "spread_var": one decode_sparse_variable_data_from_decoder;
+        12 => "x_var": one decode_sparse_variable_data_from_decoder;
+        13 => "y_var": one decode_sparse_variable_data_from_decoder;
+        14 => "count": one kiwi_sparse_uint_value;
+        15 => "repeat_type": one decode_sparse_repeat_type_from_decoder;
+        16 => "axis": one decode_sparse_effect_axis_from_decoder;
+        17 => "unit_type": one decode_sparse_unit_type_from_decoder;
+        18 => "order": one decode_sparse_repeat_order_from_decoder;
+        19 => "blur_op_type": one decode_sparse_blur_op_type_from_decoder;
+        20 => "start_offset": one decode_sparse_vector_from_decoder;
+        21 => "start_radius": one kiwi_sparse_float_value;
+        22 => "noise_size": one decode_sparse_vector_from_decoder;
+        23 => "clip_to_shape": one kiwi_sparse_bool_value;
+        24 => "secondary_color": one decode_sparse_color_from_decoder;
+        25 => "density": one kiwi_sparse_float_value;
+        26 => "noise_type": one decode_sparse_noise_type_from_decoder;
+        27 => "opacity": one kiwi_sparse_float_value;
+        28 => "end_offset": one decode_sparse_vector_from_decoder;
+        29 => "seed": one kiwi_sparse_uint_value;
+        30 => "refraction_radius": one kiwi_sparse_float_value;
+        31 => "specular_angle": one kiwi_sparse_float_value;
+        32 => "specular_intensity": one kiwi_sparse_float_value;
+        33 => "bevel_size": one kiwi_sparse_float_value;
+        34 => "chromatic_aberration": one kiwi_sparse_float_value;
+        35 => "reflection_distance": one kiwi_sparse_float_value;
+        36 => "refraction_intensity": one kiwi_sparse_float_value;
+        37 => "refraction_radius_var": one decode_sparse_variable_data_from_decoder;
+        38 => "specular_angle_var": one decode_sparse_variable_data_from_decoder;
+        39 => "specular_intensity_var": one decode_sparse_variable_data_from_decoder;
+        40 => "chromatic_aberration_var": one decode_sparse_variable_data_from_decoder;
+        41 => "splay_var": one decode_sparse_variable_data_from_decoder;
+        42 => "refraction_intensity_var": one decode_sparse_variable_data_from_decoder;
+        43 => "custom_effect_id": one decode_sparse_code_component_id_from_decoder;
+        44 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
+        45 => "start_radius_var": one decode_sparse_variable_data_from_decoder;
+        46 => "start_offset_x_var": one decode_sparse_variable_data_from_decoder;
+        47 => "start_offset_y_var": one decode_sparse_variable_data_from_decoder;
+        48 => "end_offset_x_var": one decode_sparse_variable_data_from_decoder;
+        49 => "end_offset_y_var": one decode_sparse_variable_data_from_decoder;
+        50 => "noise_size_x_var": one decode_sparse_variable_data_from_decoder;
+        51 => "noise_size_y_var": one decode_sparse_variable_data_from_decoder;
+        52 => "density_var": one decode_sparse_variable_data_from_decoder;
+        53 => "effect_opacity_var": one decode_sparse_variable_data_from_decoder;
+        54 => "secondary_color_var": one decode_sparse_variable_data_from_decoder;
+        55 => "id": one decode_sparse_guid_from_decoder;
     ]
 }
 
@@ -2736,7 +2862,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transform_modifier_from_decoder;
     env env;
     decoder decoder;
@@ -2744,16 +2870,16 @@ kiwi_sparse_message_decoder! {
     definition "TransformModifier";
     capacity 11;
     fields [
-        1 => "type": decode_sparse_transform_modifier_type_from_decoder(env, decoder)?.encode(env);
-        2 => "offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        3 => "visible": decoder.read_bool()?.encode(env);
-        4 => "count": decoder.read_var_uint()?.encode(env);
-        5 => "repeat_type": decode_sparse_repeat_type_from_decoder(env, decoder)?.encode(env);
-        6 => "axis": decode_sparse_effect_axis_from_decoder(env, decoder)?.encode(env);
-        7 => "unit_type": decode_sparse_unit_type_from_decoder(env, decoder)?.encode(env);
-        8 => "order": decode_sparse_repeat_order_from_decoder(env, decoder)?.encode(env);
-        9 => "skew_x": decoder.read_var_float(env)?.encode(env);
-        10 => "skew_y": decoder.read_var_float(env)?.encode(env);
+        1 => "type": one decode_sparse_transform_modifier_type_from_decoder;
+        2 => "offset": one decode_sparse_vector_from_decoder;
+        3 => "visible": one kiwi_sparse_bool_value;
+        4 => "count": one kiwi_sparse_uint_value;
+        5 => "repeat_type": one decode_sparse_repeat_type_from_decoder;
+        6 => "axis": one decode_sparse_effect_axis_from_decoder;
+        7 => "unit_type": one decode_sparse_unit_type_from_decoder;
+        8 => "order": one decode_sparse_repeat_order_from_decoder;
+        9 => "skew_x": one kiwi_sparse_float_value;
+        10 => "skew_y": one kiwi_sparse_float_value;
     ]
 }
 
@@ -2794,7 +2920,7 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_fixed_order_transform3d_from_decoder;
     env env;
     decoder decoder;
@@ -2802,11 +2928,11 @@ kiwi_sparse_message_decoder! {
     definition "FixedOrderTransform3d";
     capacity 6;
     fields [
-        1 => "perspective": decoder.read_var_float(env)?.encode(env);
-        2 => "translate_z": decoder.read_var_float(env)?.encode(env);
-        3 => "rotate_x": decoder.read_var_float(env)?.encode(env);
-        4 => "rotate_y": decoder.read_var_float(env)?.encode(env);
-        5 => "rotate_z": decoder.read_var_float(env)?.encode(env);
+        1 => "perspective": one kiwi_sparse_float_value;
+        2 => "translate_z": one kiwi_sparse_float_value;
+        3 => "rotate_x": one kiwi_sparse_float_value;
+        4 => "rotate_y": one kiwi_sparse_float_value;
+        5 => "rotate_z": one kiwi_sparse_float_value;
     ]
 }
 
@@ -2825,7 +2951,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transform_fn_value_from_decoder;
     env env;
     decoder decoder;
@@ -2833,14 +2959,14 @@ kiwi_sparse_message_decoder! {
     definition "TransformFnValue";
     capacity 5;
     fields [
-        1 => "matrix3d": decode_sparse_matrix4f_from_decoder(env, decoder)?.encode(env);
-        2 => "perspective": decoder.read_var_float(env)?.encode(env);
-        3 => "rotate_angle": decoder.read_var_float(env)?.encode(env);
-        4 => "translate_value": decoder.read_var_float(env)?.encode(env);
+        1 => "matrix3d": one decode_sparse_matrix4f_from_decoder;
+        2 => "perspective": one kiwi_sparse_float_value;
+        3 => "rotate_angle": one kiwi_sparse_float_value;
+        4 => "translate_value": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transform_fn_from_decoder;
     env env;
     decoder decoder;
@@ -2848,12 +2974,12 @@ kiwi_sparse_message_decoder! {
     definition "TransformFn";
     capacity 3;
     fields [
-        1 => "type": decode_sparse_transform_fn_type_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decode_sparse_transform_fn_value_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_transform_fn_type_from_decoder;
+        2 => "value": one decode_sparse_transform_fn_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transform_schema_value_from_decoder;
     env env;
     decoder decoder;
@@ -2861,12 +2987,12 @@ kiwi_sparse_message_decoder! {
     definition "TransformSchemaValue";
     capacity 3;
     fields [
-        1 => "fixed_order_transform3d": decode_sparse_fixed_order_transform3d_from_decoder(env, decoder)?.encode(env);
-        2 => "transform_functions": decoder.read_repeated(|decoder| decode_sparse_transform_fn_from_decoder(env, decoder))?.encode(env);
+        1 => "fixed_order_transform3d": one decode_sparse_fixed_order_transform3d_from_decoder;
+        2 => "transform_functions": repeated decode_sparse_transform_fn_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transform3d_from_decoder;
     env env;
     decoder decoder;
@@ -2874,9 +3000,9 @@ kiwi_sparse_message_decoder! {
     definition "Transform3d";
     capacity 4;
     fields [
-        1 => "type": decode_sparse_transform_schema_type_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decode_sparse_transform_schema_value_from_decoder(env, decoder)?.encode(env);
-        3 => "backface_hidden": decoder.read_bool()?.encode(env);
+        1 => "type": one decode_sparse_transform_schema_type_from_decoder;
+        2 => "value": one decode_sparse_transform_schema_value_from_decoder;
+        3 => "backface_hidden": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -2892,7 +3018,7 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_scene3d_from_decoder;
     env env;
     decoder decoder;
@@ -2900,13 +3026,13 @@ kiwi_sparse_message_decoder! {
     definition "Scene3d";
     capacity 4;
     fields [
-        1 => "perspective": decoder.read_var_float(env)?.encode(env);
-        2 => "perspective_origin": decode_sparse_number_vector2_d_from_decoder(env, decoder)?.encode(env);
-        3 => "preserve3d": decoder.read_bool()?.encode(env);
+        1 => "perspective": one kiwi_sparse_float_value;
+        2 => "perspective_origin": one decode_sparse_number_vector2_d_from_decoder;
+        3 => "preserve3d": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transform_origin_from_decoder;
     env env;
     decoder decoder;
@@ -2914,12 +3040,12 @@ kiwi_sparse_message_decoder! {
     definition "TransformOrigin";
     capacity 3;
     fields [
-        1 => "x": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
-        2 => "y": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
+        1 => "x": one decode_sparse_number_from_decoder;
+        2 => "y": one decode_sparse_number_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transition_info_from_decoder;
     env env;
     decoder decoder;
@@ -2927,8 +3053,8 @@ kiwi_sparse_message_decoder! {
     definition "TransitionInfo";
     capacity 3;
     fields [
-        1 => "type": decode_sparse_transition_type_from_decoder(env, decoder)?.encode(env);
-        2 => "duration": decoder.read_var_float(env)?.encode(env);
+        1 => "type": one decode_sparse_transition_type_from_decoder;
+        2 => "duration": one kiwi_sparse_float_value;
     ]
 }
 
@@ -2954,7 +3080,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_prototype_device_from_decoder;
     env env;
     decoder decoder;
@@ -2962,10 +3088,10 @@ kiwi_sparse_message_decoder! {
     definition "PrototypeDevice";
     capacity 5;
     fields [
-        1 => "type": decode_sparse_prototype_device_type_from_decoder(env, decoder)?.encode(env);
-        2 => "size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        3 => "preset_identifier": decoder.read_string(env)?.encode(env);
-        4 => "rotation": decode_sparse_device_rotation_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_prototype_device_type_from_decoder;
+        2 => "size": one decode_sparse_vector_from_decoder;
+        3 => "preset_identifier": one kiwi_sparse_string_value;
+        4 => "rotation": one decode_sparse_device_rotation_from_decoder;
     ]
 }
 
@@ -3005,7 +3131,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_overlay_background_appearance_from_decoder;
     env env;
     decoder decoder;
@@ -3013,8 +3139,8 @@ kiwi_sparse_message_decoder! {
     definition "OverlayBackgroundAppearance";
     capacity 3;
     fields [
-        1 => "background_type": decode_sparse_overlay_background_type_from_decoder(env, decoder)?.encode(env);
-        2 => "background_color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
+        1 => "background_type": one decode_sparse_overlay_background_type_from_decoder;
+        2 => "background_color": one decode_sparse_color_from_decoder;
     ]
 }
 
@@ -3054,7 +3180,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_export_settings_from_decoder;
     env env;
     decoder decoder;
@@ -3062,21 +3188,21 @@ kiwi_sparse_message_decoder! {
     definition "ExportSettings";
     capacity 16;
     fields [
-        1 => "suffix": decoder.read_string(env)?.encode(env);
-        2 => "image_type": decode_sparse_image_type_from_decoder(env, decoder)?.encode(env);
-        3 => "constraint": decode_sparse_export_constraint_from_decoder(env, decoder)?.encode(env);
-        4 => "svg_data_name": decoder.read_bool()?.encode(env);
-        5 => "svg_id_mode": decode_sparse_export_svgid_mode_from_decoder(env, decoder)?.encode(env);
-        6 => "svg_outline_text": decoder.read_bool()?.encode(env);
-        7 => "contents_only": decoder.read_bool()?.encode(env);
-        8 => "svg_force_stroke_masks": decoder.read_bool()?.encode(env);
-        9 => "use_absolute_bounds": decoder.read_bool()?.encode(env);
-        10 => "color_profile": decode_sparse_export_color_profile_from_decoder(env, decoder)?.encode(env);
-        11 => "quality": decoder.read_var_float(env)?.encode(env);
-        12 => "use_bicubic_sampler": decoder.read_bool()?.encode(env);
-        13 => "frame_rate": decoder.read_var_int()?.encode(env);
-        14 => "loop_count": decoder.read_var_int()?.encode(env);
-        15 => "background_type": decode_sparse_export_background_type_from_decoder(env, decoder)?.encode(env);
+        1 => "suffix": one kiwi_sparse_string_value;
+        2 => "image_type": one decode_sparse_image_type_from_decoder;
+        3 => "constraint": one decode_sparse_export_constraint_from_decoder;
+        4 => "svg_data_name": one kiwi_sparse_bool_value;
+        5 => "svg_id_mode": one decode_sparse_export_svgid_mode_from_decoder;
+        6 => "svg_outline_text": one kiwi_sparse_bool_value;
+        7 => "contents_only": one kiwi_sparse_bool_value;
+        8 => "svg_force_stroke_masks": one kiwi_sparse_bool_value;
+        9 => "use_absolute_bounds": one kiwi_sparse_bool_value;
+        10 => "color_profile": one decode_sparse_export_color_profile_from_decoder;
+        11 => "quality": one kiwi_sparse_float_value;
+        12 => "use_bicubic_sampler": one kiwi_sparse_bool_value;
+        13 => "frame_rate": one kiwi_sparse_int_value;
+        14 => "loop_count": one kiwi_sparse_int_value;
+        15 => "background_type": one decode_sparse_export_background_type_from_decoder;
     ]
 }
 
@@ -3090,7 +3216,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_layout_grid_from_decoder;
     env env;
     decoder decoder;
@@ -3098,23 +3224,23 @@ kiwi_sparse_message_decoder! {
     definition "LayoutGrid";
     capacity 14;
     fields [
-        1 => "type": decode_sparse_layout_grid_type_from_decoder(env, decoder)?.encode(env);
-        2 => "axis": decode_sparse_axis_from_decoder(env, decoder)?.encode(env);
-        3 => "visible": decoder.read_bool()?.encode(env);
-        4 => "num_sections": decoder.read_var_int()?.encode(env);
-        5 => "offset": decoder.read_var_float(env)?.encode(env);
-        6 => "section_size": decoder.read_var_float(env)?.encode(env);
-        7 => "gutter_size": decoder.read_var_float(env)?.encode(env);
-        8 => "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        9 => "pattern": decode_sparse_layout_grid_pattern_from_decoder(env, decoder)?.encode(env);
-        10 => "num_sections_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        11 => "offset_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        12 => "section_size_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        13 => "gutter_size_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_layout_grid_type_from_decoder;
+        2 => "axis": one decode_sparse_axis_from_decoder;
+        3 => "visible": one kiwi_sparse_bool_value;
+        4 => "num_sections": one kiwi_sparse_int_value;
+        5 => "offset": one kiwi_sparse_float_value;
+        6 => "section_size": one kiwi_sparse_float_value;
+        7 => "gutter_size": one kiwi_sparse_float_value;
+        8 => "color": one decode_sparse_color_from_decoder;
+        9 => "pattern": one decode_sparse_layout_grid_pattern_from_decoder;
+        10 => "num_sections_var": one decode_sparse_variable_data_from_decoder;
+        11 => "offset_var": one decode_sparse_variable_data_from_decoder;
+        12 => "section_size_var": one decode_sparse_variable_data_from_decoder;
+        13 => "gutter_size_var": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_guide_from_decoder;
     env env;
     decoder decoder;
@@ -3122,13 +3248,13 @@ kiwi_sparse_message_decoder! {
     definition "Guide";
     capacity 4;
     fields [
-        1 => "axis": decode_sparse_axis_from_decoder(env, decoder)?.encode(env);
-        2 => "offset": decoder.read_var_float(env)?.encode(env);
-        3 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "axis": one decode_sparse_axis_from_decoder;
+        2 => "offset": one kiwi_sparse_float_value;
+        3 => "guid": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_path_from_decoder;
     env env;
     decoder decoder;
@@ -3136,9 +3262,9 @@ kiwi_sparse_message_decoder! {
     definition "Path";
     capacity 4;
     fields [
-        1 => "winding_rule": decode_sparse_winding_rule_from_decoder(env, decoder)?.encode(env);
-        2 => "commands_blob": decoder.read_var_uint()?.encode(env);
-        3 => "style_id": decoder.read_var_uint()?.encode(env);
+        1 => "winding_rule": one decode_sparse_winding_rule_from_decoder;
+        2 => "commands_blob": one kiwi_sparse_uint_value;
+        3 => "style_id": one kiwi_sparse_uint_value;
     ]
 }
 
@@ -3178,7 +3304,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_dynamic_stroke_settings_from_decoder;
     env env;
     decoder decoder;
@@ -3186,13 +3312,13 @@ kiwi_sparse_message_decoder! {
     definition "DynamicStrokeSettings";
     capacity 4;
     fields [
-        1 => "frequency": decoder.read_var_float(env)?.encode(env);
-        2 => "wiggle": decoder.read_var_float(env)?.encode(env);
-        3 => "smoothen": decoder.read_var_float(env)?.encode(env);
+        1 => "frequency": one kiwi_sparse_float_value;
+        2 => "wiggle": one kiwi_sparse_float_value;
+        3 => "smoothen": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_scatter_stroke_settings_from_decoder;
     env env;
     decoder decoder;
@@ -3200,15 +3326,15 @@ kiwi_sparse_message_decoder! {
     definition "ScatterStrokeSettings";
     capacity 6;
     fields [
-        1 => "gap": decoder.read_var_float(env)?.encode(env);
-        2 => "wiggle": decoder.read_var_float(env)?.encode(env);
-        3 => "angular_jitter": decoder.read_var_float(env)?.encode(env);
-        4 => "rotation": decoder.read_var_float(env)?.encode(env);
-        5 => "size_jitter": decoder.read_var_float(env)?.encode(env);
+        1 => "gap": one kiwi_sparse_float_value;
+        2 => "wiggle": one kiwi_sparse_float_value;
+        3 => "angular_jitter": one kiwi_sparse_float_value;
+        4 => "rotation": one kiwi_sparse_float_value;
+        5 => "size_jitter": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_stretch_stroke_settings_from_decoder;
     env env;
     decoder decoder;
@@ -3216,11 +3342,11 @@ kiwi_sparse_message_decoder! {
     definition "StretchStrokeSettings";
     capacity 2;
     fields [
-        1 => "orientation": decode_sparse_brush_orientation_from_decoder(env, decoder)?.encode(env);
+        1 => "orientation": one decode_sparse_brush_orientation_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_stroke_data_from_decoder;
     env env;
     decoder decoder;
@@ -3228,12 +3354,12 @@ kiwi_sparse_message_decoder! {
     definition "StrokeData";
     capacity 3;
     fields [
-        1 => "strokes": decoder.read_repeated(|decoder| decode_sparse_stroke_from_decoder(env, decoder))?.encode(env);
-        2 => "version": decoder.read_var_uint()?.encode(env);
+        1 => "strokes": repeated decode_sparse_stroke_from_decoder;
+        2 => "version": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_stroke_from_decoder;
     env env;
     decoder decoder;
@@ -3241,24 +3367,24 @@ kiwi_sparse_message_decoder! {
     definition "Stroke";
     capacity 15;
     fields [
-        1 => "stroke_id": decoder.read_var_int()?.encode(env);
-        2 => "stroke_weight": decoder.read_var_float(env)?.encode(env);
-        3 => "stroke_weight_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        4 => "stroke_paint": decoder.read_repeated(|decoder| decode_sparse_paint_from_decoder(env, decoder))?.encode(env);
-        5 => "style_id_for_stroke_fill": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        6 => "stroke_align": decode_sparse_stroke_align_from_decoder(env, decoder)?.encode(env);
-        7 => "stroke_cap": decode_sparse_stroke_cap_from_decoder(env, decoder)?.encode(env);
-        8 => "stroke_cap_size": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
-        9 => "stroke_join": decode_sparse_stroke_join_from_decoder(env, decoder)?.encode(env);
-        10 => "miter_limit": decoder.read_var_float(env)?.encode(env);
-        11 => "dash_pattern": decoder.read_repeated(|decoder| decoder.read_var_float(env))?.encode(env);
-        12 => "path_trim": decode_sparse_optional_vector_from_decoder(env, decoder)?.encode(env);
-        13 => "stroke_offset": decoder.read_var_float(env)?.encode(env);
-        14 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "stroke_id": one kiwi_sparse_int_value;
+        2 => "stroke_weight": one kiwi_sparse_float_value;
+        3 => "stroke_weight_var": one decode_sparse_variable_data_from_decoder;
+        4 => "stroke_paint": repeated decode_sparse_paint_from_decoder;
+        5 => "style_id_for_stroke_fill": one decode_sparse_style_id_from_decoder;
+        6 => "stroke_align": one decode_sparse_stroke_align_from_decoder;
+        7 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder;
+        8 => "stroke_cap_size": one decode_sparse_number_from_decoder;
+        9 => "stroke_join": one decode_sparse_stroke_join_from_decoder;
+        10 => "miter_limit": one kiwi_sparse_float_value;
+        11 => "dash_pattern": repeated kiwi_sparse_float_value;
+        12 => "path_trim": one decode_sparse_optional_vector_from_decoder;
+        13 => "stroke_offset": one kiwi_sparse_float_value;
+        14 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_width_point_from_decoder;
     env env;
     decoder decoder;
@@ -3266,14 +3392,14 @@ kiwi_sparse_message_decoder! {
     definition "VariableWidthPoint";
     capacity 5;
     fields [
-        1 => "position": decoder.read_var_float(env)?.encode(env);
-        2 => "ascent": decoder.read_var_float(env)?.encode(env);
-        3 => "descent": decoder.read_var_float(env)?.encode(env);
-        4 => "segment_id": decoder.read_var_int()?.encode(env);
+        1 => "position": one kiwi_sparse_float_value;
+        2 => "ascent": one kiwi_sparse_float_value;
+        3 => "descent": one kiwi_sparse_float_value;
+        4 => "segment_id": one kiwi_sparse_int_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_shared_style_reference_from_decoder;
     env env;
     decoder decoder;
@@ -3281,12 +3407,12 @@ kiwi_sparse_message_decoder! {
     definition "SharedStyleReference";
     capacity 3;
     fields [
-        1 => "style_key": decoder.read_string(env)?.encode(env);
-        2 => "version_hash": decoder.read_string(env)?.encode(env);
+        1 => "style_key": one kiwi_sparse_string_value;
+        2 => "version_hash": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_shared_style_master_data_from_decoder;
     env env;
     decoder decoder;
@@ -3294,9 +3420,9 @@ kiwi_sparse_message_decoder! {
     definition "SharedStyleMasterData";
     capacity 4;
     fields [
-        1 => "style_key": decoder.read_string(env)?.encode(env);
-        2 => "sort_position": decoder.read_string(env)?.encode(env);
-        3 => "file_key": decoder.read_string(env)?.encode(env);
+        1 => "style_key": one kiwi_sparse_string_value;
+        2 => "sort_position": one kiwi_sparse_string_value;
+        3 => "file_key": one kiwi_sparse_string_value;
     ]
 }
 
@@ -3311,7 +3437,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_arc_data_from_decoder;
     env env;
     decoder decoder;
@@ -3319,13 +3445,13 @@ kiwi_sparse_message_decoder! {
     definition "ArcData";
     capacity 4;
     fields [
-        1 => "starting_angle": decoder.read_var_float(env)?.encode(env);
-        2 => "ending_angle": decoder.read_var_float(env)?.encode(env);
-        3 => "inner_radius": decoder.read_var_float(env)?.encode(env);
+        1 => "starting_angle": one kiwi_sparse_float_value;
+        2 => "ending_angle": one kiwi_sparse_float_value;
+        3 => "inner_radius": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_symbol_link_from_decoder;
     env env;
     decoder decoder;
@@ -3333,13 +3459,13 @@ kiwi_sparse_message_decoder! {
     definition "SymbolLink";
     capacity 4;
     fields [
-        1 => "uri": decoder.read_string(env)?.encode(env);
-        2 => "display_name": decoder.read_string(env)?.encode(env);
-        3 => "display_text": decoder.read_string(env)?.encode(env);
+        1 => "uri": one kiwi_sparse_string_value;
+        2 => "display_name": one kiwi_sparse_string_value;
+        3 => "display_text": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_plugin_data_from_decoder;
     env env;
     decoder decoder;
@@ -3347,13 +3473,13 @@ kiwi_sparse_message_decoder! {
     definition "PluginData";
     capacity 4;
     fields [
-        1 => "plugin_id": decoder.read_string(env)?.encode(env);
-        2 => "value": decoder.read_string(env)?.encode(env);
-        3 => "key": decoder.read_string(env)?.encode(env);
+        1 => "plugin_id": one kiwi_sparse_string_value;
+        2 => "value": one kiwi_sparse_string_value;
+        3 => "key": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_plugin_relaunch_data_from_decoder;
     env env;
     decoder decoder;
@@ -3361,15 +3487,15 @@ kiwi_sparse_message_decoder! {
     definition "PluginRelaunchData";
     capacity 6;
     fields [
-        1 => "plugin_id": decoder.read_string(env)?.encode(env);
-        2 => "message": decoder.read_string(env)?.encode(env);
-        3 => "command": decoder.read_string(env)?.encode(env);
-        4 => "is_deleted": decoder.read_bool()?.encode(env);
-        5 => "custom_tool_id": decode_sparse_code_component_id_from_decoder(env, decoder)?.encode(env);
+        1 => "plugin_id": one kiwi_sparse_string_value;
+        2 => "message": one kiwi_sparse_string_value;
+        3 => "command": one kiwi_sparse_string_value;
+        4 => "is_deleted": one kiwi_sparse_bool_value;
+        5 => "custom_tool_id": one decode_sparse_code_component_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_multiplayer_field_version_from_decoder;
     env env;
     decoder decoder;
@@ -3377,8 +3503,8 @@ kiwi_sparse_message_decoder! {
     definition "MultiplayerFieldVersion";
     capacity 3;
     fields [
-        1 => "counter": decoder.read_var_uint()?.encode(env);
-        2 => "session_id": decoder.read_var_uint()?.encode(env);
+        1 => "counter": one kiwi_sparse_uint_value;
+        2 => "session_id": one kiwi_sparse_uint_value;
     ]
 }
 
@@ -3400,7 +3526,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_connector_endpoint_from_decoder;
     env env;
     decoder decoder;
@@ -3408,14 +3534,14 @@ kiwi_sparse_message_decoder! {
     definition "ConnectorEndpoint";
     capacity 5;
     fields [
-        1 => "endpoint_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "position": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        3 => "magnet": decode_sparse_connector_magnet_from_decoder(env, decoder)?.encode(env);
-        4 => "relative_position": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
+        1 => "endpoint_node_id": one decode_sparse_guid_from_decoder;
+        2 => "position": one decode_sparse_vector_from_decoder;
+        3 => "magnet": one decode_sparse_connector_magnet_from_decoder;
+        4 => "relative_position": one decode_sparse_vector_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_connector_control_point_from_decoder;
     env env;
     decoder decoder;
@@ -3423,8 +3549,8 @@ kiwi_sparse_message_decoder! {
     definition "ConnectorControlPoint";
     capacity 3;
     fields [
-        1 => "position": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        2 => "axis": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
+        1 => "position": one decode_sparse_vector_from_decoder;
+        2 => "axis": one decode_sparse_vector_from_decoder;
     ]
 }
 
@@ -3449,7 +3575,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_connector_text_midpoint_from_decoder;
     env env;
     decoder decoder;
@@ -3457,9 +3583,9 @@ kiwi_sparse_message_decoder! {
     definition "ConnectorTextMidpoint";
     capacity 4;
     fields [
-        1 => "section": decode_sparse_connector_text_section_from_decoder(env, decoder)?.encode(env);
-        2 => "offset": decoder.read_var_float(env)?.encode(env);
-        3 => "off_axis_offset": decode_sparse_connector_off_axis_offset_from_decoder(env, decoder)?.encode(env);
+        1 => "section": one decode_sparse_connector_text_section_from_decoder;
+        2 => "offset": one kiwi_sparse_float_value;
+        3 => "off_axis_offset": one decode_sparse_connector_off_axis_offset_from_decoder;
     ]
 }
 
@@ -3525,7 +3651,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_annotation_property_from_decoder;
     env env;
     decoder decoder;
@@ -3533,7 +3659,7 @@ kiwi_sparse_message_decoder! {
     definition "AnnotationProperty";
     capacity 2;
     fields [
-        1 => "type": decode_sparse_annotation_property_type_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_annotation_property_type_from_decoder;
     ]
 }
 
@@ -3567,7 +3693,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_annotation_category_custom_from_decoder;
     env env;
     decoder decoder;
@@ -3575,13 +3701,13 @@ kiwi_sparse_message_decoder! {
     definition "AnnotationCategoryCustom";
     capacity 4;
     fields [
-        1 => "color": decode_sparse_annotation_category_color_from_decoder(env, decoder)?.encode(env);
-        2 => "custom_color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        3 => "label": decoder.read_string(env)?.encode(env);
+        1 => "color": one decode_sparse_annotation_category_color_from_decoder;
+        2 => "custom_color": one decode_sparse_color_from_decoder;
+        3 => "label": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_annotation_category_from_decoder;
     env env;
     decoder decoder;
@@ -3589,13 +3715,13 @@ kiwi_sparse_message_decoder! {
     definition "AnnotationCategory";
     capacity 4;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "preset": decode_sparse_annotation_category_preset_from_decoder(env, decoder)?.encode(env);
-        3 => "custom": decode_sparse_annotation_category_custom_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "preset": one decode_sparse_annotation_category_preset_from_decoder;
+        3 => "custom": one decode_sparse_annotation_category_custom_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_annotation_categories_from_decoder;
     env env;
     decoder decoder;
@@ -3603,12 +3729,12 @@ kiwi_sparse_message_decoder! {
     definition "AnnotationCategories";
     capacity 3;
     fields [
-        1 => "version": decoder.read_var_uint()?.encode(env);
-        2 => "items": decoder.read_repeated(|decoder| decode_sparse_annotation_category_from_decoder(env, decoder))?.encode(env);
+        1 => "version": one kiwi_sparse_uint_value;
+        2 => "items": repeated decode_sparse_annotation_category_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_annotation_from_decoder;
     env env;
     decoder decoder;
@@ -3616,10 +3742,10 @@ kiwi_sparse_message_decoder! {
     definition "Annotation";
     capacity 5;
     fields [
-        1 => "label": decoder.read_string(env)?.encode(env);
-        2 => "properties": decoder.read_repeated(|decoder| decode_sparse_annotation_property_from_decoder(env, decoder))?.encode(env);
-        3 => "label_v2": decoder.read_string(env)?.encode(env);
-        4 => "category_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "label": one kiwi_sparse_string_value;
+        2 => "properties": repeated decode_sparse_annotation_property_from_decoder;
+        3 => "label_v2": one kiwi_sparse_string_value;
+        4 => "category_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
@@ -3635,7 +3761,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_annotation_measurement_from_decoder;
     env env;
     decoder decoder;
@@ -3643,19 +3769,19 @@ kiwi_sparse_message_decoder! {
     definition "AnnotationMeasurement";
     capacity 10;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "from_node": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "to_node": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "from_node_side": decode_sparse_annotation_measurement_node_side_from_decoder(env, decoder)?.encode(env);
-        5 => "to_same_side": decoder.read_bool()?.encode(env);
-        6 => "inner_offset_relative": decoder.read_var_float(env)?.encode(env);
-        7 => "outer_offset_fixed": decoder.read_var_float(env)?.encode(env);
-        8 => "to_node_stable_path": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        9 => "free_text": decoder.read_string(env)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "from_node": one decode_sparse_guid_from_decoder;
+        3 => "to_node": one decode_sparse_guid_from_decoder;
+        4 => "from_node_side": one decode_sparse_annotation_measurement_node_side_from_decoder;
+        5 => "to_same_side": one kiwi_sparse_bool_value;
+        6 => "inner_offset_relative": one kiwi_sparse_float_value;
+        7 => "outer_offset_fixed": one kiwi_sparse_float_value;
+        8 => "to_node_stable_path": one decode_sparse_guid_path_from_decoder;
+        9 => "free_text": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_library_move_info_from_decoder;
     env env;
     decoder decoder;
@@ -3663,12 +3789,12 @@ kiwi_sparse_message_decoder! {
     definition "LibraryMoveInfo";
     capacity 3;
     fields [
-        1 => "old_key": decoder.read_string(env)?.encode(env);
-        2 => "paste_file_key": decoder.read_string(env)?.encode(env);
+        1 => "old_key": one kiwi_sparse_string_value;
+        2 => "paste_file_key": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_library_move_history_item_from_decoder;
     env env;
     decoder decoder;
@@ -3676,12 +3802,12 @@ kiwi_sparse_message_decoder! {
     definition "LibraryMoveHistoryItem";
     capacity 3;
     fields [
-        1 => "source_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "source_component_key": decoder.read_string(env)?.encode(env);
+        1 => "source_node_id": one decode_sparse_guid_from_decoder;
+        2 => "source_component_key": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_developer_related_link_from_decoder;
     env env;
     decoder decoder;
@@ -3689,14 +3815,14 @@ kiwi_sparse_message_decoder! {
     definition "DeveloperRelatedLink";
     capacity 5;
     fields [
-        1 => "node_id": decoder.read_string(env)?.encode(env);
-        2 => "file_key": decoder.read_string(env)?.encode(env);
-        3 => "link_name": decoder.read_string(env)?.encode(env);
-        4 => "link_url": decoder.read_string(env)?.encode(env);
+        1 => "node_id": one kiwi_sparse_string_value;
+        2 => "file_key": one kiwi_sparse_string_value;
+        3 => "link_name": one kiwi_sparse_string_value;
+        4 => "link_url": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_widget_pointer_from_decoder;
     env env;
     decoder decoder;
@@ -3704,11 +3830,11 @@ kiwi_sparse_message_decoder! {
     definition "WidgetPointer";
     capacity 2;
     fields [
-        1 => "node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "node_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_edit_info_from_decoder;
     env env;
     decoder decoder;
@@ -3716,10 +3842,10 @@ kiwi_sparse_message_decoder! {
     definition "EditInfo";
     capacity 5;
     fields [
-        1 => "timestamp_iso8601": decoder.read_string(env)?.encode(env);
-        2 => "user_id": decoder.read_string(env)?.encode(env);
-        3 => "last_edited_at": decoder.read_var_uint()?.encode(env);
-        4 => "created_at": decoder.read_var_uint()?.encode(env);
+        1 => "timestamp_iso8601": one kiwi_sparse_string_value;
+        2 => "user_id": one kiwi_sparse_string_value;
+        3 => "last_edited_at": one kiwi_sparse_uint_value;
+        4 => "created_at": one kiwi_sparse_uint_value;
     ]
 }
 
@@ -3773,7 +3899,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_section_status_info_from_decoder;
     env env;
     decoder decoder;
@@ -3781,15 +3907,15 @@ kiwi_sparse_message_decoder! {
     definition "SectionStatusInfo";
     capacity 6;
     fields [
-        1 => "status": decode_sparse_section_status_from_decoder(env, decoder)?.encode(env);
-        2 => "last_update_unix_timestamp": decoder.read_var_uint()?.encode(env);
-        3 => "description": decoder.read_string(env)?.encode(env);
-        4 => "user_id": decoder.read_string(env)?.encode(env);
-        5 => "prev_status": decode_sparse_section_status_from_decoder(env, decoder)?.encode(env);
+        1 => "status": one decode_sparse_section_status_from_decoder;
+        2 => "last_update_unix_timestamp": one kiwi_sparse_uint_value;
+        3 => "description": one kiwi_sparse_string_value;
+        4 => "user_id": one kiwi_sparse_string_value;
+        5 => "prev_status": one decode_sparse_section_status_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_buzz_approval_request_info_from_decoder;
     env env;
     decoder decoder;
@@ -3797,17 +3923,17 @@ kiwi_sparse_message_decoder! {
     definition "BuzzApprovalRequestInfo";
     capacity 8;
     fields [
-        1 => "request_id": decoder.read_string(env)?.encode(env);
-        2 => "requester_user_id": decoder.read_string(env)?.encode(env);
-        3 => "requested_at": decoder.read_var_uint()?.encode(env);
-        4 => "reviewer_user_ids": decoder.read_repeated(|decoder| decoder.read_string(env))?.encode(env);
-        5 => "title": decoder.read_string(env)?.encode(env);
-        6 => "note": decoder.read_string(env)?.encode(env);
-        7 => "assets_in_request": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
+        1 => "request_id": one kiwi_sparse_string_value;
+        2 => "requester_user_id": one kiwi_sparse_string_value;
+        3 => "requested_at": one kiwi_sparse_uint_value;
+        4 => "reviewer_user_ids": repeated kiwi_sparse_string_value;
+        5 => "title": one kiwi_sparse_string_value;
+        6 => "note": one kiwi_sparse_string_value;
+        7 => "assets_in_request": repeated decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_buzz_approval_requests_from_decoder;
     env env;
     decoder decoder;
@@ -3815,7 +3941,7 @@ kiwi_sparse_message_decoder! {
     definition "BuzzApprovalRequests";
     capacity 2;
     fields [
-        1 => "requests": decoder.read_repeated(|decoder| decode_sparse_buzz_approval_request_info_from_decoder(env, decoder))?.encode(env);
+        1 => "requests": repeated decode_sparse_buzz_approval_request_info_from_decoder;
     ]
 }
 
@@ -3831,7 +3957,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_buzz_approval_node_status_info_from_decoder;
     env env;
     decoder decoder;
@@ -3839,13 +3965,13 @@ kiwi_sparse_message_decoder! {
     definition "BuzzApprovalNodeStatusInfo";
     capacity 4;
     fields [
-        1 => "current_status": decode_sparse_buzz_approval_node_status_from_decoder(env, decoder)?.encode(env);
-        2 => "was_previously_approved": decoder.read_bool()?.encode(env);
-        3 => "approval_revoked_at_history": decoder.read_repeated(|decoder| decoder.read_var_uint())?.encode(env);
+        1 => "current_status": one decode_sparse_buzz_approval_node_status_from_decoder;
+        2 => "was_previously_approved": one kiwi_sparse_bool_value;
+        3 => "approval_revoked_at_history": repeated kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_embed_info_from_decoder;
     env env;
     decoder decoder;
@@ -3853,11 +3979,11 @@ kiwi_sparse_message_decoder! {
     definition "CodeEmbedInfo";
     capacity 6;
     fields [
-        1 => "url": decoder.read_string(env)?.encode(env);
-        2 => "src_url": decoder.read_string(env)?.encode(env);
-        3 => "title": decoder.read_string(env)?.encode(env);
-        4 => "thumbnail_image_hash": decoder.read_string(env)?.encode(env);
-        5 => "is_published_site": decoder.read_bool()?.encode(env);
+        1 => "url": one kiwi_sparse_string_value;
+        2 => "src_url": one kiwi_sparse_string_value;
+        3 => "title": one kiwi_sparse_string_value;
+        4 => "thumbnail_image_hash": one kiwi_sparse_string_value;
+        5 => "is_published_site": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -3871,7 +3997,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_change_from_decoder;
     env env;
     decoder decoder;
@@ -3879,596 +4005,596 @@ kiwi_sparse_message_decoder! {
     definition "NodeChange";
     capacity 591;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        53 => "guid_tag": decoder.read_var_uint()?.encode(env);
-        2 => "phase": decode_sparse_node_phase_from_decoder(env, decoder)?.encode(env);
-        54 => "phase_tag": decoder.read_var_uint()?.encode(env);
-        3 => "parent_index": decode_sparse_parent_index_from_decoder(env, decoder)?.encode(env);
-        55 => "parent_index_tag": decoder.read_var_uint()?.encode(env);
-        4 => "type": decode_sparse_node_type_from_decoder(env, decoder)?.encode(env);
-        56 => "type_tag": decoder.read_var_uint()?.encode(env);
-        5 => "name": decoder.read_string(env)?.encode(env);
-        57 => "name_tag": decoder.read_var_uint()?.encode(env);
-        174 => "is_publishable": decoder.read_bool()?.encode(env);
-        318 => "description": decoder.read_string(env)?.encode(env);
-        256 => "library_move_info": decode_sparse_library_move_info_from_decoder(env, decoder)?.encode(env);
-        281 => "library_move_history": decoder.read_repeated(|decoder| decode_sparse_library_move_history_item_from_decoder(env, decoder))?.encode(env);
-        319 => "key": decoder.read_string(env)?.encode(env);
-        383 => "file_asset_ids": decode_sparse_asset_id_map_from_decoder(env, decoder)?.encode(env);
-        49 => "style_id": decoder.read_var_uint()?.encode(env);
-        101 => "style_id_tag": decoder.read_var_uint()?.encode(env);
-        157 => "is_fill_style": decoder.read_bool()?.encode(env);
-        161 => "is_stroke_style": decoder.read_bool()?.encode(env);
-        376 => "is_override_over_text_style": decoder.read_bool()?.encode(env);
-        163 => "style_type": decode_sparse_style_type_from_decoder(env, decoder)?.encode(env);
-        191 => "style_description": decoder.read_string(env)?.encode(env);
-        171 => "version": decoder.read_string(env)?.encode(env);
-        399 => "user_facing_version": decoder.read_string(env)?.encode(env);
-        320 => "sort_position": decoder.read_string(env)?.encode(env);
-        345 => "ojans_super_secret_node_field": decode_sparse_shared_style_master_data_from_decoder(env, decoder)?.encode(env);
-        348 => "sev_moonlit_lily_data": decode_sparse_shared_style_master_data_from_decoder(env, decoder)?.encode(env);
-        176 => "is_soft_deleted_style": decoder.read_bool()?.encode(env);
-        177 => "is_non_updateable": decoder.read_bool()?.encode(env);
-        172 => "shared_style_master_data": decode_sparse_shared_style_master_data_from_decoder(env, decoder)?.encode(env);
-        173 => "shared_style_reference": decode_sparse_shared_style_reference_from_decoder(env, decoder)?.encode(env);
-        158 => "inherit_fill_style_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        162 => "inherit_stroke_style_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        167 => "inherit_text_style_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        168 => "inherit_export_style_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        169 => "inherit_effect_style_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        170 => "inherit_grid_style_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        185 => "inherit_fill_style_id_for_stroke": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        332 => "style_id_for_fill": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        333 => "style_id_for_stroke_fill": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        334 => "style_id_for_text": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        335 => "style_id_for_effect": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        336 => "style_id_for_grid": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        580 => "style_animations": decoder.read_repeated(|decoder| decode_sparse_style_animation_from_decoder(env, decoder))?.encode(env);
-        193 => "background_paints": decoder.read_repeated(|decoder| decode_sparse_paint_from_decoder(env, decoder))?.encode(env);
-        194 => "inherit_fill_style_id_for_background": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        225 => "is_state_group": decoder.read_bool()?.encode(env);
-        238 => "state_group_property_value_orders": decoder.read_repeated(|decoder| decode_sparse_state_group_property_value_order_from_decoder(env, decoder))?.encode(env);
-        581 => "partial_paste_annotation": decode_sparse_partial_paste_annotation_from_decoder(env, decoder)?.encode(env);
-        122 => "shared_symbol_reference": decode_sparse_shared_symbol_reference_from_decoder(env, decoder)?.encode(env);
-        123 => "is_symbol_publishable": decoder.read_bool()?.encode(env);
-        124 => "shared_symbol_mappings": decoder.read_repeated(|decoder| decode_sparse_guid_path_mapping_from_decoder(env, decoder))?.encode(env);
-        126 => "shared_symbol_version": decoder.read_string(env)?.encode(env);
-        152 => "shared_component_master_data": decode_sparse_shared_component_master_data_from_decoder(env, decoder)?.encode(env);
-        144 => "symbol_description": decoder.read_string(env)?.encode(env);
-        164 => "unflattening_mappings": decoder.read_repeated(|decoder| decode_sparse_guid_path_mapping_from_decoder(env, decoder))?.encode(env);
-        228 => "force_unflattening_mappings": decoder.read_repeated(|decoder| decode_sparse_guid_path_mapping_from_decoder(env, decoder))?.encode(env);
-        214 => "publish_file": decoder.read_string(env)?.encode(env);
-        395 => "source_library_key": decoder.read_string(env)?.encode(env);
-        215 => "publish_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        216 => "component_key": decoder.read_string(env)?.encode(env);
-        217 => "is_c2": decoder.read_bool()?.encode(env);
-        218 => "published_version": decoder.read_string(env)?.encode(env);
-        252 => "origin_component_key": decoder.read_string(env)?.encode(env);
-        266 => "component_prop_defs": decoder.read_repeated(|decoder| decode_sparse_component_prop_def_from_decoder(env, decoder))?.encode(env);
-        267 => "component_prop_refs": decoder.read_repeated(|decoder| decode_sparse_component_prop_ref_from_decoder(env, decoder))?.encode(env);
-        483 => "variant_prop_specs": decoder.read_repeated(|decoder| decode_sparse_variant_prop_spec_from_decoder(env, decoder))?.encode(env);
-        113 => "symbol_data": decode_sparse_symbol_data_from_decoder(env, decoder)?.encode(env);
-        114 => "symbol_data_tag": decoder.read_var_uint()?.encode(env);
-        125 => "derived_symbol_data": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
-        394 => "nested_instance_resize_enabled": decoder.read_bool()?.encode(env);
-        143 => "overridden_symbol_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        268 => "component_prop_assignments": decoder.read_repeated(|decoder| decode_sparse_component_prop_assignment_from_decoder(env, decoder))?.encode(env);
-        305 => "props_are_bubbled": decoder.read_bool()?.encode(env);
-        248 => "override_stash": decoder.read_repeated(|decoder| decode_sparse_instance_override_stash_from_decoder(env, decoder))?.encode(env);
-        250 => "override_stash_v2": decoder.read_repeated(|decoder| decode_sparse_instance_override_stash_v2_from_decoder(env, decoder))?.encode(env);
-        111 => "guid_path": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        112 => "guid_path_tag": decoder.read_var_uint()?.encode(env);
-        321 => "override_level": decoder.read_var_int()?.encode(env);
-        382 => "module_type": decode_sparse_module_type_from_decoder(env, decoder)?.encode(env);
-        463 => "is_slot": decoder.read_bool()?.encode(env);
-        495 => "is_slot_content": decoder.read_bool()?.encode(env);
-        21 => "font_size": decoder.read_var_float(env)?.encode(env);
-        73 => "font_size_tag": decoder.read_var_uint()?.encode(env);
-        22 => "paragraph_indent": decoder.read_var_float(env)?.encode(env);
-        74 => "paragraph_indent_tag": decoder.read_var_uint()?.encode(env);
-        23 => "paragraph_spacing": decoder.read_var_float(env)?.encode(env);
-        75 => "paragraph_spacing_tag": decoder.read_var_uint()?.encode(env);
-        32 => "text_align_horizontal": decode_sparse_text_align_horizontal_from_decoder(env, decoder)?.encode(env);
-        84 => "text_align_horizontal_tag": decoder.read_var_uint()?.encode(env);
-        33 => "text_align_vertical": decode_sparse_text_align_vertical_from_decoder(env, decoder)?.encode(env);
-        85 => "text_align_vertical_tag": decoder.read_var_uint()?.encode(env);
-        34 => "text_case": decode_sparse_text_case_from_decoder(env, decoder)?.encode(env);
-        86 => "text_case_tag": decoder.read_var_uint()?.encode(env);
-        35 => "text_decoration": decode_sparse_text_decoration_from_decoder(env, decoder)?.encode(env);
-        87 => "text_decoration_tag": decoder.read_var_uint()?.encode(env);
-        40 => "line_height": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
-        92 => "line_height_tag": decoder.read_var_uint()?.encode(env);
-        41 => "font_name": decode_sparse_font_name_from_decoder(env, decoder)?.encode(env);
-        93 => "font_name_tag": decoder.read_var_uint()?.encode(env);
-        42 => "text_data": decode_sparse_text_data_from_decoder(env, decoder)?.encode(env);
-        94 => "text_data_tag": decoder.read_var_uint()?.encode(env);
-        359 => "derived_text_data": decode_sparse_derived_text_data_from_decoder(env, decoder)?.encode(env);
-        127 => "font_variant_common_ligatures": decoder.read_bool()?.encode(env);
-        128 => "font_variant_contextual_ligatures": decoder.read_bool()?.encode(env);
-        129 => "font_variant_discretionary_ligatures": decoder.read_bool()?.encode(env);
-        130 => "font_variant_historical_ligatures": decoder.read_bool()?.encode(env);
-        131 => "font_variant_ordinal": decoder.read_bool()?.encode(env);
-        132 => "font_variant_slashed_zero": decoder.read_bool()?.encode(env);
-        133 => "font_variant_numeric_figure": decode_sparse_font_variant_numeric_figure_from_decoder(env, decoder)?.encode(env);
-        134 => "font_variant_numeric_spacing": decode_sparse_font_variant_numeric_spacing_from_decoder(env, decoder)?.encode(env);
-        135 => "font_variant_numeric_fraction": decode_sparse_font_variant_numeric_fraction_from_decoder(env, decoder)?.encode(env);
-        136 => "font_variant_caps": decode_sparse_font_variant_caps_from_decoder(env, decoder)?.encode(env);
-        137 => "font_variant_position": decode_sparse_font_variant_position_from_decoder(env, decoder)?.encode(env);
-        165 => "letter_spacing": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
-        202 => "font_version": decoder.read_string(env)?.encode(env);
-        322 => "leading_trim": decode_sparse_leading_trim_from_decoder(env, decoder)?.encode(env);
-        337 => "hanging_punctuation": decoder.read_bool()?.encode(env);
-        339 => "hanging_list": decoder.read_bool()?.encode(env);
-        550 => "fallback_glyphs": decoder.read_bool()?.encode(env);
-        351 => "max_lines": decoder.read_var_int()?.encode(env);
-        417 => "responsive_text_style_variants": decoder.read_repeated(|decoder| decode_sparse_responsive_text_style_variant_from_decoder(env, decoder))?.encode(env);
-        352 => "section_status": decode_sparse_section_status_from_decoder(env, decoder)?.encode(env);
-        355 => "section_status_info": decode_sparse_section_status_info_from_decoder(env, decoder)?.encode(env);
-        203 => "text_user_layout_version": decoder.read_var_uint()?.encode(env);
-        396 => "text_explicit_layout_version": decoder.read_var_uint()?.encode(env);
-        205 => "toggled_on_ot_features": decoder.read_repeated(|decoder| decode_sparse_open_type_feature_from_decoder(env, decoder))?.encode(env);
-        206 => "toggled_off_ot_features": decoder.read_repeated(|decoder| decode_sparse_open_type_feature_from_decoder(env, decoder))?.encode(env);
-        223 => "hyperlink": decode_sparse_hyperlink_from_decoder(env, decoder)?.encode(env);
-        340 => "mention": decode_sparse_mention_from_decoder(env, decoder)?.encode(env);
-        260 => "font_variations": decoder.read_repeated(|decoder| decode_sparse_font_variation_from_decoder(env, decoder))?.encode(env);
-        279 => "text_bidi_version": decoder.read_var_uint()?.encode(env);
-        280 => "text_truncation": decode_sparse_text_truncation_from_decoder(env, decoder)?.encode(env);
-        292 => "has_had_rtl_text": decoder.read_bool()?.encode(env);
-        391 => "emoji_image_set": decode_sparse_emoji_image_set_from_decoder(env, decoder)?.encode(env);
-        392 => "slide_thumbnail_hash": decoder.read_string(env)?.encode(env);
-        6 => "visible": decoder.read_bool()?.encode(env);
-        58 => "visible_tag": decoder.read_var_uint()?.encode(env);
-        7 => "locked": decoder.read_bool()?.encode(env);
-        59 => "locked_tag": decoder.read_var_uint()?.encode(env);
-        434 => "lock_mode": decode_sparse_lock_mode_from_decoder(env, decoder)?.encode(env);
-        8 => "opacity": decoder.read_var_float(env)?.encode(env);
-        60 => "opacity_tag": decoder.read_var_uint()?.encode(env);
-        9 => "blend_mode": decode_sparse_blend_mode_from_decoder(env, decoder)?.encode(env);
-        61 => "blend_mode_tag": decoder.read_var_uint()?.encode(env);
-        11 => "size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        63 => "size_tag": decoder.read_var_uint()?.encode(env);
-        12 => "transform": decode_sparse_matrix_from_decoder(env, decoder)?.encode(env);
-        64 => "transform_tag": decoder.read_var_uint()?.encode(env);
-        13 => "dash_pattern": decoder.read_repeated(|decoder| decoder.read_var_float(env))?.encode(env);
-        65 => "dash_pattern_tag": decoder.read_var_uint()?.encode(env);
-        16 => "mask": decoder.read_bool()?.encode(env);
-        68 => "mask_tag": decoder.read_var_uint()?.encode(env);
-        424 => "rotation_origin": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        18 => "mask_is_outline": decoder.read_bool()?.encode(env);
-        70 => "mask_is_outline_tag": decoder.read_var_uint()?.encode(env);
-        317 => "mask_type": decode_sparse_mask_type_from_decoder(env, decoder)?.encode(env);
-        19 => "background_opacity": decoder.read_var_float(env)?.encode(env);
-        71 => "background_opacity_tag": decoder.read_var_uint()?.encode(env);
-        20 => "corner_radius": decoder.read_var_float(env)?.encode(env);
-        72 => "corner_radius_tag": decoder.read_var_uint()?.encode(env);
-        26 => "stroke_weight": decoder.read_var_float(env)?.encode(env);
-        78 => "stroke_weight_tag": decoder.read_var_uint()?.encode(env);
-        29 => "stroke_align": decode_sparse_stroke_align_from_decoder(env, decoder)?.encode(env);
-        81 => "stroke_align_tag": decoder.read_var_uint()?.encode(env);
-        30 => "stroke_cap": decode_sparse_stroke_cap_from_decoder(env, decoder)?.encode(env);
-        82 => "stroke_cap_tag": decoder.read_var_uint()?.encode(env);
-        497 => "stroke_cap_size": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
-        31 => "stroke_join": decode_sparse_stroke_join_from_decoder(env, decoder)?.encode(env);
-        83 => "stroke_join_tag": decoder.read_var_uint()?.encode(env);
-        38 => "fill_paints": decoder.read_repeated(|decoder| decode_sparse_paint_from_decoder(env, decoder))?.encode(env);
-        90 => "fill_paints_tag": decoder.read_var_uint()?.encode(env);
-        39 => "stroke_paints": decoder.read_repeated(|decoder| decode_sparse_paint_from_decoder(env, decoder))?.encode(env);
-        91 => "stroke_paints_tag": decoder.read_var_uint()?.encode(env);
-        43 => "effects": decoder.read_repeated(|decoder| decode_sparse_effect_from_decoder(env, decoder))?.encode(env);
-        95 => "effects_tag": decoder.read_var_uint()?.encode(env);
-        50 => "background_color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        102 => "background_color_tag": decoder.read_var_uint()?.encode(env);
-        51 => "fill_geometry": decoder.read_repeated(|decoder| decode_sparse_path_from_decoder(env, decoder))?.encode(env);
-        103 => "fill_geometry_tag": decoder.read_var_uint()?.encode(env);
-        52 => "stroke_geometry": decoder.read_repeated(|decoder| decode_sparse_path_from_decoder(env, decoder))?.encode(env);
-        104 => "stroke_geometry_tag": decoder.read_var_uint()?.encode(env);
-        564 => "offset_fill_mask_geometry": decoder.read_repeated(|decoder| decode_sparse_path_from_decoder(env, decoder))?.encode(env);
-        411 => "text_decoration_fill_paints": decoder.read_repeated(|decoder| decode_sparse_paint_from_decoder(env, decoder))?.encode(env);
-        412 => "text_decoration_skip_ink": decoder.read_bool()?.encode(env);
-        413 => "text_underline_offset": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
-        415 => "text_decoration_thickness": decode_sparse_number_from_decoder(env, decoder)?.encode(env);
-        416 => "text_decoration_style": decode_sparse_text_decoration_style_from_decoder(env, decoder)?.encode(env);
-        455 => "transform_modifiers": decoder.read_repeated(|decoder| decode_sparse_transform_modifier_from_decoder(env, decoder))?.encode(env);
-        570 => "transform3d": decode_sparse_transform3d_from_decoder(env, decoder)?.encode(env);
-        571 => "stroke_data": decode_sparse_stroke_data_from_decoder(env, decoder)?.encode(env);
-        572 => "scene3d": decode_sparse_scene3d_from_decoder(env, decoder)?.encode(env);
-        587 => "transform_origin": decode_sparse_transform_origin_from_decoder(env, decoder)?.encode(env);
-        145 => "rectangle_top_left_corner_radius": decoder.read_var_float(env)?.encode(env);
-        146 => "rectangle_top_right_corner_radius": decoder.read_var_float(env)?.encode(env);
-        147 => "rectangle_bottom_left_corner_radius": decoder.read_var_float(env)?.encode(env);
-        148 => "rectangle_bottom_right_corner_radius": decoder.read_var_float(env)?.encode(env);
-        149 => "rectangle_corner_radii_independent": decoder.read_bool()?.encode(env);
-        150 => "rectangle_corner_tool_independent": decoder.read_bool()?.encode(env);
-        151 => "proportions_constrained": decoder.read_bool()?.encode(env);
-        423 => "target_aspect_ratio": decode_sparse_optional_vector_from_decoder(env, decoder)?.encode(env);
-        258 => "use_absolute_bounds": decoder.read_bool()?.encode(env);
-        287 => "border_top_hidden": decoder.read_bool()?.encode(env);
-        288 => "border_bottom_hidden": decoder.read_bool()?.encode(env);
-        289 => "border_left_hidden": decoder.read_bool()?.encode(env);
-        290 => "border_right_hidden": decoder.read_bool()?.encode(env);
-        294 => "borders_take_space": decoder.read_bool()?.encode(env);
-        295 => "border_top_weight": decoder.read_var_float(env)?.encode(env);
-        296 => "border_bottom_weight": decoder.read_var_float(env)?.encode(env);
-        297 => "border_left_weight": decoder.read_var_float(env)?.encode(env);
-        298 => "border_right_weight": decoder.read_var_float(env)?.encode(env);
-        299 => "border_stroke_weights_independent": decoder.read_bool()?.encode(env);
-        28 => "horizontal_constraint": decode_sparse_constraint_type_from_decoder(env, decoder)?.encode(env);
-        80 => "horizontal_constraint_tag": decoder.read_var_uint()?.encode(env);
-        105 => "stack_mode": decode_sparse_stack_mode_from_decoder(env, decoder)?.encode(env);
-        106 => "stack_mode_tag": decoder.read_var_uint()?.encode(env);
-        107 => "stack_spacing": decoder.read_var_float(env)?.encode(env);
-        108 => "stack_spacing_tag": decoder.read_var_uint()?.encode(env);
-        109 => "stack_padding": decoder.read_var_float(env)?.encode(env);
-        110 => "stack_padding_tag": decoder.read_var_uint()?.encode(env);
-        120 => "stack_counter_align": decode_sparse_stack_counter_align_from_decoder(env, decoder)?.encode(env);
-        121 => "stack_justify": decode_sparse_stack_justify_from_decoder(env, decoder)?.encode(env);
-        208 => "stack_align": decode_sparse_stack_align_from_decoder(env, decoder)?.encode(env);
-        209 => "stack_horizontal_padding": decoder.read_var_float(env)?.encode(env);
-        210 => "stack_vertical_padding": decoder.read_var_float(env)?.encode(env);
-        211 => "stack_width": decode_sparse_stack_size_from_decoder(env, decoder)?.encode(env);
-        212 => "stack_height": decode_sparse_stack_size_from_decoder(env, decoder)?.encode(env);
-        229 => "stack_primary_sizing": decode_sparse_stack_size_from_decoder(env, decoder)?.encode(env);
-        230 => "stack_primary_align_items": decode_sparse_stack_justify_from_decoder(env, decoder)?.encode(env);
-        231 => "stack_counter_align_items": decode_sparse_stack_align_from_decoder(env, decoder)?.encode(env);
-        232 => "stack_child_primary_grow": decoder.read_var_float(env)?.encode(env);
-        233 => "stack_padding_right": decoder.read_var_float(env)?.encode(env);
-        234 => "stack_padding_bottom": decoder.read_var_float(env)?.encode(env);
-        236 => "stack_child_align_self": decode_sparse_stack_counter_align_from_decoder(env, decoder)?.encode(env);
-        269 => "stack_positioning": decode_sparse_stack_positioning_from_decoder(env, decoder)?.encode(env);
-        271 => "stack_reverse_z_index": decoder.read_bool()?.encode(env);
-        323 => "stack_wrap": decode_sparse_stack_wrap_from_decoder(env, decoder)?.encode(env);
-        324 => "stack_counter_spacing": decoder.read_var_float(env)?.encode(env);
-        325 => "min_size": decode_sparse_optional_vector_from_decoder(env, decoder)?.encode(env);
-        326 => "max_size": decode_sparse_optional_vector_from_decoder(env, decoder)?.encode(env);
-        343 => "stack_counter_align_content": decode_sparse_stack_counter_align_content_from_decoder(env, decoder)?.encode(env);
-        406 => "sorted_moving_child_indices": decoder.read_repeated(|decoder| decoder.read_var_int())?.encode(env);
-        574 => "stack_layout_version": decoder.read_var_uint()?.encode(env);
-        435 => "grid_rows": decode_sparse_guid_position_map_from_decoder(env, decoder)?.encode(env);
-        436 => "grid_columns": decode_sparse_guid_position_map_from_decoder(env, decoder)?.encode(env);
-        437 => "grid_row_gap": decoder.read_var_float(env)?.encode(env);
-        438 => "grid_column_gap": decoder.read_var_float(env)?.encode(env);
-        439 => "grid_row_anchor": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        440 => "grid_column_anchor": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        441 => "grid_row_span": decoder.read_var_uint()?.encode(env);
-        442 => "grid_column_span": decoder.read_var_uint()?.encode(env);
-        474 => "grid_columns_sizing": decode_sparse_guid_grid_track_size_map_from_decoder(env, decoder)?.encode(env);
-        475 => "grid_rows_sizing": decode_sparse_guid_grid_track_size_map_from_decoder(env, decoder)?.encode(env);
-        476 => "grid_child_vertical_align": decode_sparse_grid_child_align_from_decoder(env, decoder)?.encode(env);
-        477 => "grid_child_horizontal_align": decode_sparse_grid_child_align_from_decoder(env, decoder)?.encode(env);
-        555 => "grid_auto_tracks": decode_sparse_grid_auto_tracks_from_decoder(env, decoder)?.encode(env);
-        556 => "grid_reflow_enabled": decoder.read_bool()?.encode(env);
-        344 => "is_snake_game_board": decoder.read_bool()?.encode(env);
-        139 => "transition_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        140 => "prototype_start_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        141 => "prototype_background_color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        153 => "transition_info": decode_sparse_transition_info_from_decoder(env, decoder)?.encode(env);
-        154 => "transition_type": decode_sparse_transition_type_from_decoder(env, decoder)?.encode(env);
-        155 => "transition_duration": decoder.read_var_float(env)?.encode(env);
-        156 => "easing_type": decode_sparse_easing_type_from_decoder(env, decoder)?.encode(env);
-        181 => "transition_preserve_scroll": decoder.read_bool()?.encode(env);
-        182 => "connection_type": decode_sparse_connection_type_from_decoder(env, decoder)?.encode(env);
-        183 => "connection_url": decoder.read_string(env)?.encode(env);
-        184 => "prototype_device": decode_sparse_prototype_device_from_decoder(env, decoder)?.encode(env);
-        187 => "interaction_type": decode_sparse_interaction_type_from_decoder(env, decoder)?.encode(env);
-        188 => "transition_timeout": decoder.read_var_float(env)?.encode(env);
-        189 => "interaction_maintained": decoder.read_bool()?.encode(env);
-        190 => "interaction_duration": decoder.read_var_float(env)?.encode(env);
-        192 => "destination_is_overlay": decoder.read_bool()?.encode(env);
-        207 => "transition_should_smart_animate": decoder.read_bool()?.encode(env);
-        226 => "prototype_interactions": decoder.read_repeated(|decoder| decode_sparse_prototype_interaction_from_decoder(env, decoder))?.encode(env);
-        426 => "object_animations": decoder.read_repeated(|decoder| decode_sparse_prototype_interaction_from_decoder(env, decoder))?.encode(env);
-        249 => "prototype_starting_point": decode_sparse_prototype_starting_point_from_decoder(env, decoder)?.encode(env);
-        204 => "plugin_data": decoder.read_repeated(|decoder| decode_sparse_plugin_data_from_decoder(env, decoder))?.encode(env);
-        219 => "plugin_relaunch_data": decoder.read_repeated(|decoder| decode_sparse_plugin_relaunch_data_from_decoder(env, decoder))?.encode(env);
-        242 => "connector_start": decode_sparse_connector_endpoint_from_decoder(env, decoder)?.encode(env);
-        243 => "connector_end": decode_sparse_connector_endpoint_from_decoder(env, decoder)?.encode(env);
-        244 => "connector_line_style": decode_sparse_connector_line_style_from_decoder(env, decoder)?.encode(env);
-        245 => "connector_start_cap": decode_sparse_stroke_cap_from_decoder(env, decoder)?.encode(env);
-        246 => "connector_end_cap": decode_sparse_stroke_cap_from_decoder(env, decoder)?.encode(env);
-        253 => "connector_control_points": decoder.read_repeated(|decoder| decode_sparse_connector_control_point_from_decoder(env, decoder))?.encode(env);
-        479 => "connector_bezier_control_points": decoder.read_repeated(|decoder| decode_sparse_connector_control_point_from_decoder(env, decoder))?.encode(env);
-        255 => "connector_text_midpoint": decode_sparse_connector_text_midpoint_from_decoder(env, decoder)?.encode(env);
-        373 => "connector_type": decode_sparse_connector_type_from_decoder(env, decoder)?.encode(env);
-        533 => "connector_version": decoder.read_var_int()?.encode(env);
-        369 => "annotations": decoder.read_repeated(|decoder| decode_sparse_annotation_from_decoder(env, decoder))?.encode(env);
-        384 => "measurements": decoder.read_repeated(|decoder| decode_sparse_annotation_measurement_from_decoder(env, decoder))?.encode(env);
-        453 => "annotation_categories": decode_sparse_annotation_categories_from_decoder(env, decoder)?.encode(env);
-        241 => "shape_with_text_type": decode_sparse_shape_with_text_type_from_decoder(env, decoder)?.encode(env);
-        247 => "shape_user_height": decoder.read_var_float(env)?.encode(env);
-        530 => "is_stroke_paint_derived": decoder.read_bool()?.encode(env);
-        254 => "derived_immutable_frame_data": decode_sparse_derived_immutable_frame_data_from_decoder(env, decoder)?.encode(env);
-        338 => "derived_immutable_frame_data_version": decode_sparse_multiplayer_field_version_from_decoder(env, decoder)?.encode(env);
-        240 => "node_generation_data": decode_sparse_node_generation_data_from_decoder(env, decoder)?.encode(env);
-        491 => "jsx_data": decode_sparse_jsx_data_from_decoder(env, decoder)?.encode(env);
-        492 => "derived_jsx_data": decode_sparse_derived_jsx_data_from_decoder(env, decoder)?.encode(env);
-        493 => "stable_key": decoder.read_string(env)?.encode(env);
-        259 => "code_block_language": decode_sparse_code_block_language_from_decoder(env, decoder)?.encode(env);
-        433 => "code_block_theme": decode_sparse_code_block_theme_from_decoder(env, decoder)?.encode(env);
-        278 => "link_preview_data": decode_sparse_link_preview_data_from_decoder(env, decoder)?.encode(env);
-        282 => "shape_truncates": decoder.read_bool()?.encode(env);
-        283 => "section_contents_hidden": decoder.read_bool()?.encode(env);
-        300 => "video_playback": decode_sparse_video_playback_from_decoder(env, decoder)?.encode(env);
-        301 => "stamp_data": decode_sparse_stamp_data_from_decoder(env, decoder)?.encode(env);
-        370 => "section_preset_info": decode_sparse_section_preset_info_from_decoder(env, decoder)?.encode(env);
-        409 => "platform_shape_definition": decode_sparse_platform_shape_definition_from_decoder(env, decoder)?.encode(env);
-        273 => "widget_synced_state": decode_sparse_multiplayer_map_from_decoder(env, decoder)?.encode(env);
-        274 => "widget_sync_cursor": decoder.read_var_uint()?.encode(env);
-        275 => "widget_derived_subtree_cursor": decode_sparse_widget_derived_subtree_cursor_from_decoder(env, decoder)?.encode(env);
-        276 => "widget_cached_ancestor": decode_sparse_widget_pointer_from_decoder(env, decoder)?.encode(env);
-        285 => "widget_input_behavior": decode_sparse_widget_input_behavior_from_decoder(env, decoder)?.encode(env);
-        286 => "widget_tooltip": decoder.read_string(env)?.encode(env);
-        291 => "widget_hover_style": decode_sparse_widget_hover_style_from_decoder(env, decoder)?.encode(env);
-        293 => "is_widget_stickable": decoder.read_bool()?.encode(env);
-        360 => "should_hide_cursors_on_widget_hover": decoder.read_bool()?.encode(env);
-        262 => "widget_metadata": decode_sparse_widget_metadata_from_decoder(env, decoder)?.encode(env);
-        263 => "widget_events": decoder.read_repeated(|decoder| decode_sparse_widget_event_from_decoder(env, decoder))?.encode(env);
-        265 => "widget_property_menu_items": decoder.read_repeated(|decoder| decode_sparse_widget_property_menu_item_from_decoder(env, decoder))?.encode(env);
-        401 => "widget_input_text_node_type": decode_sparse_widget_input_text_node_type_from_decoder(env, decoder)?.encode(env);
-        489 => "jsx_props": decode_sparse_multiplayer_map_from_decoder(env, decoder)?.encode(env);
-        308 => "table_row_positions": decode_sparse_table_row_column_position_map_from_decoder(env, decoder)?.encode(env);
-        309 => "table_column_positions": decode_sparse_table_row_column_position_map_from_decoder(env, decoder)?.encode(env);
-        310 => "table_row_heights": decode_sparse_table_row_column_size_map_from_decoder(env, decoder)?.encode(env);
-        311 => "table_column_widths": decode_sparse_table_row_column_size_map_from_decoder(env, decoder)?.encode(env);
-        538 => "table_merged_cells": decode_sparse_table_merged_cell_map_from_decoder(env, decoder)?.encode(env);
-        371 => "interactive_slide_config_data": decode_sparse_multiplayer_map_from_decoder(env, decoder)?.encode(env);
-        372 => "interactive_slide_participant_data": decode_sparse_multiplayer_map_from_decoder(env, decoder)?.encode(env);
-        402 => "flapp_type": decode_sparse_flapp_type_from_decoder(env, decoder)?.encode(env);
-        486 => "is_embedded_prototype": decoder.read_bool()?.encode(env);
-        389 => "slide_speaker_notes": decoder.read_string(env)?.encode(env);
-        410 => "is_skipped_slide": decoder.read_bool()?.encode(env);
-        573 => "presentation_outlines": decode_sparse_multiplayer_map_from_decoder(env, decoder)?.encode(env);
-        379 => "theme_id": decode_sparse_theme_id_from_decoder(env, decoder)?.encode(env);
-        381 => "slide_theme_data": decode_sparse_slide_theme_data_from_decoder(env, decoder)?.encode(env);
-        390 => "slide_theme_map": decode_sparse_slide_theme_map_from_decoder(env, decoder)?.encode(env);
-        393 => "slide_template_file_key": decoder.read_string(env)?.encode(env);
-        443 => "slide_number": decode_sparse_slide_number_from_decoder(env, decoder)?.encode(env);
-        456 => "slide_number_separator": decoder.read_string(env)?.encode(env);
-        363 => "diagram_parent_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        362 => "layout_root": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        364 => "layout_position": decoder.read_string(env)?.encode(env);
-        366 => "diagram_layout_rule_type": decode_sparse_diagram_layout_rule_type_from_decoder(env, decoder)?.encode(env);
-        367 => "diagram_parent_index": decode_sparse_diagram_parent_index_from_decoder(env, decoder)?.encode(env);
-        368 => "diagram_layout_paused": decode_sparse_diagram_layout_paused_from_decoder(env, decoder)?.encode(env);
-        380 => "is_page_divider": decoder.read_bool()?.encode(env);
-        251 => "internal_enum_for_test": decode_sparse_internal_enum_for_test_from_decoder(env, decoder)?.encode(env);
-        257 => "internal_data_for_test": decode_sparse_internal_data_for_test_from_decoder(env, decoder)?.encode(env);
-        14 => "auto_rename": decoder.read_bool()?.encode(env);
-        66 => "auto_rename_tag": decoder.read_var_uint()?.encode(env);
-        15 => "background_enabled": decoder.read_bool()?.encode(env);
-        67 => "background_enabled_tag": decoder.read_var_uint()?.encode(env);
-        17 => "export_contents_only": decoder.read_bool()?.encode(env);
-        69 => "export_contents_only_tag": decoder.read_var_uint()?.encode(env);
-        25 => "miter_limit": decoder.read_var_float(env)?.encode(env);
-        77 => "miter_limit_tag": decoder.read_var_uint()?.encode(env);
-        27 => "text_tracking": decoder.read_var_float(env)?.encode(env);
-        79 => "text_tracking_tag": decoder.read_var_uint()?.encode(env);
-        37 => "vertical_constraint": decode_sparse_constraint_type_from_decoder(env, decoder)?.encode(env);
-        89 => "vertical_constraint_tag": decoder.read_var_uint()?.encode(env);
-        45 => "export_settings": decoder.read_repeated(|decoder| decode_sparse_export_settings_from_decoder(env, decoder))?.encode(env);
-        97 => "export_settings_tag": decoder.read_var_uint()?.encode(env);
-        46 => "text_auto_resize": decode_sparse_text_auto_resize_from_decoder(env, decoder)?.encode(env);
-        98 => "text_auto_resize_tag": decoder.read_var_uint()?.encode(env);
-        47 => "layout_grids": decoder.read_repeated(|decoder| decode_sparse_layout_grid_from_decoder(env, decoder))?.encode(env);
-        99 => "layout_grids_tag": decoder.read_var_uint()?.encode(env);
-        115 => "frame_mask_disabled": decoder.read_bool()?.encode(env);
-        116 => "frame_mask_disabled_tag": decoder.read_var_uint()?.encode(env);
-        117 => "resize_to_fit": decoder.read_bool()?.encode(env);
-        118 => "resize_to_fit_tag": decoder.read_var_uint()?.encode(env);
-        36 => "boolean_operation": decode_sparse_boolean_operation_from_decoder(env, decoder)?.encode(env);
-        88 => "boolean_operation_tag": decoder.read_var_uint()?.encode(env);
-        44 => "handle_mirroring": decode_sparse_vector_mirror_from_decoder(env, decoder)?.encode(env);
-        96 => "handle_mirroring_tag": decoder.read_var_uint()?.encode(env);
-        10 => "count": decoder.read_var_uint()?.encode(env);
-        62 => "count_tag": decoder.read_var_uint()?.encode(env);
-        24 => "star_inner_scale": decoder.read_var_float(env)?.encode(env);
-        76 => "star_inner_scale_tag": decoder.read_var_uint()?.encode(env);
-        195 => "arc_data": decode_sparse_arc_data_from_decoder(env, decoder)?.encode(env);
-        48 => "vector_data": decode_sparse_vector_data_from_decoder(env, decoder)?.encode(env);
-        100 => "vector_data_tag": decoder.read_var_uint()?.encode(env);
-        425 => "vector_operation_version": decoder.read_var_uint()?.encode(env);
-        432 => "text_path_start": decode_sparse_text_path_start_from_decoder(env, decoder)?.encode(env);
-        119 => "export_background_disabled": decoder.read_bool()?.encode(env);
-        138 => "guides": decoder.read_repeated(|decoder| decode_sparse_guide_from_decoder(env, decoder))?.encode(env);
-        142 => "internal_only": decoder.read_bool()?.encode(env);
-        159 => "scroll_direction": decode_sparse_scroll_direction_from_decoder(env, decoder)?.encode(env);
-        160 => "corner_smoothing": decoder.read_var_float(env)?.encode(env);
-        166 => "scroll_offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        175 => "export_text_as_svg_text": decoder.read_bool()?.encode(env);
-        178 => "scroll_contracted_state": decode_sparse_scroll_contracted_state_from_decoder(env, decoder)?.encode(env);
-        179 => "contracted_size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        180 => "fixed_children_divider": decoder.read_string(env)?.encode(env);
-        186 => "scroll_behavior": decode_sparse_scroll_behavior_from_decoder(env, decoder)?.encode(env);
-        196 => "derived_symbol_data_layout_version": decoder.read_var_int()?.encode(env);
-        197 => "navigation_type": decode_sparse_navigation_type_from_decoder(env, decoder)?.encode(env);
-        198 => "overlay_position_type": decode_sparse_overlay_position_type_from_decoder(env, decoder)?.encode(env);
-        199 => "overlay_relative_position": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        200 => "overlay_background_interaction": decode_sparse_overlay_background_interaction_from_decoder(env, decoder)?.encode(env);
-        201 => "overlay_background_appearance": decode_sparse_overlay_background_appearance_from_decoder(env, decoder)?.encode(env);
-        213 => "override_key": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        220 => "container_supports_fill_stroke_and_corners": decoder.read_bool()?.encode(env);
-        221 => "stack_counter_sizing": decode_sparse_stack_size_from_decoder(env, decoder)?.encode(env);
-        222 => "containers_support_fill_stroke_and_corners": decoder.read_bool()?.encode(env);
-        224 => "key_trigger": decode_sparse_key_trigger_from_decoder(env, decoder)?.encode(env);
-        227 => "voice_event_phrase": decoder.read_string(env)?.encode(env);
-        235 => "ancestor_path_before_deletion": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
-        237 => "symbol_links": decoder.read_repeated(|decoder| decode_sparse_symbol_link_from_decoder(env, decoder))?.encode(env);
-        239 => "text_list_data": decode_sparse_text_list_data_from_decoder(env, decoder)?.encode(env);
-        261 => "detach_optical_size_from_font_size": decoder.read_bool()?.encode(env);
-        264 => "list_spacing": decoder.read_var_float(env)?.encode(env);
-        270 => "embed_data": decode_sparse_embed_data_from_decoder(env, decoder)?.encode(env);
-        272 => "rich_media_data": decode_sparse_rich_media_data_from_decoder(env, decoder)?.encode(env);
-        277 => "rendered_synced_state": decode_sparse_multiplayer_map_from_decoder(env, decoder)?.encode(env);
-        284 => "simplify_instance_panels": decoder.read_bool()?.encode(env);
-        302 => "accessible_html_tag": decode_sparse_html_tag_from_decoder(env, decoder)?.encode(env);
-        303 => "aria_role": decode_sparse_aria_role_from_decoder(env, decoder)?.encode(env);
-        357 => "aria_attributes": decode_sparse_aria_attributes_map_from_decoder(env, decoder)?.encode(env);
-        304 => "accessible_label": decoder.read_string(env)?.encode(env);
-        490 => "is_decorative_image": decoder.read_bool()?.encode(env);
-        306 => "variable_data": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        307 => "variable_consumption_map": decode_sparse_variable_data_map_from_decoder(env, decoder)?.encode(env);
-        316 => "variable_mode_by_set_map": decode_sparse_variable_mode_by_set_map_from_decoder(env, decoder)?.encode(env);
-        312 => "variable_set_modes": decoder.read_repeated(|decoder| decode_sparse_variable_set_mode_from_decoder(env, decoder))?.encode(env);
-        313 => "variable_set_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
-        314 => "variable_resolved_type": decode_sparse_variable_resolved_data_type_from_decoder(env, decoder)?.encode(env);
-        315 => "variable_data_values": decode_sparse_variable_data_values_from_decoder(env, decoder)?.encode(env);
-        350 => "variable_token_name": decoder.read_string(env)?.encode(env);
-        566 => "timing_display_unit": decode_sparse_variable_timing_display_unit_from_decoder(env, decoder)?.encode(env);
-        353 => "variable_scopes": decoder.read_repeated(|decoder| decode_sparse_variable_scope_from_decoder(env, decoder))?.encode(env);
-        445 => "parameter_consumption_map": decode_sparse_variable_data_map_from_decoder(env, decoder)?.encode(env);
-        358 => "code_syntax": decode_sparse_code_syntax_map_from_decoder(env, decoder)?.encode(env);
-        388 => "paste_source": decode_sparse_paste_source_from_decoder(env, decoder)?.encode(env);
-        397 => "page_type": decode_sparse_editor_type_from_decoder(env, decoder)?.encode(env);
-        446 => "stroke_brush_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        482 => "stroke_seed": decoder.read_var_uint64()?.encode(env);
-        447 => "variable_width_points": decoder.read_repeated(|decoder| decode_sparse_variable_width_point_from_decoder(env, decoder))?.encode(env);
-        448 => "dynamic_stroke_settings": decode_sparse_dynamic_stroke_settings_from_decoder(env, decoder)?.encode(env);
-        449 => "scatter_stroke_settings": decode_sparse_scatter_stroke_settings_from_decoder(env, decoder)?.encode(env);
-        450 => "stretch_stroke_settings": decode_sparse_stretch_stroke_settings_from_decoder(env, decoder)?.encode(env);
-        488 => "scatter_brush_transforms": decoder.read_repeated(|decoder| decode_sparse_matrix_from_decoder(env, decoder))?.encode(env);
-        452 => "brush_type": decode_sparse_brush_type_from_decoder(env, decoder)?.encode(env);
-        542 => "path_trim": decode_sparse_optional_vector_from_decoder(env, decoder)?.encode(env);
-        554 => "stroke_offset": decoder.read_var_float(env)?.encode(env);
-        377 => "backing_variable_set_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
-        464 => "overridden_variable_id": decode_sparse_variable_id_from_decoder(env, decoder)?.encode(env);
-        378 => "backing_variable_id": decode_sparse_variable_id_or_variable_override_id_from_decoder(env, decoder)?.encode(env);
-        385 => "is_collection_extendable": decoder.read_bool()?.encode(env);
-        386 => "root_variable_key": decoder.read_string(env)?.encode(env);
-        517 => "inherited_variable_ids": decode_sparse_inherited_variables_data_from_decoder(env, decoder)?.encode(env);
-        361 => "handoff_status_map": decode_sparse_handoff_status_map_from_decoder(env, decoder)?.encode(env);
-        327 => "agenda_position_map": decode_sparse_agenda_position_map_from_decoder(env, decoder)?.encode(env);
-        328 => "agenda_metadata_map": decode_sparse_agenda_metadata_map_from_decoder(env, decoder)?.encode(env);
-        329 => "migration_status": decode_sparse_migration_status_from_decoder(env, decoder)?.encode(env);
-        330 => "is_soft_deleted": decoder.read_bool()?.encode(env);
-        331 => "edit_info": decode_sparse_edit_info_from_decoder(env, decoder)?.encode(env);
-        341 => "color_profile": decode_sparse_color_profile_from_decoder(env, decoder)?.encode(env);
-        342 => "detached_symbol_id": decode_sparse_symbol_id_from_decoder(env, decoder)?.encode(env);
-        346 => "child_reading_direction": decode_sparse_child_reading_direction_from_decoder(env, decoder)?.encode(env);
-        347 => "reading_index": decoder.read_string(env)?.encode(env);
-        349 => "document_color_profile": decode_sparse_document_color_profile_from_decoder(env, decoder)?.encode(env);
-        354 => "developer_related_links": decoder.read_repeated(|decoder| decode_sparse_developer_related_link_from_decoder(env, decoder))?.encode(env);
-        356 => "slide_active_theme_lib_key": decoder.read_string(env)?.encode(env);
-        365 => "edit_scope_info": decode_sparse_edit_scope_info_from_decoder(env, decoder)?.encode(env);
-        374 => "semantic_weight": decode_sparse_semantic_weight_from_decoder(env, decoder)?.encode(env);
-        375 => "semantic_italic": decode_sparse_semantic_italic_from_decoder(env, decoder)?.encode(env);
-        403 => "are_slides_manually_indented": decoder.read_bool()?.encode(env);
-        387 => "is_responsive_set": decoder.read_bool()?.encode(env);
-        500 => "derived_breakpoint_data": decode_sparse_derived_breakpoint_data_from_decoder(env, decoder)?.encode(env);
-        398 => "default_responsive_set_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        458 => "is_primary_breakpoint": decoder.read_bool()?.encode(env);
-        457 => "primary_responsive_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        462 => "multi_edit_glue_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        501 => "breakpoint_min_width": decoder.read_var_float(env)?.encode(env);
-        522 => "is_breakpoint_in_focus": decoder.read_bool()?.encode(env);
-        400 => "responsive_set_settings": decode_sparse_responsive_set_settings_from_decoder(env, decoder)?.encode(env);
-        404 => "behaviors": decode_sparse_node_behaviors_from_decoder(env, decoder)?.encode(env);
-        414 => "source_code": decoder.read_string(env)?.encode(env);
-        534 => "source_code_collaborative_text_version": decoder.read_repeated(|decoder| decode_sparse_collaborative_text_op_id_from_decoder(env, decoder))?.encode(env);
-        444 => "collaborative_source_code": decode_sparse_collaborative_plain_text_from_decoder(env, decoder)?.encode(env);
-        427 => "belongs_to_code_library_id": decode_sparse_code_library_id_from_decoder(env, decoder)?.encode(env);
-        467 => "imported_code_files": decode_sparse_imported_code_files_from_decoder(env, decoder)?.encode(env);
-        468 => "code_file_canvas_node_id": decode_sparse_canvas_node_id_from_decoder(env, decoder)?.encode(env);
-        498 => "is_entrypoint_code_file": decoder.read_bool()?.encode(env);
-        502 => "component_or_state_group_key": decoder.read_string(env)?.encode(env);
-        503 => "component_or_state_group_version": decoder.read_var_uint()?.encode(env);
-        504 => "source_code_library_key": decoder.read_string(env)?.encode(env);
-        515 => "source_code_library_keys": decoder.read_repeated(|decoder| decoder.read_string(env))?.encode(env);
-        524 => "used_make_libraries": decoder.read_repeated(|decoder| decode_sparse_used_make_library_from_decoder(env, decoder))?.encode(env);
-        518 => "make_library_component_id": decoder.read_string(env)?.encode(env);
-        520 => "should_hide_preview_for_make_kit_creation": decoder.read_bool()?.encode(env);
-        551 => "is_make_kit": decoder.read_bool()?.encode(env);
-        531 => "code_preview_settings": decode_sparse_prototype_device_from_decoder(env, decoder)?.encode(env);
-        525 => "code_examples": decoder.read_repeated(|decoder| decode_sparse_code_example_from_decoder(env, decoder))?.encode(env);
-        428 => "exported_from_code_file_id": decode_sparse_code_file_id_from_decoder(env, decoder)?.encode(env);
-        430 => "code_export_name": decoder.read_string(env)?.encode(env);
-        547 => "code_component_description": decoder.read_string(env)?.encode(env);
-        429 => "backing_code_component_id": decode_sparse_code_component_id_from_decoder(env, decoder)?.encode(env);
-        487 => "is_main_code_component": decoder.read_bool()?.encode(env);
-        431 => "code_snapshot_state": decode_sparse_code_snapshot_state_from_decoder(env, decoder)?.encode(env);
-        451 => "chat_messages": decoder.read_repeated(|decoder| decode_sparse_node_chat_message_from_decoder(env, decoder))?.encode(env);
-        485 => "chat_compression_state": decode_sparse_node_chat_compression_state_from_decoder(env, decoder)?.encode(env);
-        496 => "ai_chat_thread": decode_sparse_ai_chat_thread_from_decoder(env, decoder)?.encode(env);
-        484 => "code_chat_messages_key": decoder.read_string(env)?.encode(env);
-        459 => "code_snapshot": decode_sparse_code_snapshot_from_decoder(env, decoder)?.encode(env);
-        589 => "code_snapshot_layers": decode_sparse_code_snapshot_layers_from_decoder(env, decoder)?.encode(env);
-        480 => "code_snapshot_invalidated_at": decoder.read_var_uint()?.encode(env);
-        465 => "is_code_behavior": decoder.read_bool()?.encode(env);
-        469 => "auto_fork_code": decoder.read_bool()?.encode(env);
-        470 => "has_been_manually_renamed": decoder.read_bool()?.encode(env);
-        471 => "code_created_from_design": decoder.read_bool()?.encode(env);
-        481 => "code_created_from_design_node_id": decode_sparse_canvas_node_id_from_decoder(env, decoder)?.encode(env);
-        473 => "image_imports": decode_sparse_image_import_map_from_decoder(env, decoder)?.encode(env);
-        516 => "code_object_type": decode_sparse_code_object_type_from_decoder(env, decoder)?.encode(env);
-        472 => "code_file_path": decoder.read_string(env)?.encode(env);
-        478 => "code_behavior_data": decode_sparse_code_behavior_data_from_decoder(env, decoder)?.encode(env);
-        519 => "code_library_format": decoder.read_var_uint()?.encode(env);
-        527 => "is_code_preview_playing_on_canvas": decoder.read_bool()?.encode(env);
-        532 => "code_embed_info": decode_sparse_code_embed_info_from_decoder(env, decoder)?.encode(env);
-        546 => "is_embed_code_layer": decoder.read_bool()?.encode(env);
-        558 => "code_source_info": decode_sparse_code_source_info_from_decoder(env, decoder)?.encode(env);
-        536 => "mime_type": decoder.read_string(env)?.encode(env);
-        537 => "blob_ref": decoder.read_byte_array(env)?;
-        419 => "cms_selector": decode_sparse_cms_selector_from_decoder(env, decoder)?.encode(env);
-        420 => "cms_consumption_map": decode_sparse_cms_consumption_map_from_decoder(env, decoder)?.encode(env);
-        460 => "cms_rich_text_style_map": decode_sparse_cms_rich_text_style_map_from_decoder(env, decoder)?.encode(env);
-        539 => "repeater_symbol_id": decode_sparse_symbol_id_from_decoder(env, decoder)?.encode(env);
-        540 => "repeater_cms_override_data": decode_sparse_repeater_cms_override_data_from_decoder(env, decoder)?.encode(env);
-        549 => "repeater_symbol_override_data": decode_sparse_repeater_symbol_override_data_from_decoder(env, decoder)?.encode(env);
-        541 => "repeater_override_data": decode_sparse_repeater_override_data_from_decoder(env, decoder)?.encode(env);
-        405 => "ai_edited_node_change_field_numbers": decoder.read_repeated(|decoder| decoder.read_var_uint())?.encode(env);
-        408 => "ai_edit_scope_label": decoder.read_string(env)?.encode(env);
-        407 => "first_draft_data": decode_sparse_first_draft_data_from_decoder(env, decoder)?.encode(env);
-        418 => "first_draft_kit_element_data": decode_sparse_first_draft_kit_element_data_from_decoder(env, decoder)?.encode(env);
-        421 => "cooper_revert_data": decode_sparse_cooper_revert_data_from_decoder(env, decoder)?.encode(env);
-        461 => "cooper_template_data": decode_sparse_cooper_template_data_from_decoder(env, decoder)?.encode(env);
-        528 => "buzz_approval_requests": decode_sparse_buzz_approval_requests_from_decoder(env, decoder)?.encode(env);
-        529 => "buzz_approval_node_status_info": decode_sparse_buzz_approval_node_status_info_from_decoder(env, decoder)?.encode(env);
-        422 => "hub_file_attribution": decode_sparse_hub_file_attribution_from_decoder(env, decoder)?.encode(env);
-        454 => "managed_string_data": decode_sparse_managed_string_data_from_decoder(env, decoder)?.encode(env);
-        466 => "thumbnail_info": decode_sparse_thumbnail_info_from_decoder(env, decoder)?.encode(env);
-        494 => "ai_canvas_prompt": decode_sparse_ai_canvas_prompt_from_decoder(env, decoder)?.encode(env);
-        499 => "backing_node_id": decode_sparse_canvas_node_id_from_decoder(env, decoder)?.encode(env);
-        548 => "page_status": decoder.read_string(env)?.encode(env);
-        523 => "motion_transform": decode_sparse_trss_transform2_d_from_decoder(env, decoder)?.encode(env);
-        506 => "timeline_position": decoder.read_var_int64()?.encode(env);
-        507 => "keyframe_value": decode_sparse_keyframe_value_data_from_decoder(env, decoder)?.encode(env);
-        586 => "keyframe_value_ref": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        505 => "interpolation_type": decode_sparse_interpolation_type_from_decoder(env, decoder)?.encode(env);
-        508 => "bezier_handles": decode_sparse_bezier_handles_from_decoder(env, decoder)?.encode(env);
-        535 => "easing_data": decode_sparse_easing_data_from_decoder(env, decoder)?.encode(env);
-        509 => "keyframe_operation": decode_sparse_keyframe_operation_from_decoder(env, decoder)?.encode(env);
-        510 => "timeline_position_type": decode_sparse_timeline_position_type_from_decoder(env, decoder)?.encode(env);
-        545 => "is_clip": decoder.read_bool()?.encode(env);
-        511 => "clip_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        512 => "timeline_duration": decoder.read_var_uint64()?.encode(env);
-        513 => "timeline_offset": decoder.read_var_int64()?.encode(env);
-        543 => "timeline_disabled": decoder.read_bool()?.encode(env);
-        514 => "playback_style": decode_sparse_playback_style_from_decoder(env, decoder)?.encode(env);
-        552 => "timeline_definitions": decode_sparse_timeline_definitions_map_from_decoder(env, decoder)?.encode(env);
-        553 => "timeline_assignments": decode_sparse_timeline_assignments_map_from_decoder(env, decoder)?.encode(env);
-        521 => "animation_presets": decode_sparse_animation_presets_from_decoder(env, decoder)?.encode(env);
-        582 => "style_ids_for_animation": decoder.read_repeated(|decoder| decode_sparse_style_id_for_animation_from_decoder(env, decoder))?.encode(env);
-        583 => "backing_animation_preset_id": decode_sparse_animation_preset_id_from_decoder(env, decoder)?.encode(env);
-        568 => "tools": decode_sparse_tools_from_decoder(env, decoder)?.encode(env);
-        569 => "custom_effects": decode_sparse_custom_effects_from_decoder(env, decoder)?.encode(env);
-        526 => "transition_overrides": decode_sparse_transition_override_data_from_decoder(env, decoder)?.encode(env);
-        544 => "use_legacy_smart_animate": decoder.read_bool()?.encode(env);
-        557 => "source_control_config": decode_sparse_source_control_config_from_decoder(env, decoder)?.encode(env);
-        559 => "spec_block_type": decode_sparse_spec_block_type_from_decoder(env, decoder)?.encode(env);
-        560 => "spec_block_content": decode_sparse_collaborative_plain_text_from_decoder(env, decoder)?.encode(env);
-        561 => "spec_code_block_language": decoder.read_string(env)?.encode(env);
-        562 => "spec_block_table_alignment": decoder.read_string(env)?.encode(env);
-        563 => "spec_block_indent_level": decoder.read_var_int()?.encode(env);
-        575 => "spec_image_hash": decoder.read_string(env)?.encode(env);
-        576 => "spec_width": decoder.read_var_int()?.encode(env);
-        577 => "spec_height": decoder.read_var_int()?.encode(env);
-        578 => "spec_block_table_row_heights": decode_sparse_table_row_column_size_map_from_decoder(env, decoder)?.encode(env);
-        579 => "spec_block_table_column_widths": decode_sparse_table_row_column_size_map_from_decoder(env, decoder)?.encode(env);
-        590 => "spec_embed_url": decoder.read_string(env)?.encode(env);
-        565 => "placeholder": decoder.read_bool()?.encode(env);
-        584 => "placeholder_client_lifecycle_id": decoder.read_string(env)?.encode(env);
-        585 => "placeholder_invalidate_at": decoder.read_var_int()?.encode(env);
-        567 => "disable_jit_dst": decoder.read_bool()?.encode(env);
-        588 => "custom_tool_artifact_ref": decode_sparse_custom_tool_artifact_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "phase": one decode_sparse_node_phase_from_decoder;
+        3 => "parent_index": one decode_sparse_parent_index_from_decoder;
+        4 => "type": one decode_sparse_node_type_from_decoder;
+        5 => "name": one kiwi_sparse_string_value;
+        6 => "visible": one kiwi_sparse_bool_value;
+        7 => "locked": one kiwi_sparse_bool_value;
+        8 => "opacity": one kiwi_sparse_float_value;
+        9 => "blend_mode": one decode_sparse_blend_mode_from_decoder;
+        10 => "count": one kiwi_sparse_uint_value;
+        11 => "size": one decode_sparse_vector_from_decoder;
+        12 => "transform": one decode_sparse_matrix_from_decoder;
+        13 => "dash_pattern": repeated kiwi_sparse_float_value;
+        14 => "auto_rename": one kiwi_sparse_bool_value;
+        15 => "background_enabled": one kiwi_sparse_bool_value;
+        16 => "mask": one kiwi_sparse_bool_value;
+        17 => "export_contents_only": one kiwi_sparse_bool_value;
+        18 => "mask_is_outline": one kiwi_sparse_bool_value;
+        19 => "background_opacity": one kiwi_sparse_float_value;
+        20 => "corner_radius": one kiwi_sparse_float_value;
+        21 => "font_size": one kiwi_sparse_float_value;
+        22 => "paragraph_indent": one kiwi_sparse_float_value;
+        23 => "paragraph_spacing": one kiwi_sparse_float_value;
+        24 => "star_inner_scale": one kiwi_sparse_float_value;
+        25 => "miter_limit": one kiwi_sparse_float_value;
+        26 => "stroke_weight": one kiwi_sparse_float_value;
+        27 => "text_tracking": one kiwi_sparse_float_value;
+        28 => "horizontal_constraint": one decode_sparse_constraint_type_from_decoder;
+        29 => "stroke_align": one decode_sparse_stroke_align_from_decoder;
+        30 => "stroke_cap": one decode_sparse_stroke_cap_from_decoder;
+        31 => "stroke_join": one decode_sparse_stroke_join_from_decoder;
+        32 => "text_align_horizontal": one decode_sparse_text_align_horizontal_from_decoder;
+        33 => "text_align_vertical": one decode_sparse_text_align_vertical_from_decoder;
+        34 => "text_case": one decode_sparse_text_case_from_decoder;
+        35 => "text_decoration": one decode_sparse_text_decoration_from_decoder;
+        36 => "boolean_operation": one decode_sparse_boolean_operation_from_decoder;
+        37 => "vertical_constraint": one decode_sparse_constraint_type_from_decoder;
+        38 => "fill_paints": repeated decode_sparse_paint_from_decoder;
+        39 => "stroke_paints": repeated decode_sparse_paint_from_decoder;
+        40 => "line_height": one decode_sparse_number_from_decoder;
+        41 => "font_name": one decode_sparse_font_name_from_decoder;
+        42 => "text_data": one decode_sparse_text_data_from_decoder;
+        43 => "effects": repeated decode_sparse_effect_from_decoder;
+        44 => "handle_mirroring": one decode_sparse_vector_mirror_from_decoder;
+        45 => "export_settings": repeated decode_sparse_export_settings_from_decoder;
+        46 => "text_auto_resize": one decode_sparse_text_auto_resize_from_decoder;
+        47 => "layout_grids": repeated decode_sparse_layout_grid_from_decoder;
+        48 => "vector_data": one decode_sparse_vector_data_from_decoder;
+        49 => "style_id": one kiwi_sparse_uint_value;
+        50 => "background_color": one decode_sparse_color_from_decoder;
+        51 => "fill_geometry": repeated decode_sparse_path_from_decoder;
+        52 => "stroke_geometry": repeated decode_sparse_path_from_decoder;
+        53 => "guid_tag": one kiwi_sparse_uint_value;
+        54 => "phase_tag": one kiwi_sparse_uint_value;
+        55 => "parent_index_tag": one kiwi_sparse_uint_value;
+        56 => "type_tag": one kiwi_sparse_uint_value;
+        57 => "name_tag": one kiwi_sparse_uint_value;
+        58 => "visible_tag": one kiwi_sparse_uint_value;
+        59 => "locked_tag": one kiwi_sparse_uint_value;
+        60 => "opacity_tag": one kiwi_sparse_uint_value;
+        61 => "blend_mode_tag": one kiwi_sparse_uint_value;
+        62 => "count_tag": one kiwi_sparse_uint_value;
+        63 => "size_tag": one kiwi_sparse_uint_value;
+        64 => "transform_tag": one kiwi_sparse_uint_value;
+        65 => "dash_pattern_tag": one kiwi_sparse_uint_value;
+        66 => "auto_rename_tag": one kiwi_sparse_uint_value;
+        67 => "background_enabled_tag": one kiwi_sparse_uint_value;
+        68 => "mask_tag": one kiwi_sparse_uint_value;
+        69 => "export_contents_only_tag": one kiwi_sparse_uint_value;
+        70 => "mask_is_outline_tag": one kiwi_sparse_uint_value;
+        71 => "background_opacity_tag": one kiwi_sparse_uint_value;
+        72 => "corner_radius_tag": one kiwi_sparse_uint_value;
+        73 => "font_size_tag": one kiwi_sparse_uint_value;
+        74 => "paragraph_indent_tag": one kiwi_sparse_uint_value;
+        75 => "paragraph_spacing_tag": one kiwi_sparse_uint_value;
+        76 => "star_inner_scale_tag": one kiwi_sparse_uint_value;
+        77 => "miter_limit_tag": one kiwi_sparse_uint_value;
+        78 => "stroke_weight_tag": one kiwi_sparse_uint_value;
+        79 => "text_tracking_tag": one kiwi_sparse_uint_value;
+        80 => "horizontal_constraint_tag": one kiwi_sparse_uint_value;
+        81 => "stroke_align_tag": one kiwi_sparse_uint_value;
+        82 => "stroke_cap_tag": one kiwi_sparse_uint_value;
+        83 => "stroke_join_tag": one kiwi_sparse_uint_value;
+        84 => "text_align_horizontal_tag": one kiwi_sparse_uint_value;
+        85 => "text_align_vertical_tag": one kiwi_sparse_uint_value;
+        86 => "text_case_tag": one kiwi_sparse_uint_value;
+        87 => "text_decoration_tag": one kiwi_sparse_uint_value;
+        88 => "boolean_operation_tag": one kiwi_sparse_uint_value;
+        89 => "vertical_constraint_tag": one kiwi_sparse_uint_value;
+        90 => "fill_paints_tag": one kiwi_sparse_uint_value;
+        91 => "stroke_paints_tag": one kiwi_sparse_uint_value;
+        92 => "line_height_tag": one kiwi_sparse_uint_value;
+        93 => "font_name_tag": one kiwi_sparse_uint_value;
+        94 => "text_data_tag": one kiwi_sparse_uint_value;
+        95 => "effects_tag": one kiwi_sparse_uint_value;
+        96 => "handle_mirroring_tag": one kiwi_sparse_uint_value;
+        97 => "export_settings_tag": one kiwi_sparse_uint_value;
+        98 => "text_auto_resize_tag": one kiwi_sparse_uint_value;
+        99 => "layout_grids_tag": one kiwi_sparse_uint_value;
+        100 => "vector_data_tag": one kiwi_sparse_uint_value;
+        101 => "style_id_tag": one kiwi_sparse_uint_value;
+        102 => "background_color_tag": one kiwi_sparse_uint_value;
+        103 => "fill_geometry_tag": one kiwi_sparse_uint_value;
+        104 => "stroke_geometry_tag": one kiwi_sparse_uint_value;
+        105 => "stack_mode": one decode_sparse_stack_mode_from_decoder;
+        106 => "stack_mode_tag": one kiwi_sparse_uint_value;
+        107 => "stack_spacing": one kiwi_sparse_float_value;
+        108 => "stack_spacing_tag": one kiwi_sparse_uint_value;
+        109 => "stack_padding": one kiwi_sparse_float_value;
+        110 => "stack_padding_tag": one kiwi_sparse_uint_value;
+        111 => "guid_path": one decode_sparse_guid_path_from_decoder;
+        112 => "guid_path_tag": one kiwi_sparse_uint_value;
+        113 => "symbol_data": one decode_sparse_symbol_data_from_decoder;
+        114 => "symbol_data_tag": one kiwi_sparse_uint_value;
+        115 => "frame_mask_disabled": one kiwi_sparse_bool_value;
+        116 => "frame_mask_disabled_tag": one kiwi_sparse_uint_value;
+        117 => "resize_to_fit": one kiwi_sparse_bool_value;
+        118 => "resize_to_fit_tag": one kiwi_sparse_uint_value;
+        119 => "export_background_disabled": one kiwi_sparse_bool_value;
+        120 => "stack_counter_align": one decode_sparse_stack_counter_align_from_decoder;
+        121 => "stack_justify": one decode_sparse_stack_justify_from_decoder;
+        122 => "shared_symbol_reference": one decode_sparse_shared_symbol_reference_from_decoder;
+        123 => "is_symbol_publishable": one kiwi_sparse_bool_value;
+        124 => "shared_symbol_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
+        125 => "derived_symbol_data": repeated decode_sparse_node_change_from_decoder;
+        126 => "shared_symbol_version": one kiwi_sparse_string_value;
+        127 => "font_variant_common_ligatures": one kiwi_sparse_bool_value;
+        128 => "font_variant_contextual_ligatures": one kiwi_sparse_bool_value;
+        129 => "font_variant_discretionary_ligatures": one kiwi_sparse_bool_value;
+        130 => "font_variant_historical_ligatures": one kiwi_sparse_bool_value;
+        131 => "font_variant_ordinal": one kiwi_sparse_bool_value;
+        132 => "font_variant_slashed_zero": one kiwi_sparse_bool_value;
+        133 => "font_variant_numeric_figure": one decode_sparse_font_variant_numeric_figure_from_decoder;
+        134 => "font_variant_numeric_spacing": one decode_sparse_font_variant_numeric_spacing_from_decoder;
+        135 => "font_variant_numeric_fraction": one decode_sparse_font_variant_numeric_fraction_from_decoder;
+        136 => "font_variant_caps": one decode_sparse_font_variant_caps_from_decoder;
+        137 => "font_variant_position": one decode_sparse_font_variant_position_from_decoder;
+        138 => "guides": repeated decode_sparse_guide_from_decoder;
+        139 => "transition_node_id": one decode_sparse_guid_from_decoder;
+        140 => "prototype_start_node_id": one decode_sparse_guid_from_decoder;
+        141 => "prototype_background_color": one decode_sparse_color_from_decoder;
+        142 => "internal_only": one kiwi_sparse_bool_value;
+        143 => "overridden_symbol_id": one decode_sparse_guid_from_decoder;
+        144 => "symbol_description": one kiwi_sparse_string_value;
+        145 => "rectangle_top_left_corner_radius": one kiwi_sparse_float_value;
+        146 => "rectangle_top_right_corner_radius": one kiwi_sparse_float_value;
+        147 => "rectangle_bottom_left_corner_radius": one kiwi_sparse_float_value;
+        148 => "rectangle_bottom_right_corner_radius": one kiwi_sparse_float_value;
+        149 => "rectangle_corner_radii_independent": one kiwi_sparse_bool_value;
+        150 => "rectangle_corner_tool_independent": one kiwi_sparse_bool_value;
+        151 => "proportions_constrained": one kiwi_sparse_bool_value;
+        152 => "shared_component_master_data": one decode_sparse_shared_component_master_data_from_decoder;
+        153 => "transition_info": one decode_sparse_transition_info_from_decoder;
+        154 => "transition_type": one decode_sparse_transition_type_from_decoder;
+        155 => "transition_duration": one kiwi_sparse_float_value;
+        156 => "easing_type": one decode_sparse_easing_type_from_decoder;
+        157 => "is_fill_style": one kiwi_sparse_bool_value;
+        158 => "inherit_fill_style_id": one decode_sparse_guid_from_decoder;
+        159 => "scroll_direction": one decode_sparse_scroll_direction_from_decoder;
+        160 => "corner_smoothing": one kiwi_sparse_float_value;
+        161 => "is_stroke_style": one kiwi_sparse_bool_value;
+        162 => "inherit_stroke_style_id": one decode_sparse_guid_from_decoder;
+        163 => "style_type": one decode_sparse_style_type_from_decoder;
+        164 => "unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
+        165 => "letter_spacing": one decode_sparse_number_from_decoder;
+        166 => "scroll_offset": one decode_sparse_vector_from_decoder;
+        167 => "inherit_text_style_id": one decode_sparse_guid_from_decoder;
+        168 => "inherit_export_style_id": one decode_sparse_guid_from_decoder;
+        169 => "inherit_effect_style_id": one decode_sparse_guid_from_decoder;
+        170 => "inherit_grid_style_id": one decode_sparse_guid_from_decoder;
+        171 => "version": one kiwi_sparse_string_value;
+        172 => "shared_style_master_data": one decode_sparse_shared_style_master_data_from_decoder;
+        173 => "shared_style_reference": one decode_sparse_shared_style_reference_from_decoder;
+        174 => "is_publishable": one kiwi_sparse_bool_value;
+        175 => "export_text_as_svg_text": one kiwi_sparse_bool_value;
+        176 => "is_soft_deleted_style": one kiwi_sparse_bool_value;
+        177 => "is_non_updateable": one kiwi_sparse_bool_value;
+        178 => "scroll_contracted_state": one decode_sparse_scroll_contracted_state_from_decoder;
+        179 => "contracted_size": one decode_sparse_vector_from_decoder;
+        180 => "fixed_children_divider": one kiwi_sparse_string_value;
+        181 => "transition_preserve_scroll": one kiwi_sparse_bool_value;
+        182 => "connection_type": one decode_sparse_connection_type_from_decoder;
+        183 => "connection_url": one kiwi_sparse_string_value;
+        184 => "prototype_device": one decode_sparse_prototype_device_from_decoder;
+        185 => "inherit_fill_style_id_for_stroke": one decode_sparse_guid_from_decoder;
+        186 => "scroll_behavior": one decode_sparse_scroll_behavior_from_decoder;
+        187 => "interaction_type": one decode_sparse_interaction_type_from_decoder;
+        188 => "transition_timeout": one kiwi_sparse_float_value;
+        189 => "interaction_maintained": one kiwi_sparse_bool_value;
+        190 => "interaction_duration": one kiwi_sparse_float_value;
+        191 => "style_description": one kiwi_sparse_string_value;
+        192 => "destination_is_overlay": one kiwi_sparse_bool_value;
+        193 => "background_paints": repeated decode_sparse_paint_from_decoder;
+        194 => "inherit_fill_style_id_for_background": one decode_sparse_guid_from_decoder;
+        195 => "arc_data": one decode_sparse_arc_data_from_decoder;
+        196 => "derived_symbol_data_layout_version": one kiwi_sparse_int_value;
+        197 => "navigation_type": one decode_sparse_navigation_type_from_decoder;
+        198 => "overlay_position_type": one decode_sparse_overlay_position_type_from_decoder;
+        199 => "overlay_relative_position": one decode_sparse_vector_from_decoder;
+        200 => "overlay_background_interaction": one decode_sparse_overlay_background_interaction_from_decoder;
+        201 => "overlay_background_appearance": one decode_sparse_overlay_background_appearance_from_decoder;
+        202 => "font_version": one kiwi_sparse_string_value;
+        203 => "text_user_layout_version": one kiwi_sparse_uint_value;
+        204 => "plugin_data": repeated decode_sparse_plugin_data_from_decoder;
+        205 => "toggled_on_ot_features": repeated decode_sparse_open_type_feature_from_decoder;
+        206 => "toggled_off_ot_features": repeated decode_sparse_open_type_feature_from_decoder;
+        207 => "transition_should_smart_animate": one kiwi_sparse_bool_value;
+        208 => "stack_align": one decode_sparse_stack_align_from_decoder;
+        209 => "stack_horizontal_padding": one kiwi_sparse_float_value;
+        210 => "stack_vertical_padding": one kiwi_sparse_float_value;
+        211 => "stack_width": one decode_sparse_stack_size_from_decoder;
+        212 => "stack_height": one decode_sparse_stack_size_from_decoder;
+        213 => "override_key": one decode_sparse_guid_from_decoder;
+        214 => "publish_file": one kiwi_sparse_string_value;
+        215 => "publish_id": one decode_sparse_guid_from_decoder;
+        216 => "component_key": one kiwi_sparse_string_value;
+        217 => "is_c2": one kiwi_sparse_bool_value;
+        218 => "published_version": one kiwi_sparse_string_value;
+        219 => "plugin_relaunch_data": repeated decode_sparse_plugin_relaunch_data_from_decoder;
+        220 => "container_supports_fill_stroke_and_corners": one kiwi_sparse_bool_value;
+        221 => "stack_counter_sizing": one decode_sparse_stack_size_from_decoder;
+        222 => "containers_support_fill_stroke_and_corners": one kiwi_sparse_bool_value;
+        223 => "hyperlink": one decode_sparse_hyperlink_from_decoder;
+        224 => "key_trigger": one decode_sparse_key_trigger_from_decoder;
+        225 => "is_state_group": one kiwi_sparse_bool_value;
+        226 => "prototype_interactions": repeated decode_sparse_prototype_interaction_from_decoder;
+        227 => "voice_event_phrase": one kiwi_sparse_string_value;
+        228 => "force_unflattening_mappings": repeated decode_sparse_guid_path_mapping_from_decoder;
+        229 => "stack_primary_sizing": one decode_sparse_stack_size_from_decoder;
+        230 => "stack_primary_align_items": one decode_sparse_stack_justify_from_decoder;
+        231 => "stack_counter_align_items": one decode_sparse_stack_align_from_decoder;
+        232 => "stack_child_primary_grow": one kiwi_sparse_float_value;
+        233 => "stack_padding_right": one kiwi_sparse_float_value;
+        234 => "stack_padding_bottom": one kiwi_sparse_float_value;
+        235 => "ancestor_path_before_deletion": repeated decode_sparse_guid_from_decoder;
+        236 => "stack_child_align_self": one decode_sparse_stack_counter_align_from_decoder;
+        237 => "symbol_links": repeated decode_sparse_symbol_link_from_decoder;
+        238 => "state_group_property_value_orders": repeated decode_sparse_state_group_property_value_order_from_decoder;
+        239 => "text_list_data": one decode_sparse_text_list_data_from_decoder;
+        240 => "node_generation_data": one decode_sparse_node_generation_data_from_decoder;
+        241 => "shape_with_text_type": one decode_sparse_shape_with_text_type_from_decoder;
+        242 => "connector_start": one decode_sparse_connector_endpoint_from_decoder;
+        243 => "connector_end": one decode_sparse_connector_endpoint_from_decoder;
+        244 => "connector_line_style": one decode_sparse_connector_line_style_from_decoder;
+        245 => "connector_start_cap": one decode_sparse_stroke_cap_from_decoder;
+        246 => "connector_end_cap": one decode_sparse_stroke_cap_from_decoder;
+        247 => "shape_user_height": one kiwi_sparse_float_value;
+        248 => "override_stash": repeated decode_sparse_instance_override_stash_from_decoder;
+        249 => "prototype_starting_point": one decode_sparse_prototype_starting_point_from_decoder;
+        250 => "override_stash_v2": repeated decode_sparse_instance_override_stash_v2_from_decoder;
+        251 => "internal_enum_for_test": one decode_sparse_internal_enum_for_test_from_decoder;
+        252 => "origin_component_key": one kiwi_sparse_string_value;
+        253 => "connector_control_points": repeated decode_sparse_connector_control_point_from_decoder;
+        254 => "derived_immutable_frame_data": one decode_sparse_derived_immutable_frame_data_from_decoder;
+        255 => "connector_text_midpoint": one decode_sparse_connector_text_midpoint_from_decoder;
+        256 => "library_move_info": one decode_sparse_library_move_info_from_decoder;
+        257 => "internal_data_for_test": one decode_sparse_internal_data_for_test_from_decoder;
+        258 => "use_absolute_bounds": one kiwi_sparse_bool_value;
+        259 => "code_block_language": one decode_sparse_code_block_language_from_decoder;
+        260 => "font_variations": repeated decode_sparse_font_variation_from_decoder;
+        261 => "detach_optical_size_from_font_size": one kiwi_sparse_bool_value;
+        262 => "widget_metadata": one decode_sparse_widget_metadata_from_decoder;
+        263 => "widget_events": repeated decode_sparse_widget_event_from_decoder;
+        264 => "list_spacing": one kiwi_sparse_float_value;
+        265 => "widget_property_menu_items": repeated decode_sparse_widget_property_menu_item_from_decoder;
+        266 => "component_prop_defs": repeated decode_sparse_component_prop_def_from_decoder;
+        267 => "component_prop_refs": repeated decode_sparse_component_prop_ref_from_decoder;
+        268 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
+        269 => "stack_positioning": one decode_sparse_stack_positioning_from_decoder;
+        270 => "embed_data": one decode_sparse_embed_data_from_decoder;
+        271 => "stack_reverse_z_index": one kiwi_sparse_bool_value;
+        272 => "rich_media_data": one decode_sparse_rich_media_data_from_decoder;
+        273 => "widget_synced_state": one decode_sparse_multiplayer_map_from_decoder;
+        274 => "widget_sync_cursor": one kiwi_sparse_uint_value;
+        275 => "widget_derived_subtree_cursor": one decode_sparse_widget_derived_subtree_cursor_from_decoder;
+        276 => "widget_cached_ancestor": one decode_sparse_widget_pointer_from_decoder;
+        277 => "rendered_synced_state": one decode_sparse_multiplayer_map_from_decoder;
+        278 => "link_preview_data": one decode_sparse_link_preview_data_from_decoder;
+        279 => "text_bidi_version": one kiwi_sparse_uint_value;
+        280 => "text_truncation": one decode_sparse_text_truncation_from_decoder;
+        281 => "library_move_history": repeated decode_sparse_library_move_history_item_from_decoder;
+        282 => "shape_truncates": one kiwi_sparse_bool_value;
+        283 => "section_contents_hidden": one kiwi_sparse_bool_value;
+        284 => "simplify_instance_panels": one kiwi_sparse_bool_value;
+        285 => "widget_input_behavior": one decode_sparse_widget_input_behavior_from_decoder;
+        286 => "widget_tooltip": one kiwi_sparse_string_value;
+        287 => "border_top_hidden": one kiwi_sparse_bool_value;
+        288 => "border_bottom_hidden": one kiwi_sparse_bool_value;
+        289 => "border_left_hidden": one kiwi_sparse_bool_value;
+        290 => "border_right_hidden": one kiwi_sparse_bool_value;
+        291 => "widget_hover_style": one decode_sparse_widget_hover_style_from_decoder;
+        292 => "has_had_rtl_text": one kiwi_sparse_bool_value;
+        293 => "is_widget_stickable": one kiwi_sparse_bool_value;
+        294 => "borders_take_space": one kiwi_sparse_bool_value;
+        295 => "border_top_weight": one kiwi_sparse_float_value;
+        296 => "border_bottom_weight": one kiwi_sparse_float_value;
+        297 => "border_left_weight": one kiwi_sparse_float_value;
+        298 => "border_right_weight": one kiwi_sparse_float_value;
+        299 => "border_stroke_weights_independent": one kiwi_sparse_bool_value;
+        300 => "video_playback": one decode_sparse_video_playback_from_decoder;
+        301 => "stamp_data": one decode_sparse_stamp_data_from_decoder;
+        302 => "accessible_html_tag": one decode_sparse_html_tag_from_decoder;
+        303 => "aria_role": one decode_sparse_aria_role_from_decoder;
+        304 => "accessible_label": one kiwi_sparse_string_value;
+        305 => "props_are_bubbled": one kiwi_sparse_bool_value;
+        306 => "variable_data": one decode_sparse_variable_data_from_decoder;
+        307 => "variable_consumption_map": one decode_sparse_variable_data_map_from_decoder;
+        308 => "table_row_positions": one decode_sparse_table_row_column_position_map_from_decoder;
+        309 => "table_column_positions": one decode_sparse_table_row_column_position_map_from_decoder;
+        310 => "table_row_heights": one decode_sparse_table_row_column_size_map_from_decoder;
+        311 => "table_column_widths": one decode_sparse_table_row_column_size_map_from_decoder;
+        312 => "variable_set_modes": repeated decode_sparse_variable_set_mode_from_decoder;
+        313 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder;
+        314 => "variable_resolved_type": one decode_sparse_variable_resolved_data_type_from_decoder;
+        315 => "variable_data_values": one decode_sparse_variable_data_values_from_decoder;
+        316 => "variable_mode_by_set_map": one decode_sparse_variable_mode_by_set_map_from_decoder;
+        317 => "mask_type": one decode_sparse_mask_type_from_decoder;
+        318 => "description": one kiwi_sparse_string_value;
+        319 => "key": one kiwi_sparse_string_value;
+        320 => "sort_position": one kiwi_sparse_string_value;
+        321 => "override_level": one kiwi_sparse_int_value;
+        322 => "leading_trim": one decode_sparse_leading_trim_from_decoder;
+        323 => "stack_wrap": one decode_sparse_stack_wrap_from_decoder;
+        324 => "stack_counter_spacing": one kiwi_sparse_float_value;
+        325 => "min_size": one decode_sparse_optional_vector_from_decoder;
+        326 => "max_size": one decode_sparse_optional_vector_from_decoder;
+        327 => "agenda_position_map": one decode_sparse_agenda_position_map_from_decoder;
+        328 => "agenda_metadata_map": one decode_sparse_agenda_metadata_map_from_decoder;
+        329 => "migration_status": one decode_sparse_migration_status_from_decoder;
+        330 => "is_soft_deleted": one kiwi_sparse_bool_value;
+        331 => "edit_info": one decode_sparse_edit_info_from_decoder;
+        332 => "style_id_for_fill": one decode_sparse_style_id_from_decoder;
+        333 => "style_id_for_stroke_fill": one decode_sparse_style_id_from_decoder;
+        334 => "style_id_for_text": one decode_sparse_style_id_from_decoder;
+        335 => "style_id_for_effect": one decode_sparse_style_id_from_decoder;
+        336 => "style_id_for_grid": one decode_sparse_style_id_from_decoder;
+        337 => "hanging_punctuation": one kiwi_sparse_bool_value;
+        338 => "derived_immutable_frame_data_version": one decode_sparse_multiplayer_field_version_from_decoder;
+        339 => "hanging_list": one kiwi_sparse_bool_value;
+        340 => "mention": one decode_sparse_mention_from_decoder;
+        341 => "color_profile": one decode_sparse_color_profile_from_decoder;
+        342 => "detached_symbol_id": one decode_sparse_symbol_id_from_decoder;
+        343 => "stack_counter_align_content": one decode_sparse_stack_counter_align_content_from_decoder;
+        344 => "is_snake_game_board": one kiwi_sparse_bool_value;
+        345 => "ojans_super_secret_node_field": one decode_sparse_shared_style_master_data_from_decoder;
+        346 => "child_reading_direction": one decode_sparse_child_reading_direction_from_decoder;
+        347 => "reading_index": one kiwi_sparse_string_value;
+        348 => "sev_moonlit_lily_data": one decode_sparse_shared_style_master_data_from_decoder;
+        349 => "document_color_profile": one decode_sparse_document_color_profile_from_decoder;
+        350 => "variable_token_name": one kiwi_sparse_string_value;
+        351 => "max_lines": one kiwi_sparse_int_value;
+        352 => "section_status": one decode_sparse_section_status_from_decoder;
+        353 => "variable_scopes": repeated decode_sparse_variable_scope_from_decoder;
+        354 => "developer_related_links": repeated decode_sparse_developer_related_link_from_decoder;
+        355 => "section_status_info": one decode_sparse_section_status_info_from_decoder;
+        356 => "slide_active_theme_lib_key": one kiwi_sparse_string_value;
+        357 => "aria_attributes": one decode_sparse_aria_attributes_map_from_decoder;
+        358 => "code_syntax": one decode_sparse_code_syntax_map_from_decoder;
+        359 => "derived_text_data": one decode_sparse_derived_text_data_from_decoder;
+        360 => "should_hide_cursors_on_widget_hover": one kiwi_sparse_bool_value;
+        361 => "handoff_status_map": one decode_sparse_handoff_status_map_from_decoder;
+        362 => "layout_root": one decode_sparse_guid_from_decoder;
+        363 => "diagram_parent_id": one decode_sparse_guid_from_decoder;
+        364 => "layout_position": one kiwi_sparse_string_value;
+        365 => "edit_scope_info": one decode_sparse_edit_scope_info_from_decoder;
+        366 => "diagram_layout_rule_type": one decode_sparse_diagram_layout_rule_type_from_decoder;
+        367 => "diagram_parent_index": one decode_sparse_diagram_parent_index_from_decoder;
+        368 => "diagram_layout_paused": one decode_sparse_diagram_layout_paused_from_decoder;
+        369 => "annotations": repeated decode_sparse_annotation_from_decoder;
+        370 => "section_preset_info": one decode_sparse_section_preset_info_from_decoder;
+        371 => "interactive_slide_config_data": one decode_sparse_multiplayer_map_from_decoder;
+        372 => "interactive_slide_participant_data": one decode_sparse_multiplayer_map_from_decoder;
+        373 => "connector_type": one decode_sparse_connector_type_from_decoder;
+        374 => "semantic_weight": one decode_sparse_semantic_weight_from_decoder;
+        375 => "semantic_italic": one decode_sparse_semantic_italic_from_decoder;
+        376 => "is_override_over_text_style": one kiwi_sparse_bool_value;
+        377 => "backing_variable_set_id": one decode_sparse_variable_set_id_from_decoder;
+        378 => "backing_variable_id": one decode_sparse_variable_id_or_variable_override_id_from_decoder;
+        379 => "theme_id": one decode_sparse_theme_id_from_decoder;
+        380 => "is_page_divider": one kiwi_sparse_bool_value;
+        381 => "slide_theme_data": one decode_sparse_slide_theme_data_from_decoder;
+        382 => "module_type": one decode_sparse_module_type_from_decoder;
+        383 => "file_asset_ids": one decode_sparse_asset_id_map_from_decoder;
+        384 => "measurements": repeated decode_sparse_annotation_measurement_from_decoder;
+        385 => "is_collection_extendable": one kiwi_sparse_bool_value;
+        386 => "root_variable_key": one kiwi_sparse_string_value;
+        387 => "is_responsive_set": one kiwi_sparse_bool_value;
+        388 => "paste_source": one decode_sparse_paste_source_from_decoder;
+        389 => "slide_speaker_notes": one kiwi_sparse_string_value;
+        390 => "slide_theme_map": one decode_sparse_slide_theme_map_from_decoder;
+        391 => "emoji_image_set": one decode_sparse_emoji_image_set_from_decoder;
+        392 => "slide_thumbnail_hash": one kiwi_sparse_string_value;
+        393 => "slide_template_file_key": one kiwi_sparse_string_value;
+        394 => "nested_instance_resize_enabled": one kiwi_sparse_bool_value;
+        395 => "source_library_key": one kiwi_sparse_string_value;
+        396 => "text_explicit_layout_version": one kiwi_sparse_uint_value;
+        397 => "page_type": one decode_sparse_editor_type_from_decoder;
+        398 => "default_responsive_set_id": one decode_sparse_guid_from_decoder;
+        399 => "user_facing_version": one kiwi_sparse_string_value;
+        400 => "responsive_set_settings": one decode_sparse_responsive_set_settings_from_decoder;
+        401 => "widget_input_text_node_type": one decode_sparse_widget_input_text_node_type_from_decoder;
+        402 => "flapp_type": one decode_sparse_flapp_type_from_decoder;
+        403 => "are_slides_manually_indented": one kiwi_sparse_bool_value;
+        404 => "behaviors": one decode_sparse_node_behaviors_from_decoder;
+        405 => "ai_edited_node_change_field_numbers": repeated kiwi_sparse_uint_value;
+        406 => "sorted_moving_child_indices": repeated kiwi_sparse_int_value;
+        407 => "first_draft_data": one decode_sparse_first_draft_data_from_decoder;
+        408 => "ai_edit_scope_label": one kiwi_sparse_string_value;
+        409 => "platform_shape_definition": one decode_sparse_platform_shape_definition_from_decoder;
+        410 => "is_skipped_slide": one kiwi_sparse_bool_value;
+        411 => "text_decoration_fill_paints": repeated decode_sparse_paint_from_decoder;
+        412 => "text_decoration_skip_ink": one kiwi_sparse_bool_value;
+        413 => "text_underline_offset": one decode_sparse_number_from_decoder;
+        414 => "source_code": one kiwi_sparse_string_value;
+        415 => "text_decoration_thickness": one decode_sparse_number_from_decoder;
+        416 => "text_decoration_style": one decode_sparse_text_decoration_style_from_decoder;
+        417 => "responsive_text_style_variants": repeated decode_sparse_responsive_text_style_variant_from_decoder;
+        418 => "first_draft_kit_element_data": one decode_sparse_first_draft_kit_element_data_from_decoder;
+        419 => "cms_selector": one decode_sparse_cms_selector_from_decoder;
+        420 => "cms_consumption_map": one decode_sparse_cms_consumption_map_from_decoder;
+        421 => "cooper_revert_data": one decode_sparse_cooper_revert_data_from_decoder;
+        422 => "hub_file_attribution": one decode_sparse_hub_file_attribution_from_decoder;
+        423 => "target_aspect_ratio": one decode_sparse_optional_vector_from_decoder;
+        424 => "rotation_origin": one decode_sparse_vector_from_decoder;
+        425 => "vector_operation_version": one kiwi_sparse_uint_value;
+        426 => "object_animations": repeated decode_sparse_prototype_interaction_from_decoder;
+        427 => "belongs_to_code_library_id": one decode_sparse_code_library_id_from_decoder;
+        428 => "exported_from_code_file_id": one decode_sparse_code_file_id_from_decoder;
+        429 => "backing_code_component_id": one decode_sparse_code_component_id_from_decoder;
+        430 => "code_export_name": one kiwi_sparse_string_value;
+        431 => "code_snapshot_state": one decode_sparse_code_snapshot_state_from_decoder;
+        432 => "text_path_start": one decode_sparse_text_path_start_from_decoder;
+        433 => "code_block_theme": one decode_sparse_code_block_theme_from_decoder;
+        434 => "lock_mode": one decode_sparse_lock_mode_from_decoder;
+        435 => "grid_rows": one decode_sparse_guid_position_map_from_decoder;
+        436 => "grid_columns": one decode_sparse_guid_position_map_from_decoder;
+        437 => "grid_row_gap": one kiwi_sparse_float_value;
+        438 => "grid_column_gap": one kiwi_sparse_float_value;
+        439 => "grid_row_anchor": one decode_sparse_guid_from_decoder;
+        440 => "grid_column_anchor": one decode_sparse_guid_from_decoder;
+        441 => "grid_row_span": one kiwi_sparse_uint_value;
+        442 => "grid_column_span": one kiwi_sparse_uint_value;
+        443 => "slide_number": one decode_sparse_slide_number_from_decoder;
+        444 => "collaborative_source_code": one decode_sparse_collaborative_plain_text_from_decoder;
+        445 => "parameter_consumption_map": one decode_sparse_variable_data_map_from_decoder;
+        446 => "stroke_brush_guid": one decode_sparse_guid_from_decoder;
+        447 => "variable_width_points": repeated decode_sparse_variable_width_point_from_decoder;
+        448 => "dynamic_stroke_settings": one decode_sparse_dynamic_stroke_settings_from_decoder;
+        449 => "scatter_stroke_settings": one decode_sparse_scatter_stroke_settings_from_decoder;
+        450 => "stretch_stroke_settings": one decode_sparse_stretch_stroke_settings_from_decoder;
+        451 => "chat_messages": repeated decode_sparse_node_chat_message_from_decoder;
+        452 => "brush_type": one decode_sparse_brush_type_from_decoder;
+        453 => "annotation_categories": one decode_sparse_annotation_categories_from_decoder;
+        454 => "managed_string_data": one decode_sparse_managed_string_data_from_decoder;
+        455 => "transform_modifiers": repeated decode_sparse_transform_modifier_from_decoder;
+        456 => "slide_number_separator": one kiwi_sparse_string_value;
+        457 => "primary_responsive_node_id": one decode_sparse_guid_from_decoder;
+        458 => "is_primary_breakpoint": one kiwi_sparse_bool_value;
+        459 => "code_snapshot": one decode_sparse_code_snapshot_from_decoder;
+        460 => "cms_rich_text_style_map": one decode_sparse_cms_rich_text_style_map_from_decoder;
+        461 => "cooper_template_data": one decode_sparse_cooper_template_data_from_decoder;
+        462 => "multi_edit_glue_id": one decode_sparse_guid_from_decoder;
+        463 => "is_slot": one kiwi_sparse_bool_value;
+        464 => "overridden_variable_id": one decode_sparse_variable_id_from_decoder;
+        465 => "is_code_behavior": one kiwi_sparse_bool_value;
+        466 => "thumbnail_info": one decode_sparse_thumbnail_info_from_decoder;
+        467 => "imported_code_files": one decode_sparse_imported_code_files_from_decoder;
+        468 => "code_file_canvas_node_id": one decode_sparse_canvas_node_id_from_decoder;
+        469 => "auto_fork_code": one kiwi_sparse_bool_value;
+        470 => "has_been_manually_renamed": one kiwi_sparse_bool_value;
+        471 => "code_created_from_design": one kiwi_sparse_bool_value;
+        472 => "code_file_path": one kiwi_sparse_string_value;
+        473 => "image_imports": one decode_sparse_image_import_map_from_decoder;
+        474 => "grid_columns_sizing": one decode_sparse_guid_grid_track_size_map_from_decoder;
+        475 => "grid_rows_sizing": one decode_sparse_guid_grid_track_size_map_from_decoder;
+        476 => "grid_child_vertical_align": one decode_sparse_grid_child_align_from_decoder;
+        477 => "grid_child_horizontal_align": one decode_sparse_grid_child_align_from_decoder;
+        478 => "code_behavior_data": one decode_sparse_code_behavior_data_from_decoder;
+        479 => "connector_bezier_control_points": repeated decode_sparse_connector_control_point_from_decoder;
+        480 => "code_snapshot_invalidated_at": one kiwi_sparse_uint_value;
+        481 => "code_created_from_design_node_id": one decode_sparse_canvas_node_id_from_decoder;
+        482 => "stroke_seed": one kiwi_sparse_uint64_value;
+        483 => "variant_prop_specs": repeated decode_sparse_variant_prop_spec_from_decoder;
+        484 => "code_chat_messages_key": one kiwi_sparse_string_value;
+        485 => "chat_compression_state": one decode_sparse_node_chat_compression_state_from_decoder;
+        486 => "is_embedded_prototype": one kiwi_sparse_bool_value;
+        487 => "is_main_code_component": one kiwi_sparse_bool_value;
+        488 => "scatter_brush_transforms": repeated decode_sparse_matrix_from_decoder;
+        489 => "jsx_props": one decode_sparse_multiplayer_map_from_decoder;
+        490 => "is_decorative_image": one kiwi_sparse_bool_value;
+        491 => "jsx_data": one decode_sparse_jsx_data_from_decoder;
+        492 => "derived_jsx_data": one decode_sparse_derived_jsx_data_from_decoder;
+        493 => "stable_key": one kiwi_sparse_string_value;
+        494 => "ai_canvas_prompt": one decode_sparse_ai_canvas_prompt_from_decoder;
+        495 => "is_slot_content": one kiwi_sparse_bool_value;
+        496 => "ai_chat_thread": one decode_sparse_ai_chat_thread_from_decoder;
+        497 => "stroke_cap_size": one decode_sparse_number_from_decoder;
+        498 => "is_entrypoint_code_file": one kiwi_sparse_bool_value;
+        499 => "backing_node_id": one decode_sparse_canvas_node_id_from_decoder;
+        500 => "derived_breakpoint_data": one decode_sparse_derived_breakpoint_data_from_decoder;
+        501 => "breakpoint_min_width": one kiwi_sparse_float_value;
+        502 => "component_or_state_group_key": one kiwi_sparse_string_value;
+        503 => "component_or_state_group_version": one kiwi_sparse_uint_value;
+        504 => "source_code_library_key": one kiwi_sparse_string_value;
+        505 => "interpolation_type": one decode_sparse_interpolation_type_from_decoder;
+        506 => "timeline_position": one kiwi_sparse_int64_value;
+        507 => "keyframe_value": one decode_sparse_keyframe_value_data_from_decoder;
+        508 => "bezier_handles": one decode_sparse_bezier_handles_from_decoder;
+        509 => "keyframe_operation": one decode_sparse_keyframe_operation_from_decoder;
+        510 => "timeline_position_type": one decode_sparse_timeline_position_type_from_decoder;
+        511 => "clip_id": one decode_sparse_guid_from_decoder;
+        512 => "timeline_duration": one kiwi_sparse_uint64_value;
+        513 => "timeline_offset": one kiwi_sparse_int64_value;
+        514 => "playback_style": one decode_sparse_playback_style_from_decoder;
+        515 => "source_code_library_keys": repeated kiwi_sparse_string_value;
+        516 => "code_object_type": one decode_sparse_code_object_type_from_decoder;
+        517 => "inherited_variable_ids": one decode_sparse_inherited_variables_data_from_decoder;
+        518 => "make_library_component_id": one kiwi_sparse_string_value;
+        519 => "code_library_format": one kiwi_sparse_uint_value;
+        520 => "should_hide_preview_for_make_kit_creation": one kiwi_sparse_bool_value;
+        521 => "animation_presets": one decode_sparse_animation_presets_from_decoder;
+        522 => "is_breakpoint_in_focus": one kiwi_sparse_bool_value;
+        523 => "motion_transform": one decode_sparse_trss_transform2_d_from_decoder;
+        524 => "used_make_libraries": repeated decode_sparse_used_make_library_from_decoder;
+        525 => "code_examples": repeated decode_sparse_code_example_from_decoder;
+        526 => "transition_overrides": one decode_sparse_transition_override_data_from_decoder;
+        527 => "is_code_preview_playing_on_canvas": one kiwi_sparse_bool_value;
+        528 => "buzz_approval_requests": one decode_sparse_buzz_approval_requests_from_decoder;
+        529 => "buzz_approval_node_status_info": one decode_sparse_buzz_approval_node_status_info_from_decoder;
+        530 => "is_stroke_paint_derived": one kiwi_sparse_bool_value;
+        531 => "code_preview_settings": one decode_sparse_prototype_device_from_decoder;
+        532 => "code_embed_info": one decode_sparse_code_embed_info_from_decoder;
+        533 => "connector_version": one kiwi_sparse_int_value;
+        534 => "source_code_collaborative_text_version": repeated decode_sparse_collaborative_text_op_id_from_decoder;
+        535 => "easing_data": one decode_sparse_easing_data_from_decoder;
+        536 => "mime_type": one kiwi_sparse_string_value;
+        537 => "blob_ref": bytes kiwi_sparse_bytes_value;
+        538 => "table_merged_cells": one decode_sparse_table_merged_cell_map_from_decoder;
+        539 => "repeater_symbol_id": one decode_sparse_symbol_id_from_decoder;
+        540 => "repeater_cms_override_data": one decode_sparse_repeater_cms_override_data_from_decoder;
+        541 => "repeater_override_data": one decode_sparse_repeater_override_data_from_decoder;
+        542 => "path_trim": one decode_sparse_optional_vector_from_decoder;
+        543 => "timeline_disabled": one kiwi_sparse_bool_value;
+        544 => "use_legacy_smart_animate": one kiwi_sparse_bool_value;
+        545 => "is_clip": one kiwi_sparse_bool_value;
+        546 => "is_embed_code_layer": one kiwi_sparse_bool_value;
+        547 => "code_component_description": one kiwi_sparse_string_value;
+        548 => "page_status": one kiwi_sparse_string_value;
+        549 => "repeater_symbol_override_data": one decode_sparse_repeater_symbol_override_data_from_decoder;
+        550 => "fallback_glyphs": one kiwi_sparse_bool_value;
+        551 => "is_make_kit": one kiwi_sparse_bool_value;
+        552 => "timeline_definitions": one decode_sparse_timeline_definitions_map_from_decoder;
+        553 => "timeline_assignments": one decode_sparse_timeline_assignments_map_from_decoder;
+        554 => "stroke_offset": one kiwi_sparse_float_value;
+        555 => "grid_auto_tracks": one decode_sparse_grid_auto_tracks_from_decoder;
+        556 => "grid_reflow_enabled": one kiwi_sparse_bool_value;
+        557 => "source_control_config": one decode_sparse_source_control_config_from_decoder;
+        558 => "code_source_info": one decode_sparse_code_source_info_from_decoder;
+        559 => "spec_block_type": one decode_sparse_spec_block_type_from_decoder;
+        560 => "spec_block_content": one decode_sparse_collaborative_plain_text_from_decoder;
+        561 => "spec_code_block_language": one kiwi_sparse_string_value;
+        562 => "spec_block_table_alignment": one kiwi_sparse_string_value;
+        563 => "spec_block_indent_level": one kiwi_sparse_int_value;
+        564 => "offset_fill_mask_geometry": repeated decode_sparse_path_from_decoder;
+        565 => "placeholder": one kiwi_sparse_bool_value;
+        566 => "timing_display_unit": one decode_sparse_variable_timing_display_unit_from_decoder;
+        567 => "disable_jit_dst": one kiwi_sparse_bool_value;
+        568 => "tools": one decode_sparse_tools_from_decoder;
+        569 => "custom_effects": one decode_sparse_custom_effects_from_decoder;
+        570 => "transform3d": one decode_sparse_transform3d_from_decoder;
+        571 => "stroke_data": one decode_sparse_stroke_data_from_decoder;
+        572 => "scene3d": one decode_sparse_scene3d_from_decoder;
+        573 => "presentation_outlines": one decode_sparse_multiplayer_map_from_decoder;
+        574 => "stack_layout_version": one kiwi_sparse_uint_value;
+        575 => "spec_image_hash": one kiwi_sparse_string_value;
+        576 => "spec_width": one kiwi_sparse_int_value;
+        577 => "spec_height": one kiwi_sparse_int_value;
+        578 => "spec_block_table_row_heights": one decode_sparse_table_row_column_size_map_from_decoder;
+        579 => "spec_block_table_column_widths": one decode_sparse_table_row_column_size_map_from_decoder;
+        580 => "style_animations": repeated decode_sparse_style_animation_from_decoder;
+        581 => "partial_paste_annotation": one decode_sparse_partial_paste_annotation_from_decoder;
+        582 => "style_ids_for_animation": repeated decode_sparse_style_id_for_animation_from_decoder;
+        583 => "backing_animation_preset_id": one decode_sparse_animation_preset_id_from_decoder;
+        584 => "placeholder_client_lifecycle_id": one kiwi_sparse_string_value;
+        585 => "placeholder_invalidate_at": one kiwi_sparse_int_value;
+        586 => "keyframe_value_ref": one decode_sparse_variable_data_from_decoder;
+        587 => "transform_origin": one decode_sparse_transform_origin_from_decoder;
+        588 => "custom_tool_artifact_ref": one decode_sparse_custom_tool_artifact_ref_from_decoder;
+        589 => "code_snapshot_layers": one decode_sparse_code_snapshot_layers_from_decoder;
+        590 => "spec_embed_url": one kiwi_sparse_string_value;
     ]
 }
 
@@ -4483,7 +4609,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_git_repo_ref_from_decoder;
     env env;
     decoder decoder;
@@ -4491,13 +4617,13 @@ kiwi_sparse_message_decoder! {
     definition "GitRepoRef";
     capacity 4;
     fields [
-        1 => "provider": decode_sparse_git_repo_ref_provider_from_decoder(env, decoder)?.encode(env);
-        2 => "git_repo": decoder.read_string(env)?.encode(env);
-        3 => "git_ref": decoder.read_string(env)?.encode(env);
+        1 => "provider": one decode_sparse_git_repo_ref_provider_from_decoder;
+        2 => "git_repo": one kiwi_sparse_string_value;
+        3 => "git_ref": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_source_control_config_from_decoder;
     env env;
     decoder decoder;
@@ -4505,12 +4631,12 @@ kiwi_sparse_message_decoder! {
     definition "SourceControlConfig";
     capacity 3;
     fields [
-        1 => "origin": decode_sparse_git_repo_ref_from_decoder(env, decoder)?.encode(env);
-        2 => "upstream": decode_sparse_git_repo_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "origin": one decode_sparse_git_repo_ref_from_decoder;
+        2 => "upstream": one decode_sparse_git_repo_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_snapshot_from_decoder;
     env env;
     decoder decoder;
@@ -4518,17 +4644,17 @@ kiwi_sparse_message_decoder! {
     definition "CodeSnapshot";
     capacity 8;
     fields [
-        6 => "state": decode_sparse_code_snapshot_state_from_decoder(env, decoder)?.encode(env);
-        7 => "invalidated_at": decoder.read_var_uint()?.encode(env);
-        1 => "paints": decoder.read_repeated(|decoder| decode_sparse_paint_from_decoder(env, decoder))?.encode(env);
-        2 => "offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        3 => "layout_size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        5 => "canvas_size": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        4 => "device_pixel_ratio": decoder.read_var_uint()?.encode(env);
+        1 => "paints": repeated decode_sparse_paint_from_decoder;
+        2 => "offset": one decode_sparse_vector_from_decoder;
+        3 => "layout_size": one decode_sparse_vector_from_decoder;
+        4 => "device_pixel_ratio": one kiwi_sparse_uint_value;
+        5 => "canvas_size": one decode_sparse_vector_from_decoder;
+        6 => "state": one decode_sparse_code_snapshot_state_from_decoder;
+        7 => "invalidated_at": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_output_layer_from_decoder;
     env env;
     decoder decoder;
@@ -4536,11 +4662,11 @@ kiwi_sparse_message_decoder! {
     definition "CodeOutputLayer";
     capacity 2;
     fields [
-        1 => "node": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
+        1 => "node": one decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_snapshot_layers_from_decoder;
     env env;
     decoder decoder;
@@ -4548,13 +4674,13 @@ kiwi_sparse_message_decoder! {
     definition "CodeSnapshotLayers";
     capacity 4;
     fields [
-        1 => "state": decode_sparse_code_snapshot_state_from_decoder(env, decoder)?.encode(env);
-        2 => "invalidated_at": decoder.read_var_uint()?.encode(env);
-        3 => "layers": decoder.read_repeated(|decoder| decode_sparse_code_output_layer_from_decoder(env, decoder))?.encode(env);
+        1 => "state": one decode_sparse_code_snapshot_state_from_decoder;
+        2 => "invalidated_at": one kiwi_sparse_uint_value;
+        3 => "layers": repeated decode_sparse_code_output_layer_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_behavior_data_from_decoder;
     env env;
     decoder decoder;
@@ -4562,15 +4688,15 @@ kiwi_sparse_message_decoder! {
     definition "CodeBehaviorData";
     capacity 6;
     fields [
-        1 => "name": decoder.read_string(env)?.encode(env);
-        2 => "icon": decoder.read_string(env)?.encode(env);
-        3 => "node_types": decoder.read_repeated(|decoder| decoder.read_string(env))?.encode(env);
-        4 => "category": decoder.read_string(env)?.encode(env);
-        5 => "api_version": decoder.read_var_uint()?.encode(env);
+        1 => "name": one kiwi_sparse_string_value;
+        2 => "icon": one kiwi_sparse_string_value;
+        3 => "node_types": repeated kiwi_sparse_string_value;
+        4 => "category": one kiwi_sparse_string_value;
+        5 => "api_version": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_example_from_decoder;
     env env;
     decoder decoder;
@@ -4578,12 +4704,12 @@ kiwi_sparse_message_decoder! {
     definition "CodeExample";
     capacity 3;
     fields [
-        1 => "example_name": decoder.read_string(env)?.encode(env);
-        2 => "code_export_name": decoder.read_string(env)?.encode(env);
+        1 => "example_name": one kiwi_sparse_string_value;
+        2 => "code_export_name": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_used_make_library_from_decoder;
     env env;
     decoder decoder;
@@ -4591,11 +4717,11 @@ kiwi_sparse_message_decoder! {
     definition "UsedMakeLibrary";
     capacity 2;
     fields [
-        1 => "make_library_id": decoder.read_string(env)?.encode(env);
+        1 => "make_library_id": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cookie_banner_text_from_decoder;
     env env;
     decoder decoder;
@@ -4603,28 +4729,28 @@ kiwi_sparse_message_decoder! {
     definition "CookieBannerText";
     capacity 19;
     fields [
-        1 => "banner_header": decoder.read_string(env)?.encode(env);
-        2 => "banner_disclaimer_explicit": decoder.read_string(env)?.encode(env);
-        3 => "banner_disclaimer_implicit": decoder.read_string(env)?.encode(env);
-        4 => "policy_label": decoder.read_string(env)?.encode(env);
-        5 => "accept_text": decoder.read_string(env)?.encode(env);
-        6 => "acknowledge_text": decoder.read_string(env)?.encode(env);
-        7 => "manage_text": decoder.read_string(env)?.encode(env);
-        8 => "reject_text": decoder.read_string(env)?.encode(env);
-        9 => "necessary_text": decoder.read_string(env)?.encode(env);
-        10 => "necessary_description": decoder.read_string(env)?.encode(env);
-        11 => "analytics_text": decoder.read_string(env)?.encode(env);
-        12 => "analytics_description": decoder.read_string(env)?.encode(env);
-        13 => "preferences_text": decoder.read_string(env)?.encode(env);
-        14 => "preferences_description": decoder.read_string(env)?.encode(env);
-        15 => "marketing_text": decoder.read_string(env)?.encode(env);
-        16 => "marketing_description": decoder.read_string(env)?.encode(env);
-        17 => "save_label": decoder.read_string(env)?.encode(env);
-        18 => "trigger_label": decoder.read_string(env)?.encode(env);
+        1 => "banner_header": one kiwi_sparse_string_value;
+        2 => "banner_disclaimer_explicit": one kiwi_sparse_string_value;
+        3 => "banner_disclaimer_implicit": one kiwi_sparse_string_value;
+        4 => "policy_label": one kiwi_sparse_string_value;
+        5 => "accept_text": one kiwi_sparse_string_value;
+        6 => "acknowledge_text": one kiwi_sparse_string_value;
+        7 => "manage_text": one kiwi_sparse_string_value;
+        8 => "reject_text": one kiwi_sparse_string_value;
+        9 => "necessary_text": one kiwi_sparse_string_value;
+        10 => "necessary_description": one kiwi_sparse_string_value;
+        11 => "analytics_text": one kiwi_sparse_string_value;
+        12 => "analytics_description": one kiwi_sparse_string_value;
+        13 => "preferences_text": one kiwi_sparse_string_value;
+        14 => "preferences_description": one kiwi_sparse_string_value;
+        15 => "marketing_text": one kiwi_sparse_string_value;
+        16 => "marketing_description": one kiwi_sparse_string_value;
+        17 => "save_label": one kiwi_sparse_string_value;
+        18 => "trigger_label": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cookie_banner_settings_from_decoder;
     env env;
     decoder decoder;
@@ -4632,17 +4758,17 @@ kiwi_sparse_message_decoder! {
     definition "CookieBannerSettings";
     capacity 12;
     fields [
-        1 => "enabled": decoder.read_bool()?.encode(env);
-        2 => "component_type": decode_sparse_cookie_banner_component_type_from_decoder(env, decoder)?.encode(env);
-        3 => "x_alignment": decode_sparse_cookie_x_alignment_from_decoder(env, decoder)?.encode(env);
-        4 => "y_alignment": decode_sparse_cookie_y_alignment_from_decoder(env, decoder)?.encode(env);
-        5 => "trigger_x_alignment": decode_sparse_cookie_x_alignment_from_decoder(env, decoder)?.encode(env);
-        6 => "trigger_y_alignment": decode_sparse_cookie_y_alignment_from_decoder(env, decoder)?.encode(env);
-        7 => "trigger_component_type": decode_sparse_trigger_component_type_from_decoder(env, decoder)?.encode(env);
-        8 => "policy_url": decoder.read_string(env)?.encode(env);
-        9 => "text": decode_sparse_cookie_banner_text_from_decoder(env, decoder)?.encode(env);
-        10 => "policy_link": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        11 => "locale": decoder.read_string(env)?.encode(env);
+        1 => "enabled": one kiwi_sparse_bool_value;
+        2 => "component_type": one decode_sparse_cookie_banner_component_type_from_decoder;
+        3 => "x_alignment": one decode_sparse_cookie_x_alignment_from_decoder;
+        4 => "y_alignment": one decode_sparse_cookie_y_alignment_from_decoder;
+        5 => "trigger_x_alignment": one decode_sparse_cookie_x_alignment_from_decoder;
+        6 => "trigger_y_alignment": one decode_sparse_cookie_y_alignment_from_decoder;
+        7 => "trigger_component_type": one decode_sparse_trigger_component_type_from_decoder;
+        8 => "policy_url": one kiwi_sparse_string_value;
+        9 => "text": one decode_sparse_cookie_banner_text_from_decoder;
+        10 => "policy_link": one decode_sparse_guid_from_decoder;
+        11 => "locale": one kiwi_sparse_string_value;
     ]
 }
 
@@ -4688,7 +4814,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_responsive_set_settings_from_decoder;
     env env;
     decoder decoder;
@@ -4696,27 +4822,27 @@ kiwi_sparse_message_decoder! {
     definition "ResponsiveSetSettings";
     capacity 22;
     fields [
-        1 => "title": decoder.read_string(env)?.encode(env);
-        2 => "description": decoder.read_string(env)?.encode(env);
-        3 => "scaling_mode": decode_sparse_responsive_scaling_mode_from_decoder(env, decoder)?.encode(env);
-        4 => "scaling_min_font_size": decoder.read_var_float(env)?.encode(env);
-        5 => "scaling_max_font_size": decoder.read_var_float(env)?.encode(env);
-        6 => "scaling_min_layout_width": decoder.read_var_float(env)?.encode(env);
-        7 => "scaling_max_layout_width": decoder.read_var_float(env)?.encode(env);
-        8 => "lang": decoder.read_string(env)?.encode(env);
-        9 => "favicon_hash": decoder.read_string(env)?.encode(env);
-        10 => "social_image_hash": decoder.read_string(env)?.encode(env);
-        11 => "google_analytics_id": decoder.read_string(env)?.encode(env);
-        12 => "block_search_indexing": decoder.read_bool()?.encode(env);
-        13 => "custom_code_head_start": decoder.read_string(env)?.encode(env);
-        14 => "custom_code_head_end": decoder.read_string(env)?.encode(env);
-        15 => "custom_code_body_start": decoder.read_string(env)?.encode(env);
-        16 => "custom_code_body_end": decoder.read_string(env)?.encode(env);
-        17 => "favicon_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        18 => "social_image_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        19 => "add_bypass_links": decoder.read_bool()?.encode(env);
-        20 => "ignore_reduced_motion": decoder.read_bool()?.encode(env);
-        21 => "cookie_banner": decode_sparse_cookie_banner_settings_from_decoder(env, decoder)?.encode(env);
+        1 => "title": one kiwi_sparse_string_value;
+        2 => "description": one kiwi_sparse_string_value;
+        3 => "scaling_mode": one decode_sparse_responsive_scaling_mode_from_decoder;
+        4 => "scaling_min_font_size": one kiwi_sparse_float_value;
+        5 => "scaling_max_font_size": one kiwi_sparse_float_value;
+        6 => "scaling_min_layout_width": one kiwi_sparse_float_value;
+        7 => "scaling_max_layout_width": one kiwi_sparse_float_value;
+        8 => "lang": one kiwi_sparse_string_value;
+        9 => "favicon_hash": one kiwi_sparse_string_value;
+        10 => "social_image_hash": one kiwi_sparse_string_value;
+        11 => "google_analytics_id": one kiwi_sparse_string_value;
+        12 => "block_search_indexing": one kiwi_sparse_bool_value;
+        13 => "custom_code_head_start": one kiwi_sparse_string_value;
+        14 => "custom_code_head_end": one kiwi_sparse_string_value;
+        15 => "custom_code_body_start": one kiwi_sparse_string_value;
+        16 => "custom_code_body_end": one kiwi_sparse_string_value;
+        17 => "favicon_id": one decode_sparse_guid_from_decoder;
+        18 => "social_image_id": one decode_sparse_guid_from_decoder;
+        19 => "add_bypass_links": one kiwi_sparse_bool_value;
+        20 => "ignore_reduced_motion": one kiwi_sparse_bool_value;
+        21 => "cookie_banner": one decode_sparse_cookie_banner_settings_from_decoder;
     ]
 }
 
@@ -4730,7 +4856,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_selector_from_decoder;
     env env;
     decoder decoder;
@@ -4738,14 +4864,14 @@ kiwi_sparse_message_decoder! {
     definition "CMSSelector";
     capacity 5;
     fields [
-        1 => "cms_collection_id": decoder.read_string(env)?.encode(env);
-        2 => "filter_criteria": decode_sparse_cms_filter_critera_from_decoder(env, decoder)?.encode(env);
-        3 => "sorts": decoder.read_repeated(|decoder| decode_sparse_cms_selector_sort_from_decoder(env, decoder))?.encode(env);
-        4 => "limit": decoder.read_var_uint()?.encode(env);
+        1 => "cms_collection_id": one kiwi_sparse_string_value;
+        2 => "filter_criteria": one decode_sparse_cms_filter_critera_from_decoder;
+        3 => "sorts": repeated decode_sparse_cms_selector_sort_from_decoder;
+        4 => "limit": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_filter_critera_from_decoder;
     env env;
     decoder decoder;
@@ -4753,8 +4879,8 @@ kiwi_sparse_message_decoder! {
     definition "CMSFilterCritera";
     capacity 3;
     fields [
-        1 => "match_type": decode_sparse_cms_filter_criteria_match_type_from_decoder(env, decoder)?.encode(env);
-        2 => "filters": decoder.read_repeated(|decoder| decode_sparse_cms_selector_filter_from_decoder(env, decoder))?.encode(env);
+        1 => "match_type": one decode_sparse_cms_filter_criteria_match_type_from_decoder;
+        2 => "filters": repeated decode_sparse_cms_selector_filter_from_decoder;
     ]
 }
 
@@ -4768,7 +4894,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_selector_filter_from_decoder;
     env env;
     decoder decoder;
@@ -4776,9 +4902,9 @@ kiwi_sparse_message_decoder! {
     definition "CMSSelectorFilter";
     capacity 4;
     fields [
-        1 => "cms_field_id": decoder.read_string(env)?.encode(env);
-        2 => "op": decode_sparse_cms_selector_filter_operator_from_decoder(env, decoder)?.encode(env);
-        3 => "comparison_value": decoder.read_string(env)?.encode(env);
+        1 => "cms_field_id": one kiwi_sparse_string_value;
+        2 => "op": one decode_sparse_cms_selector_filter_operator_from_decoder;
+        3 => "comparison_value": one kiwi_sparse_string_value;
     ]
 }
 
@@ -4791,7 +4917,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_selector_sort_from_decoder;
     env env;
     decoder decoder;
@@ -4799,8 +4925,8 @@ kiwi_sparse_message_decoder! {
     definition "CMSSelectorSort";
     capacity 3;
     fields [
-        1 => "cms_field_id": decoder.read_string(env)?.encode(env);
-        2 => "order_by": decode_sparse_cms_field_order_by_from_decoder(env, decoder)?.encode(env);
+        1 => "cms_field_id": one kiwi_sparse_string_value;
+        2 => "order_by": one decode_sparse_cms_field_order_by_from_decoder;
     ]
 }
 
@@ -4814,7 +4940,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_consumption_map_from_decoder;
     env env;
     decoder decoder;
@@ -4822,11 +4948,11 @@ kiwi_sparse_message_decoder! {
     definition "CMSConsumptionMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_cms_consumption_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_cms_consumption_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_consumption_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -4834,8 +4960,8 @@ kiwi_sparse_message_decoder! {
     definition "CMSConsumptionMapEntry";
     capacity 3;
     fields [
-        1 => "consumption_field": decode_sparse_cms_consumption_field_from_decoder(env, decoder)?.encode(env);
-        2 => "cms_field_id": decoder.read_string(env)?.encode(env);
+        1 => "consumption_field": one decode_sparse_cms_consumption_field_from_decoder;
+        2 => "cms_field_id": one kiwi_sparse_string_value;
     ]
 }
 
@@ -4849,7 +4975,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_rich_text_style_map_from_decoder;
     env env;
     decoder decoder;
@@ -4857,11 +4983,11 @@ kiwi_sparse_message_decoder! {
     definition "CMSRichTextStyleMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_cms_rich_text_style_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_cms_rich_text_style_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_rich_text_style_entry_from_decoder;
     env env;
     decoder decoder;
@@ -4869,8 +4995,8 @@ kiwi_sparse_message_decoder! {
     definition "CMSRichTextStyleEntry";
     capacity 3;
     fields [
-        1 => "style_class": decode_sparse_cms_rich_text_style_class_from_decoder(env, decoder)?.encode(env);
-        2 => "text_descriptor": decode_sparse_cms_rich_text_descriptor_from_decoder(env, decoder)?.encode(env);
+        1 => "style_class": one decode_sparse_cms_rich_text_style_class_from_decoder;
+        2 => "text_descriptor": one decode_sparse_cms_rich_text_descriptor_from_decoder;
     ]
 }
 
@@ -4891,7 +5017,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_rich_text_descriptor_from_decoder;
     env env;
     decoder decoder;
@@ -4899,12 +5025,12 @@ kiwi_sparse_message_decoder! {
     definition "CMSRichTextDescriptor";
     capacity 3;
     fields [
-        1 => "text_style_id": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        2 => "font_name_variants": decoder.read_repeated(|decoder| decode_sparse_font_name_from_decoder(env, decoder))?.encode(env);
+        1 => "text_style_id": one decode_sparse_style_id_from_decoder;
+        2 => "font_name_variants": repeated decode_sparse_font_name_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_repeater_cms_override_data_from_decoder;
     env env;
     decoder decoder;
@@ -4912,11 +5038,11 @@ kiwi_sparse_message_decoder! {
     definition "RepeaterCmsOverrideData";
     capacity 2;
     fields [
-        1 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "overrides": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_repeater_override_data_from_decoder;
     env env;
     decoder decoder;
@@ -4924,11 +5050,11 @@ kiwi_sparse_message_decoder! {
     definition "RepeaterOverrideData";
     capacity 2;
     fields [
-        1 => "parent_index_overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "parent_index_overrides": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_repeater_symbol_override_data_from_decoder;
     env env;
     decoder decoder;
@@ -4936,11 +5062,11 @@ kiwi_sparse_message_decoder! {
     definition "RepeaterSymbolOverrideData";
     capacity 2;
     fields [
-        1 => "overrides_by_position": decoder.read_repeated(|decoder| decode_sparse_repeater_position_overrides_from_decoder(env, decoder))?.encode(env);
+        1 => "overrides_by_position": repeated decode_sparse_repeater_position_overrides_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_repeater_position_overrides_from_decoder;
     env env;
     decoder decoder;
@@ -4948,12 +5074,12 @@ kiwi_sparse_message_decoder! {
     definition "RepeaterPositionOverrides";
     capacity 3;
     fields [
-        1 => "position": decode_sparse_parent_index_from_decoder(env, decoder)?.encode(env);
-        2 => "overrides": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
+        1 => "position": one decode_sparse_parent_index_from_decoder;
+        2 => "overrides": repeated decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_inherited_variables_data_from_decoder;
     env env;
     decoder decoder;
@@ -4961,11 +5087,11 @@ kiwi_sparse_message_decoder! {
     definition "InheritedVariablesData";
     capacity 2;
     fields [
-        1 => "variable_ids": decoder.read_repeated(|decoder| decode_sparse_inherited_variable_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "variable_ids": repeated decode_sparse_inherited_variable_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_inherited_variable_entry_from_decoder;
     env env;
     decoder decoder;
@@ -4973,11 +5099,11 @@ kiwi_sparse_message_decoder! {
     definition "InheritedVariableEntry";
     capacity 2;
     fields [
-        1 => "variable_id": decode_sparse_variable_id_from_decoder(env, decoder)?.encode(env);
+        1 => "variable_id": one decode_sparse_variable_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_hub_file_attribution_from_decoder;
     env env;
     decoder decoder;
@@ -4985,12 +5111,12 @@ kiwi_sparse_message_decoder! {
     definition "HubFileAttribution";
     capacity 3;
     fields [
-        1 => "hub_file_id": decoder.read_string(env)?.encode(env);
-        2 => "hub_file_name": decoder.read_string(env)?.encode(env);
+        1 => "hub_file_id": one kiwi_sparse_string_value;
+        2 => "hub_file_name": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_data_from_decoder;
     env env;
     decoder decoder;
@@ -4998,11 +5124,11 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringData";
     capacity 6;
     fields [
-        1 => "key": decoder.read_string(env)?.encode(env);
-        2 => "context": decoder.read_string(env)?.encode(env);
-        3 => "locale": decoder.read_string(env)?.encode(env);
-        4 => "content": decode_sparse_managed_string_node_from_decoder(env, decoder)?.encode(env);
-        5 => "content_schema": decode_sparse_managed_string_content_schema_from_decoder(env, decoder)?.encode(env);
+        1 => "key": one kiwi_sparse_string_value;
+        2 => "context": one kiwi_sparse_string_value;
+        3 => "locale": one kiwi_sparse_string_value;
+        4 => "content": one decode_sparse_managed_string_node_from_decoder;
+        5 => "content_schema": one decode_sparse_managed_string_content_schema_from_decoder;
     ]
 }
 
@@ -5027,7 +5153,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_node_from_decoder;
     env env;
     decoder decoder;
@@ -5035,15 +5161,15 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringNode";
     capacity 6;
     fields [
-        1 => "type": decode_sparse_managed_string_node_type_from_decoder(env, decoder)?.encode(env);
-        2 => "text_node_data": decode_sparse_managed_string_text_node_data_from_decoder(env, decoder)?.encode(env);
-        3 => "concatenate_node_data": decode_sparse_managed_string_concatenate_ast_node_data_from_decoder(env, decoder)?.encode(env);
-        4 => "plural_node_data": decode_sparse_managed_string_plural_ast_node_data_from_decoder(env, decoder)?.encode(env);
-        5 => "placeholder_node_data": decode_sparse_managed_string_placeholder_ast_node_data_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_managed_string_node_type_from_decoder;
+        2 => "text_node_data": one decode_sparse_managed_string_text_node_data_from_decoder;
+        3 => "concatenate_node_data": one decode_sparse_managed_string_concatenate_ast_node_data_from_decoder;
+        4 => "plural_node_data": one decode_sparse_managed_string_plural_ast_node_data_from_decoder;
+        5 => "placeholder_node_data": one decode_sparse_managed_string_placeholder_ast_node_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_text_node_data_from_decoder;
     env env;
     decoder decoder;
@@ -5051,11 +5177,11 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringTextNodeData";
     capacity 2;
     fields [
-        1 => "value": decoder.read_string(env)?.encode(env);
+        1 => "value": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_concatenate_ast_node_data_from_decoder;
     env env;
     decoder decoder;
@@ -5063,7 +5189,7 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringConcatenateAstNodeData";
     capacity 2;
     fields [
-        1 => "values": decoder.read_repeated(|decoder| decode_sparse_managed_string_node_from_decoder(env, decoder))?.encode(env);
+        1 => "values": repeated decode_sparse_managed_string_node_from_decoder;
     ]
 }
 
@@ -5081,7 +5207,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_plural_ast_node_data_from_decoder;
     env env;
     decoder decoder;
@@ -5089,12 +5215,12 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringPluralAstNodeData";
     capacity 3;
     fields [
-        1 => "identifier": decoder.read_string(env)?.encode(env);
-        2 => "conditions": decoder.read_repeated(|decoder| decode_sparse_managed_string_plural_type_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "identifier": one kiwi_sparse_string_value;
+        2 => "conditions": repeated decode_sparse_managed_string_plural_type_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_plural_type_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5102,8 +5228,8 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringPluralTypeMapEntry";
     capacity 3;
     fields [
-        1 => "key": decode_sparse_managed_string_plural_type_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decode_sparse_managed_string_node_from_decoder(env, decoder)?.encode(env);
+        1 => "key": one decode_sparse_managed_string_plural_type_from_decoder;
+        2 => "value": one decode_sparse_managed_string_node_from_decoder;
     ]
 }
 
@@ -5119,7 +5245,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_placeholder_ast_node_data_from_decoder;
     env env;
     decoder decoder;
@@ -5127,13 +5253,13 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringPlaceholderAstNodeData";
     capacity 4;
     fields [
-        1 => "identifier": decoder.read_string(env)?.encode(env);
-        2 => "format_type": decode_sparse_managed_string_format_type_from_decoder(env, decoder)?.encode(env);
-        3 => "format_pattern": decoder.read_string(env)?.encode(env);
+        1 => "identifier": one kiwi_sparse_string_value;
+        2 => "format_type": one decode_sparse_managed_string_format_type_from_decoder;
+        3 => "format_pattern": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cooper_revert_data_from_decoder;
     env env;
     decoder decoder;
@@ -5141,11 +5267,11 @@ kiwi_sparse_message_decoder! {
     definition "CooperRevertData";
     capacity 2;
     fields [
-        1 => "original_values": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
+        1 => "original_values": one decode_sparse_node_change_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_video_playback_from_decoder;
     env env;
     decoder decoder;
@@ -5153,12 +5279,12 @@ kiwi_sparse_message_decoder! {
     definition "VideoPlayback";
     capacity 7;
     fields [
-        1 => "autoplay": decoder.read_bool()?.encode(env);
-        2 => "media_loop": decoder.read_bool()?.encode(env);
-        3 => "muted": decoder.read_bool()?.encode(env);
-        4 => "show_controls": decoder.read_bool()?.encode(env);
-        5 => "start_time_ms": decoder.read_var_uint()?.encode(env);
-        6 => "end_time_ms": decoder.read_var_uint()?.encode(env);
+        1 => "autoplay": one kiwi_sparse_bool_value;
+        2 => "media_loop": one kiwi_sparse_bool_value;
+        3 => "muted": one kiwi_sparse_bool_value;
+        4 => "show_controls": one kiwi_sparse_bool_value;
+        5 => "start_time_ms": one kiwi_sparse_uint_value;
+        6 => "end_time_ms": one kiwi_sparse_uint_value;
     ]
 }
 
@@ -5192,7 +5318,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_widget_hover_style_from_decoder;
     env env;
     decoder decoder;
@@ -5200,16 +5326,16 @@ kiwi_sparse_message_decoder! {
     definition "WidgetHoverStyle";
     capacity 7;
     fields [
-        1 => "fill_paints": decoder.read_repeated(|decoder| decode_sparse_paint_from_decoder(env, decoder))?.encode(env);
-        2 => "stroke_paints": decoder.read_repeated(|decoder| decode_sparse_paint_from_decoder(env, decoder))?.encode(env);
-        3 => "opacity": decoder.read_var_float(env)?.encode(env);
-        4 => "are_fill_paints_set": decoder.read_bool()?.encode(env);
-        5 => "are_stroke_paints_set": decoder.read_bool()?.encode(env);
-        6 => "is_opacity_set": decoder.read_bool()?.encode(env);
+        1 => "fill_paints": repeated decode_sparse_paint_from_decoder;
+        2 => "stroke_paints": repeated decode_sparse_paint_from_decoder;
+        3 => "opacity": one kiwi_sparse_float_value;
+        4 => "are_fill_paints_set": one kiwi_sparse_bool_value;
+        5 => "are_stroke_paints_set": one kiwi_sparse_bool_value;
+        6 => "is_opacity_set": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_widget_derived_subtree_cursor_from_decoder;
     env env;
     decoder decoder;
@@ -5217,12 +5343,12 @@ kiwi_sparse_message_decoder! {
     definition "WidgetDerivedSubtreeCursor";
     capacity 3;
     fields [
-        1 => "session_id": decoder.read_var_uint()?.encode(env);
-        2 => "counter": decoder.read_var_uint()?.encode(env);
+        1 => "session_id": one kiwi_sparse_uint_value;
+        2 => "counter": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_multiplayer_map_from_decoder;
     env env;
     decoder decoder;
@@ -5230,11 +5356,11 @@ kiwi_sparse_message_decoder! {
     definition "MultiplayerMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_multiplayer_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_multiplayer_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_multiplayer_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5242,12 +5368,12 @@ kiwi_sparse_message_decoder! {
     definition "MultiplayerMapEntry";
     capacity 3;
     fields [
-        1 => "key": decoder.read_string(env)?.encode(env);
-        2 => "value": decoder.read_string(env)?.encode(env);
+        1 => "key": one kiwi_sparse_string_value;
+        2 => "value": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_data_map_from_decoder;
     env env;
     decoder decoder;
@@ -5255,11 +5381,11 @@ kiwi_sparse_message_decoder! {
     definition "VariableDataMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_variable_data_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_variable_data_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_data_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5267,9 +5393,9 @@ kiwi_sparse_message_decoder! {
     definition "VariableDataMapEntry";
     capacity 4;
     fields [
-        1 => "node_field": decoder.read_var_uint()?.encode(env);
-        2 => "variable_data": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        3 => "variable_field": decode_sparse_variable_field_from_decoder(env, decoder)?.encode(env);
+        1 => "node_field": one kiwi_sparse_uint_value;
+        2 => "variable_data": one decode_sparse_variable_data_from_decoder;
+        3 => "variable_field": one decode_sparse_variable_field_from_decoder;
     ]
 }
 
@@ -5347,7 +5473,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_mode_by_set_map_from_decoder;
     env env;
     decoder decoder;
@@ -5355,11 +5481,11 @@ kiwi_sparse_message_decoder! {
     definition "VariableModeBySetMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_variable_mode_by_set_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_variable_mode_by_set_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_mode_by_set_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5367,13 +5493,13 @@ kiwi_sparse_message_decoder! {
     definition "VariableModeBySetMapEntry";
     capacity 4;
     fields [
-        1 => "variable_set_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
-        2 => "variable_mode_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "variable_set_extension_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
+        1 => "variable_set_id": one decode_sparse_variable_set_id_from_decoder;
+        2 => "variable_mode_id": one decode_sparse_guid_from_decoder;
+        3 => "variable_set_extension_id": one decode_sparse_variable_set_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_syntax_map_from_decoder;
     env env;
     decoder decoder;
@@ -5381,11 +5507,11 @@ kiwi_sparse_message_decoder! {
     definition "CodeSyntaxMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_code_syntax_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_code_syntax_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_syntax_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5393,12 +5519,12 @@ kiwi_sparse_message_decoder! {
     definition "CodeSyntaxMapEntry";
     capacity 3;
     fields [
-        1 => "platform": decode_sparse_code_syntax_platform_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decoder.read_string(env)?.encode(env);
+        1 => "platform": one decode_sparse_code_syntax_platform_from_decoder;
+        2 => "value": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_table_merged_cell_map_from_decoder;
     env env;
     decoder decoder;
@@ -5406,11 +5532,11 @@ kiwi_sparse_message_decoder! {
     definition "TableMergedCellMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_table_merged_cell_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_table_merged_cell_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_table_merged_cell_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5418,14 +5544,14 @@ kiwi_sparse_message_decoder! {
     definition "TableMergedCellMapEntry";
     capacity 5;
     fields [
-        1 => "row_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "col_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "row_span": decoder.read_var_int()?.encode(env);
-        4 => "col_span": decoder.read_var_int()?.encode(env);
+        1 => "row_id": one decode_sparse_guid_from_decoder;
+        2 => "col_id": one decode_sparse_guid_from_decoder;
+        3 => "row_span": one kiwi_sparse_int_value;
+        4 => "col_span": one kiwi_sparse_int_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_table_row_column_position_map_from_decoder;
     env env;
     decoder decoder;
@@ -5433,11 +5559,11 @@ kiwi_sparse_message_decoder! {
     definition "TableRowColumnPositionMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_table_row_column_position_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_table_row_column_position_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_table_row_column_position_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5445,12 +5571,12 @@ kiwi_sparse_message_decoder! {
     definition "TableRowColumnPositionMapEntry";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "position": decoder.read_string(env)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "position": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_guid_position_map_from_decoder;
     env env;
     decoder decoder;
@@ -5458,11 +5584,11 @@ kiwi_sparse_message_decoder! {
     definition "GUIDPositionMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_guid_position_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_guid_position_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_guid_position_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5470,12 +5596,12 @@ kiwi_sparse_message_decoder! {
     definition "GUIDPositionMapEntry";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "position": decoder.read_string(env)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "position": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_guid_grid_track_size_map_from_decoder;
     env env;
     decoder decoder;
@@ -5483,11 +5609,11 @@ kiwi_sparse_message_decoder! {
     definition "GUIDGridTrackSizeMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_guid_grid_track_size_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_guid_grid_track_size_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_guid_grid_track_size_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5495,12 +5621,12 @@ kiwi_sparse_message_decoder! {
     definition "GUIDGridTrackSizeMapEntry";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "track_size": decode_sparse_grid_track_size_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "track_size": one decode_sparse_grid_track_size_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_object_animation_list_from_decoder;
     env env;
     decoder decoder;
@@ -5508,11 +5634,11 @@ kiwi_sparse_message_decoder! {
     definition "ObjectAnimationList";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_object_animation_list_item_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_object_animation_list_item_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_object_animation_list_item_from_decoder;
     env env;
     decoder decoder;
@@ -5520,12 +5646,12 @@ kiwi_sparse_message_decoder! {
     definition "ObjectAnimationListItem";
     capacity 3;
     fields [
-        1 => "target_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "animation": decode_sparse_prototype_action_from_decoder(env, decoder)?.encode(env);
+        1 => "target_node_id": one decode_sparse_guid_from_decoder;
+        2 => "animation": one decode_sparse_prototype_action_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_grid_track_size_from_decoder;
     env env;
     decoder decoder;
@@ -5533,12 +5659,12 @@ kiwi_sparse_message_decoder! {
     definition "GridTrackSize";
     capacity 3;
     fields [
-        1 => "min_sizing": decode_sparse_grid_track_sizing_function_from_decoder(env, decoder)?.encode(env);
-        2 => "max_sizing": decode_sparse_grid_track_sizing_function_from_decoder(env, decoder)?.encode(env);
+        1 => "min_sizing": one decode_sparse_grid_track_sizing_function_from_decoder;
+        2 => "max_sizing": one decode_sparse_grid_track_sizing_function_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_grid_track_sizing_function_from_decoder;
     env env;
     decoder decoder;
@@ -5546,8 +5672,8 @@ kiwi_sparse_message_decoder! {
     definition "GridTrackSizingFunction";
     capacity 3;
     fields [
-        1 => "type": decode_sparse_grid_track_sizing_type_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decoder.read_var_float(env)?.encode(env);
+        1 => "type": one decode_sparse_grid_track_sizing_type_from_decoder;
+        2 => "value": one kiwi_sparse_float_value;
     ]
 }
 
@@ -5562,7 +5688,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_table_row_column_size_map_from_decoder;
     env env;
     decoder decoder;
@@ -5570,11 +5696,11 @@ kiwi_sparse_message_decoder! {
     definition "TableRowColumnSizeMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_table_row_column_size_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_table_row_column_size_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_table_row_column_size_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5582,12 +5708,12 @@ kiwi_sparse_message_decoder! {
     definition "TableRowColumnSizeMapEntry";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "size": decoder.read_var_float(env)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "size": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agenda_position_map_from_decoder;
     env env;
     decoder decoder;
@@ -5595,11 +5721,11 @@ kiwi_sparse_message_decoder! {
     definition "AgendaPositionMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_agenda_position_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_agenda_position_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agenda_position_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5607,8 +5733,8 @@ kiwi_sparse_message_decoder! {
     definition "AgendaPositionMapEntry";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "position": decoder.read_string(env)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "position": one kiwi_sparse_string_value;
     ]
 }
 
@@ -5622,7 +5748,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agenda_metadata_map_from_decoder;
     env env;
     decoder decoder;
@@ -5630,11 +5756,11 @@ kiwi_sparse_message_decoder! {
     definition "AgendaMetadataMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_agenda_metadata_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_agenda_metadata_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agenda_metadata_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5642,12 +5768,12 @@ kiwi_sparse_message_decoder! {
     definition "AgendaMetadataMapEntry";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "data": decode_sparse_agenda_metadata_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "data": one decode_sparse_agenda_metadata_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agenda_metadata_from_decoder;
     env env;
     decoder decoder;
@@ -5655,16 +5781,16 @@ kiwi_sparse_message_decoder! {
     definition "AgendaMetadata";
     capacity 7;
     fields [
-        1 => "name": decoder.read_string(env)?.encode(env);
-        2 => "type": decode_sparse_agenda_item_type_from_decoder(env, decoder)?.encode(env);
-        3 => "target_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "timer_info": decode_sparse_agenda_timer_info_from_decoder(env, decoder)?.encode(env);
-        5 => "vote_info": decode_sparse_agenda_vote_info_from_decoder(env, decoder)?.encode(env);
-        6 => "music_info": decode_sparse_agenda_music_info_from_decoder(env, decoder)?.encode(env);
+        1 => "name": one kiwi_sparse_string_value;
+        2 => "type": one decode_sparse_agenda_item_type_from_decoder;
+        3 => "target_node_id": one decode_sparse_guid_from_decoder;
+        4 => "timer_info": one decode_sparse_agenda_timer_info_from_decoder;
+        5 => "vote_info": one decode_sparse_agenda_vote_info_from_decoder;
+        6 => "music_info": one decode_sparse_agenda_music_info_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agenda_timer_info_from_decoder;
     env env;
     decoder decoder;
@@ -5672,11 +5798,11 @@ kiwi_sparse_message_decoder! {
     definition "AgendaTimerInfo";
     capacity 2;
     fields [
-        1 => "timer_length": decoder.read_var_uint()?.encode(env);
+        1 => "timer_length": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agenda_vote_info_from_decoder;
     env env;
     decoder decoder;
@@ -5684,11 +5810,11 @@ kiwi_sparse_message_decoder! {
     definition "AgendaVoteInfo";
     capacity 2;
     fields [
-        1 => "vote_count": decoder.read_var_uint()?.encode(env);
+        1 => "vote_count": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agenda_music_info_from_decoder;
     env env;
     decoder decoder;
@@ -5696,8 +5822,8 @@ kiwi_sparse_message_decoder! {
     definition "AgendaMusicInfo";
     capacity 3;
     fields [
-        1 => "song_id": decoder.read_string(env)?.encode(env);
-        2 => "start_time_ms": decoder.read_var_uint()?.encode(env);
+        1 => "song_id": one kiwi_sparse_string_value;
+        2 => "start_time_ms": one kiwi_sparse_uint_value;
     ]
 }
 
@@ -5733,7 +5859,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_component_prop_ref_from_decoder;
     env env;
     decoder decoder;
@@ -5741,11 +5867,11 @@ kiwi_sparse_message_decoder! {
     definition "ComponentPropRef";
     capacity 6;
     fields [
-        1 => "node_field": decoder.read_var_uint()?.encode(env);
-        2 => "def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "zombie_fallback_name": decoder.read_string(env)?.encode(env);
-        4 => "component_prop_node_field": decode_sparse_component_prop_node_field_from_decoder(env, decoder)?.encode(env);
-        5 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "node_field": one kiwi_sparse_uint_value;
+        2 => "def_id": one decode_sparse_guid_from_decoder;
+        3 => "zombie_fallback_name": one kiwi_sparse_string_value;
+        4 => "component_prop_node_field": one decode_sparse_component_prop_node_field_from_decoder;
+        5 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -5762,7 +5888,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_component_prop_assignment_from_decoder;
     env env;
     decoder decoder;
@@ -5770,14 +5896,14 @@ kiwi_sparse_message_decoder! {
     definition "ComponentPropAssignment";
     capacity 5;
     fields [
-        1 => "def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decode_sparse_component_prop_value_from_decoder(env, decoder)?.encode(env);
-        3 => "var_value": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        4 => "legacy_derived_text_data": decode_sparse_derived_text_data_from_decoder(env, decoder)?.encode(env);
+        1 => "def_id": one decode_sparse_guid_from_decoder;
+        2 => "value": one decode_sparse_component_prop_value_from_decoder;
+        3 => "var_value": one decode_sparse_variable_data_from_decoder;
+        4 => "legacy_derived_text_data": one decode_sparse_derived_text_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_component_prop_def_from_decoder;
     env env;
     decoder decoder;
@@ -5785,23 +5911,23 @@ kiwi_sparse_message_decoder! {
     definition "ComponentPropDef";
     capacity 14;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "name": decoder.read_string(env)?.encode(env);
-        3 => "initial_value": decode_sparse_component_prop_value_from_decoder(env, decoder)?.encode(env);
-        4 => "sort_position": decoder.read_string(env)?.encode(env);
-        5 => "parent_prop_def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        6 => "type": decode_sparse_component_prop_type_from_decoder(env, decoder)?.encode(env);
-        7 => "is_deleted": decoder.read_bool()?.encode(env);
-        8 => "preferred_values": decode_sparse_component_prop_preferred_values_from_decoder(env, decoder)?.encode(env);
-        9 => "var_value": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        10 => "parameter_config": decode_sparse_parameter_config_from_decoder(env, decoder)?.encode(env);
-        11 => "description": decoder.read_string(env)?.encode(env);
-        12 => "slot_prop_config": decode_sparse_slot_prop_config_from_decoder(env, decoder)?.encode(env);
-        13 => "color_array_config": decode_sparse_color_array_config_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "name": one kiwi_sparse_string_value;
+        3 => "initial_value": one decode_sparse_component_prop_value_from_decoder;
+        4 => "sort_position": one kiwi_sparse_string_value;
+        5 => "parent_prop_def_id": one decode_sparse_guid_from_decoder;
+        6 => "type": one decode_sparse_component_prop_type_from_decoder;
+        7 => "is_deleted": one kiwi_sparse_bool_value;
+        8 => "preferred_values": one decode_sparse_component_prop_preferred_values_from_decoder;
+        9 => "var_value": one decode_sparse_variable_data_from_decoder;
+        10 => "parameter_config": one decode_sparse_parameter_config_from_decoder;
+        11 => "description": one kiwi_sparse_string_value;
+        12 => "slot_prop_config": one decode_sparse_slot_prop_config_from_decoder;
+        13 => "color_array_config": one decode_sparse_color_array_config_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_component_prop_value_from_decoder;
     env env;
     decoder decoder;
@@ -5809,22 +5935,22 @@ kiwi_sparse_message_decoder! {
     definition "ComponentPropValue";
     capacity 13;
     fields [
-        1 => "bool_value": decoder.read_bool()?.encode(env);
-        2 => "text_value": decode_sparse_text_data_from_decoder(env, decoder)?.encode(env);
-        3 => "guid_value": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "float_value": decoder.read_var_float(env)?.encode(env);
-        5 => "easing_data": decode_sparse_easing_data_from_decoder(env, decoder)?.encode(env);
-        6 => "vector_value": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        7 => "line_value": decode_sparse_line_from_decoder(env, decoder)?.encode(env);
-        8 => "circle_value": decode_sparse_circle_from_decoder(env, decoder)?.encode(env);
-        9 => "rotation3_d_value": decode_sparse_rotation3_d_from_decoder(env, decoder)?.encode(env);
-        10 => "circle_point_value": decode_sparse_circle_point_from_decoder(env, decoder)?.encode(env);
-        11 => "gradient_value": decode_sparse_gradient_from_decoder(env, decoder)?.encode(env);
-        12 => "color_point_value": decode_sparse_color_point_from_decoder(env, decoder)?.encode(env);
+        1 => "bool_value": one kiwi_sparse_bool_value;
+        2 => "text_value": one decode_sparse_text_data_from_decoder;
+        3 => "guid_value": one decode_sparse_guid_from_decoder;
+        4 => "float_value": one kiwi_sparse_float_value;
+        5 => "easing_data": one decode_sparse_easing_data_from_decoder;
+        6 => "vector_value": one decode_sparse_vector_from_decoder;
+        7 => "line_value": one decode_sparse_line_from_decoder;
+        8 => "circle_value": one decode_sparse_circle_from_decoder;
+        9 => "rotation3_d_value": one decode_sparse_rotation3_d_from_decoder;
+        10 => "circle_point_value": one decode_sparse_circle_point_from_decoder;
+        11 => "gradient_value": one decode_sparse_gradient_from_decoder;
+        12 => "color_point_value": one decode_sparse_color_point_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_timeline_data_from_decoder;
     env env;
     decoder decoder;
@@ -5832,14 +5958,14 @@ kiwi_sparse_message_decoder! {
     definition "TimelineData";
     capacity 5;
     fields [
-        1 => "duration_us": decoder.read_var_uint64()?.encode(env);
-        2 => "default_timeline": decoder.read_bool()?.encode(env);
-        3 => "parent_timeline_def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "playback_style": decode_sparse_playback_style_from_decoder(env, decoder)?.encode(env);
+        1 => "duration_us": one kiwi_sparse_uint64_value;
+        2 => "default_timeline": one kiwi_sparse_bool_value;
+        3 => "parent_timeline_def_id": one decode_sparse_guid_from_decoder;
+        4 => "playback_style": one decode_sparse_playback_style_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_timeline_definitions_map_from_decoder;
     env env;
     decoder decoder;
@@ -5847,11 +5973,11 @@ kiwi_sparse_message_decoder! {
     definition "TimelineDefinitionsMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_timeline_definitions_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_timeline_definitions_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_timeline_definitions_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5859,12 +5985,12 @@ kiwi_sparse_message_decoder! {
     definition "TimelineDefinitionsMapEntry";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "data": decode_sparse_timeline_data_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "data": one decode_sparse_timeline_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_timeline_assignment_key_from_decoder;
     env env;
     decoder decoder;
@@ -5872,12 +5998,12 @@ kiwi_sparse_message_decoder! {
     definition "TimelineAssignmentKey";
     capacity 3;
     fields [
-        1 => "assigned_timeline_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "containing_timeline_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "assigned_timeline_id": one decode_sparse_guid_from_decoder;
+        2 => "containing_timeline_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_timeline_binding_data_from_decoder;
     env env;
     decoder decoder;
@@ -5885,12 +6011,12 @@ kiwi_sparse_message_decoder! {
     definition "TimelineBindingData";
     capacity 3;
     fields [
-        1 => "offset_us": decoder.read_var_int64()?.encode(env);
-        2 => "disabled": decoder.read_bool()?.encode(env);
+        1 => "offset_us": one kiwi_sparse_int64_value;
+        2 => "disabled": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_timeline_assignments_map_from_decoder;
     env env;
     decoder decoder;
@@ -5898,11 +6024,11 @@ kiwi_sparse_message_decoder! {
     definition "TimelineAssignmentsMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_timeline_assignments_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_timeline_assignments_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_timeline_assignments_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -5910,8 +6036,8 @@ kiwi_sparse_message_decoder! {
     definition "TimelineAssignmentsMapEntry";
     capacity 3;
     fields [
-        1 => "key": decode_sparse_timeline_assignment_key_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decode_sparse_timeline_binding_data_from_decoder(env, decoder)?.encode(env);
+        1 => "key": one decode_sparse_timeline_assignment_key_from_decoder;
+        2 => "value": one decode_sparse_timeline_binding_data_from_decoder;
     ]
 }
 
@@ -5940,7 +6066,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_component_prop_preferred_values_from_decoder;
     env env;
     decoder decoder;
@@ -5948,12 +6074,12 @@ kiwi_sparse_message_decoder! {
     definition "ComponentPropPreferredValues";
     capacity 3;
     fields [
-        1 => "string_values": decoder.read_repeated(|decoder| decoder.read_string(env))?.encode(env);
-        2 => "instance_swap_values": decoder.read_repeated(|decoder| decode_sparse_instance_swap_preferred_value_from_decoder(env, decoder))?.encode(env);
+        1 => "string_values": repeated kiwi_sparse_string_value;
+        2 => "instance_swap_values": repeated decode_sparse_instance_swap_preferred_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_parameter_config_from_decoder;
     env env;
     decoder decoder;
@@ -5961,19 +6087,19 @@ kiwi_sparse_message_decoder! {
     definition "ParameterConfig";
     capacity 14;
     fields [
-        1 => "number_prop_config": decode_sparse_number_prop_config_from_decoder(env, decoder)?.encode(env);
-        2 => "control": decode_sparse_parameter_config_control_from_decoder(env, decoder)?.encode(env);
-        3 => "slider_config": decode_sparse_slider_config_from_decoder(env, decoder)?.encode(env);
-        4 => "label": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        5 => "input_config": decode_sparse_input_config_from_decoder(env, decoder)?.encode(env);
-        6 => "select_config": decode_sparse_select_config_from_decoder(env, decoder)?.encode(env);
-        7 => "point_config": decode_sparse_point_config_from_decoder(env, decoder)?.encode(env);
-        8 => "line_config": decode_sparse_line_config_from_decoder(env, decoder)?.encode(env);
-        9 => "point_radius_config": decode_sparse_point_radius_config_from_decoder(env, decoder)?.encode(env);
-        10 => "rotation3_d_config": decode_sparse_rotation3_d_config_from_decoder(env, decoder)?.encode(env);
-        11 => "circle_point_config": decode_sparse_circle_point_config_from_decoder(env, decoder)?.encode(env);
-        12 => "color_point_config": decode_sparse_color_point_config_from_decoder(env, decoder)?.encode(env);
-        13 => "show_divider_above": decoder.read_bool()?.encode(env);
+        1 => "number_prop_config": one decode_sparse_number_prop_config_from_decoder;
+        2 => "control": one decode_sparse_parameter_config_control_from_decoder;
+        3 => "slider_config": one decode_sparse_slider_config_from_decoder;
+        4 => "label": one decode_sparse_variable_data_from_decoder;
+        5 => "input_config": one decode_sparse_input_config_from_decoder;
+        6 => "select_config": one decode_sparse_select_config_from_decoder;
+        7 => "point_config": one decode_sparse_point_config_from_decoder;
+        8 => "line_config": one decode_sparse_line_config_from_decoder;
+        9 => "point_radius_config": one decode_sparse_point_radius_config_from_decoder;
+        10 => "rotation3_d_config": one decode_sparse_rotation3_d_config_from_decoder;
+        11 => "circle_point_config": one decode_sparse_circle_point_config_from_decoder;
+        12 => "color_point_config": one decode_sparse_color_point_config_from_decoder;
+        13 => "show_divider_above": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -5989,7 +6115,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_input_config_from_decoder;
     env env;
     decoder decoder;
@@ -5997,13 +6123,13 @@ kiwi_sparse_message_decoder! {
     definition "InputConfig";
     capacity 4;
     fields [
-        1 => "unit": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        2 => "min": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        3 => "max": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "unit": one decode_sparse_variable_data_from_decoder;
+        2 => "min": one decode_sparse_variable_data_from_decoder;
+        3 => "max": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_slider_config_from_decoder;
     env env;
     decoder decoder;
@@ -6011,10 +6137,10 @@ kiwi_sparse_message_decoder! {
     definition "SliderConfig";
     capacity 5;
     fields [
-        1 => "min": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        2 => "max": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        3 => "step": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        4 => "unit": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "min": one decode_sparse_variable_data_from_decoder;
+        2 => "max": one decode_sparse_variable_data_from_decoder;
+        3 => "step": one decode_sparse_variable_data_from_decoder;
+        4 => "unit": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
@@ -6029,7 +6155,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_point_config_from_decoder;
     env env;
     decoder decoder;
@@ -6037,12 +6163,12 @@ kiwi_sparse_message_decoder! {
     definition "PointConfig";
     capacity 3;
     fields [
-        1 => "mode": decode_sparse_point_mode_from_decoder(env, decoder)?.encode(env);
-        2 => "unit": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
+        1 => "mode": one decode_sparse_point_mode_from_decoder;
+        2 => "unit": one decode_sparse_number_units_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_line_from_decoder;
     env env;
     decoder decoder;
@@ -6050,12 +6176,12 @@ kiwi_sparse_message_decoder! {
     definition "Line";
     capacity 3;
     fields [
-        1 => "a": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        2 => "b": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
+        1 => "a": one decode_sparse_vector_from_decoder;
+        2 => "b": one decode_sparse_vector_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_line_config_from_decoder;
     env env;
     decoder decoder;
@@ -6063,12 +6189,12 @@ kiwi_sparse_message_decoder! {
     definition "LineConfig";
     capacity 3;
     fields [
-        1 => "mode": decode_sparse_point_mode_from_decoder(env, decoder)?.encode(env);
-        2 => "unit": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
+        1 => "mode": one decode_sparse_point_mode_from_decoder;
+        2 => "unit": one decode_sparse_number_units_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_circle_from_decoder;
     env env;
     decoder decoder;
@@ -6076,12 +6202,12 @@ kiwi_sparse_message_decoder! {
     definition "Circle";
     capacity 3;
     fields [
-        1 => "center": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        2 => "radius": decoder.read_var_float(env)?.encode(env);
+        1 => "center": one decode_sparse_vector_from_decoder;
+        2 => "radius": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_point_radius_config_from_decoder;
     env env;
     decoder decoder;
@@ -6089,15 +6215,15 @@ kiwi_sparse_message_decoder! {
     definition "PointRadiusConfig";
     capacity 6;
     fields [
-        1 => "mode": decode_sparse_point_mode_from_decoder(env, decoder)?.encode(env);
-        2 => "position_unit": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
-        3 => "radius_unit": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
-        4 => "min_radius": decoder.read_var_float(env)?.encode(env);
-        5 => "max_radius": decoder.read_var_float(env)?.encode(env);
+        1 => "mode": one decode_sparse_point_mode_from_decoder;
+        2 => "position_unit": one decode_sparse_number_units_from_decoder;
+        3 => "radius_unit": one decode_sparse_number_units_from_decoder;
+        4 => "min_radius": one kiwi_sparse_float_value;
+        5 => "max_radius": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_rotation3_d_from_decoder;
     env env;
     decoder decoder;
@@ -6105,14 +6231,14 @@ kiwi_sparse_message_decoder! {
     definition "Rotation3D";
     capacity 5;
     fields [
-        1 => "x": decoder.read_var_float(env)?.encode(env);
-        2 => "y": decoder.read_var_float(env)?.encode(env);
-        3 => "z": decoder.read_var_float(env)?.encode(env);
-        4 => "translate_z": decoder.read_var_float(env)?.encode(env);
+        1 => "x": one kiwi_sparse_float_value;
+        2 => "y": one kiwi_sparse_float_value;
+        3 => "z": one kiwi_sparse_float_value;
+        4 => "translate_z": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_rotation3_d_config_from_decoder;
     env env;
     decoder decoder;
@@ -6120,11 +6246,11 @@ kiwi_sparse_message_decoder! {
     definition "Rotation3DConfig";
     capacity 2;
     fields [
-        1 => "mode": decode_sparse_point_mode_from_decoder(env, decoder)?.encode(env);
+        1 => "mode": one decode_sparse_point_mode_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_circle_point_from_decoder;
     env env;
     decoder decoder;
@@ -6132,13 +6258,13 @@ kiwi_sparse_message_decoder! {
     definition "CirclePoint";
     capacity 4;
     fields [
-        1 => "center": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        2 => "radius": decoder.read_var_float(env)?.encode(env);
-        3 => "angle": decoder.read_var_float(env)?.encode(env);
+        1 => "center": one decode_sparse_vector_from_decoder;
+        2 => "radius": one kiwi_sparse_float_value;
+        3 => "angle": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_circle_point_config_from_decoder;
     env env;
     decoder decoder;
@@ -6146,15 +6272,15 @@ kiwi_sparse_message_decoder! {
     definition "CirclePointConfig";
     capacity 6;
     fields [
-        1 => "mode": decode_sparse_point_mode_from_decoder(env, decoder)?.encode(env);
-        2 => "position_unit": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
-        3 => "radius_unit": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
-        4 => "min_radius": decoder.read_var_float(env)?.encode(env);
-        5 => "max_radius": decoder.read_var_float(env)?.encode(env);
+        1 => "mode": one decode_sparse_point_mode_from_decoder;
+        2 => "position_unit": one decode_sparse_number_units_from_decoder;
+        3 => "radius_unit": one decode_sparse_number_units_from_decoder;
+        4 => "min_radius": one kiwi_sparse_float_value;
+        5 => "max_radius": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_color_point_from_decoder;
     env env;
     decoder decoder;
@@ -6162,12 +6288,12 @@ kiwi_sparse_message_decoder! {
     definition "ColorPoint";
     capacity 3;
     fields [
-        1 => "point": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        2 => "color": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "point": one decode_sparse_vector_from_decoder;
+        2 => "color": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_color_point_config_from_decoder;
     env env;
     decoder decoder;
@@ -6175,12 +6301,12 @@ kiwi_sparse_message_decoder! {
     definition "ColorPointConfig";
     capacity 3;
     fields [
-        1 => "mode": decode_sparse_point_mode_from_decoder(env, decoder)?.encode(env);
-        2 => "unit": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
+        1 => "mode": one decode_sparse_point_mode_from_decoder;
+        2 => "unit": one decode_sparse_number_units_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_gradient_from_decoder;
     env env;
     decoder decoder;
@@ -6188,11 +6314,11 @@ kiwi_sparse_message_decoder! {
     definition "Gradient";
     capacity 2;
     fields [
-        1 => "stops": decoder.read_repeated(|decoder| decode_sparse_gradient_stop_from_decoder(env, decoder))?.encode(env);
+        1 => "stops": repeated decode_sparse_gradient_stop_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_gradient_stop_from_decoder;
     env env;
     decoder decoder;
@@ -6200,12 +6326,12 @@ kiwi_sparse_message_decoder! {
     definition "GradientStop";
     capacity 3;
     fields [
-        1 => "position": decoder.read_var_float(env)?.encode(env);
-        2 => "color": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "position": one kiwi_sparse_float_value;
+        2 => "color": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_select_option_from_decoder;
     env env;
     decoder decoder;
@@ -6213,12 +6339,12 @@ kiwi_sparse_message_decoder! {
     definition "SelectOption";
     capacity 3;
     fields [
-        1 => "value": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        2 => "label": decoder.read_string(env)?.encode(env);
+        1 => "value": one decode_sparse_variable_data_from_decoder;
+        2 => "label": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_select_config_from_decoder;
     env env;
     decoder decoder;
@@ -6226,11 +6352,11 @@ kiwi_sparse_message_decoder! {
     definition "SelectConfig";
     capacity 2;
     fields [
-        1 => "options": decoder.read_repeated(|decoder| decode_sparse_select_option_from_decoder(env, decoder))?.encode(env);
+        1 => "options": repeated decode_sparse_select_option_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_color_array_config_from_decoder;
     env env;
     decoder decoder;
@@ -6238,12 +6364,12 @@ kiwi_sparse_message_decoder! {
     definition "ColorArrayConfig";
     capacity 3;
     fields [
-        1 => "min_length": decoder.read_var_uint()?.encode(env);
-        2 => "max_length": decoder.read_var_uint()?.encode(env);
+        1 => "min_length": one kiwi_sparse_uint_value;
+        2 => "max_length": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_slot_prop_config_from_decoder;
     env env;
     decoder decoder;
@@ -6251,15 +6377,15 @@ kiwi_sparse_message_decoder! {
     definition "SlotPropConfig";
     capacity 6;
     fields [
-        1 => "stretch_child_on_insert": decoder.read_bool()?.encode(env);
-        2 => "display_by_default": decoder.read_bool()?.encode(env);
-        3 => "min_children": decoder.read_var_uint()?.encode(env);
-        4 => "max_children": decoder.read_var_uint()?.encode(env);
-        5 => "allow_preferred_values_only": decoder.read_bool()?.encode(env);
+        1 => "stretch_child_on_insert": one kiwi_sparse_bool_value;
+        2 => "display_by_default": one kiwi_sparse_bool_value;
+        3 => "min_children": one kiwi_sparse_uint_value;
+        4 => "max_children": one kiwi_sparse_uint_value;
+        5 => "allow_preferred_values_only": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_number_prop_config_from_decoder;
     env env;
     decoder decoder;
@@ -6267,14 +6393,14 @@ kiwi_sparse_message_decoder! {
     definition "NumberPropConfig";
     capacity 5;
     fields [
-        1 => "control": decode_sparse_parameter_config_control_from_decoder(env, decoder)?.encode(env);
-        2 => "min": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        3 => "max": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        4 => "step": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "control": one decode_sparse_parameter_config_control_from_decoder;
+        2 => "min": one decode_sparse_variable_data_from_decoder;
+        3 => "max": one decode_sparse_variable_data_from_decoder;
+        4 => "step": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_instance_swap_preferred_value_from_decoder;
     env env;
     decoder decoder;
@@ -6282,8 +6408,8 @@ kiwi_sparse_message_decoder! {
     definition "InstanceSwapPreferredValue";
     capacity 3;
     fields [
-        1 => "type": decode_sparse_instance_swap_preferred_value_type_from_decoder(env, decoder)?.encode(env);
-        2 => "key": decoder.read_string(env)?.encode(env);
+        1 => "type": one decode_sparse_instance_swap_preferred_value_type_from_decoder;
+        2 => "key": one kiwi_sparse_string_value;
     ]
 }
 
@@ -6321,7 +6447,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_widget_metadata_from_decoder;
     env env;
     decoder decoder;
@@ -6329,11 +6455,11 @@ kiwi_sparse_message_decoder! {
     definition "WidgetMetadata";
     capacity 6;
     fields [
-        1 => "plugin_id": decoder.read_string(env)?.encode(env);
-        2 => "plugin_version_id": decoder.read_string(env)?.encode(env);
-        3 => "widget_name": decoder.read_string(env)?.encode(env);
-        4 => "is_resizable": decoder.read_bool()?.encode(env);
-        5 => "is_rotatable": decoder.read_bool()?.encode(env);
+        1 => "plugin_id": one kiwi_sparse_string_value;
+        2 => "plugin_version_id": one kiwi_sparse_string_value;
+        3 => "widget_name": one kiwi_sparse_string_value;
+        4 => "is_resizable": one kiwi_sparse_bool_value;
+        5 => "is_rotatable": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -6352,7 +6478,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_widget_property_menu_selector_option_from_decoder;
     env env;
     decoder decoder;
@@ -6360,8 +6486,8 @@ kiwi_sparse_message_decoder! {
     definition "WidgetPropertyMenuSelectorOption";
     capacity 3;
     fields [
-        1 => "option": decoder.read_string(env)?.encode(env);
-        2 => "tooltip": decoder.read_string(env)?.encode(env);
+        1 => "option": one kiwi_sparse_string_value;
+        2 => "tooltip": one kiwi_sparse_string_value;
     ]
 }
 
@@ -6375,7 +6501,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_widget_property_menu_item_from_decoder;
     env env;
     decoder decoder;
@@ -6383,15 +6509,15 @@ kiwi_sparse_message_decoder! {
     definition "WidgetPropertyMenuItem";
     capacity 10;
     fields [
-        1 => "property_name": decoder.read_string(env)?.encode(env);
-        2 => "tooltip": decoder.read_string(env)?.encode(env);
-        3 => "item_type": decode_sparse_widget_property_menu_item_type_from_decoder(env, decoder)?.encode(env);
-        4 => "icon": decoder.read_string(env)?.encode(env);
-        5 => "options": decoder.read_repeated(|decoder| decode_sparse_widget_property_menu_selector_option_from_decoder(env, decoder))?.encode(env);
-        6 => "selected_option": decoder.read_string(env)?.encode(env);
-        7 => "is_toggled": decoder.read_bool()?.encode(env);
-        8 => "href": decoder.read_string(env)?.encode(env);
-        9 => "allow_custom_color": decoder.read_bool()?.encode(env);
+        1 => "property_name": one kiwi_sparse_string_value;
+        2 => "tooltip": one kiwi_sparse_string_value;
+        3 => "item_type": one decode_sparse_widget_property_menu_item_type_from_decoder;
+        4 => "icon": one kiwi_sparse_string_value;
+        5 => "options": repeated decode_sparse_widget_property_menu_selector_option_from_decoder;
+        6 => "selected_option": one kiwi_sparse_string_value;
+        7 => "is_toggled": one kiwi_sparse_bool_value;
+        8 => "href": one kiwi_sparse_string_value;
+        9 => "allow_custom_color": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -6473,7 +6599,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_internal_data_for_test_from_decoder;
     env env;
     decoder decoder;
@@ -6481,11 +6607,11 @@ kiwi_sparse_message_decoder! {
     definition "InternalDataForTest";
     capacity 2;
     fields [
-        1 => "test_field_a": decoder.read_var_int()?.encode(env);
+        1 => "test_field_a": one kiwi_sparse_int_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_state_group_property_value_order_from_decoder;
     env env;
     decoder decoder;
@@ -6493,8 +6619,8 @@ kiwi_sparse_message_decoder! {
     definition "StateGroupPropertyValueOrder";
     capacity 3;
     fields [
-        1 => "property": decoder.read_string(env)?.encode(env);
-        2 => "values": decoder.read_repeated(|decoder| decoder.read_string(env))?.encode(env);
+        1 => "property": one kiwi_sparse_string_value;
+        2 => "values": repeated kiwi_sparse_string_value;
     ]
 }
 
@@ -6510,7 +6636,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_partial_paste_annotation_from_decoder;
     env env;
     decoder decoder;
@@ -6518,13 +6644,13 @@ kiwi_sparse_message_decoder! {
     definition "PartialPasteAnnotation";
     capacity 4;
     fields [
-        1 => "is_partial": decoder.read_bool()?.encode(env);
-        2 => "annotated_at": decoder.read_var_uint64()?.encode(env);
-        3 => "error_state": decode_sparse_backfill_error_from_decoder(env, decoder)?.encode(env);
+        1 => "is_partial": one kiwi_sparse_bool_value;
+        2 => "annotated_at": one kiwi_sparse_uint64_value;
+        3 => "error_state": one decode_sparse_backfill_error_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variant_prop_spec_from_decoder;
     env env;
     decoder decoder;
@@ -6532,12 +6658,12 @@ kiwi_sparse_message_decoder! {
     definition "VariantPropSpec";
     capacity 3;
     fields [
-        1 => "prop_def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decoder.read_string(env)?.encode(env);
+        1 => "prop_def_id": one decode_sparse_guid_from_decoder;
+        2 => "value": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_text_list_data_from_decoder;
     env env;
     decoder decoder;
@@ -6545,10 +6671,10 @@ kiwi_sparse_message_decoder! {
     definition "TextListData";
     capacity 5;
     fields [
-        1 => "list_id": decoder.read_var_int()?.encode(env);
-        2 => "bullet_type": decode_sparse_bullet_type_from_decoder(env, decoder)?.encode(env);
-        3 => "indentation_level": decoder.read_var_int()?.encode(env);
-        4 => "line_number": decoder.read_var_int()?.encode(env);
+        1 => "list_id": one kiwi_sparse_int_value;
+        2 => "bullet_type": one decode_sparse_bullet_type_from_decoder;
+        3 => "indentation_level": one kiwi_sparse_int_value;
+        4 => "line_number": one kiwi_sparse_int_value;
     ]
 }
 
@@ -6564,7 +6690,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_text_line_data_from_decoder;
     env env;
     decoder decoder;
@@ -6572,20 +6698,20 @@ kiwi_sparse_message_decoder! {
     definition "TextLineData";
     capacity 11;
     fields [
-        1 => "line_type": decode_sparse_line_type_from_decoder(env, decoder)?.encode(env);
-        10 => "style_id": decoder.read_var_int()?.encode(env);
-        2 => "indentation_level": decoder.read_var_int()?.encode(env);
-        9 => "source_directionality": decode_sparse_source_directionality_from_decoder(env, decoder)?.encode(env);
-        3 => "directionality": decode_sparse_directionality_from_decoder(env, decoder)?.encode(env);
-        4 => "directionality_intent": decode_sparse_directionality_intent_from_decoder(env, decoder)?.encode(env);
-        5 => "downgrade_style_id": decoder.read_var_int()?.encode(env);
-        6 => "consistency_style_id": decoder.read_var_int()?.encode(env);
-        7 => "list_start_offset": decoder.read_var_int()?.encode(env);
-        8 => "is_first_line_of_list": decoder.read_bool()?.encode(env);
+        1 => "line_type": one decode_sparse_line_type_from_decoder;
+        2 => "indentation_level": one kiwi_sparse_int_value;
+        3 => "directionality": one decode_sparse_directionality_from_decoder;
+        4 => "directionality_intent": one decode_sparse_directionality_intent_from_decoder;
+        5 => "downgrade_style_id": one kiwi_sparse_int_value;
+        6 => "consistency_style_id": one kiwi_sparse_int_value;
+        7 => "list_start_offset": one kiwi_sparse_int_value;
+        8 => "is_first_line_of_list": one kiwi_sparse_bool_value;
+        9 => "source_directionality": one decode_sparse_source_directionality_from_decoder;
+        10 => "style_id": one kiwi_sparse_int_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_derived_text_line_data_from_decoder;
     env env;
     decoder decoder;
@@ -6593,7 +6719,7 @@ kiwi_sparse_message_decoder! {
     definition "DerivedTextLineData";
     capacity 2;
     fields [
-        1 => "directionality": decode_sparse_directionality_from_decoder(env, decoder)?.encode(env);
+        1 => "directionality": one decode_sparse_directionality_from_decoder;
     ]
 }
 
@@ -6641,7 +6767,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_prototype_interaction_from_decoder;
     env env;
     decoder decoder;
@@ -6649,15 +6775,15 @@ kiwi_sparse_message_decoder! {
     definition "PrototypeInteraction";
     capacity 6;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "event": decode_sparse_prototype_event_from_decoder(env, decoder)?.encode(env);
-        3 => "actions": decoder.read_repeated(|decoder| decode_sparse_prototype_action_from_decoder(env, decoder))?.encode(env);
-        4 => "is_deleted": decoder.read_bool()?.encode(env);
-        5 => "state_management_version": decoder.read_var_int()?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "event": one decode_sparse_prototype_event_from_decoder;
+        3 => "actions": repeated decode_sparse_prototype_action_from_decoder;
+        4 => "is_deleted": one kiwi_sparse_bool_value;
+        5 => "state_management_version": one kiwi_sparse_int_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_prototype_event_from_decoder;
     env env;
     decoder decoder;
@@ -6665,17 +6791,17 @@ kiwi_sparse_message_decoder! {
     definition "PrototypeEvent";
     capacity 8;
     fields [
-        1 => "interaction_type": decode_sparse_interaction_type_from_decoder(env, decoder)?.encode(env);
-        2 => "interaction_maintained": decoder.read_bool()?.encode(env);
-        3 => "interaction_duration": decoder.read_var_float(env)?.encode(env);
-        4 => "key_trigger": decode_sparse_key_trigger_from_decoder(env, decoder)?.encode(env);
-        5 => "voice_event_phrase": decoder.read_string(env)?.encode(env);
-        6 => "transition_timeout": decoder.read_var_float(env)?.encode(env);
-        7 => "media_hit_time": decoder.read_var_float(env)?.encode(env);
+        1 => "interaction_type": one decode_sparse_interaction_type_from_decoder;
+        2 => "interaction_maintained": one kiwi_sparse_bool_value;
+        3 => "interaction_duration": one kiwi_sparse_float_value;
+        4 => "key_trigger": one decode_sparse_key_trigger_from_decoder;
+        5 => "voice_event_phrase": one kiwi_sparse_string_value;
+        6 => "transition_timeout": one kiwi_sparse_float_value;
+        7 => "media_hit_time": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_prototype_variable_target_from_decoder;
     env env;
     decoder decoder;
@@ -6683,12 +6809,12 @@ kiwi_sparse_message_decoder! {
     definition "PrototypeVariableTarget";
     capacity 3;
     fields [
-        1 => "id": decode_sparse_variable_id_from_decoder(env, decoder)?.encode(env);
-        2 => "node_field_alias": decode_sparse_node_field_alias_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_variable_id_from_decoder;
+        2 => "node_field_alias": one decode_sparse_node_field_alias_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_conditional_actions_from_decoder;
     env env;
     decoder decoder;
@@ -6696,12 +6822,12 @@ kiwi_sparse_message_decoder! {
     definition "ConditionalActions";
     capacity 3;
     fields [
-        1 => "actions": decoder.read_repeated(|decoder| decode_sparse_prototype_action_from_decoder(env, decoder))?.encode(env);
-        2 => "condition": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "actions": repeated decode_sparse_prototype_action_from_decoder;
+        2 => "condition": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_prototype_action_from_decoder;
     env env;
     decoder decoder;
@@ -6709,48 +6835,48 @@ kiwi_sparse_message_decoder! {
     definition "PrototypeAction";
     capacity 43;
     fields [
-        1 => "transition_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "transition_type": decode_sparse_transition_type_from_decoder(env, decoder)?.encode(env);
-        3 => "transition_duration": decoder.read_var_float(env)?.encode(env);
-        4 => "easing_type": decode_sparse_easing_type_from_decoder(env, decoder)?.encode(env);
-        5 => "transition_timeout": decoder.read_var_float(env)?.encode(env);
-        6 => "transition_should_smart_animate": decoder.read_bool()?.encode(env);
-        7 => "connection_type": decode_sparse_connection_type_from_decoder(env, decoder)?.encode(env);
-        9 => "overlay_relative_position": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        10 => "navigation_type": decode_sparse_navigation_type_from_decoder(env, decoder)?.encode(env);
-        11 => "transition_preserve_scroll": decoder.read_bool()?.encode(env);
-        12 => "easing_function": decoder.read_repeated(|decoder| decoder.read_var_float(env))?.encode(env);
-        13 => "extra_scroll_offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        25 => "transition_reset_scroll_position": decoder.read_bool()?.encode(env);
-        26 => "transition_reset_interactive_components": decoder.read_bool()?.encode(env);
-        42 => "transition_overrides_enabled": decoder.read_bool()?.encode(env);
-        8 => "connection_url": decoder.read_string(env)?.encode(env);
-        18 => "open_url_in_new_tab": decoder.read_bool()?.encode(env);
-        34 => "link_param": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        35 => "cms_target": decode_sparse_cms_item_page_target_from_decoder(env, decoder)?.encode(env);
-        14 => "target_variable_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        15 => "target_variable_value": decode_sparse_variable_any_value_from_decoder(env, decoder)?.encode(env);
-        19 => "target_variable": decode_sparse_prototype_variable_target_from_decoder(env, decoder)?.encode(env);
-        20 => "target_variable_data": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        16 => "media_action": decode_sparse_media_action_from_decoder(env, decoder)?.encode(env);
-        17 => "transition_reset_video_position": decoder.read_bool()?.encode(env);
-        21 => "media_skip_to_time": decoder.read_var_float(env)?.encode(env);
-        22 => "media_skip_by_amount": decoder.read_var_float(env)?.encode(env);
-        36 => "media_playback_rate": decoder.read_var_float(env)?.encode(env);
-        23 => "conditions": decoder.read_repeated(|decoder| decode_sparse_variable_data_from_decoder(env, decoder))?.encode(env);
-        24 => "conditional_actions": decoder.read_repeated(|decoder| decode_sparse_conditional_actions_from_decoder(env, decoder))?.encode(env);
-        27 => "target_variable_set_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
-        28 => "target_variable_mode_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        29 => "target_variable_set_key": decoder.read_string(env)?.encode(env);
-        38 => "variable_set_target_extension_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
-        30 => "animation_type": decode_sparse_animation_type_from_decoder(env, decoder)?.encode(env);
-        31 => "animation_target_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        32 => "animation_phase": decode_sparse_animation_phase_from_decoder(env, decoder)?.encode(env);
-        33 => "animation_state": decode_sparse_animation_state_from_decoder(env, decoder)?.encode(env);
-        37 => "simple_link": decoder.read_bool()?.encode(env);
-        39 => "animation_timeline_action": decode_sparse_animation_timeline_action_from_decoder(env, decoder)?.encode(env);
-        41 => "animation_timeline_def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        40 => "animation_skip_to_time": decoder.read_var_float(env)?.encode(env);
+        1 => "transition_node_id": one decode_sparse_guid_from_decoder;
+        2 => "transition_type": one decode_sparse_transition_type_from_decoder;
+        3 => "transition_duration": one kiwi_sparse_float_value;
+        4 => "easing_type": one decode_sparse_easing_type_from_decoder;
+        5 => "transition_timeout": one kiwi_sparse_float_value;
+        6 => "transition_should_smart_animate": one kiwi_sparse_bool_value;
+        7 => "connection_type": one decode_sparse_connection_type_from_decoder;
+        8 => "connection_url": one kiwi_sparse_string_value;
+        9 => "overlay_relative_position": one decode_sparse_vector_from_decoder;
+        10 => "navigation_type": one decode_sparse_navigation_type_from_decoder;
+        11 => "transition_preserve_scroll": one kiwi_sparse_bool_value;
+        12 => "easing_function": repeated kiwi_sparse_float_value;
+        13 => "extra_scroll_offset": one decode_sparse_vector_from_decoder;
+        14 => "target_variable_id": one decode_sparse_guid_from_decoder;
+        15 => "target_variable_value": one decode_sparse_variable_any_value_from_decoder;
+        16 => "media_action": one decode_sparse_media_action_from_decoder;
+        17 => "transition_reset_video_position": one kiwi_sparse_bool_value;
+        18 => "open_url_in_new_tab": one kiwi_sparse_bool_value;
+        19 => "target_variable": one decode_sparse_prototype_variable_target_from_decoder;
+        20 => "target_variable_data": one decode_sparse_variable_data_from_decoder;
+        21 => "media_skip_to_time": one kiwi_sparse_float_value;
+        22 => "media_skip_by_amount": one kiwi_sparse_float_value;
+        23 => "conditions": repeated decode_sparse_variable_data_from_decoder;
+        24 => "conditional_actions": repeated decode_sparse_conditional_actions_from_decoder;
+        25 => "transition_reset_scroll_position": one kiwi_sparse_bool_value;
+        26 => "transition_reset_interactive_components": one kiwi_sparse_bool_value;
+        27 => "target_variable_set_id": one decode_sparse_variable_set_id_from_decoder;
+        28 => "target_variable_mode_id": one decode_sparse_guid_from_decoder;
+        29 => "target_variable_set_key": one kiwi_sparse_string_value;
+        30 => "animation_type": one decode_sparse_animation_type_from_decoder;
+        31 => "animation_target_id": one decode_sparse_guid_from_decoder;
+        32 => "animation_phase": one decode_sparse_animation_phase_from_decoder;
+        33 => "animation_state": one decode_sparse_animation_state_from_decoder;
+        34 => "link_param": one decode_sparse_variable_data_from_decoder;
+        35 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder;
+        36 => "media_playback_rate": one kiwi_sparse_float_value;
+        37 => "simple_link": one kiwi_sparse_bool_value;
+        38 => "variable_set_target_extension_id": one decode_sparse_variable_set_id_from_decoder;
+        39 => "animation_timeline_action": one decode_sparse_animation_timeline_action_from_decoder;
+        40 => "animation_skip_to_time": one kiwi_sparse_float_value;
+        41 => "animation_timeline_def_id": one decode_sparse_guid_from_decoder;
+        42 => "transition_overrides_enabled": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -6778,7 +6904,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_animation_state_from_decoder;
     env env;
     decoder decoder;
@@ -6786,12 +6912,12 @@ kiwi_sparse_message_decoder! {
     definition "AnimationState";
     capacity 3;
     fields [
-        1 => "opacity": decoder.read_var_float(env)?.encode(env);
-        2 => "transform": decode_sparse_matrix_from_decoder(env, decoder)?.encode(env);
+        1 => "opacity": one kiwi_sparse_float_value;
+        2 => "transform": one decode_sparse_matrix_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_prototype_starting_point_from_decoder;
     env env;
     decoder decoder;
@@ -6799,9 +6925,9 @@ kiwi_sparse_message_decoder! {
     definition "PrototypeStartingPoint";
     capacity 4;
     fields [
-        1 => "name": decoder.read_string(env)?.encode(env);
-        2 => "description": decoder.read_string(env)?.encode(env);
-        3 => "position": decoder.read_string(env)?.encode(env);
+        1 => "name": one kiwi_sparse_string_value;
+        2 => "description": one kiwi_sparse_string_value;
+        3 => "position": one kiwi_sparse_string_value;
     ]
 }
 
@@ -6818,7 +6944,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_key_trigger_from_decoder;
     env env;
     decoder decoder;
@@ -6826,12 +6952,12 @@ kiwi_sparse_message_decoder! {
     definition "KeyTrigger";
     capacity 3;
     fields [
-        1 => "key_codes": decoder.read_repeated(|decoder| decoder.read_var_int())?.encode(env);
-        2 => "trigger_device": decode_sparse_trigger_device_from_decoder(env, decoder)?.encode(env);
+        1 => "key_codes": repeated kiwi_sparse_int_value;
+        2 => "trigger_device": one decode_sparse_trigger_device_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_hyperlink_from_decoder;
     env env;
     decoder decoder;
@@ -6839,14 +6965,14 @@ kiwi_sparse_message_decoder! {
     definition "Hyperlink";
     capacity 5;
     fields [
-        1 => "url": decoder.read_string(env)?.encode(env);
-        2 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "cms_target": decode_sparse_cms_item_page_target_from_decoder(env, decoder)?.encode(env);
-        3 => "open_in_new_tab": decoder.read_bool()?.encode(env);
+        1 => "url": one kiwi_sparse_string_value;
+        2 => "guid": one decode_sparse_guid_from_decoder;
+        3 => "open_in_new_tab": one kiwi_sparse_bool_value;
+        4 => "cms_target": one decode_sparse_cms_item_page_target_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_item_page_target_from_decoder;
     env env;
     decoder decoder;
@@ -6854,9 +6980,9 @@ kiwi_sparse_message_decoder! {
     definition "CMSItemPageTarget";
     capacity 4;
     fields [
-        1 => "node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "cms_item_id": decoder.read_string(env)?.encode(env);
-        3 => "field_schema_id": decoder.read_string(env)?.encode(env);
+        1 => "node_id": one decode_sparse_guid_from_decoder;
+        2 => "cms_item_id": one kiwi_sparse_string_value;
+        3 => "field_schema_id": one kiwi_sparse_string_value;
     ]
 }
 
@@ -6871,7 +6997,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_mention_from_decoder;
     env env;
     decoder decoder;
@@ -6879,18 +7005,18 @@ kiwi_sparse_message_decoder! {
     definition "Mention";
     capacity 9;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "mentioned_user_id": decoder.read_string(env)?.encode(env);
-        3 => "mentioned_by_user_id": decoder.read_string(env)?.encode(env);
-        4 => "file_key": decoder.read_string(env)?.encode(env);
-        5 => "source": decode_sparse_mention_source_from_decoder(env, decoder)?.encode(env);
-        6 => "mentioned_user_id_int": decoder.read_var_uint64()?.encode(env);
-        7 => "mentioned_by_user_id_int": decoder.read_var_uint64()?.encode(env);
-        8 => "mentioned_user_group_id": decoder.read_string(env)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "mentioned_user_id": one kiwi_sparse_string_value;
+        3 => "mentioned_by_user_id": one kiwi_sparse_string_value;
+        4 => "file_key": one kiwi_sparse_string_value;
+        5 => "source": one decode_sparse_mention_source_from_decoder;
+        6 => "mentioned_user_id_int": one kiwi_sparse_uint64_value;
+        7 => "mentioned_by_user_id_int": one kiwi_sparse_uint64_value;
+        8 => "mentioned_user_group_id": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_embed_data_from_decoder;
     env env;
     decoder decoder;
@@ -6898,24 +7024,24 @@ kiwi_sparse_message_decoder! {
     definition "EmbedData";
     capacity 15;
     fields [
-        1 => "url": decoder.read_string(env)?.encode(env);
-        2 => "src_url": decoder.read_string(env)?.encode(env);
-        3 => "title": decoder.read_string(env)?.encode(env);
-        4 => "thumbnail_url": decoder.read_string(env)?.encode(env);
-        5 => "width": decoder.read_var_float(env)?.encode(env);
-        6 => "height": decoder.read_var_float(env)?.encode(env);
-        7 => "embed_type": decoder.read_string(env)?.encode(env);
-        8 => "thumbnail_image_hash": decoder.read_string(env)?.encode(env);
-        9 => "favicon_image_hash": decoder.read_string(env)?.encode(env);
-        10 => "provider": decoder.read_string(env)?.encode(env);
-        11 => "original_text": decoder.read_string(env)?.encode(env);
-        12 => "description": decoder.read_string(env)?.encode(env);
-        13 => "embed_version_id": decoder.read_string(env)?.encode(env);
-        14 => "is_published_site": decoder.read_bool()?.encode(env);
+        1 => "url": one kiwi_sparse_string_value;
+        2 => "src_url": one kiwi_sparse_string_value;
+        3 => "title": one kiwi_sparse_string_value;
+        4 => "thumbnail_url": one kiwi_sparse_string_value;
+        5 => "width": one kiwi_sparse_float_value;
+        6 => "height": one kiwi_sparse_float_value;
+        7 => "embed_type": one kiwi_sparse_string_value;
+        8 => "thumbnail_image_hash": one kiwi_sparse_string_value;
+        9 => "favicon_image_hash": one kiwi_sparse_string_value;
+        10 => "provider": one kiwi_sparse_string_value;
+        11 => "original_text": one kiwi_sparse_string_value;
+        12 => "description": one kiwi_sparse_string_value;
+        13 => "embed_version_id": one kiwi_sparse_string_value;
+        14 => "is_published_site": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_stamp_data_from_decoder;
     env env;
     decoder decoder;
@@ -6923,13 +7049,13 @@ kiwi_sparse_message_decoder! {
     definition "StampData";
     capacity 4;
     fields [
-        1 => "user_id": decoder.read_string(env)?.encode(env);
-        2 => "voting_session_id": decoder.read_string(env)?.encode(env);
-        3 => "stamped_by_user_id": decoder.read_string(env)?.encode(env);
+        1 => "user_id": one kiwi_sparse_string_value;
+        2 => "voting_session_id": one kiwi_sparse_string_value;
+        3 => "stamped_by_user_id": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_link_preview_data_from_decoder;
     env env;
     decoder decoder;
@@ -6937,18 +7063,18 @@ kiwi_sparse_message_decoder! {
     definition "LinkPreviewData";
     capacity 9;
     fields [
-        1 => "url": decoder.read_string(env)?.encode(env);
-        2 => "title": decoder.read_string(env)?.encode(env);
-        3 => "provider": decoder.read_string(env)?.encode(env);
-        4 => "description": decoder.read_string(env)?.encode(env);
-        5 => "thumbnail_image_hash": decoder.read_string(env)?.encode(env);
-        6 => "favicon_image_hash": decoder.read_string(env)?.encode(env);
-        7 => "thumbnail_image_width": decoder.read_var_float(env)?.encode(env);
-        8 => "thumbnail_image_height": decoder.read_var_float(env)?.encode(env);
+        1 => "url": one kiwi_sparse_string_value;
+        2 => "title": one kiwi_sparse_string_value;
+        3 => "provider": one kiwi_sparse_string_value;
+        4 => "description": one kiwi_sparse_string_value;
+        5 => "thumbnail_image_hash": one kiwi_sparse_string_value;
+        6 => "favicon_image_hash": one kiwi_sparse_string_value;
+        7 => "thumbnail_image_width": one kiwi_sparse_float_value;
+        8 => "thumbnail_image_height": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_viewport_from_decoder;
     env env;
     decoder decoder;
@@ -6956,14 +7082,14 @@ kiwi_sparse_message_decoder! {
     definition "Viewport";
     capacity 5;
     fields [
-        1 => "canvas_space_bounds": decode_sparse_rect_from_decoder(env, decoder)?.encode(env);
-        2 => "pixel_preview": decoder.read_bool()?.encode(env);
-        3 => "pixel_density": decoder.read_var_float(env)?.encode(env);
-        4 => "canvas_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "canvas_space_bounds": one decode_sparse_rect_from_decoder;
+        2 => "pixel_preview": one kiwi_sparse_bool_value;
+        3 => "pixel_density": one kiwi_sparse_float_value;
+        4 => "canvas_guid": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_mouse_from_decoder;
     env env;
     decoder decoder;
@@ -6971,11 +7097,11 @@ kiwi_sparse_message_decoder! {
     definition "Mouse";
     capacity 6;
     fields [
-        1 => "cursor": decode_sparse_mouse_cursor_from_decoder(env, decoder)?.encode(env);
-        2 => "canvas_space_location": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        3 => "canvas_space_selection_box": decode_sparse_rect_from_decoder(env, decoder)?.encode(env);
-        4 => "canvas_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        5 => "cursor_hidden_reason": decoder.read_var_uint()?.encode(env);
+        1 => "cursor": one decode_sparse_mouse_cursor_from_decoder;
+        2 => "canvas_space_location": one decode_sparse_vector_from_decoder;
+        3 => "canvas_space_selection_box": one decode_sparse_rect_from_decoder;
+        4 => "canvas_guid": one decode_sparse_guid_from_decoder;
+        5 => "cursor_hidden_reason": one kiwi_sparse_uint_value;
     ]
 }
 
@@ -7016,7 +7142,7 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_triggered_overlay_data_from_decoder;
     env env;
     decoder decoder;
@@ -7024,15 +7150,15 @@ kiwi_sparse_message_decoder! {
     definition "TriggeredOverlayData";
     capacity 6;
     fields [
-        1 => "overlay_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "hotspot_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "swap_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "prototype_interaction_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        5 => "hotspot_blueprint_id": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
+        1 => "overlay_guid": one decode_sparse_guid_from_decoder;
+        2 => "hotspot_guid": one decode_sparse_guid_from_decoder;
+        3 => "swap_guid": one decode_sparse_guid_from_decoder;
+        4 => "prototype_interaction_guid": one decode_sparse_guid_from_decoder;
+        5 => "hotspot_blueprint_id": one decode_sparse_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_triggered_set_variable_action_data_from_decoder;
     env env;
     decoder decoder;
@@ -7040,14 +7166,14 @@ kiwi_sparse_message_decoder! {
     definition "TriggeredSetVariableActionData";
     capacity 5;
     fields [
-        1 => "node_for_finding_topmost_screen_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "target_variable_id": decoder.read_string(env)?.encode(env);
-        3 => "target_variable_data": decoder.read_string(env)?.encode(env);
-        4 => "resolved_variable_modes": decoder.read_string(env)?.encode(env);
+        1 => "node_for_finding_topmost_screen_id": one decode_sparse_guid_from_decoder;
+        2 => "target_variable_id": one kiwi_sparse_string_value;
+        3 => "target_variable_data": one kiwi_sparse_string_value;
+        4 => "resolved_variable_modes": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_triggered_set_variable_mode_action_data_from_decoder;
     env env;
     decoder decoder;
@@ -7055,14 +7181,14 @@ kiwi_sparse_message_decoder! {
     definition "TriggeredSetVariableModeActionData";
     capacity 5;
     fields [
-        1 => "node_for_finding_topmost_screen_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "target_variable_set_key": decoder.read_string(env)?.encode(env);
-        3 => "target_variable_mode_id": decoder.read_string(env)?.encode(env);
-        4 => "target_variable_set_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
+        1 => "node_for_finding_topmost_screen_id": one decode_sparse_guid_from_decoder;
+        2 => "target_variable_set_key": one kiwi_sparse_string_value;
+        3 => "target_variable_mode_id": one kiwi_sparse_string_value;
+        4 => "target_variable_set_id": one decode_sparse_variable_set_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_video_state_change_data_from_decoder;
     env env;
     decoder decoder;
@@ -7070,15 +7196,15 @@ kiwi_sparse_message_decoder! {
     definition "VideoStateChangeData";
     capacity 6;
     fields [
-        1 => "target_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "is_playing": decoder.read_bool()?.encode(env);
-        3 => "is_playing_sound": decoder.read_bool()?.encode(env);
-        4 => "current_times": decoder.read_repeated(|decoder| decoder.read_var_uint())?.encode(env);
-        5 => "action_taken_timestamp": decoder.read_var_uint()?.encode(env);
+        1 => "target_node_id": one decode_sparse_guid_from_decoder;
+        2 => "is_playing": one kiwi_sparse_bool_value;
+        3 => "is_playing_sound": one kiwi_sparse_bool_value;
+        4 => "current_times": repeated kiwi_sparse_uint_value;
+        5 => "action_taken_timestamp": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_embedded_prototype_data_from_decoder;
     env env;
     decoder decoder;
@@ -7086,12 +7212,12 @@ kiwi_sparse_message_decoder! {
     definition "EmbeddedPrototypeData";
     capacity 3;
     fields [
-        1 => "node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "session_id": decoder.read_var_uint()?.encode(env);
+        1 => "node_id": one decode_sparse_guid_from_decoder;
+        2 => "session_id": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_presented_state_from_decoder;
     env env;
     decoder decoder;
@@ -7099,8 +7225,8 @@ kiwi_sparse_message_decoder! {
     definition "PresentedState";
     capacity 3;
     fields [
-        1 => "base_screen_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "overlays": decoder.read_repeated(|decoder| decode_sparse_triggered_overlay_data_from_decoder(env, decoder))?.encode(env);
+        1 => "base_screen_id": one decode_sparse_guid_from_decoder;
+        2 => "overlays": repeated decode_sparse_triggered_overlay_data_from_decoder;
     ]
 }
 
@@ -7114,7 +7240,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_top_level_playback_change_from_decoder;
     env env;
     decoder decoder;
@@ -7122,17 +7248,17 @@ kiwi_sparse_message_decoder! {
     definition "TopLevelPlaybackChange";
     capacity 8;
     fields [
-        1 => "old_state": decode_sparse_presented_state_from_decoder(env, decoder)?.encode(env);
-        2 => "new_state": decode_sparse_presented_state_from_decoder(env, decoder)?.encode(env);
-        3 => "hotspot_blueprint_id": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        4 => "interaction_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        5 => "is_hotspot_in_new_presented_state": decoder.read_bool()?.encode(env);
-        6 => "direction": decode_sparse_transition_direction_from_decoder(env, decoder)?.encode(env);
-        7 => "instance_stable_path": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
+        1 => "old_state": one decode_sparse_presented_state_from_decoder;
+        2 => "new_state": one decode_sparse_presented_state_from_decoder;
+        3 => "hotspot_blueprint_id": one decode_sparse_guid_path_from_decoder;
+        4 => "interaction_id": one decode_sparse_guid_from_decoder;
+        5 => "is_hotspot_in_new_presented_state": one kiwi_sparse_bool_value;
+        6 => "direction": one decode_sparse_transition_direction_from_decoder;
+        7 => "instance_stable_path": one decode_sparse_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_instance_state_change_from_decoder;
     env env;
     decoder decoder;
@@ -7140,15 +7266,15 @@ kiwi_sparse_message_decoder! {
     definition "InstanceStateChange";
     capacity 6;
     fields [
-        1 => "state_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "interaction_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "hotspot_stable_path": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        4 => "instance_stable_path": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        5 => "phase": decode_sparse_playback_change_phase_from_decoder(env, decoder)?.encode(env);
+        1 => "state_id": one decode_sparse_guid_from_decoder;
+        2 => "interaction_id": one decode_sparse_guid_from_decoder;
+        3 => "hotspot_stable_path": one decode_sparse_guid_path_from_decoder;
+        4 => "instance_stable_path": one decode_sparse_guid_path_from_decoder;
+        5 => "phase": one decode_sparse_playback_change_phase_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_text_cursor_from_decoder;
     env env;
     decoder decoder;
@@ -7156,13 +7282,13 @@ kiwi_sparse_message_decoder! {
     definition "TextCursor";
     capacity 4;
     fields [
-        1 => "selection_box": decode_sparse_rect_from_decoder(env, decoder)?.encode(env);
-        2 => "canvas_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "text_node_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "selection_box": one decode_sparse_rect_from_decoder;
+        2 => "canvas_guid": one decode_sparse_guid_from_decoder;
+        3 => "text_node_guid": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_text_selection_from_decoder;
     env env;
     decoder decoder;
@@ -7170,13 +7296,13 @@ kiwi_sparse_message_decoder! {
     definition "TextSelection";
     capacity 8;
     fields [
-        1 => "selection_boxes": decoder.read_repeated(|decoder| decode_sparse_rect_from_decoder(env, decoder))?.encode(env);
-        2 => "canvas_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "text_node_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "text_selection_range": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        5 => "text_node_or_containing_if_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        6 => "table_cell_row_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        7 => "table_cell_col_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "selection_boxes": repeated decode_sparse_rect_from_decoder;
+        2 => "canvas_guid": one decode_sparse_guid_from_decoder;
+        3 => "text_node_guid": one decode_sparse_guid_from_decoder;
+        4 => "text_selection_range": one decode_sparse_vector_from_decoder;
+        5 => "text_node_or_containing_if_guid": one decode_sparse_guid_from_decoder;
+        6 => "table_cell_row_id": one decode_sparse_guid_from_decoder;
+        7 => "table_cell_col_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
@@ -7191,7 +7317,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_playback_change_keyframe_from_decoder;
     env env;
     decoder decoder;
@@ -7199,13 +7325,13 @@ kiwi_sparse_message_decoder! {
     definition "PlaybackChangeKeyframe";
     capacity 4;
     fields [
-        1 => "phase": decode_sparse_playback_change_phase_from_decoder(env, decoder)?.encode(env);
-        2 => "progress": decoder.read_var_float(env)?.encode(env);
-        3 => "timestamp": decoder.read_var_float(env)?.encode(env);
+        1 => "phase": one decode_sparse_playback_change_phase_from_decoder;
+        2 => "progress": one kiwi_sparse_float_value;
+        3 => "timestamp": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_state_mapping_from_decoder;
     env env;
     decoder decoder;
@@ -7213,14 +7339,14 @@ kiwi_sparse_message_decoder! {
     definition "StateMapping";
     capacity 5;
     fields [
-        1 => "stable_path": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        2 => "last_top_level_change": decode_sparse_top_level_playback_change_from_decoder(env, decoder)?.encode(env);
-        3 => "last_top_level_change_status": decode_sparse_playback_change_keyframe_from_decoder(env, decoder)?.encode(env);
-        4 => "timestamp": decoder.read_var_float(env)?.encode(env);
+        1 => "stable_path": one decode_sparse_guid_path_from_decoder;
+        2 => "last_top_level_change": one decode_sparse_top_level_playback_change_from_decoder;
+        3 => "last_top_level_change_status": one decode_sparse_playback_change_keyframe_from_decoder;
+        4 => "timestamp": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_scroll_mapping_from_decoder;
     env env;
     decoder decoder;
@@ -7228,13 +7354,13 @@ kiwi_sparse_message_decoder! {
     definition "ScrollMapping";
     capacity 4;
     fields [
-        1 => "blueprint_id": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        2 => "overlay_index": decoder.read_var_uint()?.encode(env);
-        3 => "scroll_offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
+        1 => "blueprint_id": one decode_sparse_guid_path_from_decoder;
+        2 => "overlay_index": one kiwi_sparse_uint_value;
+        3 => "scroll_offset": one decode_sparse_vector_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_playback_update_from_decoder;
     env env;
     decoder decoder;
@@ -7242,17 +7368,17 @@ kiwi_sparse_message_decoder! {
     definition "PlaybackUpdate";
     capacity 8;
     fields [
-        1 => "last_top_level_change": decode_sparse_top_level_playback_change_from_decoder(env, decoder)?.encode(env);
-        2 => "last_top_level_change_status": decode_sparse_playback_change_keyframe_from_decoder(env, decoder)?.encode(env);
-        3 => "scroll_mappings": decoder.read_repeated(|decoder| decode_sparse_scroll_mapping_from_decoder(env, decoder))?.encode(env);
-        4 => "timestamp": decoder.read_var_float(env)?.encode(env);
-        5 => "pointer_location": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        6 => "is_top_level_frame_change": decoder.read_bool()?.encode(env);
-        7 => "state_mappings": decoder.read_repeated(|decoder| decode_sparse_state_mapping_from_decoder(env, decoder))?.encode(env);
+        1 => "last_top_level_change": one decode_sparse_top_level_playback_change_from_decoder;
+        2 => "last_top_level_change_status": one decode_sparse_playback_change_keyframe_from_decoder;
+        3 => "scroll_mappings": repeated decode_sparse_scroll_mapping_from_decoder;
+        4 => "timestamp": one kiwi_sparse_float_value;
+        5 => "pointer_location": one decode_sparse_vector_from_decoder;
+        6 => "is_top_level_frame_change": one kiwi_sparse_bool_value;
+        7 => "state_mappings": repeated decode_sparse_state_mapping_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_chat_message_from_decoder;
     env env;
     decoder decoder;
@@ -7260,12 +7386,12 @@ kiwi_sparse_message_decoder! {
     definition "ChatMessage";
     capacity 3;
     fields [
-        1 => "text": decoder.read_string(env)?.encode(env);
-        2 => "previous_text": decoder.read_string(env)?.encode(env);
+        1 => "text": one kiwi_sparse_string_value;
+        2 => "previous_text": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_voice_metadata_from_decoder;
     env env;
     decoder decoder;
@@ -7273,11 +7399,11 @@ kiwi_sparse_message_decoder! {
     definition "VoiceMetadata";
     capacity 2;
     fields [
-        1 => "connected_call_id": decoder.read_string(env)?.encode(env);
+        1 => "connected_call_id": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_april_fun_cursor_from_decoder;
     env env;
     decoder decoder;
@@ -7285,12 +7411,12 @@ kiwi_sparse_message_decoder! {
     definition "AprilFunCursor";
     capacity 3;
     fields [
-        1 => "id": decoder.read_string(env)?.encode(env);
-        2 => "trail_enabled": decoder.read_bool()?.encode(env);
+        1 => "id": one kiwi_sparse_string_value;
+        2 => "trail_enabled": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_april_fun_fig_pal_from_decoder;
     env env;
     decoder decoder;
@@ -7298,8 +7424,8 @@ kiwi_sparse_message_decoder! {
     definition "AprilFunFigPal";
     capacity 3;
     fields [
-        1 => "customization": decoder.read_string(env)?.encode(env);
-        2 => "name": decoder.read_string(env)?.encode(env);
+        1 => "customization": one kiwi_sparse_string_value;
+        2 => "name": one kiwi_sparse_string_value;
     ]
 }
 
@@ -7338,7 +7464,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_agent_info_from_decoder;
     env env;
     decoder decoder;
@@ -7346,13 +7472,13 @@ kiwi_sparse_message_decoder! {
     definition "AgentInfo";
     capacity 4;
     fields [
-        1 => "name": decoder.read_string(env)?.encode(env);
-        2 => "logo": decoder.read_string(env)?.encode(env);
-        3 => "oauth_client_id": decoder.read_string(env)?.encode(env);
+        1 => "name": one kiwi_sparse_string_value;
+        2 => "logo": one kiwi_sparse_string_value;
+        3 => "oauth_client_id": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_user_change_from_decoder;
     env env;
     decoder decoder;
@@ -7360,56 +7486,56 @@ kiwi_sparse_message_decoder! {
     definition "UserChange";
     capacity 47;
     fields [
-        1 => "session_id": decoder.read_var_uint()?.encode(env);
-        44 => "stable_session_id": decoder.read_string(env)?.encode(env);
-        2 => "connected": decoder.read_bool()?.encode(env);
-        3 => "name": decoder.read_string(env)?.encode(env);
-        4 => "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        5 => "image_url": decoder.read_string(env)?.encode(env);
-        6 => "viewport": decode_sparse_viewport_from_decoder(env, decoder)?.encode(env);
-        7 => "mouse": decode_sparse_mouse_from_decoder(env, decoder)?.encode(env);
-        8 => "selection": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
-        9 => "observing": decoder.read_repeated(|decoder| decoder.read_var_uint())?.encode(env);
-        10 => "device_name": decoder.read_string(env)?.encode(env);
-        11 => "recent_clicks": decoder.read_repeated(|decoder| decode_sparse_click_from_decoder(env, decoder))?.encode(env);
-        12 => "scroll_positions": decoder.read_repeated(|decoder| decode_sparse_scroll_position_from_decoder(env, decoder))?.encode(env);
-        13 => "triggered_overlays": decoder.read_repeated(|decoder| decode_sparse_triggered_overlay_from_decoder(env, decoder))?.encode(env);
-        14 => "user_id": decoder.read_string(env)?.encode(env);
-        15 => "last_triggered_hotspot": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        16 => "last_triggered_prototype_interaction_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        38 => "last_triggered_object_animation_index": decoder.read_var_uint()?.encode(env);
-        17 => "triggered_overlays_data": decoder.read_repeated(|decoder| decode_sparse_triggered_overlay_data_from_decoder(env, decoder))?.encode(env);
-        18 => "playback_updates": decoder.read_repeated(|decoder| decode_sparse_playback_update_from_decoder(env, decoder))?.encode(env);
-        19 => "chat_message": decode_sparse_chat_message_from_decoder(env, decoder)?.encode(env);
-        20 => "voice_metadata": decode_sparse_voice_metadata_from_decoder(env, decoder)?.encode(env);
-        21 => "can_write": decoder.read_bool()?.encode(env);
-        22 => "high_five_status": decoder.read_bool()?.encode(env);
-        23 => "instance_state_changes": decoder.read_repeated(|decoder| decode_sparse_instance_state_change_from_decoder(env, decoder))?.encode(env);
-        24 => "text_cursor": decode_sparse_text_cursor_from_decoder(env, decoder)?.encode(env);
-        25 => "text_selection": decode_sparse_text_selection_from_decoder(env, decoder)?.encode(env);
-        26 => "connected_at_time_s": decoder.read_var_uint()?.encode(env);
-        27 => "focus_on_text_cursor": decoder.read_bool()?.encode(env);
-        28 => "heartbeat": decode_sparse_heartbeat_from_decoder(env, decoder)?.encode(env);
-        29 => "triggered_set_variable_action_data": decoder.read_repeated(|decoder| decode_sparse_triggered_set_variable_action_data_from_decoder(env, decoder))?.encode(env);
-        30 => "video_state_change_data": decoder.read_repeated(|decoder| decode_sparse_video_state_change_data_from_decoder(env, decoder))?.encode(env);
-        31 => "client_id": decoder.read_string(env)?.encode(env);
-        32 => "focused_slide_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        33 => "triggered_set_variable_mode_action_data": decoder.read_repeated(|decoder| decode_sparse_triggered_set_variable_mode_action_data_from_decoder(env, decoder))?.encode(env);
-        34 => "april_fun_cursor": decode_sparse_april_fun_cursor_from_decoder(env, decoder)?.encode(env);
-        35 => "embedded_prototype_data": decoder.read_repeated(|decoder| decode_sparse_embedded_prototype_data_from_decoder(env, decoder))?.encode(env);
-        36 => "active_slides_embeddable_prototype": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        43 => "active_embedded_prototypes": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
-        37 => "active_code_component_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        39 => "april_fun_fig_pal": decode_sparse_april_fun_fig_pal_from_decoder(env, decoder)?.encode(env);
-        40 => "collaborative_text_selection": decode_sparse_collaborative_text_selection_from_decoder(env, decoder)?.encode(env);
-        41 => "sites_view_state": decode_sparse_sites_view_state_from_decoder(env, decoder)?.encode(env);
-        42 => "node_chat_exchanges": decoder.read_repeated(|decoder| decode_sparse_node_chat_exchange_from_decoder(env, decoder))?.encode(env);
-        45 => "design_full_page_view_state": decode_sparse_design_full_page_view_state_from_decoder(env, decoder)?.encode(env);
-        46 => "agent_info": decode_sparse_agent_info_from_decoder(env, decoder)?.encode(env);
+        1 => "session_id": one kiwi_sparse_uint_value;
+        2 => "connected": one kiwi_sparse_bool_value;
+        3 => "name": one kiwi_sparse_string_value;
+        4 => "color": one decode_sparse_color_from_decoder;
+        5 => "image_url": one kiwi_sparse_string_value;
+        6 => "viewport": one decode_sparse_viewport_from_decoder;
+        7 => "mouse": one decode_sparse_mouse_from_decoder;
+        8 => "selection": repeated decode_sparse_guid_from_decoder;
+        9 => "observing": repeated kiwi_sparse_uint_value;
+        10 => "device_name": one kiwi_sparse_string_value;
+        11 => "recent_clicks": repeated decode_sparse_click_from_decoder;
+        12 => "scroll_positions": repeated decode_sparse_scroll_position_from_decoder;
+        13 => "triggered_overlays": repeated decode_sparse_triggered_overlay_from_decoder;
+        14 => "user_id": one kiwi_sparse_string_value;
+        15 => "last_triggered_hotspot": one decode_sparse_guid_from_decoder;
+        16 => "last_triggered_prototype_interaction_id": one decode_sparse_guid_from_decoder;
+        17 => "triggered_overlays_data": repeated decode_sparse_triggered_overlay_data_from_decoder;
+        18 => "playback_updates": repeated decode_sparse_playback_update_from_decoder;
+        19 => "chat_message": one decode_sparse_chat_message_from_decoder;
+        20 => "voice_metadata": one decode_sparse_voice_metadata_from_decoder;
+        21 => "can_write": one kiwi_sparse_bool_value;
+        22 => "high_five_status": one kiwi_sparse_bool_value;
+        23 => "instance_state_changes": repeated decode_sparse_instance_state_change_from_decoder;
+        24 => "text_cursor": one decode_sparse_text_cursor_from_decoder;
+        25 => "text_selection": one decode_sparse_text_selection_from_decoder;
+        26 => "connected_at_time_s": one kiwi_sparse_uint_value;
+        27 => "focus_on_text_cursor": one kiwi_sparse_bool_value;
+        28 => "heartbeat": one decode_sparse_heartbeat_from_decoder;
+        29 => "triggered_set_variable_action_data": repeated decode_sparse_triggered_set_variable_action_data_from_decoder;
+        30 => "video_state_change_data": repeated decode_sparse_video_state_change_data_from_decoder;
+        31 => "client_id": one kiwi_sparse_string_value;
+        32 => "focused_slide_id": one decode_sparse_guid_from_decoder;
+        33 => "triggered_set_variable_mode_action_data": repeated decode_sparse_triggered_set_variable_mode_action_data_from_decoder;
+        34 => "april_fun_cursor": one decode_sparse_april_fun_cursor_from_decoder;
+        35 => "embedded_prototype_data": repeated decode_sparse_embedded_prototype_data_from_decoder;
+        36 => "active_slides_embeddable_prototype": one decode_sparse_guid_from_decoder;
+        37 => "active_code_component_id": one decode_sparse_guid_from_decoder;
+        38 => "last_triggered_object_animation_index": one kiwi_sparse_uint_value;
+        39 => "april_fun_fig_pal": one decode_sparse_april_fun_fig_pal_from_decoder;
+        40 => "collaborative_text_selection": one decode_sparse_collaborative_text_selection_from_decoder;
+        41 => "sites_view_state": one decode_sparse_sites_view_state_from_decoder;
+        42 => "node_chat_exchanges": repeated decode_sparse_node_chat_exchange_from_decoder;
+        43 => "active_embedded_prototypes": repeated decode_sparse_guid_from_decoder;
+        44 => "stable_session_id": one kiwi_sparse_string_value;
+        45 => "design_full_page_view_state": one decode_sparse_design_full_page_view_state_from_decoder;
+        46 => "agent_info": one decode_sparse_agent_info_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_interactive_slide_element_change_from_decoder;
     env env;
     decoder decoder;
@@ -7417,14 +7543,14 @@ kiwi_sparse_message_decoder! {
     definition "InteractiveSlideElementChange";
     capacity 5;
     fields [
-        1 => "user_id": decoder.read_string(env)?.encode(env);
-        2 => "anonymous_user_id": decoder.read_string(env)?.encode(env);
-        3 => "node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "response_data": decoder.read_string(env)?.encode(env);
+        1 => "user_id": one kiwi_sparse_string_value;
+        2 => "anonymous_user_id": one kiwi_sparse_string_value;
+        3 => "node_id": one decode_sparse_guid_from_decoder;
+        4 => "response_data": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_status_change_from_decoder;
     env env;
     decoder decoder;
@@ -7432,12 +7558,12 @@ kiwi_sparse_message_decoder! {
     definition "NodeStatusChange";
     capacity 3;
     fields [
-        1 => "node_ids": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
-        2 => "status_info": decode_sparse_section_status_info_from_decoder(env, decoder)?.encode(env);
+        1 => "node_ids": repeated decode_sparse_guid_from_decoder;
+        2 => "status_info": one decode_sparse_section_status_info_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_buzz_approval_asset_entry_from_decoder;
     env env;
     decoder decoder;
@@ -7445,12 +7571,12 @@ kiwi_sparse_message_decoder! {
     definition "BuzzApprovalAssetEntry";
     capacity 3;
     fields [
-        1 => "asset_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "approved": decoder.read_bool()?.encode(env);
+        1 => "asset_node_id": one decode_sparse_guid_from_decoder;
+        2 => "approved": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_buzz_approval_change_from_decoder;
     env env;
     decoder decoder;
@@ -7458,9 +7584,9 @@ kiwi_sparse_message_decoder! {
     definition "BuzzApprovalChange";
     capacity 4;
     fields [
-        1 => "asset_entries": decoder.read_repeated(|decoder| decode_sparse_buzz_approval_asset_entry_from_decoder(env, decoder))?.encode(env);
-        2 => "canvas_grid_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "request_id": decoder.read_string(env)?.encode(env);
+        1 => "asset_entries": repeated decode_sparse_buzz_approval_asset_entry_from_decoder;
+        2 => "canvas_grid_node_id": one decode_sparse_guid_from_decoder;
+        3 => "request_id": one kiwi_sparse_string_value;
     ]
 }
 
@@ -7485,7 +7611,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_scene_graph_query_from_decoder;
     env env;
     decoder decoder;
@@ -7493,13 +7619,13 @@ kiwi_sparse_message_decoder! {
     definition "SceneGraphQuery";
     capacity 4;
     fields [
-        1 => "starting_node": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "depth": decoder.read_var_uint()?.encode(env);
-        3 => "behavior": decode_sparse_scene_graph_query_behavior_from_decoder(env, decoder)?.encode(env);
+        1 => "starting_node": one decode_sparse_guid_from_decoder;
+        2 => "depth": one kiwi_sparse_uint_value;
+        3 => "behavior": one decode_sparse_scene_graph_query_behavior_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_changes_metadata_from_decoder;
     env env;
     decoder decoder;
@@ -7507,11 +7633,11 @@ kiwi_sparse_message_decoder! {
     definition "NodeChangesMetadata";
     capacity 2;
     fields [
-        1 => "blobs_field_offset": decoder.read_var_uint()?.encode(env);
+        1 => "blobs_field_offset": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cursor_reaction_from_decoder;
     env env;
     decoder decoder;
@@ -7519,11 +7645,11 @@ kiwi_sparse_message_decoder! {
     definition "CursorReaction";
     capacity 2;
     fields [
-        1 => "image_url": decoder.read_string(env)?.encode(env);
+        1 => "image_url": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_timer_info_from_decoder;
     env env;
     decoder decoder;
@@ -7531,18 +7657,18 @@ kiwi_sparse_message_decoder! {
     definition "TimerInfo";
     capacity 9;
     fields [
-        1 => "is_paused": decoder.read_bool()?.encode(env);
-        2 => "time_remaining_ms": decoder.read_var_uint()?.encode(env);
-        3 => "total_time_ms": decoder.read_var_uint()?.encode(env);
-        4 => "timer_id": decoder.read_var_uint()?.encode(env);
-        5 => "set_by": decoder.read_string(env)?.encode(env);
-        6 => "song_id": decoder.read_var_uint()?.encode(env);
-        7 => "last_received_song_timestamp_ms": decoder.read_var_uint()?.encode(env);
-        8 => "song_uuid": decoder.read_string(env)?.encode(env);
+        1 => "is_paused": one kiwi_sparse_bool_value;
+        2 => "time_remaining_ms": one kiwi_sparse_uint_value;
+        3 => "total_time_ms": one kiwi_sparse_uint_value;
+        4 => "timer_id": one kiwi_sparse_uint_value;
+        5 => "set_by": one kiwi_sparse_string_value;
+        6 => "song_id": one kiwi_sparse_uint_value;
+        7 => "last_received_song_timestamp_ms": one kiwi_sparse_uint_value;
+        8 => "song_uuid": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_music_info_from_decoder;
     env env;
     decoder decoder;
@@ -7550,15 +7676,15 @@ kiwi_sparse_message_decoder! {
     definition "MusicInfo";
     capacity 6;
     fields [
-        1 => "is_paused": decoder.read_bool()?.encode(env);
-        2 => "message_id": decoder.read_var_uint()?.encode(env);
-        3 => "song_id": decoder.read_string(env)?.encode(env);
-        4 => "last_received_song_timestamp_ms": decoder.read_var_uint()?.encode(env);
-        5 => "is_stopped": decoder.read_bool()?.encode(env);
+        1 => "is_paused": one kiwi_sparse_bool_value;
+        2 => "message_id": one kiwi_sparse_uint_value;
+        3 => "song_id": one kiwi_sparse_string_value;
+        4 => "last_received_song_timestamp_ms": one kiwi_sparse_uint_value;
+        5 => "is_stopped": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_presenter_nomination_from_decoder;
     env env;
     decoder decoder;
@@ -7566,12 +7692,12 @@ kiwi_sparse_message_decoder! {
     definition "PresenterNomination";
     capacity 3;
     fields [
-        1 => "session_id": decoder.read_var_uint()?.encode(env);
-        2 => "is_cancelled": decoder.read_bool()?.encode(env);
+        1 => "session_id": one kiwi_sparse_uint_value;
+        2 => "is_cancelled": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_presenter_info_from_decoder;
     env env;
     decoder decoder;
@@ -7579,13 +7705,13 @@ kiwi_sparse_message_decoder! {
     definition "PresenterInfo";
     capacity 4;
     fields [
-        1 => "session_id": decoder.read_var_uint()?.encode(env);
-        2 => "nomination": decode_sparse_presenter_nomination_from_decoder(env, decoder)?.encode(env);
-        3 => "is_reconnected": decoder.read_bool()?.encode(env);
+        1 => "session_id": one kiwi_sparse_uint_value;
+        2 => "nomination": one decode_sparse_presenter_nomination_from_decoder;
+        3 => "is_reconnected": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_client_broadcast_from_decoder;
     env env;
     decoder decoder;
@@ -7593,12 +7719,12 @@ kiwi_sparse_message_decoder! {
     definition "ClientBroadcast";
     capacity 7;
     fields [
-        1 => "session_id": decoder.read_var_uint()?.encode(env);
-        2 => "cursor_reaction": decode_sparse_cursor_reaction_from_decoder(env, decoder)?.encode(env);
-        3 => "timer": decode_sparse_timer_info_from_decoder(env, decoder)?.encode(env);
-        4 => "presenter": decode_sparse_presenter_info_from_decoder(env, decoder)?.encode(env);
-        5 => "prototype_presenter": decode_sparse_presenter_info_from_decoder(env, decoder)?.encode(env);
-        6 => "music": decode_sparse_music_info_from_decoder(env, decoder)?.encode(env);
+        1 => "session_id": one kiwi_sparse_uint_value;
+        2 => "cursor_reaction": one decode_sparse_cursor_reaction_from_decoder;
+        3 => "timer": one decode_sparse_timer_info_from_decoder;
+        4 => "presenter": one decode_sparse_presenter_info_from_decoder;
+        5 => "prototype_presenter": one decode_sparse_presenter_info_from_decoder;
+        6 => "music": one decode_sparse_music_info_from_decoder;
     ]
 }
 
@@ -7612,7 +7738,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_message_from_decoder;
     env env;
     decoder decoder;
@@ -7620,55 +7746,55 @@ kiwi_sparse_message_decoder! {
     definition "Message";
     capacity 46;
     fields [
-        1 => "type": decode_sparse_message_type_from_decoder(env, decoder)?.encode(env);
-        2 => "session_id": decoder.read_var_uint()?.encode(env);
-        42 => "stable_session_id": decoder.read_string(env)?.encode(env);
-        3 => "ack_id": decoder.read_var_uint()?.encode(env);
-        37 => "is_retransmission": decoder.read_bool()?.encode(env);
-        4 => "node_changes": decoder.read_repeated(|decoder| decode_sparse_node_change_from_decoder(env, decoder))?.encode(env);
-        5 => "user_changes": decoder.read_repeated(|decoder| decode_sparse_user_change_from_decoder(env, decoder))?.encode(env);
-        32 => "interactive_slide_element_change": decode_sparse_interactive_slide_element_change_from_decoder(env, decoder)?.encode(env);
-        36 => "node_status_change": decode_sparse_node_status_change_from_decoder(env, decoder)?.encode(env);
-        44 => "buzz_approval_change": decode_sparse_buzz_approval_change_from_decoder(env, decoder)?.encode(env);
-        6 => "blobs": decoder.read_repeated(|decoder| decode_sparse_blob_from_decoder(env, decoder))?.encode(env);
-        30 => "blob_base_index": decoder.read_var_uint()?.encode(env);
-        7 => "signal_name": decoder.read_string(env)?.encode(env);
-        8 => "access": decode_sparse_access_from_decoder(env, decoder)?.encode(env);
-        9 => "style_set_name": decoder.read_string(env)?.encode(env);
-        10 => "style_set_type": decode_sparse_style_set_type_from_decoder(env, decoder)?.encode(env);
-        11 => "style_set_content_type": decode_sparse_style_set_content_type_from_decoder(env, decoder)?.encode(env);
-        12 => "paste_id": decoder.read_var_int()?.encode(env);
-        13 => "paste_offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        14 => "paste_file_key": decoder.read_string(env)?.encode(env);
-        15 => "signal_payload": decoder.read_string(env)?.encode(env);
-        16 => "scene_graph_queries": decoder.read_repeated(|decoder| decode_sparse_scene_graph_query_from_decoder(env, decoder))?.encode(env);
-        17 => "node_changes_metadata": decode_sparse_node_changes_metadata_from_decoder(env, decoder)?.encode(env);
-        18 => "file_version": decoder.read_var_uint()?.encode(env);
-        19 => "paste_is_partially_outside_enclosing_frame": decoder.read_bool()?.encode(env);
-        20 => "paste_page_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        21 => "is_cut": decoder.read_bool()?.encode(env);
-        22 => "local_undo_stack": decoder.read_repeated(|decoder| decode_sparse_message_from_decoder(env, decoder))?.encode(env);
-        23 => "local_redo_stack": decoder.read_repeated(|decoder| decode_sparse_message_from_decoder(env, decoder))?.encode(env);
-        24 => "broadcasts": decoder.read_repeated(|decoder| decode_sparse_client_broadcast_from_decoder(env, decoder))?.encode(env);
-        25 => "reconnect_sequence_number": decoder.read_var_uint()?.encode(env);
-        26 => "paste_branch_source_file_key": decoder.read_string(env)?.encode(env);
-        27 => "paste_editor_type": decode_sparse_editor_type_from_decoder(env, decoder)?.encode(env);
-        28 => "post_sync_actions": decoder.read_string(env)?.encode(env);
-        29 => "published_asset_guids": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
-        31 => "dirty_from_initial_load": decoder.read_bool()?.encode(env);
-        33 => "clipboard_selection_regions": decoder.read_repeated(|decoder| decode_sparse_clipboard_selection_region_from_decoder(env, decoder))?.encode(env);
-        34 => "encoded_offsets_index": decode_sparse_encoded_offsets_index_from_decoder(env, decoder)?.encode(env);
-        35 => "has_repeating_content": decoder.read_bool()?.encode(env);
-        38 => "sent_timestamp": decoder.read_var_uint64()?.encode(env);
-        39 => "annotation_categories": decoder.read_repeated(|decoder| decode_sparse_annotation_category_from_decoder(env, decoder))?.encode(env);
-        40 => "client_rendered_metadata": decode_sparse_client_rendered_metadata_from_decoder(env, decoder)?.encode(env);
-        41 => "paste_asset_type": decode_sparse_paste_asset_type_from_decoder(env, decoder)?.encode(env);
-        43 => "object_animations": decode_sparse_object_animation_list_from_decoder(env, decoder)?.encode(env);
-        45 => "scene_graph_query_mode": decode_sparse_scene_graph_query_mode_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_message_type_from_decoder;
+        2 => "session_id": one kiwi_sparse_uint_value;
+        3 => "ack_id": one kiwi_sparse_uint_value;
+        4 => "node_changes": repeated decode_sparse_node_change_from_decoder;
+        5 => "user_changes": repeated decode_sparse_user_change_from_decoder;
+        6 => "blobs": repeated decode_sparse_blob_from_decoder;
+        7 => "signal_name": one kiwi_sparse_string_value;
+        8 => "access": one decode_sparse_access_from_decoder;
+        9 => "style_set_name": one kiwi_sparse_string_value;
+        10 => "style_set_type": one decode_sparse_style_set_type_from_decoder;
+        11 => "style_set_content_type": one decode_sparse_style_set_content_type_from_decoder;
+        12 => "paste_id": one kiwi_sparse_int_value;
+        13 => "paste_offset": one decode_sparse_vector_from_decoder;
+        14 => "paste_file_key": one kiwi_sparse_string_value;
+        15 => "signal_payload": one kiwi_sparse_string_value;
+        16 => "scene_graph_queries": repeated decode_sparse_scene_graph_query_from_decoder;
+        17 => "node_changes_metadata": one decode_sparse_node_changes_metadata_from_decoder;
+        18 => "file_version": one kiwi_sparse_uint_value;
+        19 => "paste_is_partially_outside_enclosing_frame": one kiwi_sparse_bool_value;
+        20 => "paste_page_id": one decode_sparse_guid_from_decoder;
+        21 => "is_cut": one kiwi_sparse_bool_value;
+        22 => "local_undo_stack": repeated decode_sparse_message_from_decoder;
+        23 => "local_redo_stack": repeated decode_sparse_message_from_decoder;
+        24 => "broadcasts": repeated decode_sparse_client_broadcast_from_decoder;
+        25 => "reconnect_sequence_number": one kiwi_sparse_uint_value;
+        26 => "paste_branch_source_file_key": one kiwi_sparse_string_value;
+        27 => "paste_editor_type": one decode_sparse_editor_type_from_decoder;
+        28 => "post_sync_actions": one kiwi_sparse_string_value;
+        29 => "published_asset_guids": repeated decode_sparse_guid_from_decoder;
+        30 => "blob_base_index": one kiwi_sparse_uint_value;
+        31 => "dirty_from_initial_load": one kiwi_sparse_bool_value;
+        32 => "interactive_slide_element_change": one decode_sparse_interactive_slide_element_change_from_decoder;
+        33 => "clipboard_selection_regions": repeated decode_sparse_clipboard_selection_region_from_decoder;
+        34 => "encoded_offsets_index": one decode_sparse_encoded_offsets_index_from_decoder;
+        35 => "has_repeating_content": one kiwi_sparse_bool_value;
+        36 => "node_status_change": one decode_sparse_node_status_change_from_decoder;
+        37 => "is_retransmission": one kiwi_sparse_bool_value;
+        38 => "sent_timestamp": one kiwi_sparse_uint64_value;
+        39 => "annotation_categories": repeated decode_sparse_annotation_category_from_decoder;
+        40 => "client_rendered_metadata": one decode_sparse_client_rendered_metadata_from_decoder;
+        41 => "paste_asset_type": one decode_sparse_paste_asset_type_from_decoder;
+        42 => "stable_session_id": one kiwi_sparse_string_value;
+        43 => "object_animations": one decode_sparse_object_animation_list_from_decoder;
+        44 => "buzz_approval_change": one decode_sparse_buzz_approval_change_from_decoder;
+        45 => "scene_graph_query_mode": one decode_sparse_scene_graph_query_mode_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_encoded_offsets_index_from_decoder;
     env env;
     decoder decoder;
@@ -7676,10 +7802,10 @@ kiwi_sparse_message_decoder! {
     definition "EncodedOffsetsIndex";
     capacity 5;
     fields [
-        1 => "node_changes_field_offset": decoder.read_var_uint()?.encode(env);
-        2 => "node_changes_field_length": decoder.read_var_uint()?.encode(env);
-        3 => "blobs_field_offset": decoder.read_var_uint()?.encode(env);
-        4 => "node_change_offsets": decoder.read_repeated(|decoder| decode_sparse_guid_and_encoded_offset_from_decoder(env, decoder))?.encode(env);
+        1 => "node_changes_field_offset": one kiwi_sparse_uint_value;
+        2 => "node_changes_field_length": one kiwi_sparse_uint_value;
+        3 => "blobs_field_offset": one kiwi_sparse_uint_value;
+        4 => "node_change_offsets": repeated decode_sparse_guid_and_encoded_offset_from_decoder;
     ]
 }
 
@@ -7705,7 +7831,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_rich_media_data_from_decoder;
     env env;
     decoder decoder;
@@ -7713,8 +7839,8 @@ kiwi_sparse_message_decoder! {
     definition "RichMediaData";
     capacity 3;
     fields [
-        1 => "media_hash": decoder.read_string(env)?.encode(env);
-        2 => "rich_media_type": decode_sparse_rich_media_type_from_decoder(env, decoder)?.encode(env);
+        1 => "media_hash": one kiwi_sparse_string_value;
+        2 => "rich_media_type": one decode_sparse_rich_media_type_from_decoder;
     ]
 }
 
@@ -7790,7 +7916,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_any_value_from_decoder;
     env env;
     decoder decoder;
@@ -7798,35 +7924,35 @@ kiwi_sparse_message_decoder! {
     definition "VariableAnyValue";
     capacity 30;
     fields [
-        1 => "bool_value": decoder.read_bool()?.encode(env);
-        2 => "text_value": decoder.read_string(env)?.encode(env);
-        3 => "float_value": decoder.read_var_float(env)?.encode(env);
-        4 => "alias": decode_sparse_variable_id_from_decoder(env, decoder)?.encode(env);
-        5 => "color_value": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        6 => "expression_value": decode_sparse_expression_from_decoder(env, decoder)?.encode(env);
-        7 => "map_value": decode_sparse_variable_map_from_decoder(env, decoder)?.encode(env);
-        8 => "symbol_id_value": decode_sparse_symbol_id_from_decoder(env, decoder)?.encode(env);
-        9 => "font_style_value": decode_sparse_variable_font_style_from_decoder(env, decoder)?.encode(env);
-        10 => "text_data_value": decode_sparse_text_data_from_decoder(env, decoder)?.encode(env);
-        11 => "node_field_alias_value": decode_sparse_node_field_alias_from_decoder(env, decoder)?.encode(env);
-        12 => "cms_alias_value": decode_sparse_cms_alias_from_decoder(env, decoder)?.encode(env);
-        13 => "prop_ref_value": decode_sparse_prop_ref_value_from_decoder(env, decoder)?.encode(env);
-        14 => "image_value": decode_sparse_image_parameter_value_from_decoder(env, decoder)?.encode(env);
-        15 => "managed_string_alias_value": decode_sparse_managed_string_alias_from_decoder(env, decoder)?.encode(env);
-        16 => "link_value": decode_sparse_hyperlink_from_decoder(env, decoder)?.encode(env);
-        17 => "js_runtime_alias_value": decode_sparse_js_runtime_alias_from_decoder(env, decoder)?.encode(env);
-        18 => "slot_content_id_value": decode_sparse_slot_content_id_from_decoder(env, decoder)?.encode(env);
-        19 => "keyframe_track_id_value": decode_sparse_keyframe_track_id_from_decoder(env, decoder)?.encode(env);
-        20 => "keyframe_track_parameter_value": decode_sparse_keyframe_track_parameter_value_from_decoder(env, decoder)?.encode(env);
-        21 => "easing_value": decode_sparse_easing_data_from_decoder(env, decoder)?.encode(env);
-        22 => "vector_value": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        23 => "color_array_value": decode_sparse_color_array_from_decoder(env, decoder)?.encode(env);
-        24 => "line_value": decode_sparse_line_from_decoder(env, decoder)?.encode(env);
-        25 => "circle_value": decode_sparse_circle_from_decoder(env, decoder)?.encode(env);
-        26 => "rotation3_d_value": decode_sparse_rotation3_d_from_decoder(env, decoder)?.encode(env);
-        27 => "circle_point_value": decode_sparse_circle_point_from_decoder(env, decoder)?.encode(env);
-        28 => "gradient_value": decode_sparse_gradient_from_decoder(env, decoder)?.encode(env);
-        29 => "color_point_value": decode_sparse_color_point_from_decoder(env, decoder)?.encode(env);
+        1 => "bool_value": one kiwi_sparse_bool_value;
+        2 => "text_value": one kiwi_sparse_string_value;
+        3 => "float_value": one kiwi_sparse_float_value;
+        4 => "alias": one decode_sparse_variable_id_from_decoder;
+        5 => "color_value": one decode_sparse_color_from_decoder;
+        6 => "expression_value": one decode_sparse_expression_from_decoder;
+        7 => "map_value": one decode_sparse_variable_map_from_decoder;
+        8 => "symbol_id_value": one decode_sparse_symbol_id_from_decoder;
+        9 => "font_style_value": one decode_sparse_variable_font_style_from_decoder;
+        10 => "text_data_value": one decode_sparse_text_data_from_decoder;
+        11 => "node_field_alias_value": one decode_sparse_node_field_alias_from_decoder;
+        12 => "cms_alias_value": one decode_sparse_cms_alias_from_decoder;
+        13 => "prop_ref_value": one decode_sparse_prop_ref_value_from_decoder;
+        14 => "image_value": one decode_sparse_image_parameter_value_from_decoder;
+        15 => "managed_string_alias_value": one decode_sparse_managed_string_alias_from_decoder;
+        16 => "link_value": one decode_sparse_hyperlink_from_decoder;
+        17 => "js_runtime_alias_value": one decode_sparse_js_runtime_alias_from_decoder;
+        18 => "slot_content_id_value": one decode_sparse_slot_content_id_from_decoder;
+        19 => "keyframe_track_id_value": one decode_sparse_keyframe_track_id_from_decoder;
+        20 => "keyframe_track_parameter_value": one decode_sparse_keyframe_track_parameter_value_from_decoder;
+        21 => "easing_value": one decode_sparse_easing_data_from_decoder;
+        22 => "vector_value": one decode_sparse_vector_from_decoder;
+        23 => "color_array_value": one decode_sparse_color_array_from_decoder;
+        24 => "line_value": one decode_sparse_line_from_decoder;
+        25 => "circle_value": one decode_sparse_circle_from_decoder;
+        26 => "rotation3_d_value": one decode_sparse_rotation3_d_from_decoder;
+        27 => "circle_point_value": one decode_sparse_circle_point_from_decoder;
+        28 => "gradient_value": one decode_sparse_gradient_from_decoder;
+        29 => "color_point_value": one decode_sparse_color_point_from_decoder;
     ]
 }
 
@@ -7858,7 +7984,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_expression_from_decoder;
     env env;
     decoder decoder;
@@ -7866,12 +7992,12 @@ kiwi_sparse_message_decoder! {
     definition "Expression";
     capacity 3;
     fields [
-        1 => "expression_function": decode_sparse_expression_function_from_decoder(env, decoder)?.encode(env);
-        2 => "expression_arguments": decoder.read_repeated(|decoder| decode_sparse_variable_data_from_decoder(env, decoder))?.encode(env);
+        1 => "expression_function": one decode_sparse_expression_function_from_decoder;
+        2 => "expression_arguments": repeated decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_map_value_from_decoder;
     env env;
     decoder decoder;
@@ -7879,13 +8005,13 @@ kiwi_sparse_message_decoder! {
     definition "VariableMapValue";
     capacity 4;
     fields [
-        1 => "key": decoder.read_string(env)?.encode(env);
-        2 => "value": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        3 => "guid_key": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "key": one kiwi_sparse_string_value;
+        2 => "value": one decode_sparse_variable_data_from_decoder;
+        3 => "guid_key": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_map_from_decoder;
     env env;
     decoder decoder;
@@ -7893,11 +8019,11 @@ kiwi_sparse_message_decoder! {
     definition "VariableMap";
     capacity 2;
     fields [
-        1 => "values": decoder.read_repeated(|decoder| decode_sparse_variable_map_value_from_decoder(env, decoder))?.encode(env);
+        1 => "values": repeated decode_sparse_variable_map_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_color_array_from_decoder;
     env env;
     decoder decoder;
@@ -7905,11 +8031,11 @@ kiwi_sparse_message_decoder! {
     definition "ColorArray";
     capacity 2;
     fields [
-        1 => "colors": decoder.read_repeated(|decoder| decode_sparse_variable_data_from_decoder(env, decoder))?.encode(env);
+        1 => "colors": repeated decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_font_style_from_decoder;
     env env;
     decoder decoder;
@@ -7917,13 +8043,13 @@ kiwi_sparse_message_decoder! {
     definition "VariableFontStyle";
     capacity 4;
     fields [
-        1 => "as_string": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        2 => "as_float": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        3 => "as_variations": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "as_string": one decode_sparse_variable_data_from_decoder;
+        2 => "as_float": one decode_sparse_variable_data_from_decoder;
+        3 => "as_variations": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_image_parameter_value_from_decoder;
     env env;
     decoder decoder;
@@ -7931,17 +8057,17 @@ kiwi_sparse_message_decoder! {
     definition "ImageParameterValue";
     capacity 8;
     fields [
-        1 => "image": decode_sparse_image_from_decoder(env, decoder)?.encode(env);
-        2 => "image_thumbnail": decode_sparse_image_from_decoder(env, decoder)?.encode(env);
-        6 => "animated_image": decode_sparse_image_from_decoder(env, decoder)?.encode(env);
-        3 => "alt_text": decoder.read_string(env)?.encode(env);
-        4 => "original_image_height": decoder.read_var_uint()?.encode(env);
-        5 => "original_image_width": decoder.read_var_uint()?.encode(env);
-        7 => "animation_frame": decoder.read_var_uint()?.encode(env);
+        1 => "image": one decode_sparse_image_from_decoder;
+        2 => "image_thumbnail": one decode_sparse_image_from_decoder;
+        3 => "alt_text": one kiwi_sparse_string_value;
+        4 => "original_image_height": one kiwi_sparse_uint_value;
+        5 => "original_image_width": one kiwi_sparse_uint_value;
+        6 => "animated_image": one decode_sparse_image_from_decoder;
+        7 => "animation_frame": one kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_thumbnail_info_from_decoder;
     env env;
     decoder decoder;
@@ -7949,12 +8075,12 @@ kiwi_sparse_message_decoder! {
     definition "ThumbnailInfo";
     capacity 3;
     fields [
-        1 => "node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "thumbnail_version": decoder.read_string(env)?.encode(env);
+        1 => "node_id": one decode_sparse_guid_from_decoder;
+        2 => "thumbnail_version": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_ai_canvas_prompt_from_decoder;
     env env;
     decoder decoder;
@@ -7962,13 +8088,13 @@ kiwi_sparse_message_decoder! {
     definition "AiCanvasPrompt";
     capacity 4;
     fields [
-        1 => "user_prompt": decoder.read_string(env)?.encode(env);
-        2 => "author_id": decoder.read_string(env)?.encode(env);
-        3 => "parent_node_ids": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
+        1 => "user_prompt": one kiwi_sparse_string_value;
+        2 => "author_id": one kiwi_sparse_string_value;
+        3 => "parent_node_ids": repeated decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_field_alias_from_decoder;
     env env;
     decoder decoder;
@@ -7976,9 +8102,9 @@ kiwi_sparse_message_decoder! {
     definition "NodeFieldAlias";
     capacity 4;
     fields [
-        1 => "stable_path_to_node": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
-        2 => "node_field": decode_sparse_node_field_alias_type_from_decoder(env, decoder)?.encode(env);
-        3 => "index_or_key": decoder.read_string(env)?.encode(env);
+        1 => "stable_path_to_node": one decode_sparse_guid_path_from_decoder;
+        2 => "node_field": one decode_sparse_node_field_alias_type_from_decoder;
+        3 => "index_or_key": one kiwi_sparse_string_value;
     ]
 }
 
@@ -7992,7 +8118,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cms_alias_from_decoder;
     env env;
     decoder decoder;
@@ -8000,14 +8126,14 @@ kiwi_sparse_message_decoder! {
     definition "CMSAlias";
     capacity 5;
     fields [
-        1 => "collection_id": decoder.read_string(env)?.encode(env);
-        2 => "item_id": decoder.read_string(env)?.encode(env);
-        3 => "field_id": decoder.read_string(env)?.encode(env);
-        4 => "type": decode_sparse_variable_data_type_from_decoder(env, decoder)?.encode(env);
+        1 => "collection_id": one kiwi_sparse_string_value;
+        2 => "item_id": one kiwi_sparse_string_value;
+        3 => "field_id": one kiwi_sparse_string_value;
+        4 => "type": one decode_sparse_variable_data_type_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_js_runtime_alias_from_decoder;
     env env;
     decoder decoder;
@@ -8015,11 +8141,11 @@ kiwi_sparse_message_decoder! {
     definition "JsRuntimeAlias";
     capacity 2;
     fields [
-        1 => "lookup_key": decoder.read_string(env)?.encode(env);
+        1 => "lookup_key": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_prop_ref_value_from_decoder;
     env env;
     decoder decoder;
@@ -8027,11 +8153,11 @@ kiwi_sparse_message_decoder! {
     definition "PropRefValue";
     capacity 2;
     fields [
-        1 => "def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "def_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_id_from_decoder;
     env env;
     decoder decoder;
@@ -8039,12 +8165,12 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_placeholder_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -8052,12 +8178,12 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringPlaceholderMapEntry";
     capacity 3;
     fields [
-        1 => "key": decoder.read_string(env)?.encode(env);
-        2 => "value": decoder.read_string(env)?.encode(env);
+        1 => "key": one kiwi_sparse_string_value;
+        2 => "value": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_slot_content_id_from_decoder;
     env env;
     decoder decoder;
@@ -8065,11 +8191,11 @@ kiwi_sparse_message_decoder! {
     definition "SlotContentId";
     capacity 2;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_managed_string_alias_from_decoder;
     env env;
     decoder decoder;
@@ -8077,12 +8203,12 @@ kiwi_sparse_message_decoder! {
     definition "ManagedStringAlias";
     capacity 3;
     fields [
-        1 => "managed_string_id": decode_sparse_managed_string_id_from_decoder(env, decoder)?.encode(env);
-        2 => "placeholder_values": decoder.read_repeated(|decoder| decode_sparse_managed_string_placeholder_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "managed_string_id": one decode_sparse_managed_string_id_from_decoder;
+        2 => "placeholder_values": repeated decode_sparse_managed_string_placeholder_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_keyframe_track_id_from_decoder;
     env env;
     decoder decoder;
@@ -8090,12 +8216,12 @@ kiwi_sparse_message_decoder! {
     definition "KeyframeTrackId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_animation_preset_id_from_decoder;
     env env;
     decoder decoder;
@@ -8103,12 +8229,12 @@ kiwi_sparse_message_decoder! {
     definition "AnimationPresetId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_tool_id_from_decoder;
     env env;
     decoder decoder;
@@ -8116,12 +8242,12 @@ kiwi_sparse_message_decoder! {
     definition "ToolId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_custom_effect_id_from_decoder;
     env env;
     decoder decoder;
@@ -8129,12 +8255,12 @@ kiwi_sparse_message_decoder! {
     definition "CustomEffectId";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "asset_ref": decode_sparse_asset_ref_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "asset_ref": one decode_sparse_asset_ref_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_trss_transform2_d_from_decoder;
     env env;
     decoder decoder;
@@ -8142,14 +8268,14 @@ kiwi_sparse_message_decoder! {
     definition "TRSSTransform2D";
     capacity 5;
     fields [
-        1 => "translation": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        2 => "rotation": decoder.read_var_float(env)?.encode(env);
-        3 => "scale": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        4 => "shear_x": decoder.read_var_float(env)?.encode(env);
+        1 => "translation": one decode_sparse_vector_from_decoder;
+        2 => "rotation": one kiwi_sparse_float_value;
+        3 => "scale": one decode_sparse_vector_from_decoder;
+        4 => "shear_x": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_data_from_decoder;
     env env;
     decoder decoder;
@@ -8157,13 +8283,13 @@ kiwi_sparse_message_decoder! {
     definition "VariableData";
     capacity 4;
     fields [
-        1 => "value": decode_sparse_variable_any_value_from_decoder(env, decoder)?.encode(env);
-        2 => "data_type": decode_sparse_variable_data_type_from_decoder(env, decoder)?.encode(env);
-        3 => "resolved_data_type": decode_sparse_variable_resolved_data_type_from_decoder(env, decoder)?.encode(env);
+        1 => "value": one decode_sparse_variable_any_value_from_decoder;
+        2 => "data_type": one decode_sparse_variable_data_type_from_decoder;
+        3 => "resolved_data_type": one decode_sparse_variable_resolved_data_type_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_set_mode_from_decoder;
     env env;
     decoder decoder;
@@ -8171,15 +8297,15 @@ kiwi_sparse_message_decoder! {
     definition "VariableSetMode";
     capacity 6;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "name": decoder.read_string(env)?.encode(env);
-        3 => "sort_position": decoder.read_string(env)?.encode(env);
-        4 => "parent_variable_set_id": decode_sparse_variable_set_id_from_decoder(env, decoder)?.encode(env);
-        5 => "parent_mode_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "name": one kiwi_sparse_string_value;
+        3 => "sort_position": one kiwi_sparse_string_value;
+        4 => "parent_variable_set_id": one decode_sparse_variable_set_id_from_decoder;
+        5 => "parent_mode_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_data_values_from_decoder;
     env env;
     decoder decoder;
@@ -8187,11 +8313,11 @@ kiwi_sparse_message_decoder! {
     definition "VariableDataValues";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_variable_data_values_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_variable_data_values_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_data_values_entry_from_decoder;
     env env;
     decoder decoder;
@@ -8199,8 +8325,8 @@ kiwi_sparse_message_decoder! {
     definition "VariableDataValuesEntry";
     capacity 3;
     fields [
-        1 => "mode_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "variable_data": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "mode_id": one decode_sparse_guid_from_decoder;
+        2 => "variable_data": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
@@ -8235,7 +8361,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_keyframe_any_value_from_decoder;
     env env;
     decoder decoder;
@@ -8243,10 +8369,10 @@ kiwi_sparse_message_decoder! {
     definition "KeyframeAnyValue";
     capacity 5;
     fields [
-        1 => "float_value": decoder.read_var_float(env)?.encode(env);
-        2 => "color_value": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        3 => "text_data_value": decode_sparse_text_data_from_decoder(env, decoder)?.encode(env);
-        4 => "vector_value": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
+        1 => "float_value": one kiwi_sparse_float_value;
+        2 => "color_value": one decode_sparse_color_from_decoder;
+        3 => "text_data_value": one decode_sparse_text_data_from_decoder;
+        4 => "vector_value": one decode_sparse_vector_from_decoder;
     ]
 }
 
@@ -8263,7 +8389,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_keyframe_value_data_from_decoder;
     env env;
     decoder decoder;
@@ -8271,8 +8397,8 @@ kiwi_sparse_message_decoder! {
     definition "KeyframeValueData";
     capacity 3;
     fields [
-        1 => "value": decode_sparse_keyframe_any_value_from_decoder(env, decoder)?.encode(env);
-        2 => "value_type": decode_sparse_keyframe_value_type_from_decoder(env, decoder)?.encode(env);
+        1 => "value": one decode_sparse_keyframe_any_value_from_decoder;
+        2 => "value_type": one decode_sparse_keyframe_value_type_from_decoder;
     ]
 }
 
@@ -8287,7 +8413,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_manual_keyframe_track_parameter_from_decoder;
     env env;
     decoder decoder;
@@ -8295,12 +8421,12 @@ kiwi_sparse_message_decoder! {
     definition "ManualKeyframeTrackParameter";
     capacity 3;
     fields [
-        1 => "keyframe_track_id": decode_sparse_keyframe_track_id_from_decoder(env, decoder)?.encode(env);
-        2 => "timeline_def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "keyframe_track_id": one decode_sparse_keyframe_track_id_from_decoder;
+        2 => "timeline_def_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_animation_preset_keyframe_track_parameter_from_decoder;
     env env;
     decoder decoder;
@@ -8308,13 +8434,13 @@ kiwi_sparse_message_decoder! {
     definition "AnimationPresetKeyframeTrackParameter";
     capacity 4;
     fields [
-        1 => "animation_preset_id": decode_sparse_animation_preset_id_from_decoder(env, decoder)?.encode(env);
-        2 => "keyframe_track_id": decode_sparse_keyframe_track_id_from_decoder(env, decoder)?.encode(env);
-        3 => "timeline_def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder;
+        2 => "keyframe_track_id": one decode_sparse_keyframe_track_id_from_decoder;
+        3 => "timeline_def_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_keyframe_track_any_parameter_from_decoder;
     env env;
     decoder decoder;
@@ -8322,13 +8448,13 @@ kiwi_sparse_message_decoder! {
     definition "KeyframeTrackAnyParameter";
     capacity 4;
     fields [
-        1 => "manual": decode_sparse_manual_keyframe_track_parameter_from_decoder(env, decoder)?.encode(env);
-        2 => "animation_preset": decode_sparse_animation_preset_keyframe_track_parameter_from_decoder(env, decoder)?.encode(env);
-        3 => "animation_style_binding_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "manual": one decode_sparse_manual_keyframe_track_parameter_from_decoder;
+        2 => "animation_preset": one decode_sparse_animation_preset_keyframe_track_parameter_from_decoder;
+        3 => "animation_style_binding_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_keyframe_track_parameter_from_decoder;
     env env;
     decoder decoder;
@@ -8336,12 +8462,12 @@ kiwi_sparse_message_decoder! {
     definition "KeyframeTrackParameter";
     capacity 3;
     fields [
-        1 => "value": decode_sparse_keyframe_track_any_parameter_from_decoder(env, decoder)?.encode(env);
-        2 => "type": decode_sparse_keyframe_track_parameter_type_from_decoder(env, decoder)?.encode(env);
+        1 => "value": one decode_sparse_keyframe_track_any_parameter_from_decoder;
+        2 => "type": one decode_sparse_keyframe_track_parameter_type_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_keyframe_track_parameter_value_from_decoder;
     env env;
     decoder decoder;
@@ -8349,11 +8475,11 @@ kiwi_sparse_message_decoder! {
     definition "KeyframeTrackParameterValue";
     capacity 2;
     fields [
-        1 => "parameters": decoder.read_repeated(|decoder| decode_sparse_keyframe_track_parameter_from_decoder(env, decoder))?.encode(env);
+        1 => "parameters": repeated decode_sparse_keyframe_track_parameter_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_animation_presets_from_decoder;
     env env;
     decoder decoder;
@@ -8361,11 +8487,11 @@ kiwi_sparse_message_decoder! {
     definition "AnimationPresets";
     capacity 2;
     fields [
-        1 => "presets": decoder.read_repeated(|decoder| decode_sparse_animation_preset_data_from_decoder(env, decoder))?.encode(env);
+        1 => "presets": repeated decode_sparse_animation_preset_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_animation_preset_data_from_decoder;
     env env;
     decoder decoder;
@@ -8373,12 +8499,12 @@ kiwi_sparse_message_decoder! {
     definition "AnimationPresetData";
     capacity 3;
     fields [
-        1 => "animation_preset_id": decode_sparse_animation_preset_id_from_decoder(env, decoder)?.encode(env);
-        2 => "timeline_def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder;
+        2 => "timeline_def_id": one decode_sparse_guid_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_style_animation_from_decoder;
     env env;
     decoder decoder;
@@ -8386,11 +8512,11 @@ kiwi_sparse_message_decoder! {
     definition "StyleAnimation";
     capacity 2;
     fields [
-        1 => "animation_preset_id": decode_sparse_animation_preset_id_from_decoder(env, decoder)?.encode(env);
+        1 => "animation_preset_id": one decode_sparse_animation_preset_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_style_id_for_animation_from_decoder;
     env env;
     decoder decoder;
@@ -8398,14 +8524,14 @@ kiwi_sparse_message_decoder! {
     definition "StyleIdForAnimation";
     capacity 5;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "timeline_def_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "animation_style_id": decode_sparse_style_id_from_decoder(env, decoder)?.encode(env);
-        4 => "timeline_offset": decoder.read_var_int64()?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "timeline_def_id": one decode_sparse_guid_from_decoder;
+        3 => "animation_style_id": one decode_sparse_style_id_from_decoder;
+        4 => "timeline_offset": one kiwi_sparse_int64_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_tools_from_decoder;
     env env;
     decoder decoder;
@@ -8413,11 +8539,11 @@ kiwi_sparse_message_decoder! {
     definition "Tools";
     capacity 2;
     fields [
-        1 => "tools": decoder.read_repeated(|decoder| decode_sparse_tool_data_from_decoder(env, decoder))?.encode(env);
+        1 => "tools": repeated decode_sparse_tool_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_tool_data_from_decoder;
     env env;
     decoder decoder;
@@ -8425,13 +8551,13 @@ kiwi_sparse_message_decoder! {
     definition "ToolData";
     capacity 4;
     fields [
-        1 => "tool_id": decode_sparse_tool_id_from_decoder(env, decoder)?.encode(env);
-        2 => "backing_code_component_id": decode_sparse_code_component_id_from_decoder(env, decoder)?.encode(env);
-        3 => "component_prop_assignments": decoder.read_repeated(|decoder| decode_sparse_component_prop_assignment_from_decoder(env, decoder))?.encode(env);
+        1 => "tool_id": one decode_sparse_tool_id_from_decoder;
+        2 => "backing_code_component_id": one decode_sparse_code_component_id_from_decoder;
+        3 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_custom_effects_from_decoder;
     env env;
     decoder decoder;
@@ -8439,11 +8565,11 @@ kiwi_sparse_message_decoder! {
     definition "CustomEffects";
     capacity 2;
     fields [
-        1 => "custom_effects": decoder.read_repeated(|decoder| decode_sparse_custom_effect_data_from_decoder(env, decoder))?.encode(env);
+        1 => "custom_effects": repeated decode_sparse_custom_effect_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_custom_effect_data_from_decoder;
     env env;
     decoder decoder;
@@ -8451,11 +8577,11 @@ kiwi_sparse_message_decoder! {
     definition "CustomEffectData";
     capacity 2;
     fields [
-        1 => "custom_effect_id": decode_sparse_custom_effect_id_from_decoder(env, decoder)?.encode(env);
+        1 => "custom_effect_id": one decode_sparse_custom_effect_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_spring_params_from_decoder;
     env env;
     decoder decoder;
@@ -8463,13 +8589,13 @@ kiwi_sparse_message_decoder! {
     definition "SpringParams";
     capacity 4;
     fields [
-        1 => "stiffness": decoder.read_var_float(env)?.encode(env);
-        2 => "damping": decoder.read_var_float(env)?.encode(env);
-        3 => "mass": decoder.read_var_float(env)?.encode(env);
+        1 => "stiffness": one kiwi_sparse_float_value;
+        2 => "damping": one kiwi_sparse_float_value;
+        3 => "mass": one kiwi_sparse_float_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transition_easing_any_value_from_decoder;
     env env;
     decoder decoder;
@@ -8477,12 +8603,12 @@ kiwi_sparse_message_decoder! {
     definition "TransitionEasingAnyValue";
     capacity 3;
     fields [
-        1 => "spring_easing": decode_sparse_spring_params_from_decoder(env, decoder)?.encode(env);
-        2 => "bezier_easing": decode_sparse_bezier_handles_from_decoder(env, decoder)?.encode(env);
+        1 => "spring_easing": one decode_sparse_spring_params_from_decoder;
+        2 => "bezier_easing": one decode_sparse_bezier_handles_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_easing_data_from_decoder;
     env env;
     decoder decoder;
@@ -8490,12 +8616,12 @@ kiwi_sparse_message_decoder! {
     definition "EasingData";
     capacity 3;
     fields [
-        1 => "easing_type": decode_sparse_easing_type_from_decoder(env, decoder)?.encode(env);
-        2 => "easing_value": decode_sparse_transition_easing_any_value_from_decoder(env, decoder)?.encode(env);
+        1 => "easing_type": one decode_sparse_easing_type_from_decoder;
+        2 => "easing_value": one decode_sparse_transition_easing_any_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transition_override_from_decoder;
     env env;
     decoder decoder;
@@ -8503,20 +8629,20 @@ kiwi_sparse_message_decoder! {
     definition "TransitionOverride";
     capacity 11;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "duration": decoder.read_var_float(env)?.encode(env);
-        3 => "duration_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        4 => "delay": decoder.read_var_float(env)?.encode(env);
-        5 => "delay_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        6 => "easing": decode_sparse_easing_data_from_decoder(env, decoder)?.encode(env);
-        7 => "easing_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        8 => "created_at_ms": decoder.read_var_uint64()?.encode(env);
-        9 => "interaction_i_ds": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
-        10 => "disabled": decoder.read_bool()?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "duration": one kiwi_sparse_float_value;
+        3 => "duration_var": one decode_sparse_variable_data_from_decoder;
+        4 => "delay": one kiwi_sparse_float_value;
+        5 => "delay_var": one decode_sparse_variable_data_from_decoder;
+        6 => "easing": one decode_sparse_easing_data_from_decoder;
+        7 => "easing_var": one decode_sparse_variable_data_from_decoder;
+        8 => "created_at_ms": one kiwi_sparse_uint64_value;
+        9 => "interaction_i_ds": repeated decode_sparse_guid_from_decoder;
+        10 => "disabled": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transition_override_data_from_decoder;
     env env;
     decoder decoder;
@@ -8524,8 +8650,8 @@ kiwi_sparse_message_decoder! {
     definition "TransitionOverrideData";
     capacity 3;
     fields [
-        1 => "all": decoder.read_repeated(|decoder| decode_sparse_transition_override_from_decoder(env, decoder))?.encode(env);
-        2 => "property_overrides": decode_sparse_transition_override_prop_map_from_decoder(env, decoder)?.encode(env);
+        1 => "all": repeated decode_sparse_transition_override_from_decoder;
+        2 => "property_overrides": one decode_sparse_transition_override_prop_map_from_decoder;
     ]
 }
 
@@ -8555,7 +8681,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transition_override_binding_location_from_decoder;
     env env;
     decoder decoder;
@@ -8563,10 +8689,10 @@ kiwi_sparse_message_decoder! {
     definition "TransitionOverrideBindingLocation";
     capacity 5;
     fields [
-        1 => "top_level_field": decode_sparse_transition_override_binding_top_level_field_from_decoder(env, decoder)?.encode(env);
-        2 => "parameter_field_value": decoder.read_var_int()?.encode(env);
-        3 => "index": decoder.read_var_int()?.encode(env);
-        4 => "effect_parametrized_field_value": decoder.read_var_int()?.encode(env);
+        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder;
+        2 => "parameter_field_value": one kiwi_sparse_int_value;
+        3 => "index": one kiwi_sparse_int_value;
+        4 => "effect_parametrized_field_value": one kiwi_sparse_int_value;
     ]
 }
 
@@ -8600,7 +8726,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_contents_keyframe_binding_location_from_decoder;
     env env;
     decoder decoder;
@@ -8608,14 +8734,14 @@ kiwi_sparse_message_decoder! {
     definition "NodeContentsKeyframeBindingLocation";
     capacity 5;
     fields [
-        1 => "top_level_field": decode_sparse_transition_override_binding_top_level_field_from_decoder(env, decoder)?.encode(env);
-        2 => "parameter_field_value": decode_sparse_variable_field_from_decoder(env, decoder)?.encode(env);
-        3 => "index": decoder.read_var_int()?.encode(env);
-        4 => "effect_parametrized_field_value": decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder(env, decoder)?.encode(env);
+        1 => "top_level_field": one decode_sparse_transition_override_binding_top_level_field_from_decoder;
+        2 => "parameter_field_value": one decode_sparse_variable_field_from_decoder;
+        3 => "index": one kiwi_sparse_int_value;
+        4 => "effect_parametrized_field_value": one decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transition_override_prop_map_from_decoder;
     env env;
     decoder decoder;
@@ -8623,11 +8749,11 @@ kiwi_sparse_message_decoder! {
     definition "TransitionOverridePropMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_transition_override_prop_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_transition_override_prop_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_transition_override_prop_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -8635,10 +8761,10 @@ kiwi_sparse_message_decoder! {
     definition "TransitionOverridePropMapEntry";
     capacity 5;
     fields [
-        1 => "prop": decode_sparse_transition_override_prop_from_decoder(env, decoder)?.encode(env);
-        2 => "overrides": decoder.read_repeated(|decoder| decode_sparse_transition_override_from_decoder(env, decoder))?.encode(env);
-        3 => "binding_location": decode_sparse_transition_override_binding_location_from_decoder(env, decoder)?.encode(env);
-        4 => "node_contents_binding_location": decode_sparse_node_contents_keyframe_binding_location_from_decoder(env, decoder)?.encode(env);
+        1 => "prop": one decode_sparse_transition_override_prop_from_decoder;
+        2 => "overrides": repeated decode_sparse_transition_override_from_decoder;
+        3 => "binding_location": one decode_sparse_transition_override_binding_location_from_decoder;
+        4 => "node_contents_binding_location": one decode_sparse_node_contents_keyframe_binding_location_from_decoder;
     ]
 }
 
@@ -8653,7 +8779,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_optional_vector_from_decoder;
     env env;
     decoder decoder;
@@ -8661,7 +8787,7 @@ kiwi_sparse_message_decoder! {
     definition "OptionalVector";
     capacity 2;
     fields [
-        1 => "value": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
+        1 => "value": one decode_sparse_vector_from_decoder;
     ]
 }
 
@@ -8854,7 +8980,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_migration_status_from_decoder;
     env env;
     decoder decoder;
@@ -8862,7 +8988,7 @@ kiwi_sparse_message_decoder! {
     definition "MigrationStatus";
     capacity 2;
     fields [
-        1 => "dsd_cleanup": decoder.read_bool()?.encode(env);
+        1 => "dsd_cleanup": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -8898,7 +9024,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_aria_attribute_any_value_from_decoder;
     env env;
     decoder decoder;
@@ -8906,11 +9032,11 @@ kiwi_sparse_message_decoder! {
     definition "ARIAAttributeAnyValue";
     capacity 6;
     fields [
-        1 => "bool_value": decoder.read_bool()?.encode(env);
-        2 => "string_value": decoder.read_string(env)?.encode(env);
-        3 => "float_value": decoder.read_var_float(env)?.encode(env);
-        4 => "int_value": decoder.read_var_int()?.encode(env);
-        5 => "string_array_value": decoder.read_repeated(|decoder| decoder.read_string(env))?.encode(env);
+        1 => "bool_value": one kiwi_sparse_bool_value;
+        2 => "string_value": one kiwi_sparse_string_value;
+        3 => "float_value": one kiwi_sparse_float_value;
+        4 => "int_value": one kiwi_sparse_int_value;
+        5 => "string_array_value": repeated kiwi_sparse_string_value;
     ]
 }
 
@@ -8927,7 +9053,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_aria_attribute_data_from_decoder;
     env env;
     decoder decoder;
@@ -8935,12 +9061,12 @@ kiwi_sparse_message_decoder! {
     definition "ARIAAttributeData";
     capacity 3;
     fields [
-        1 => "type": decode_sparse_aria_attribute_data_type_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decode_sparse_aria_attribute_any_value_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_aria_attribute_data_type_from_decoder;
+        2 => "value": one decode_sparse_aria_attribute_any_value_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_aria_attributes_map_from_decoder;
     env env;
     decoder decoder;
@@ -8948,11 +9074,11 @@ kiwi_sparse_message_decoder! {
     definition "ARIAAttributesMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_aria_attributes_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_aria_attributes_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_aria_attributes_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -8960,12 +9086,12 @@ kiwi_sparse_message_decoder! {
     definition "ARIAAttributesMapEntry";
     capacity 3;
     fields [
-        1 => "attribute": decoder.read_string(env)?.encode(env);
-        2 => "value": decode_sparse_aria_attribute_data_from_decoder(env, decoder)?.encode(env);
+        1 => "attribute": one kiwi_sparse_string_value;
+        2 => "value": one decode_sparse_aria_attribute_data_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_handoff_status_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -8973,12 +9099,12 @@ kiwi_sparse_message_decoder! {
     definition "HandoffStatusMapEntry";
     capacity 3;
     fields [
-        1 => "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "handoff_status": decode_sparse_section_status_info_from_decoder(env, decoder)?.encode(env);
+        1 => "guid": one decode_sparse_guid_from_decoder;
+        2 => "handoff_status": one decode_sparse_section_status_info_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_handoff_status_map_from_decoder;
     env env;
     decoder decoder;
@@ -8986,11 +9112,11 @@ kiwi_sparse_message_decoder! {
     definition "HandoffStatusMap";
     capacity 2;
     fields [
-        1 => "entries": decoder.read_repeated(|decoder| decode_sparse_handoff_status_map_entry_from_decoder(env, decoder))?.encode(env);
+        1 => "entries": repeated decode_sparse_handoff_status_map_entry_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_edit_scope_info_from_decoder;
     env env;
     decoder decoder;
@@ -8998,12 +9124,12 @@ kiwi_sparse_message_decoder! {
     definition "EditScopeInfo";
     capacity 3;
     fields [
-        1 => "edit_scope_stacks": decoder.read_repeated(|decoder| decode_sparse_edit_scope_stack_from_decoder(env, decoder))?.encode(env);
-        2 => "snapshots": decoder.read_repeated(|decoder| decode_sparse_edit_scope_snapshot_from_decoder(env, decoder))?.encode(env);
+        1 => "edit_scope_stacks": repeated decode_sparse_edit_scope_stack_from_decoder;
+        2 => "snapshots": repeated decode_sparse_edit_scope_snapshot_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_edit_scope_snapshot_from_decoder;
     env env;
     decoder decoder;
@@ -9011,12 +9137,12 @@ kiwi_sparse_message_decoder! {
     definition "EditScopeSnapshot";
     capacity 3;
     fields [
-        1 => "frames": decoder.read_repeated(|decoder| decode_sparse_edit_scope_stack_from_decoder(env, decoder))?.encode(env);
-        2 => "node_change_field_numbers": decoder.read_repeated(|decoder| decoder.read_var_uint())?.encode(env);
+        1 => "frames": repeated decode_sparse_edit_scope_stack_from_decoder;
+        2 => "node_change_field_numbers": repeated kiwi_sparse_uint_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_edit_scope_stack_from_decoder;
     env env;
     decoder decoder;
@@ -9024,11 +9150,11 @@ kiwi_sparse_message_decoder! {
     definition "EditScopeStack";
     capacity 2;
     fields [
-        1 => "stack": decoder.read_repeated(|decoder| decode_sparse_edit_scope_from_decoder(env, decoder))?.encode(env);
+        1 => "stack": repeated decode_sparse_edit_scope_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_edit_scope_from_decoder;
     env env;
     decoder decoder;
@@ -9036,9 +9162,9 @@ kiwi_sparse_message_decoder! {
     definition "EditScope";
     capacity 4;
     fields [
-        1 => "type": decode_sparse_edit_scope_type_from_decoder(env, decoder)?.encode(env);
-        2 => "label": decoder.read_string(env)?.encode(env);
-        3 => "editor_type": decode_sparse_editor_type_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_edit_scope_type_from_decoder;
+        2 => "label": one kiwi_sparse_string_value;
+        3 => "editor_type": one decode_sparse_editor_type_from_decoder;
     ]
 }
 
@@ -9090,7 +9216,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_section_preset_info_from_decoder;
     env env;
     decoder decoder;
@@ -9098,14 +9224,14 @@ kiwi_sparse_message_decoder! {
     definition "SectionPresetInfo";
     capacity 5;
     fields [
-        1 => "shelf_id": decoder.read_var_uint64()?.encode(env);
-        2 => "template_id": decoder.read_var_uint64()?.encode(env);
-        3 => "template_name": decoder.read_string(env)?.encode(env);
-        4 => "state": decode_sparse_section_preset_state_from_decoder(env, decoder)?.encode(env);
+        1 => "shelf_id": one kiwi_sparse_uint64_value;
+        2 => "template_id": one kiwi_sparse_uint64_value;
+        3 => "template_name": one kiwi_sparse_string_value;
+        4 => "state": one decode_sparse_section_preset_state_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_clipboard_selection_region_from_decoder;
     env env;
     decoder decoder;
@@ -9113,11 +9239,11 @@ kiwi_sparse_message_decoder! {
     definition "ClipboardSelectionRegion";
     capacity 6;
     fields [
-        1 => "parent": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "nodes": decoder.read_repeated(|decoder| decode_sparse_guid_from_decoder(env, decoder))?.encode(env);
-        3 => "enclosing_frame_offset": decode_sparse_vector_from_decoder(env, decoder)?.encode(env);
-        4 => "paste_is_partially_outside_enclosing_frame": decoder.read_bool()?.encode(env);
-        5 => "focus_type": decode_sparse_selection_region_focus_type_from_decoder(env, decoder)?.encode(env);
+        1 => "parent": one decode_sparse_guid_from_decoder;
+        2 => "nodes": repeated decode_sparse_guid_from_decoder;
+        3 => "enclosing_frame_offset": one decode_sparse_vector_from_decoder;
+        4 => "paste_is_partially_outside_enclosing_frame": one kiwi_sparse_bool_value;
+        5 => "focus_type": one decode_sparse_selection_region_focus_type_from_decoder;
     ]
 }
 
@@ -9132,7 +9258,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_first_draft_kit_from_decoder;
     env env;
     decoder decoder;
@@ -9140,12 +9266,12 @@ kiwi_sparse_message_decoder! {
     definition "FirstDraftKit";
     capacity 3;
     fields [
-        1 => "key": decoder.read_string(env)?.encode(env);
-        2 => "type": decode_sparse_first_draft_kit_type_from_decoder(env, decoder)?.encode(env);
+        1 => "key": one kiwi_sparse_string_value;
+        2 => "type": one decode_sparse_first_draft_kit_type_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_first_draft_data_from_decoder;
     env env;
     decoder decoder;
@@ -9153,8 +9279,8 @@ kiwi_sparse_message_decoder! {
     definition "FirstDraftData";
     capacity 3;
     fields [
-        1 => "generation_id": decoder.read_string(env)?.encode(env);
-        2 => "kit": decode_sparse_first_draft_kit_from_decoder(env, decoder)?.encode(env);
+        1 => "generation_id": one kiwi_sparse_string_value;
+        2 => "kit": one decode_sparse_first_draft_kit_from_decoder;
     ]
 }
 
@@ -9169,7 +9295,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_first_draft_kit_element_data_from_decoder;
     env env;
     decoder decoder;
@@ -9177,7 +9303,7 @@ kiwi_sparse_message_decoder! {
     definition "FirstDraftKitElementData";
     capacity 2;
     fields [
-        1 => "type": decode_sparse_first_draft_kit_element_type_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_first_draft_kit_element_type_from_decoder;
     ]
 }
 
@@ -9204,7 +9330,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_platform_shape_property_map_entry_from_decoder;
     env env;
     decoder decoder;
@@ -9212,12 +9338,12 @@ kiwi_sparse_message_decoder! {
     definition "PlatformShapePropertyMapEntry";
     capacity 3;
     fields [
-        1 => "property": decode_sparse_platform_shape_property_from_decoder(env, decoder)?.encode(env);
-        2 => "node_paths": decoder.read_repeated(|decoder| decode_sparse_guid_path_from_decoder(env, decoder))?.encode(env);
+        1 => "property": one decode_sparse_platform_shape_property_from_decoder;
+        2 => "node_paths": repeated decode_sparse_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_platform_shape_definition_from_decoder;
     env env;
     decoder decoder;
@@ -9225,13 +9351,13 @@ kiwi_sparse_message_decoder! {
     definition "PlatformShapeDefinition";
     capacity 4;
     fields [
-        1 => "property_map_entries": decoder.read_repeated(|decoder| decode_sparse_platform_shape_property_map_entry_from_decoder(env, decoder))?.encode(env);
-        2 => "behavior_type": decode_sparse_platform_shape_behavior_type_from_decoder(env, decoder)?.encode(env);
-        3 => "thumbnail_node": decode_sparse_guid_path_from_decoder(env, decoder)?.encode(env);
+        1 => "property_map_entries": repeated decode_sparse_platform_shape_property_map_entry_from_decoder;
+        2 => "behavior_type": one decode_sparse_platform_shape_behavior_type_from_decoder;
+        3 => "thumbnail_node": one decode_sparse_guid_path_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_behaviors_from_decoder;
     env env;
     decoder decoder;
@@ -9239,20 +9365,20 @@ kiwi_sparse_message_decoder! {
     definition "NodeBehaviors";
     capacity 11;
     fields [
-        1 => "link": decode_sparse_link_behavior_from_decoder(env, decoder)?.encode(env);
-        2 => "appear": decode_sparse_appear_behavior_from_decoder(env, decoder)?.encode(env);
-        3 => "hover": decode_sparse_hover_behavior_from_decoder(env, decoder)?.encode(env);
-        4 => "press": decode_sparse_press_behavior_from_decoder(env, decoder)?.encode(env);
-        5 => "focus": decode_sparse_focus_behavior_from_decoder(env, decoder)?.encode(env);
-        6 => "scroll_parallax": decode_sparse_scroll_parallax_behavior_from_decoder(env, decoder)?.encode(env);
-        7 => "scroll_transform": decode_sparse_scroll_transform_behavior_from_decoder(env, decoder)?.encode(env);
-        8 => "cursor": decode_sparse_cursor_behavior_from_decoder(env, decoder)?.encode(env);
-        9 => "marquee": decode_sparse_marquee_behavior_from_decoder(env, decoder)?.encode(env);
-        10 => "code": decoder.read_repeated(|decoder| decode_sparse_code_behavior_from_decoder(env, decoder))?.encode(env);
+        1 => "link": one decode_sparse_link_behavior_from_decoder;
+        2 => "appear": one decode_sparse_appear_behavior_from_decoder;
+        3 => "hover": one decode_sparse_hover_behavior_from_decoder;
+        4 => "press": one decode_sparse_press_behavior_from_decoder;
+        5 => "focus": one decode_sparse_focus_behavior_from_decoder;
+        6 => "scroll_parallax": one decode_sparse_scroll_parallax_behavior_from_decoder;
+        7 => "scroll_transform": one decode_sparse_scroll_transform_behavior_from_decoder;
+        8 => "cursor": one decode_sparse_cursor_behavior_from_decoder;
+        9 => "marquee": one decode_sparse_marquee_behavior_from_decoder;
+        10 => "code": repeated decode_sparse_code_behavior_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_behavior_transition_from_decoder;
     env env;
     decoder decoder;
@@ -9260,12 +9386,12 @@ kiwi_sparse_message_decoder! {
     definition "BehaviorTransition";
     capacity 7;
     fields [
-        1 => "easing_type": decode_sparse_easing_type_from_decoder(env, decoder)?.encode(env);
-        2 => "easing_function": decoder.read_repeated(|decoder| decoder.read_var_float(env))?.encode(env);
-        3 => "transition_duration": decoder.read_var_float(env)?.encode(env);
-        4 => "delay": decoder.read_var_float(env)?.encode(env);
-        5 => "transition_duration_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        6 => "delay_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        1 => "easing_type": one decode_sparse_easing_type_from_decoder;
+        2 => "easing_function": repeated kiwi_sparse_float_value;
+        3 => "transition_duration": one kiwi_sparse_float_value;
+        4 => "delay": one kiwi_sparse_float_value;
+        5 => "transition_duration_var": one decode_sparse_variable_data_from_decoder;
+        6 => "delay_var": one decode_sparse_variable_data_from_decoder;
     ]
 }
 
@@ -9293,7 +9419,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_appear_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9301,20 +9427,20 @@ kiwi_sparse_message_decoder! {
     definition "AppearBehavior";
     capacity 11;
     fields [
-        1 => "trigger": decode_sparse_appear_behavior_trigger_from_decoder(env, decoder)?.encode(env);
-        2 => "direction": decode_sparse_relative_direction_from_decoder(env, decoder)?.encode(env);
-        3 => "other_layer": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "enter_transition": decode_sparse_behavior_transition_from_decoder(env, decoder)?.encode(env);
-        5 => "enter_state": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
-        6 => "exit_transition": decode_sparse_behavior_transition_from_decoder(env, decoder)?.encode(env);
-        7 => "exit_state": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
-        8 => "plays_once": decoder.read_bool()?.encode(env);
-        9 => "plays_once_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        10 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "trigger": one decode_sparse_appear_behavior_trigger_from_decoder;
+        2 => "direction": one decode_sparse_relative_direction_from_decoder;
+        3 => "other_layer": one decode_sparse_guid_from_decoder;
+        4 => "enter_transition": one decode_sparse_behavior_transition_from_decoder;
+        5 => "enter_state": one decode_sparse_node_change_from_decoder;
+        6 => "exit_transition": one decode_sparse_behavior_transition_from_decoder;
+        7 => "exit_state": one decode_sparse_node_change_from_decoder;
+        8 => "plays_once": one kiwi_sparse_bool_value;
+        9 => "plays_once_var": one decode_sparse_variable_data_from_decoder;
+        10 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_hover_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9322,13 +9448,13 @@ kiwi_sparse_message_decoder! {
     definition "HoverBehavior";
     capacity 4;
     fields [
-        1 => "transition": decode_sparse_behavior_transition_from_decoder(env, decoder)?.encode(env);
-        2 => "state": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
-        3 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "transition": one decode_sparse_behavior_transition_from_decoder;
+        2 => "state": one decode_sparse_node_change_from_decoder;
+        3 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_press_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9336,13 +9462,13 @@ kiwi_sparse_message_decoder! {
     definition "PressBehavior";
     capacity 4;
     fields [
-        1 => "transition": decode_sparse_behavior_transition_from_decoder(env, decoder)?.encode(env);
-        2 => "state": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
-        3 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "transition": one decode_sparse_behavior_transition_from_decoder;
+        2 => "state": one decode_sparse_node_change_from_decoder;
+        3 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_focus_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9350,13 +9476,13 @@ kiwi_sparse_message_decoder! {
     definition "FocusBehavior";
     capacity 4;
     fields [
-        1 => "transition": decode_sparse_behavior_transition_from_decoder(env, decoder)?.encode(env);
-        2 => "state": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
-        3 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "transition": one decode_sparse_behavior_transition_from_decoder;
+        2 => "state": one decode_sparse_node_change_from_decoder;
+        3 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_scroll_parallax_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9364,11 +9490,11 @@ kiwi_sparse_message_decoder! {
     definition "ScrollParallaxBehavior";
     capacity 6;
     fields [
-        1 => "axis": decode_sparse_scroll_direction_from_decoder(env, decoder)?.encode(env);
-        2 => "speed": decoder.read_var_float(env)?.encode(env);
-        3 => "relative_to_page": decoder.read_bool()?.encode(env);
-        4 => "speed_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        5 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "axis": one decode_sparse_scroll_direction_from_decoder;
+        2 => "speed": one kiwi_sparse_float_value;
+        3 => "relative_to_page": one kiwi_sparse_bool_value;
+        4 => "speed_var": one decode_sparse_variable_data_from_decoder;
+        5 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
@@ -9383,7 +9509,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_scroll_transform_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9391,19 +9517,19 @@ kiwi_sparse_message_decoder! {
     definition "ScrollTransformBehavior";
     capacity 10;
     fields [
-        1 => "trigger": decode_sparse_scroll_transform_behavior_trigger_from_decoder(env, decoder)?.encode(env);
-        2 => "other_layer": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "transition": decode_sparse_behavior_transition_from_decoder(env, decoder)?.encode(env);
-        4 => "from_state": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
-        5 => "to_state": decode_sparse_node_change_from_decoder(env, decoder)?.encode(env);
-        6 => "plays_once": decoder.read_bool()?.encode(env);
-        7 => "plays_once_var": decoder.read_bool()?.encode(env);
-        8 => "plays_once_var2": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        9 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "trigger": one decode_sparse_scroll_transform_behavior_trigger_from_decoder;
+        2 => "other_layer": one decode_sparse_guid_from_decoder;
+        3 => "transition": one decode_sparse_behavior_transition_from_decoder;
+        4 => "from_state": one decode_sparse_node_change_from_decoder;
+        5 => "to_state": one decode_sparse_node_change_from_decoder;
+        6 => "plays_once": one kiwi_sparse_bool_value;
+        7 => "plays_once_var": one kiwi_sparse_bool_value;
+        8 => "plays_once_var2": one decode_sparse_variable_data_from_decoder;
+        9 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cursor_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9411,14 +9537,14 @@ kiwi_sparse_message_decoder! {
     definition "CursorBehavior";
     capacity 5;
     fields [
-        1 => "hotspot_x": decoder.read_var_float(env)?.encode(env);
-        2 => "hotspot_y": decoder.read_var_float(env)?.encode(env);
-        3 => "cursor_guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "hotspot_x": one kiwi_sparse_float_value;
+        2 => "hotspot_y": one kiwi_sparse_float_value;
+        3 => "cursor_guid": one decode_sparse_guid_from_decoder;
+        4 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_marquee_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9426,17 +9552,17 @@ kiwi_sparse_message_decoder! {
     definition "MarqueeBehavior";
     capacity 8;
     fields [
-        1 => "direction": decode_sparse_relative_direction_from_decoder(env, decoder)?.encode(env);
-        2 => "speed": decoder.read_var_float(env)?.encode(env);
-        3 => "should_loop_infinitely": decoder.read_bool()?.encode(env);
-        4 => "speed_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        5 => "should_loop_infinitely_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        6 => "pause_on_hover": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        7 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "direction": one decode_sparse_relative_direction_from_decoder;
+        2 => "speed": one kiwi_sparse_float_value;
+        3 => "should_loop_infinitely": one kiwi_sparse_bool_value;
+        4 => "speed_var": one decode_sparse_variable_data_from_decoder;
+        5 => "should_loop_infinitely_var": one decode_sparse_variable_data_from_decoder;
+        6 => "pause_on_hover": one decode_sparse_variable_data_from_decoder;
+        7 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_code_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9444,13 +9570,13 @@ kiwi_sparse_message_decoder! {
     definition "CodeBehavior";
     capacity 4;
     fields [
-        1 => "code_component_id": decode_sparse_code_component_id_from_decoder(env, decoder)?.encode(env);
-        2 => "component_prop_assignments": decoder.read_repeated(|decoder| decode_sparse_component_prop_assignment_from_decoder(env, decoder))?.encode(env);
-        3 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "code_component_id": one decode_sparse_code_component_id_from_decoder;
+        2 => "component_prop_assignments": repeated decode_sparse_component_prop_assignment_from_decoder;
+        3 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_client_rendered_metadata_from_decoder;
     env env;
     decoder decoder;
@@ -9458,10 +9584,10 @@ kiwi_sparse_message_decoder! {
     definition "ClientRenderedMetadata";
     capacity 5;
     fields [
-        1 => "load_id": decoder.read_string(env)?.encode(env);
-        2 => "tracking_session_id": decoder.read_string(env)?.encode(env);
-        3 => "tracking_session_sequence_id": decoder.read_var_uint()?.encode(env);
-        4 => "reconnect_id": decoder.read_string(env)?.encode(env);
+        1 => "load_id": one kiwi_sparse_string_value;
+        2 => "tracking_session_id": one kiwi_sparse_string_value;
+        3 => "tracking_session_sequence_id": one kiwi_sparse_uint_value;
+        4 => "reconnect_id": one kiwi_sparse_string_value;
     ]
 }
 
@@ -9475,7 +9601,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_link_behavior_from_decoder;
     env env;
     decoder decoder;
@@ -9483,14 +9609,14 @@ kiwi_sparse_message_decoder! {
     definition "LinkBehavior";
     capacity 5;
     fields [
-        1 => "type": decode_sparse_link_behavior_type_from_decoder(env, decoder)?.encode(env);
-        2 => "url": decoder.read_string(env)?.encode(env);
-        3 => "page": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "open_in_new_window": decoder.read_bool()?.encode(env);
+        1 => "type": one decode_sparse_link_behavior_type_from_decoder;
+        2 => "url": one kiwi_sparse_string_value;
+        3 => "page": one decode_sparse_guid_from_decoder;
+        4 => "open_in_new_window": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_variable_id_or_variable_override_id_from_decoder;
     env env;
     decoder decoder;
@@ -9498,12 +9624,12 @@ kiwi_sparse_message_decoder! {
     definition "VariableIdOrVariableOverrideId";
     capacity 3;
     fields [
-        1 => "variable_id": decode_sparse_variable_id_from_decoder(env, decoder)?.encode(env);
-        2 => "variable_override_id": decode_sparse_variable_override_id_from_decoder(env, decoder)?.encode(env);
+        1 => "variable_id": one decode_sparse_variable_id_from_decoder;
+        2 => "variable_override_id": one decode_sparse_variable_override_id_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_slide_theme_data_from_decoder;
     env env;
     decoder decoder;
@@ -9511,8 +9637,8 @@ kiwi_sparse_message_decoder! {
     definition "SlideThemeData";
     capacity 3;
     fields [
-        1 => "theme_id": decode_sparse_theme_id_from_decoder(env, decoder)?.encode(env);
-        2 => "version": decoder.read_string(env)?.encode(env);
+        1 => "theme_id": one decode_sparse_theme_id_from_decoder;
+        2 => "version": one kiwi_sparse_string_value;
     ]
 }
 
@@ -9542,7 +9668,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_chat_message_from_decoder;
     env env;
     decoder decoder;
@@ -9550,18 +9676,18 @@ kiwi_sparse_message_decoder! {
     definition "NodeChatMessage";
     capacity 9;
     fields [
-        1 => "id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "type": decode_sparse_node_chat_message_type_from_decoder(env, decoder)?.encode(env);
-        3 => "user_id": decoder.read_string(env)?.encode(env);
-        4 => "text_content": decoder.read_string(env)?.encode(env);
-        5 => "sent_at": decoder.read_var_uint()?.encode(env);
-        6 => "tool_calls": decoder.read_repeated(|decoder| decode_sparse_node_chat_tool_call_from_decoder(env, decoder))?.encode(env);
-        7 => "tool_results": decoder.read_repeated(|decoder| decode_sparse_node_chat_tool_result_from_decoder(env, decoder))?.encode(env);
-        8 => "sent_at64": decoder.read_var_uint64()?.encode(env);
+        1 => "id": one decode_sparse_guid_from_decoder;
+        2 => "type": one decode_sparse_node_chat_message_type_from_decoder;
+        3 => "user_id": one kiwi_sparse_string_value;
+        4 => "text_content": one kiwi_sparse_string_value;
+        5 => "sent_at": one kiwi_sparse_uint_value;
+        6 => "tool_calls": repeated decode_sparse_node_chat_tool_call_from_decoder;
+        7 => "tool_results": repeated decode_sparse_node_chat_tool_result_from_decoder;
+        8 => "sent_at64": one kiwi_sparse_uint64_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_chat_tool_call_from_decoder;
     env env;
     decoder decoder;
@@ -9569,13 +9695,13 @@ kiwi_sparse_message_decoder! {
     definition "NodeChatToolCall";
     capacity 4;
     fields [
-        1 => "tool_call_id": decoder.read_string(env)?.encode(env);
-        2 => "tool_name": decoder.read_string(env)?.encode(env);
-        3 => "args_json": decoder.read_string(env)?.encode(env);
+        1 => "tool_call_id": one kiwi_sparse_string_value;
+        2 => "tool_name": one kiwi_sparse_string_value;
+        3 => "args_json": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_chat_tool_result_from_decoder;
     env env;
     decoder decoder;
@@ -9583,13 +9709,13 @@ kiwi_sparse_message_decoder! {
     definition "NodeChatToolResult";
     capacity 4;
     fields [
-        1 => "tool_call_id": decoder.read_string(env)?.encode(env);
-        2 => "tool_name": decoder.read_string(env)?.encode(env);
-        3 => "result_json": decoder.read_string(env)?.encode(env);
+        1 => "tool_call_id": one kiwi_sparse_string_value;
+        2 => "tool_name": one kiwi_sparse_string_value;
+        3 => "result_json": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_chat_exchange_from_decoder;
     env env;
     decoder decoder;
@@ -9597,14 +9723,14 @@ kiwi_sparse_message_decoder! {
     definition "NodeChatExchange";
     capacity 5;
     fields [
-        1 => "node": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        2 => "messages": decoder.read_repeated(|decoder| decode_sparse_node_chat_message_from_decoder(env, decoder))?.encode(env);
-        3 => "is_typing": decoder.read_bool()?.encode(env);
-        4 => "file_updates": decoder.read_repeated(|decoder| decode_sparse_file_update_from_decoder(env, decoder))?.encode(env);
+        1 => "node": one decode_sparse_guid_from_decoder;
+        2 => "messages": repeated decode_sparse_node_chat_message_from_decoder;
+        3 => "is_typing": one kiwi_sparse_bool_value;
+        4 => "file_updates": repeated decode_sparse_file_update_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_node_chat_compression_state_from_decoder;
     env env;
     decoder decoder;
@@ -9612,12 +9738,12 @@ kiwi_sparse_message_decoder! {
     definition "NodeChatCompressionState";
     capacity 3;
     fields [
-        1 => "start_index": decoder.read_var_uint()?.encode(env);
-        2 => "summary": decoder.read_string(env)?.encode(env);
+        1 => "start_index": one kiwi_sparse_uint_value;
+        2 => "summary": one kiwi_sparse_string_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_file_update_from_decoder;
     env env;
     decoder decoder;
@@ -9625,13 +9751,13 @@ kiwi_sparse_message_decoder! {
     definition "FileUpdate";
     capacity 4;
     fields [
-        1 => "name": decoder.read_string(env)?.encode(env);
-        2 => "contents": decoder.read_string(env)?.encode(env);
-        3 => "is_deleted": decoder.read_bool()?.encode(env);
+        1 => "name": one kiwi_sparse_string_value;
+        2 => "contents": one kiwi_sparse_string_value;
+        3 => "is_deleted": one kiwi_sparse_bool_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_ai_chat_content_part_from_decoder;
     env env;
     decoder decoder;
@@ -9639,8 +9765,8 @@ kiwi_sparse_message_decoder! {
     definition "AIChatContentPart";
     capacity 3;
     fields [
-        1 => "type": decode_sparse_ai_chat_content_part_type_from_decoder(env, decoder)?.encode(env);
-        2 => "value": decode_sparse_ai_chat_content_part_any_value_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_ai_chat_content_part_type_from_decoder;
+        2 => "value": one decode_sparse_ai_chat_content_part_any_value_from_decoder;
     ]
 }
 
@@ -9655,7 +9781,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_ai_chat_content_part_any_value_from_decoder;
     env env;
     decoder decoder;
@@ -9663,8 +9789,8 @@ kiwi_sparse_message_decoder! {
     definition "AIChatContentPartAnyValue";
     capacity 3;
     fields [
-        1 => "text_value": decoder.read_string(env)?.encode(env);
-        2 => "selected_node_ids": decoder.read_repeated(|decoder| decoder.read_string(env))?.encode(env);
+        1 => "text_value": one kiwi_sparse_string_value;
+        2 => "selected_node_ids": repeated kiwi_sparse_string_value;
     ]
 }
 
@@ -9680,7 +9806,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_ai_chat_message_from_decoder;
     env env;
     decoder decoder;
@@ -9688,15 +9814,15 @@ kiwi_sparse_message_decoder! {
     definition "AIChatMessage";
     capacity 6;
     fields [
-        1 => "created_at_ms": decoder.read_var_uint()?.encode(env);
-        2 => "role": decode_sparse_ai_chat_message_role_from_decoder(env, decoder)?.encode(env);
-        3 => "content": decoder.read_repeated(|decoder| decode_sparse_ai_chat_content_part_from_decoder(env, decoder))?.encode(env);
-        4 => "client_id": decoder.read_string(env)?.encode(env);
-        5 => "created_at_ms64": decoder.read_var_uint64()?.encode(env);
+        1 => "created_at_ms": one kiwi_sparse_uint_value;
+        2 => "role": one decode_sparse_ai_chat_message_role_from_decoder;
+        3 => "content": repeated decode_sparse_ai_chat_content_part_from_decoder;
+        4 => "client_id": one kiwi_sparse_string_value;
+        5 => "created_at_ms64": one kiwi_sparse_uint64_value;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_ai_chat_thread_from_decoder;
     env env;
     decoder decoder;
@@ -9704,7 +9830,7 @@ kiwi_sparse_message_decoder! {
     definition "AIChatThread";
     capacity 2;
     fields [
-        1 => "messages": decoder.read_repeated(|decoder| decode_sparse_ai_chat_message_from_decoder(env, decoder))?.encode(env);
+        1 => "messages": repeated decode_sparse_ai_chat_message_from_decoder;
     ]
 }
 
@@ -9781,7 +9907,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_cooper_template_data_from_decoder;
     env env;
     decoder decoder;
@@ -9789,11 +9915,11 @@ kiwi_sparse_message_decoder! {
     definition "CooperTemplateData";
     capacity 2;
     fields [
-        1 => "type": decode_sparse_cooper_template_type_from_decoder(env, decoder)?.encode(env);
+        1 => "type": one decode_sparse_cooper_template_type_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_image_import_map_from_decoder;
     env env;
     decoder decoder;
@@ -9801,11 +9927,11 @@ kiwi_sparse_message_decoder! {
     definition "ImageImportMap";
     capacity 2;
     fields [
-        1 => "imports": decoder.read_repeated(|decoder| decode_sparse_image_import_from_decoder(env, decoder))?.encode(env);
+        1 => "imports": repeated decode_sparse_image_import_from_decoder;
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_image_import_from_decoder;
     env env;
     decoder decoder;
@@ -9813,8 +9939,8 @@ kiwi_sparse_message_decoder! {
     definition "ImageImport";
     capacity 3;
     fields [
-        1 => "name": decoder.read_string(env)?.encode(env);
-        2 => "image": decode_sparse_image_from_decoder(env, decoder)?.encode(env);
+        1 => "name": one kiwi_sparse_string_value;
+        2 => "image": one decode_sparse_image_from_decoder;
     ]
 }
 
@@ -9829,7 +9955,7 @@ kiwi_sparse_enum_decoder! {
     ]
 }
 
-kiwi_sparse_message_decoder! {
+kiwi_sparse_message_descriptor_decoder! {
     fn decode_sparse_bezier_handles_from_decoder;
     env env;
     decoder decoder;
@@ -9837,10 +9963,10 @@ kiwi_sparse_message_decoder! {
     definition "BezierHandles";
     capacity 5;
     fields [
-        1 => "p1x": decoder.read_var_float(env)?.encode(env);
-        2 => "p1y": decoder.read_var_float(env)?.encode(env);
-        3 => "p2x": decoder.read_var_float(env)?.encode(env);
-        4 => "p2y": decoder.read_var_float(env)?.encode(env);
+        1 => "p1x": one kiwi_sparse_float_value;
+        2 => "p1y": one kiwi_sparse_float_value;
+        3 => "p2x": one kiwi_sparse_float_value;
+        4 => "p2y": one kiwi_sparse_float_value;
     ]
 }
 
