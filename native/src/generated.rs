@@ -27464,6 +27464,30 @@ mod scene_xpath_runtime {
             { if $record .is_some() { $amount } else { 0 } }
         };
     }
+    macro_rules! scene_attr_clone {
+        ($record:expr, $index:expr, $cursor:expr, $name:expr) => {
+            { match $record { Some(value) => { if $index == $cursor { return Some(($name,
+            value.clone())); }; 1 }, None => { 0 }, } }
+        };
+    }
+    macro_rules! scene_attr_to_string {
+        ($record:expr, $index:expr, $cursor:expr, $name:expr) => {
+            { match $record { Some(value) => { if $index == $cursor { return Some(($name,
+            value.to_string())); }; 1 }, None => { 0 }, } }
+        };
+    }
+    macro_rules! scene_attr_x_to_string {
+        ($record:expr, $index:expr, $cursor:expr, $name:expr) => {
+            { match $record { Some(value) => { if $index == $cursor { return Some(($name,
+            value.x.to_string())); }; 1 }, None => { 0 }, } }
+        };
+    }
+    macro_rules! scene_attr_y_to_string {
+        ($record:expr, $index:expr, $cursor:expr, $name:expr) => {
+            { match $record { Some(value) => { if $index == $cursor { return Some(($name,
+            value.y.to_string())); }; 1 }, None => { 0 }, } }
+        };
+    }
     fn read_scene_float64_value(decoder: &mut Decoder<'_>) -> NifResult<f64> {
         let value = decoder.read_var_float_value()?;
         Ok(value as f64)
@@ -27517,48 +27541,16 @@ mod scene_xpath_runtime {
             return Some(("type", record.node_type.to_string()));
         }
         cursor += 1;
-        if let Some(value) = record.name.as_ref() {
-            if index == cursor {
-                return Some(("name", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.parent_guid.as_ref() {
-            if index == cursor {
-                return Some(("parent_guid", value.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.position.as_ref() {
-            if index == cursor {
-                return Some(("position", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.size.as_ref() {
-            if index == cursor {
-                return Some(("x", value.x.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.size.as_ref() {
-            if index == cursor {
-                return Some(("y", value.y.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.size.as_ref() {
-            if index == cursor {
-                return Some(("width", value.x.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.size.as_ref() {
-            if index == cursor {
-                return Some(("height", value.y.to_string()));
-            }
-            cursor += 1;
-        }
+        cursor += scene_attr_clone!(record.name.as_ref(), index, cursor, "name");
+        cursor
+            += scene_attr_to_string!(
+                record.parent_guid.as_ref(), index, cursor, "parent_guid"
+            );
+        cursor += scene_attr_clone!(record.position.as_ref(), index, cursor, "position");
+        cursor += scene_attr_x_to_string!(record.size.as_ref(), index, cursor, "x");
+        cursor += scene_attr_y_to_string!(record.size.as_ref(), index, cursor, "y");
+        cursor += scene_attr_x_to_string!(record.size.as_ref(), index, cursor, "width");
+        cursor += scene_attr_y_to_string!(record.size.as_ref(), index, cursor, "height");
         if let Some(value) = record.transform.as_ref() {
             if index == cursor {
                 return Some((
@@ -27571,107 +27563,54 @@ mod scene_xpath_runtime {
             }
             cursor += 1;
         }
-        if let Some(value) = record.visible {
-            if index == cursor {
-                return Some(("visible", value.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.locked {
-            if index == cursor {
-                return Some(("locked", value.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.opacity {
-            if index == cursor {
-                return Some(("opacity", value.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.text.as_ref() {
-            if index == cursor {
-                return Some(("text", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.font_family.as_ref() {
-            if index == cursor {
-                return Some(("font_family", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.font_style.as_ref() {
-            if index == cursor {
-                return Some(("font_style", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.font_postscript.as_ref() {
-            if index == cursor {
-                return Some(("font_postscript", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.font_size {
-            if index == cursor {
-                return Some(("font_size", value.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.text_style_guid.as_ref() {
-            if index == cursor {
-                return Some(("text_style_guid", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.component_key.as_ref() {
-            if index == cursor {
-                return Some(("component_key", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.origin_component_key.as_ref() {
-            if index == cursor {
-                return Some(("origin_component_key", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.fill_style_guid.as_ref() {
-            if index == cursor {
-                return Some(("fill_style_guid", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.stroke_style_guid.as_ref() {
-            if index == cursor {
-                return Some(("stroke_style_guid", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.effect_style_guid.as_ref() {
-            if index == cursor {
-                return Some(("effect_style_guid", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.grid_style_guid.as_ref() {
-            if index == cursor {
-                return Some(("grid_style_guid", value.clone()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.fill_count {
-            if index == cursor {
-                return Some(("fill_count", value.to_string()));
-            }
-            cursor += 1;
-        }
-        if let Some(value) = record.stroke_count {
-            if index == cursor {
-                return Some(("stroke_count", value.to_string()));
-            }
-        }
+        cursor += scene_attr_to_string!(record.visible, index, cursor, "visible");
+        cursor += scene_attr_to_string!(record.locked, index, cursor, "locked");
+        cursor += scene_attr_to_string!(record.opacity, index, cursor, "opacity");
+        cursor += scene_attr_clone!(record.text.as_ref(), index, cursor, "text");
+        cursor
+            += scene_attr_clone!(
+                record.font_family.as_ref(), index, cursor, "font_family"
+            );
+        cursor
+            += scene_attr_clone!(
+                record.font_style.as_ref(), index, cursor, "font_style"
+            );
+        cursor
+            += scene_attr_clone!(
+                record.font_postscript.as_ref(), index, cursor, "font_postscript"
+            );
+        cursor += scene_attr_to_string!(record.font_size, index, cursor, "font_size");
+        cursor
+            += scene_attr_clone!(
+                record.text_style_guid.as_ref(), index, cursor, "text_style_guid"
+            );
+        cursor
+            += scene_attr_clone!(
+                record.component_key.as_ref(), index, cursor, "component_key"
+            );
+        cursor
+            += scene_attr_clone!(
+                record.origin_component_key.as_ref(), index, cursor,
+                "origin_component_key"
+            );
+        cursor
+            += scene_attr_clone!(
+                record.fill_style_guid.as_ref(), index, cursor, "fill_style_guid"
+            );
+        cursor
+            += scene_attr_clone!(
+                record.stroke_style_guid.as_ref(), index, cursor, "stroke_style_guid"
+            );
+        cursor
+            += scene_attr_clone!(
+                record.effect_style_guid.as_ref(), index, cursor, "effect_style_guid"
+            );
+        cursor
+            += scene_attr_clone!(
+                record.grid_style_guid.as_ref(), index, cursor, "grid_style_guid"
+            );
+        cursor += scene_attr_to_string!(record.fill_count, index, cursor, "fill_count");
+        scene_attr_to_string!(record.stroke_count, index, cursor, "stroke_count");
         None
     }
     fn scene_node_record_attr_count(record: &SceneNodeRecord) -> usize {

@@ -69,7 +69,13 @@ defmodule Figler.Codegen.Native.SupportFunction do
   """
   @spec scene_reader_items() :: [RustQ.Rust.Fragment.t()]
   def scene_reader_items do
-    MetaAST.macro_items(__MODULE__, [:scene_attr_count]) ++
+    MetaAST.macro_items(__MODULE__, [
+      :scene_attr_count,
+      :scene_attr_clone,
+      :scene_attr_to_string,
+      :scene_attr_x_to_string,
+      :scene_attr_y_to_string
+    ]) ++
       MetaAST.items(__MODULE__, [
         :read_scene_float64_value,
         :read_scene_size_value,
@@ -194,6 +200,62 @@ defmodule Figler.Codegen.Native.SupportFunction do
       amount
     else
       0
+    end
+  end
+
+  defrustmacro scene_attr_clone(record, index, cursor, name) do
+    case record do
+      {:some, value} ->
+        if index == cursor do
+          return!(some({name, value.clone()}))
+        end
+
+        1
+
+      :none ->
+        0
+    end
+  end
+
+  defrustmacro scene_attr_to_string(record, index, cursor, name) do
+    case record do
+      {:some, value} ->
+        if index == cursor do
+          return!(some({name, value.to_string()}))
+        end
+
+        1
+
+      :none ->
+        0
+    end
+  end
+
+  defrustmacro scene_attr_x_to_string(record, index, cursor, name) do
+    case record do
+      {:some, value} ->
+        if index == cursor do
+          return!(some({name, value.x.to_string()}))
+        end
+
+        1
+
+      :none ->
+        0
+    end
+  end
+
+  defrustmacro scene_attr_y_to_string(record, index, cursor, name) do
+    case record do
+      {:some, value} ->
+        if index == cursor do
+          return!(some({name, value.y.to_string()}))
+        end
+
+        1
+
+      :none ->
+        0
     end
   end
 
@@ -429,25 +491,87 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   defp lookup_optional_scene_node_record_attr({%XPathAttr{} = attr, last?}) do
     accessor = xpath_accessor(attr)
-    value = xpath_value(attr.value)
 
-    cursor_advance =
-      if last?,
-        do: quote(do: :ok),
-        else: quote(do: assign!(cursor, cursor + 1))
-
-    quote do
-      case unquote(accessor) do
-        {:some, value} ->
-          if index == cursor do
-            return!(some({unquote(attr.attr), unquote(value)}))
+    case scene_attr_lookup_macro(attr.value) do
+      :scene_attr_clone ->
+        if last? do
+          quote do
+            scene_attr_clone!(unquote(accessor), index, cursor, unquote(attr.attr))
           end
+        else
+          quote do
+            assign!(
+              cursor,
+              cursor + scene_attr_clone!(unquote(accessor), index, cursor, unquote(attr.attr))
+            )
+          end
+        end
 
-          unquote(cursor_advance)
+      :scene_attr_to_string ->
+        if last? do
+          quote do
+            scene_attr_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
+          end
+        else
+          quote do
+            assign!(
+              cursor,
+              cursor + scene_attr_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
+            )
+          end
+        end
 
-        :none ->
-          :ok
-      end
+      :scene_attr_x_to_string ->
+        if last? do
+          quote do
+            scene_attr_x_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
+          end
+        else
+          quote do
+            assign!(
+              cursor,
+              cursor +
+                scene_attr_x_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
+            )
+          end
+        end
+
+      :scene_attr_y_to_string ->
+        if last? do
+          quote do
+            scene_attr_y_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
+          end
+        else
+          quote do
+            assign!(
+              cursor,
+              cursor +
+                scene_attr_y_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
+            )
+          end
+        end
+
+      nil ->
+        value = xpath_value(attr.value)
+
+        cursor_advance =
+          if last?,
+            do: quote(do: :ok),
+            else: quote(do: assign!(cursor, cursor + 1))
+
+        quote do
+          case unquote(accessor) do
+            {:some, value} ->
+              if index == cursor do
+                return!(some({unquote(attr.attr), unquote(value)}))
+              end
+
+              unquote(cursor_advance)
+
+            :none ->
+              :ok
+          end
+        end
     end
   end
 
@@ -462,6 +586,17 @@ defmodule Figler.Codegen.Native.SupportFunction do
       record.unquote(field)
     end
   end
+
+  defp scene_attr_lookup_macro(%XPathValue{kind: :value_clone}), do: :scene_attr_clone
+  defp scene_attr_lookup_macro(%XPathValue{kind: :value_to_string}), do: :scene_attr_to_string
+
+  defp scene_attr_lookup_macro(%XPathValue{kind: :field_to_string, field: :x}),
+    do: :scene_attr_x_to_string
+
+  defp scene_attr_lookup_macro(%XPathValue{kind: :field_to_string, field: :y}),
+    do: :scene_attr_y_to_string
+
+  defp scene_attr_lookup_macro(%XPathValue{}), do: nil
 
   defp xpath_value(%XPathValue{kind: :field_to_string, field: field}) do
     quote do
