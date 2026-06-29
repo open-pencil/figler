@@ -1,22 +1,15 @@
 defmodule Figler.Native.CodecNifs do
   @moduledoc """
-  Thin Elixir wrapper around native Kiwi codec entrypoints.
+  Thin Elixir wrapper around native sparse Kiwi codec entrypoints.
 
-  The functions in this module intentionally mirror NIF names and return raw
-  decoded terms for callers that need sparse or full schema decoding without
-  the higher-level convenience functions.
+  Dense schema decoding is provided by generated Elixir modules via
+  `KiwiCodec.decode/2`; the native codec surface is reserved for sparse and
+  focus-oriented map decoding that avoids materializing full schema structs.
   """
 
   alias Figler.Native.Module
 
   @delegates [
-    :decode_guid,
-    :decode_vector,
-    :decode_matrix,
-    :decode_parent_index,
-    :decode_image,
-    :decode_node_change,
-    :decode_message,
     :decode_sparse_message
   ]
 

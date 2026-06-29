@@ -56,8 +56,9 @@ generate "native", "native/src/generated.rs" do
 
   content([
     KiwiCodec.RustlerGenerator.source(schema,
-      entrypoints: {:nif_stubs, Figler.Native.Entrypoints},
-      features: [:full, :sparse, :skip],
+      entrypoints: [],
+      definitions: ["Message"],
+      features: [:sparse, :skip],
       module_prefix: "Figler.Schema"
     ),
     Figler.Codegen.Native.source(schema)

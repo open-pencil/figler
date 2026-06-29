@@ -1,10 +1,9 @@
 defmodule Figler.NativeTest do
   use ExUnit.Case, async: true
 
-  alias Figler.Native.CodecNifs, as: Codec
   alias Figler.Native.SceneNifs, as: Scene
 
-  test "decodes generated primitive structs" do
+  test "decodes generated primitive structs through Elixir codec" do
     guid = struct(Figler.Schema.GUID, session_id: 12, local_id: 34)
     vector = struct(Figler.Schema.Vector, x: 100.0, y: 50.0)
 
@@ -12,9 +11,11 @@ defmodule Figler.NativeTest do
     image = struct(Figler.Schema.Image, hash: <<1, 2, 3>>, name: "Preview", data_blob: 7)
     partial_image = struct(Figler.Schema.Image, name: "Preview")
 
-    assert Codec.decode_guid(KiwiCodec.encode(guid)) == guid
-    assert Codec.decode_vector(KiwiCodec.encode(vector)) == vector
-    assert Codec.decode_parent_index(KiwiCodec.encode(parent_index)) == parent_index
+    assert KiwiCodec.decode(KiwiCodec.encode(guid), Figler.Schema.GUID) == guid
+    assert KiwiCodec.decode(KiwiCodec.encode(vector), Figler.Schema.Vector) == vector
+
+    assert KiwiCodec.decode(KiwiCodec.encode(parent_index), Figler.Schema.ParentIndex) ==
+             parent_index
 
     node_change =
       struct(Figler.Schema.NodeChange,
@@ -36,14 +37,16 @@ defmodule Figler.NativeTest do
     partial_message = struct(Figler.Schema.Message, session_id: 12)
     unknown_enum_message = struct(Figler.Schema.Message, type: 999)
 
-    assert Codec.decode_image(KiwiCodec.encode(image)) == image
-    assert Codec.decode_image(KiwiCodec.encode(partial_image)) == partial_image
-    assert Codec.decode_node_change(KiwiCodec.encode(node_change)) == node_change
-    assert Codec.decode_message(KiwiCodec.encode(message)) == message
-    assert Codec.decode_message(KiwiCodec.encode(partial_message)) == partial_message
+    assert KiwiCodec.decode(KiwiCodec.encode(image), Figler.Schema.Image) == image
+    assert KiwiCodec.decode(KiwiCodec.encode(partial_image), Figler.Schema.Image) == partial_image
 
-    assert Codec.decode_message(KiwiCodec.encode(unknown_enum_message)) ==
-             unknown_enum_message
+    assert KiwiCodec.decode(KiwiCodec.encode(node_change), Figler.Schema.NodeChange) ==
+             node_change
+
+    assert Figler.decode_message(KiwiCodec.encode(message)) == message
+    assert Figler.decode_message(KiwiCodec.encode(partial_message)) == partial_message
+
+    assert Figler.decode_message(KiwiCodec.encode(unknown_enum_message)) == unknown_enum_message
   end
 
   test "decodes sparse messages without absent fields" do

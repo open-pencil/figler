@@ -50,7 +50,7 @@ defmodule Mix.Tasks.Figler.Bench.Fixtures do
       {full_decode_us, full_decode_mem} =
         maybe_measured(
           full_decode?,
-          fn -> Codec.decode_message(payload) end,
+          fn -> Figler.decode_message(payload) end,
           &message_info/1
         )
 

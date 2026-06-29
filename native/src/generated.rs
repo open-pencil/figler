@@ -10,85 +10,6 @@ use std::sync::OnceLock;
 use crate::runtime::Decoder;
 
 
-macro_rules! kiwi_enum_decoder {
-    (
-        fn $name:ident;
-        variants [$($value:literal => $atom_name:literal;)*]
-    ) => {
-        fn $name<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-            match decoder.read_var_uint()? as i64 {
-                $(
-                    $value => Ok(Atom::from_str(env, $atom_name).unwrap().encode(env)),
-                )*
-                value => Ok(value.encode(env)),
-            }
-        }
-    };
-}
-
-macro_rules! kiwi_struct_decoder {
-    (
-        fn $name:ident;
-        env $env:ident;
-        decoder $decoder:ident;
-        module_static $module_static:ident;
-        keys_static $keys_static:ident;
-        module $module_name:literal;
-        keys [$($key:literal),* $(,)?];
-        fields [$($field_expr:expr),* $(,)?]
-    ) => {
-        fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-            let module_atom = cached_atom($env, &$module_static, $module_name);
-            let keys = cached_struct_keys($env, &$keys_static, &[$($key),*]);
-            let mut values = Vec::with_capacity(keys.len());
-            values.push(module_atom.as_c_arg());
-            $(
-                values.push(($field_expr).encode($env).as_c_arg());
-            )*
-            make_struct_from_nif_term_arrays($env, keys, &values)
-        }
-    };
-}
-
-macro_rules! kiwi_message_decoder {
-    (
-        fn $decoder_name:ident;
-        fields_fn $fields_name:ident;
-        env $env:ident;
-        decoder $decoder:ident;
-        module_static $module_static:ident;
-        keys_static $keys_static:ident;
-        module $module_name:literal;
-        keys [$($key:literal),* $(,)?];
-        fields [$($field_id:literal => $index:literal: $field_expr:expr;)*]
-    ) => {
-        fn $decoder_name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-            let module_atom = cached_atom($env, &$module_static, $module_name);
-            let keys = cached_struct_keys($env, &$keys_static, &[$($key),*]);
-            let values = default_struct_values($env, module_atom, keys.len() - 1);
-            $fields_name($env, $decoder, keys, values)
-        }
-
-        fn $fields_name<'a>(
-            $env: Env<'a>,
-            $decoder: &mut Decoder<'_>,
-            keys: &[rustler::wrapper::NIF_TERM],
-            mut values: Vec<rustler::wrapper::NIF_TERM>,
-        ) -> NifResult<Term<'a>> {
-            match $decoder.read_var_uint()? {
-                0 => make_struct_from_nif_term_arrays($env, keys, &values),
-                $(
-                    $field_id => {
-                        values[$index] = ($field_expr).encode($env).as_c_arg();
-                        $fields_name($env, $decoder, keys, values)
-                    }
-                )*
-                _unknown => Err(Error::BadArg),
-            }
-        }
-    };
-}
-
 type KiwiSkipFn = fn(&mut Decoder<'_>) -> NifResult<()>;
 
 enum KiwiSkipKind {
@@ -229,6 +150,7 @@ macro_rules! kiwi_skip_message_decoder {
     };
 }
 
+
 #[allow(unused_macros)]
 macro_rules! kiwi_sparse_enum_decoder {
     (
@@ -365,8 +287,10 @@ fn make_struct_from_nif_term_arrays<'a>(
 }
 
 
-kiwi_enum_decoder! {
-    fn decode_message_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_message_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "join_start";
         1 => "node_changes";
@@ -396,40 +320,50 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_axis_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_axis_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "x";
         1 => "y";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_access_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_access_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "read_only";
         1 => "read_write";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_node_phase_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_node_phase_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "created";
         1 => "removed";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_winding_rule_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_winding_rule_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "nonzero";
         1 => "odd";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_node_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_node_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "document";
@@ -499,8 +433,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_shape_with_text_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_shape_with_text_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "square";
         1 => "ellipse";
@@ -535,8 +471,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_blend_mode_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_blend_mode_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "pass_through";
         1 => "normal";
@@ -560,8 +498,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_paint_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_paint_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "solid";
         1 => "gradient_linear";
@@ -577,8 +517,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_image_scale_mode_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_image_scale_mode_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "stretch";
         1 => "fit";
@@ -587,8 +529,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_effect_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_effect_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "inner_shadow";
         1 => "drop_shadow";
@@ -603,8 +547,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_text_case_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_text_case_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "original";
         1 => "upper";
@@ -615,8 +561,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_text_decoration_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_text_decoration_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "underline";
@@ -624,8 +572,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_text_decoration_style_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_text_decoration_style_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "solid";
         1 => "dotted";
@@ -633,16 +583,20 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_leading_trim_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_leading_trim_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "cap_height";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_number_units_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_number_units_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "raw";
         1 => "pixels";
@@ -650,8 +604,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_constraint_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_constraint_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "min";
         1 => "center";
@@ -663,8 +619,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stroke_align_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stroke_align_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "center";
         1 => "inside";
@@ -673,8 +631,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stroke_cap_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stroke_cap_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "round";
@@ -700,8 +660,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stroke_join_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stroke_join_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "miter";
         1 => "bevel";
@@ -709,8 +671,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_boolean_operation_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_boolean_operation_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "union";
         1 => "intersect";
@@ -719,8 +683,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_text_align_horizontal_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_text_align_horizontal_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "left";
         1 => "center";
@@ -729,8 +695,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_text_align_vertical_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_text_align_vertical_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "top";
         1 => "center";
@@ -738,8 +706,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_mouse_cursor_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_mouse_cursor_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "default";
         1 => "crosshair";
@@ -755,8 +725,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_vector_mirror_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_vector_mirror_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "angle";
@@ -764,8 +736,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_image_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_image_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "png";
         1 => "jpeg";
@@ -776,8 +750,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_export_constraint_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_export_constraint_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "content_scale";
         1 => "content_width";
@@ -785,8 +761,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_layout_grid_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_layout_grid_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "min";
         1 => "center";
@@ -795,16 +773,20 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_layout_grid_pattern_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_layout_grid_pattern_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "stripes";
         1 => "grid";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_text_auto_resize_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_text_auto_resize_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "width_and_height";
@@ -812,16 +794,20 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_text_truncation_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_text_truncation_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "disabled";
         1 => "ending";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_style_set_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_style_set_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "personal";
         1 => "team";
@@ -831,8 +817,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_style_set_content_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_style_set_content_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "solid";
         1 => "gradient";
@@ -840,8 +828,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stack_mode_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stack_mode_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "horizontal";
@@ -850,8 +840,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stack_align_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stack_align_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "min";
         1 => "center";
@@ -860,8 +852,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stack_counter_align_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stack_counter_align_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "min";
         1 => "center";
@@ -872,8 +866,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stack_justify_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stack_justify_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "min";
         1 => "center";
@@ -883,8 +879,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_grid_child_align_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_grid_child_align_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "auto";
         1 => "min";
@@ -893,16 +891,20 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_grid_auto_tracks_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_grid_auto_tracks_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "rows";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stack_size_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stack_size_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "fixed";
         1 => "resize_to_fit";
@@ -910,32 +912,40 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stack_positioning_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stack_positioning_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "auto";
         1 => "absolute";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stack_wrap_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stack_wrap_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "no_wrap";
         1 => "wrap";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_stack_counter_align_content_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_stack_counter_align_content_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "auto";
         1 => "space_between";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_connection_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_connection_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "internal_node";
@@ -951,8 +961,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_interaction_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_interaction_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "on_click";
         1 => "after_timeout";
@@ -973,8 +985,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_transition_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_transition_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "instant_transition";
         1 => "dissolve";
@@ -1005,8 +1019,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_easing_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_easing_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "in_cubic";
         1 => "out_cubic";
@@ -1026,8 +1042,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_scroll_direction_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_scroll_direction_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "horizontal";
@@ -1036,227 +1054,151 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_scroll_contracted_state_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_scroll_contracted_state_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "expanded";
         1 => "contracted";
     ]
 }
 
-static GUID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_guid_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_guid_from_decoder;
     env env;
     decoder decoder;
-    module_static GUID_MODULE_ATOM;
-    keys_static GUID_STRUCT_KEYS;
     module "Elixir.Figler.Schema.GUID";
-    keys ["session_id", "local_id"];
+    capacity 3;
     fields [
-        decoder.read_var_uint()?,
-        decoder.read_var_uint()?
+        "session_id": decoder.read_var_uint()?.encode(env);
+        "local_id": decoder.read_var_uint()?.encode(env);
     ]
 }
 
-static COLOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_color_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_color_from_decoder;
     env env;
     decoder decoder;
-    module_static COLOR_MODULE_ATOM;
-    keys_static COLOR_STRUCT_KEYS;
     module "Elixir.Figler.Schema.Color";
-    keys ["r", "g", "b", "a"];
+    capacity 5;
     fields [
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?
+        "r": decoder.read_var_float(env)?.encode(env);
+        "g": decoder.read_var_float(env)?.encode(env);
+        "b": decoder.read_var_float(env)?.encode(env);
+        "a": decoder.read_var_float(env)?.encode(env);
     ]
 }
 
-static VECTOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VECTOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_vector_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_vector_from_decoder;
     env env;
     decoder decoder;
-    module_static VECTOR_MODULE_ATOM;
-    keys_static VECTOR_STRUCT_KEYS;
     module "Elixir.Figler.Schema.Vector";
-    keys ["x", "y"];
+    capacity 3;
     fields [
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?
+        "x": decoder.read_var_float(env)?.encode(env);
+        "y": decoder.read_var_float(env)?.encode(env);
     ]
 }
 
-static RECT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static RECT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_rect_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_rect_from_decoder;
     env env;
     decoder decoder;
-    module_static RECT_MODULE_ATOM;
-    keys_static RECT_STRUCT_KEYS;
     module "Elixir.Figler.Schema.Rect";
-    keys ["x", "y", "w", "h"];
+    capacity 5;
     fields [
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?
+        "x": decoder.read_var_float(env)?.encode(env);
+        "y": decoder.read_var_float(env)?.encode(env);
+        "w": decoder.read_var_float(env)?.encode(env);
+        "h": decoder.read_var_float(env)?.encode(env);
     ]
 }
 
-static COLOR_STOP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLOR_STOP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_color_stop_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_color_stop_from_decoder;
     env env;
     decoder decoder;
-    module_static COLOR_STOP_MODULE_ATOM;
-    keys_static COLOR_STOP_STRUCT_KEYS;
     module "Elixir.Figler.Schema.ColorStop";
-    keys ["color", "position"];
+    capacity 3;
     fields [
-        decode_color_from_decoder(env, decoder)?,
-        decoder.read_var_float(env)?
+        "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
+        "position": decoder.read_var_float(env)?.encode(env);
     ]
 }
 
-static COLOR_STOP_VAR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLOR_STOP_VAR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_color_stop_var_from_decoder;
-    fields_fn decode_color_stop_var_fields_from_decoder;
+kiwi_sparse_message_decoder! {
+    fn decode_sparse_color_stop_var_from_decoder;
     env env;
     decoder decoder;
-    module_static COLOR_STOP_VAR_MODULE_ATOM;
-    keys_static COLOR_STOP_VAR_STRUCT_KEYS;
     module "Elixir.Figler.Schema.ColorStopVar";
-    keys ["color", "color_var", "position"];
+    definition "ColorStopVar";
+    capacity 4;
     fields [
-        1 => 1: decode_color_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_var_float(env)?;
+        1 => "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
+        2 => "color_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
+        3 => "position": decoder.read_var_float(env)?.encode(env);
     ]
 }
 
-static MATRIX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MATRIX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_matrix_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_matrix_from_decoder;
     env env;
     decoder decoder;
-    module_static MATRIX_MODULE_ATOM;
-    keys_static MATRIX_STRUCT_KEYS;
     module "Elixir.Figler.Schema.Matrix";
-    keys ["m00", "m01", "m02", "m10", "m11", "m12"];
+    capacity 7;
     fields [
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?
+        "m00": decoder.read_var_float(env)?.encode(env);
+        "m01": decoder.read_var_float(env)?.encode(env);
+        "m02": decoder.read_var_float(env)?.encode(env);
+        "m10": decoder.read_var_float(env)?.encode(env);
+        "m11": decoder.read_var_float(env)?.encode(env);
+        "m12": decoder.read_var_float(env)?.encode(env);
     ]
 }
 
-static PARENT_INDEX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PARENT_INDEX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_parent_index_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_parent_index_from_decoder;
     env env;
     decoder decoder;
-    module_static PARENT_INDEX_MODULE_ATOM;
-    keys_static PARENT_INDEX_STRUCT_KEYS;
     module "Elixir.Figler.Schema.ParentIndex";
-    keys ["guid", "position"];
+    capacity 3;
     fields [
-        decode_guid_from_decoder(env, decoder)?,
-        decoder.read_string(env)?
+        "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        "position": decoder.read_string(env)?.encode(env);
     ]
 }
 
-static NUMBER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NUMBER_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_number_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_number_from_decoder;
     env env;
     decoder decoder;
-    module_static NUMBER_MODULE_ATOM;
-    keys_static NUMBER_STRUCT_KEYS;
     module "Elixir.Figler.Schema.Number";
-    keys ["value", "units"];
+    capacity 3;
     fields [
-        decoder.read_var_float(env)?,
-        decode_number_units_from_decoder(env, decoder)?
+        "value": decoder.read_var_float(env)?.encode(env);
+        "units": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
     ]
 }
 
-static FONT_NAME_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_NAME_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_font_name_from_decoder;
+kiwi_sparse_struct_decoder! {
+    fn decode_sparse_font_name_from_decoder;
     env env;
     decoder decoder;
-    module_static FONT_NAME_MODULE_ATOM;
-    keys_static FONT_NAME_STRUCT_KEYS;
     module "Elixir.Figler.Schema.FontName";
-    keys ["family", "style", "postscript"];
+    capacity 4;
     fields [
-        decoder.read_string(env)?,
-        decoder.read_string(env)?,
-        decoder.read_string(env)?
+        "family": decoder.read_string(env)?.encode(env);
+        "style": decoder.read_string(env)?.encode(env);
+        "postscript": decoder.read_string(env)?.encode(env);
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_font_variant_numeric_figure_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_font_variant_numeric_figure_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "normal";
         1 => "lining";
@@ -1264,8 +1206,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_font_variant_numeric_spacing_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_font_variant_numeric_spacing_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "normal";
         1 => "proportional";
@@ -1273,8 +1217,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_font_variant_numeric_fraction_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_font_variant_numeric_fraction_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "normal";
         1 => "diagonal";
@@ -1282,8 +1228,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_font_variant_caps_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_font_variant_caps_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "normal";
         1 => "small";
@@ -1295,8 +1243,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_font_variant_position_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_font_variant_position_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "normal";
         1 => "sub";
@@ -1304,32 +1254,40 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_font_style_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_font_style_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "normal";
         1 => "italic";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_semantic_weight_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_semantic_weight_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "normal";
         1 => "bold";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_semantic_italic_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_semantic_italic_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "normal";
         1 => "italic";
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_code_snapshot_state_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_code_snapshot_state_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "initial";
         1 => "snapshotting";
@@ -1339,41 +1297,37 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_snapshot_capture_mode_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_snapshot_capture_mode_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "full";
         1 => "partial";
     ]
 }
 
-static CODE_SOURCE_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SOURCE_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_source_info_from_decoder;
-    fields_fn decode_code_source_info_fields_from_decoder;
+kiwi_sparse_message_decoder! {
+    fn decode_sparse_code_source_info_from_decoder;
     env env;
     decoder decoder;
-    module_static CODE_SOURCE_INFO_MODULE_ATOM;
-    keys_static CODE_SOURCE_INFO_STRUCT_KEYS;
     module "Elixir.Figler.Schema.CodeSourceInfo";
-    keys ["origin_reference_id", "origin_node_id", "linked_snapshot_id", "capture_mode", "source_blob_ref", "source_element_id"];
+    definition "CodeSourceInfo";
+    capacity 7;
     fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decode_snapshot_capture_mode_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_string(env)?;
-        6 => 6: decoder.read_string(env)?;
+        1 => "origin_reference_id": decoder.read_string(env)?.encode(env);
+        2 => "origin_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        3 => "linked_snapshot_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
+        4 => "capture_mode": decode_sparse_snapshot_capture_mode_from_decoder(env, decoder)?.encode(env);
+        5 => "source_blob_ref": decoder.read_string(env)?.encode(env);
+        6 => "source_element_id": decoder.read_string(env)?.encode(env);
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_code_object_type_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_code_object_type_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "web_layer";
         1 => "web_interaction";
@@ -1387,31 +1341,25 @@ kiwi_enum_decoder! {
     ]
 }
 
-static CUSTOM_TOOL_ARTIFACT_REF_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CUSTOM_TOOL_ARTIFACT_REF_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_custom_tool_artifact_ref_from_decoder;
-    fields_fn decode_custom_tool_artifact_ref_fields_from_decoder;
+kiwi_sparse_message_decoder! {
+    fn decode_sparse_custom_tool_artifact_ref_from_decoder;
     env env;
     decoder decoder;
-    module_static CUSTOM_TOOL_ARTIFACT_REF_MODULE_ATOM;
-    keys_static CUSTOM_TOOL_ARTIFACT_REF_STRUCT_KEYS;
     module "Elixir.Figler.Schema.CustomToolArtifactRef";
-    keys ["custom_tool_id", "custom_tool_version", "published_custom_tool_id", "published_custom_tool_version_id"];
+    definition "CustomToolArtifactRef";
+    capacity 5;
     fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
+        1 => "custom_tool_id": decoder.read_string(env)?.encode(env);
+        2 => "custom_tool_version": decoder.read_string(env)?.encode(env);
+        3 => "published_custom_tool_id": decoder.read_string(env)?.encode(env);
+        4 => "published_custom_tool_version_id": decoder.read_string(env)?.encode(env);
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_lock_mode_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_lock_mode_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "none";
         1 => "all";
@@ -1419,8 +1367,10 @@ kiwi_enum_decoder! {
     ]
 }
 
-kiwi_enum_decoder! {
-    fn decode_open_type_feature_from_decoder;
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_open_type_feature_from_decoder;
+    env env;
+    decoder decoder;
     variants [
         0 => "pcap";
         1 => "c2_pc";
@@ -1654,11591 +1604,6 @@ kiwi_enum_decoder! {
     ]
 }
 
-static EXPORT_CONSTRAINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_CONSTRAINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_export_constraint_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EXPORT_CONSTRAINT_MODULE_ATOM;
-    keys_static EXPORT_CONSTRAINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ExportConstraint";
-    keys ["type", "value"];
-    fields [
-        decode_export_constraint_type_from_decoder(env, decoder)?,
-        decoder.read_var_float(env)?
-    ]
-}
-
-static GUID_MAPPING_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_MAPPING_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_guid_mapping_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUID_MAPPING_MODULE_ATOM;
-    keys_static GUID_MAPPING_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GUIDMapping";
-    keys ["from", "to"];
-    fields [
-        decode_guid_from_decoder(env, decoder)?,
-        decode_guid_from_decoder(env, decoder)?
-    ]
-}
-
-static BLOB_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BLOB_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_blob_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BLOB_MODULE_ATOM;
-    keys_static BLOB_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Blob";
-    keys ["bytes"];
-    fields [
-        decoder.read_byte_array(env)?
-    ]
-}
-
-static IMAGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_image_from_decoder;
-    fields_fn decode_image_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static IMAGE_MODULE_ATOM;
-    keys_static IMAGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Image";
-    keys ["hash", "name", "data_blob"];
-    fields [
-        1 => 1: decoder.read_byte_array(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_var_uint()?;
-    ]
-}
-
-static VIDEO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VIDEO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_video_from_decoder;
-    fields_fn decode_video_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VIDEO_MODULE_ATOM;
-    keys_static VIDEO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Video";
-    keys ["hash", "s3_url"];
-    fields [
-        1 => 1: decoder.read_byte_array(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static PASTE_SOURCE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PASTE_SOURCE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_paste_source_from_decoder;
-    fields_fn decode_paste_source_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PASTE_SOURCE_MODULE_ATOM;
-    keys_static PASTE_SOURCE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PasteSource";
-    keys ["src_file", "src_node"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static FILTER_COLOR_ADJUST_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FILTER_COLOR_ADJUST_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_filter_color_adjust_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FILTER_COLOR_ADJUST_MODULE_ATOM;
-    keys_static FILTER_COLOR_ADJUST_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FilterColorAdjust";
-    keys ["tint", "shadows", "highlights", "detail", "exposure", "vignette", "temperature", "vibrance"];
-    fields [
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?
-    ]
-}
-
-static PAINT_FILTER_MESSAGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_FILTER_MESSAGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_paint_filter_message_from_decoder;
-    fields_fn decode_paint_filter_message_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PAINT_FILTER_MESSAGE_MODULE_ATOM;
-    keys_static PAINT_FILTER_MESSAGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PaintFilterMessage";
-    keys ["tint", "shadows", "highlights", "detail", "exposure", "vignette", "temperature", "vibrance", "contrast", "brightness"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decoder.read_var_float(env)?;
-        6 => 6: decoder.read_var_float(env)?;
-        7 => 7: decoder.read_var_float(env)?;
-        8 => 8: decoder.read_var_float(env)?;
-        9 => 9: decoder.read_var_float(env)?;
-        10 => 10: decoder.read_var_float(env)?;
-    ]
-}
-
-static PAINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PAINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_paint_from_decoder;
-    fields_fn decode_paint_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PAINT_MODULE_ATOM;
-    keys_static PAINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Paint";
-    keys ["type", "color", "opacity", "visible", "blend_mode", "stops", "transform", "image", "image_thumbnail", "animated_image", "animation_frame", "image_scale_mode", "image_should_color_manage", "rotation", "scale", "filter_color_adjust", "paint_filter", "emoji_code_points", "video", "original_image_width", "original_image_height", "opacity_var", "color_var", "image_var", "stops_var", "thumb_hash_base64", "thumb_hash", "source_node_id", "spacing", "pattern_spacing", "pattern_tile_type", "vertical_alignment", "horizontal_alignment", "id", "alt_text", "noise_type", "density", "noise_size", "custom_effect_id", "component_prop_assignments", "interpolation_color_space", "interpolation_hue_method"];
-    fields [
-        1 => 1: decode_paint_type_from_decoder(env, decoder)?;
-        2 => 2: decode_color_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decode_blend_mode_from_decoder(env, decoder)?;
-        6 => 6: decoder.read_repeated(|decoder| decode_color_stop_from_decoder(env, decoder))?;
-        7 => 7: decode_matrix_from_decoder(env, decoder)?;
-        8 => 8: decode_image_from_decoder(env, decoder)?;
-        9 => 9: decode_image_from_decoder(env, decoder)?;
-        16 => 10: decode_image_from_decoder(env, decoder)?;
-        17 => 11: decoder.read_var_uint()?;
-        10 => 12: decode_image_scale_mode_from_decoder(env, decoder)?;
-        22 => 13: decoder.read_bool()?;
-        11 => 14: decoder.read_var_float(env)?;
-        12 => 15: decoder.read_var_float(env)?;
-        13 => 16: decode_filter_color_adjust_from_decoder(env, decoder)?;
-        14 => 17: decode_paint_filter_message_from_decoder(env, decoder)?;
-        15 => 18: decoder.read_repeated(|decoder| decoder.read_var_uint())?;
-        18 => 19: decode_video_from_decoder(env, decoder)?;
-        19 => 20: decoder.read_var_uint()?;
-        20 => 21: decoder.read_var_uint()?;
-        38 => 22: decode_variable_data_from_decoder(env, decoder)?;
-        21 => 23: decode_variable_data_from_decoder(env, decoder)?;
-        31 => 24: decode_variable_data_from_decoder(env, decoder)?;
-        23 => 25: decoder.read_repeated(|decoder| decode_color_stop_var_from_decoder(env, decoder))?;
-        24 => 26: decoder.read_string(env)?;
-        25 => 27: decoder.read_byte_array(env)?;
-        26 => 28: decode_guid_from_decoder(env, decoder)?;
-        27 => 29: decoder.read_var_float(env)?;
-        37 => 30: decode_vector_from_decoder(env, decoder)?;
-        28 => 31: decode_pattern_tile_type_from_decoder(env, decoder)?;
-        29 => 32: decode_pattern_alignment_from_decoder(env, decoder)?;
-        30 => 33: decode_pattern_alignment_from_decoder(env, decoder)?;
-        32 => 34: decode_guid_from_decoder(env, decoder)?;
-        33 => 35: decoder.read_string(env)?;
-        34 => 36: decode_noise_type_from_decoder(env, decoder)?;
-        35 => 37: decoder.read_var_float(env)?;
-        36 => 38: decode_vector_from_decoder(env, decoder)?;
-        39 => 39: decode_code_component_id_from_decoder(env, decoder)?;
-        40 => 40: decoder.read_repeated(|decoder| decode_component_prop_assignment_from_decoder(env, decoder))?;
-        41 => 41: decode_interpolation_color_space_from_decoder(env, decoder)?;
-        42 => 42: decode_interpolation_hue_method_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_noise_type_from_decoder;
-    variants [
-        0 => "multitone";
-        1 => "monotone";
-        2 => "duotone";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_pattern_tile_type_from_decoder;
-    variants [
-        0 => "rectangular";
-        1 => "horizontal_hexagonal";
-        2 => "vertical_hexagonal";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_pattern_alignment_from_decoder;
-    variants [
-        0 => "start";
-        1 => "center";
-        2 => "end";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_interpolation_color_space_from_decoder;
-    variants [
-        0 => "default";
-        1 => "oklab";
-        2 => "oklch";
-        3 => "hsl";
-        4 => "srgb_linear";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_interpolation_hue_method_from_decoder;
-    variants [
-        0 => "shorter";
-        1 => "longer";
-        2 => "increasing";
-        3 => "decreasing";
-    ]
-}
-
-static FONT_META_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_META_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_font_meta_data_from_decoder;
-    fields_fn decode_font_meta_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FONT_META_DATA_MODULE_ATOM;
-    keys_static FONT_META_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FontMetaData";
-    keys ["key", "font_line_height", "font_digest", "font_style", "font_weight"];
-    fields [
-        1 => 1: decode_font_name_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_byte_array(env)?;
-        4 => 4: decode_font_style_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_var_int()?;
-    ]
-}
-
-static FONT_VARIATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FONT_VARIATION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_font_variation_from_decoder;
-    fields_fn decode_font_variation_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FONT_VARIATION_MODULE_ATOM;
-    keys_static FONT_VARIATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FontVariation";
-    keys ["axis_tag", "axis_name", "value"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-    ]
-}
-
-static TEXT_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_text_data_from_decoder;
-    fields_fn decode_text_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TEXT_DATA_MODULE_ATOM;
-    keys_static TEXT_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TextData";
-    keys ["characters", "character_style_i_ds", "style_override_table", "lines", "layout_version", "fallback_fonts", "min_content_height", "layout_size", "baselines", "glyphs", "decorations", "blockquotes", "font_meta_data", "hyperlink_boxes", "truncation_start_index", "truncated_height", "logical_index_to_character_offset_map", "mention_boxes", "derived_lines"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_repeated(|decoder| decoder.read_var_uint())?;
-        3 => 3: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-        12 => 4: decoder.read_repeated(|decoder| decode_text_line_data_from_decoder(env, decoder))?;
-        8 => 5: decoder.read_var_uint()?;
-        10 => 6: decoder.read_repeated(|decoder| decode_font_name_from_decoder(env, decoder))?;
-        17 => 7: decoder.read_var_float(env)?;
-        4 => 8: decode_vector_from_decoder(env, decoder)?;
-        5 => 9: decoder.read_repeated(|decoder| decode_baseline_from_decoder(env, decoder))?;
-        6 => 10: decoder.read_repeated(|decoder| decode_glyph_from_decoder(env, decoder))?;
-        7 => 11: decoder.read_repeated(|decoder| decode_decoration_from_decoder(env, decoder))?;
-        16 => 12: decoder.read_repeated(|decoder| decode_blockquote_from_decoder(env, decoder))?;
-        9 => 13: decoder.read_repeated(|decoder| decode_font_meta_data_from_decoder(env, decoder))?;
-        11 => 14: decoder.read_repeated(|decoder| decode_hyperlink_box_from_decoder(env, decoder))?;
-        13 => 15: decoder.read_var_int()?;
-        14 => 16: decoder.read_var_float(env)?;
-        15 => 17: decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
-        18 => 18: decoder.read_repeated(|decoder| decode_mention_box_from_decoder(env, decoder))?;
-        19 => 19: decoder.read_repeated(|decoder| decode_derived_text_line_data_from_decoder(env, decoder))?;
-    ]
-}
-
-static DERIVED_TEXT_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DERIVED_TEXT_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_derived_text_data_from_decoder;
-    fields_fn decode_derived_text_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DERIVED_TEXT_DATA_MODULE_ATOM;
-    keys_static DERIVED_TEXT_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.DerivedTextData";
-    keys ["layout_size", "baselines", "glyphs", "decorations", "blockquotes", "font_meta_data", "hyperlink_boxes", "truncation_start_index", "truncated_height", "logical_index_to_character_offset_map", "mention_boxes", "derived_lines"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_baseline_from_decoder(env, decoder))?;
-        3 => 3: decoder.read_repeated(|decoder| decode_glyph_from_decoder(env, decoder))?;
-        4 => 4: decoder.read_repeated(|decoder| decode_decoration_from_decoder(env, decoder))?;
-        5 => 5: decoder.read_repeated(|decoder| decode_blockquote_from_decoder(env, decoder))?;
-        6 => 6: decoder.read_repeated(|decoder| decode_font_meta_data_from_decoder(env, decoder))?;
-        7 => 7: decoder.read_repeated(|decoder| decode_hyperlink_box_from_decoder(env, decoder))?;
-        8 => 8: decoder.read_var_int()?;
-        9 => 9: decoder.read_var_float(env)?;
-        10 => 10: decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
-        11 => 11: decoder.read_repeated(|decoder| decode_mention_box_from_decoder(env, decoder))?;
-        12 => 12: decoder.read_repeated(|decoder| decode_derived_text_line_data_from_decoder(env, decoder))?;
-    ]
-}
-
-static HYPERLINK_BOX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static HYPERLINK_BOX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_hyperlink_box_from_decoder;
-    fields_fn decode_hyperlink_box_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static HYPERLINK_BOX_MODULE_ATOM;
-    keys_static HYPERLINK_BOX_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.HyperlinkBox";
-    keys ["bounds", "url", "guid", "cms_target", "open_in_new_tab", "hyperlink_id"];
-    fields [
-        1 => 1: decode_rect_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        5 => 4: decode_cms_item_page_target_from_decoder(env, decoder)?;
-        6 => 5: decoder.read_bool()?;
-        4 => 6: decoder.read_var_int()?;
-    ]
-}
-
-static MENTION_BOX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MENTION_BOX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_mention_box_from_decoder;
-    fields_fn decode_mention_box_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MENTION_BOX_MODULE_ATOM;
-    keys_static MENTION_BOX_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.MentionBox";
-    keys ["bounds", "start_index", "end_index", "is_valid", "mention_key"];
-    fields [
-        1 => 1: decode_rect_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decoder.read_var_uint()?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decoder.read_var_uint()?;
-    ]
-}
-
-static BASELINE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BASELINE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_baseline_from_decoder;
-    fields_fn decode_baseline_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BASELINE_MODULE_ATOM;
-    keys_static BASELINE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Baseline";
-    keys ["position", "width", "line_y", "line_height", "line_ascent", "ignore_leading_trim", "first_character", "end_character"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_float(env)?;
-        7 => 5: decoder.read_var_float(env)?;
-        8 => 6: decoder.read_var_float(env)?;
-        5 => 7: decoder.read_var_uint()?;
-        6 => 8: decoder.read_var_uint()?;
-    ]
-}
-
-static GLYPH_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GLYPH_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_glyph_from_decoder;
-    fields_fn decode_glyph_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GLYPH_MODULE_ATOM;
-    keys_static GLYPH_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Glyph";
-    keys ["commands_blob", "position", "style_id", "font_size", "first_character", "advance", "emoji_code_points", "emoji_image_set", "rotation"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decode_vector_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_var_uint()?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decoder.read_var_uint()?;
-        6 => 6: decoder.read_var_float(env)?;
-        7 => 7: decoder.read_repeated(|decoder| decoder.read_var_uint())?;
-        8 => 8: decode_emoji_image_set_from_decoder(env, decoder)?;
-        9 => 9: decoder.read_var_float(env)?;
-    ]
-}
-
-static DECORATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DECORATION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_decoration_from_decoder;
-    fields_fn decode_decoration_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DECORATION_MODULE_ATOM;
-    keys_static DECORATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Decoration";
-    keys ["rects", "style_id"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_rect_from_decoder(env, decoder))?;
-        2 => 2: decoder.read_var_uint()?;
-    ]
-}
-
-static BLOCKQUOTE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BLOCKQUOTE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_blockquote_from_decoder;
-    fields_fn decode_blockquote_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BLOCKQUOTE_MODULE_ATOM;
-    keys_static BLOCKQUOTE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Blockquote";
-    keys ["vertical_bar", "quote_mark_bounds", "style_id"];
-    fields [
-        1 => 1: decode_rect_from_decoder(env, decoder)?;
-        2 => 2: decode_rect_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_var_uint()?;
-    ]
-}
-
-static VECTOR_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VECTOR_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_vector_data_from_decoder;
-    fields_fn decode_vector_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VECTOR_DATA_MODULE_ATOM;
-    keys_static VECTOR_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VectorData";
-    keys ["vector_network_blob", "normalized_size", "style_override_table"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decode_vector_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static TEXT_PATH_START_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_PATH_START_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_text_path_start_from_decoder;
-    fields_fn decode_text_path_start_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TEXT_PATH_START_MODULE_ATOM;
-    keys_static TEXT_PATH_START_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TextPathStart";
-    keys ["t_value", "forward"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_bool()?;
-    ]
-}
-
-static GUID_PATH_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_PATH_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_guid_path_from_decoder;
-    fields_fn decode_guid_path_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUID_PATH_MODULE_ATOM;
-    keys_static GUID_PATH_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GUIDPath";
-    keys ["guids"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-    ]
-}
-
-static SYMBOL_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SYMBOL_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_symbol_data_from_decoder;
-    fields_fn decode_symbol_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SYMBOL_DATA_MODULE_ATOM;
-    keys_static SYMBOL_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SymbolData";
-    keys ["symbol_id", "symbol_overrides", "uniform_scale_factor"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-        3 => 3: decoder.read_var_float(env)?;
-    ]
-}
-
-static GUID_PATH_MAPPING_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_PATH_MAPPING_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_guid_path_mapping_from_decoder;
-    fields_fn decode_guid_path_mapping_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUID_PATH_MAPPING_MODULE_ATOM;
-    keys_static GUID_PATH_MAPPING_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GUIDPathMapping";
-    keys ["id", "path"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_path_from_decoder(env, decoder)?;
-    ]
-}
-
-static DERIVED_BREAKPOINT_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DERIVED_BREAKPOINT_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_derived_breakpoint_data_from_decoder;
-    fields_fn decode_derived_breakpoint_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DERIVED_BREAKPOINT_DATA_MODULE_ATOM;
-    keys_static DERIVED_BREAKPOINT_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.DerivedBreakpointData";
-    keys ["overrides"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static NODE_GENERATION_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_GENERATION_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_generation_data_from_decoder;
-    fields_fn decode_node_generation_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_GENERATION_DATA_MODULE_ATOM;
-    keys_static NODE_GENERATION_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeGenerationData";
-    keys ["overrides", "use_fine_grained_syncing", "diff_only_removals"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-        2 => 2: decoder.read_bool()?;
-        3 => 3: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static DERIVED_IMMUTABLE_FRAME_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DERIVED_IMMUTABLE_FRAME_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_derived_immutable_frame_data_from_decoder;
-    fields_fn decode_derived_immutable_frame_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DERIVED_IMMUTABLE_FRAME_DATA_MODULE_ATOM;
-    keys_static DERIVED_IMMUTABLE_FRAME_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.DerivedImmutableFrameData";
-    keys ["overrides", "version"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-        2 => 2: decoder.read_var_uint()?;
-    ]
-}
-
-static JSX_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static JSX_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_jsx_data_from_decoder;
-    fields_fn decode_jsx_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static JSX_DATA_MODULE_ATOM;
-    keys_static JSX_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.JsxData";
-    keys ["overrides"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static DERIVED_JSX_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DERIVED_JSX_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_derived_jsx_data_from_decoder;
-    fields_fn decode_derived_jsx_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DERIVED_JSX_DATA_MODULE_ATOM;
-    keys_static DERIVED_JSX_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.DerivedJsxData";
-    keys ["overrides"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static ASSET_ID_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ASSET_ID_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_asset_id_map_from_decoder;
-    fields_fn decode_asset_id_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ASSET_ID_MAP_MODULE_ATOM;
-    keys_static ASSET_ID_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AssetIdMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_asset_id_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static ASSET_ID_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ASSET_ID_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_asset_id_entry_from_decoder;
-    fields_fn decode_asset_id_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ASSET_ID_ENTRY_MODULE_ATOM;
-    keys_static ASSET_ID_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AssetIdEntry";
-    keys ["asset_key", "asset_id"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_asset_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static ASSET_REF_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ASSET_REF_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_asset_ref_from_decoder;
-    fields_fn decode_asset_ref_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ASSET_REF_MODULE_ATOM;
-    keys_static ASSET_REF_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AssetRef";
-    keys ["key", "version"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static ASSET_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ASSET_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_asset_id_from_decoder;
-    fields_fn decode_asset_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ASSET_ID_MODULE_ATOM;
-    keys_static ASSET_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AssetId";
-    keys ["guid", "asset_ref", "state_group_id", "style_id", "symbol_id", "variable_id", "variable_set_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-        3 => 3: decode_state_group_id_from_decoder(env, decoder)?;
-        4 => 4: decode_style_id_from_decoder(env, decoder)?;
-        5 => 5: decode_symbol_id_from_decoder(env, decoder)?;
-        6 => 6: decode_variable_id_from_decoder(env, decoder)?;
-        7 => 7: decode_variable_set_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static STATE_GROUP_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STATE_GROUP_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_state_group_id_from_decoder;
-    fields_fn decode_state_group_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STATE_GROUP_ID_MODULE_ATOM;
-    keys_static STATE_GROUP_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StateGroupId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static STYLE_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_style_id_from_decoder;
-    fields_fn decode_style_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STYLE_ID_MODULE_ATOM;
-    keys_static STYLE_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StyleId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static SYMBOL_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SYMBOL_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_symbol_id_from_decoder;
-    fields_fn decode_symbol_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SYMBOL_ID_MODULE_ATOM;
-    keys_static SYMBOL_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SymbolId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static VARIABLE_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_id_from_decoder;
-    fields_fn decode_variable_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_ID_MODULE_ATOM;
-    keys_static VARIABLE_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableID";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static VARIABLE_OVERRIDE_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_OVERRIDE_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_override_id_from_decoder;
-    fields_fn decode_variable_override_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_OVERRIDE_ID_MODULE_ATOM;
-    keys_static VARIABLE_OVERRIDE_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableOverrideId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static VARIABLE_SET_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SET_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_set_id_from_decoder;
-    fields_fn decode_variable_set_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_SET_ID_MODULE_ATOM;
-    keys_static VARIABLE_SET_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableSetID";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static THEME_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static THEME_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_theme_id_from_decoder;
-    fields_fn decode_theme_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static THEME_ID_MODULE_ATOM;
-    keys_static THEME_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ThemeID";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static CODE_LIBRARY_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_LIBRARY_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_library_id_from_decoder;
-    fields_fn decode_code_library_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_LIBRARY_ID_MODULE_ATOM;
-    keys_static CODE_LIBRARY_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeLibraryId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static CODE_FILE_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_FILE_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_file_id_from_decoder;
-    fields_fn decode_code_file_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_FILE_ID_MODULE_ATOM;
-    keys_static CODE_FILE_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeFileId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static CODE_COMPONENT_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_COMPONENT_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_component_id_from_decoder;
-    fields_fn decode_code_component_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_COMPONENT_ID_MODULE_ATOM;
-    keys_static CODE_COMPONENT_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeComponentId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static CANVAS_NODE_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CANVAS_NODE_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_canvas_node_id_from_decoder;
-    fields_fn decode_canvas_node_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CANVAS_NODE_ID_MODULE_ATOM;
-    keys_static CANVAS_NODE_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CanvasNodeId";
-    keys ["guid", "symbol_id", "state_group_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_symbol_id_from_decoder(env, decoder)?;
-        3 => 3: decode_state_group_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static INDEX_RANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INDEX_RANGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_index_range_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INDEX_RANGE_MODULE_ATOM;
-    keys_static INDEX_RANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.IndexRange";
-    keys ["start_index", "end_index_exclusive"];
-    fields [
-        decoder.read_var_uint()?,
-        decoder.read_var_uint()?
-    ]
-}
-
-static COLLABORATIVE_TEXT_OP_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLLABORATIVE_TEXT_OP_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_collaborative_text_op_id_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLLABORATIVE_TEXT_OP_ID_MODULE_ATOM;
-    keys_static COLLABORATIVE_TEXT_OP_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CollaborativeTextOpID";
-    keys ["session_id", "counter_id"];
-    fields [
-        decoder.read_var_uint()?,
-        decoder.read_var_uint()?
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_collaborative_text_op_type_from_decoder;
-    variants [
-        0 => "insert";
-        1 => "delete";
-    ]
-}
-
-static COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_I_DS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_I_DS_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder;
-    fields_fn decode_collaborative_text_stripped_op_run_with_i_ds_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_I_DS_MODULE_ATOM;
-    keys_static COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_I_DS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithIDs";
-    keys ["first_id", "run_length", "parent_ids", "rebased_on_op_ids"];
-    fields [
-        1 => 1: decode_collaborative_text_op_id_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decoder.read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(env, decoder))?;
-        4 => 4: decoder.read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(env, decoder))?;
-    ]
-}
-
-static COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_LOC_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_LOC_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_collaborative_text_stripped_op_run_with_loc_from_decoder;
-    fields_fn decode_collaborative_text_stripped_op_run_with_loc_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_LOC_MODULE_ATOM;
-    keys_static COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_LOC_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithLoc";
-    keys ["type", "range", "range_should_be_iterated_in_reverse", "content_bytes_in_buffer", "rebased_range"];
-    fields [
-        1 => 1: decode_collaborative_text_op_type_from_decoder(env, decoder)?;
-        2 => 2: decode_index_range_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-        4 => 4: decode_index_range_from_decoder(env, decoder)?;
-        5 => 5: decode_index_range_from_decoder(env, decoder)?;
-    ]
-}
-
-static COLLABORATIVE_TEXT_OP_RUN_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLLABORATIVE_TEXT_OP_RUN_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_collaborative_text_op_run_from_decoder;
-    fields_fn decode_collaborative_text_op_run_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLLABORATIVE_TEXT_OP_RUN_MODULE_ATOM;
-    keys_static COLLABORATIVE_TEXT_OP_RUN_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CollaborativeTextOpRun";
-    keys ["id", "parent_ids", "type", "range", "range_should_be_iterated_in_reverse", "content", "rebased_on_op_ids", "rebased_range"];
-    fields [
-        1 => 1: decode_collaborative_text_op_id_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(env, decoder))?;
-        3 => 3: decode_collaborative_text_op_type_from_decoder(env, decoder)?;
-        4 => 4: decode_index_range_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_bool()?;
-        6 => 6: decoder.read_string(env)?;
-        7 => 7: decoder.read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(env, decoder))?;
-        8 => 8: decode_index_range_from_decoder(env, decoder)?;
-    ]
-}
-
-static COLLABORATIVE_PLAIN_TEXT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLLABORATIVE_PLAIN_TEXT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_collaborative_plain_text_from_decoder;
-    fields_fn decode_collaborative_plain_text_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLLABORATIVE_PLAIN_TEXT_MODULE_ATOM;
-    keys_static COLLABORATIVE_PLAIN_TEXT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CollaborativePlainText";
-    keys ["history_ops_with_ids", "history_ops_with_loc", "history_string_content_buffer", "changes_to_append"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_collaborative_text_stripped_op_run_with_i_ds_from_decoder(env, decoder))?;
-        2 => 2: decoder.read_repeated(|decoder| decode_collaborative_text_stripped_op_run_with_loc_from_decoder(env, decoder))?;
-        3 => 3: decoder.read_byte_array(env)?;
-        4 => 4: decoder.read_repeated(|decoder| decode_collaborative_text_op_run_from_decoder(env, decoder))?;
-    ]
-}
-
-static COLLABORATIVE_TEXT_SELECTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLLABORATIVE_TEXT_SELECTION_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_collaborative_text_selection_from_decoder;
-    fields_fn decode_collaborative_text_selection_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLLABORATIVE_TEXT_SELECTION_MODULE_ATOM;
-    keys_static COLLABORATIVE_TEXT_SELECTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CollaborativeTextSelection";
-    keys ["node", "field", "selected_range", "caret_at_front", "text_version"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decode_index_range_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decoder.read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(env, decoder))?;
-    ]
-}
-
-static RESPONSIVE_TEXT_STYLE_VARIANT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static RESPONSIVE_TEXT_STYLE_VARIANT_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_responsive_text_style_variant_from_decoder;
-    fields_fn decode_responsive_text_style_variant_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static RESPONSIVE_TEXT_STYLE_VARIANT_MODULE_ATOM;
-    keys_static RESPONSIVE_TEXT_STYLE_VARIANT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ResponsiveTextStyleVariant";
-    keys ["min_width", "fields", "variable_font_size", "variable_line_height", "variable_letter_spacing", "variable_paragraph_spacing", "name"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decode_node_change_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_data_from_decoder(env, decoder)?;
-        4 => 4: decode_variable_data_from_decoder(env, decoder)?;
-        5 => 5: decode_variable_data_from_decoder(env, decoder)?;
-        6 => 6: decode_variable_data_from_decoder(env, decoder)?;
-        7 => 7: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_flapp_type_from_decoder;
-    variants [
-        0 => "poll";
-        1 => "embed";
-        2 => "facepile";
-        3 => "alignment";
-        4 => "youtube";
-    ]
-}
-
-static SLIDE_THEME_PROPS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_THEME_PROPS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_slide_theme_props_from_decoder;
-    fields_fn decode_slide_theme_props_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SLIDE_THEME_PROPS_MODULE_ATOM;
-    keys_static SLIDE_THEME_PROPS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SlideThemeProps";
-    keys ["theme_version", "variable_set_id", "text_style_ids", "is_text_color_manually_selected", "is_border_color_manually_selected", "subscribed_theme_ref", "schema_version", "is_generated_from_design"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_variable_set_id_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_style_id_from_decoder(env, decoder))?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decoder.read_bool()?;
-        6 => 6: decode_asset_ref_from_decoder(env, decoder)?;
-        7 => 7: decoder.read_var_uint()?;
-        8 => 8: decoder.read_bool()?;
-    ]
-}
-
-static SLIDE_THEME_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_THEME_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_slide_theme_map_from_decoder;
-    fields_fn decode_slide_theme_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SLIDE_THEME_MAP_MODULE_ATOM;
-    keys_static SLIDE_THEME_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SlideThemeMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_slide_theme_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static SLIDE_THEME_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_THEME_MAP_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_slide_theme_map_entry_from_decoder;
-    fields_fn decode_slide_theme_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SLIDE_THEME_MAP_ENTRY_MODULE_ATOM;
-    keys_static SLIDE_THEME_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SlideThemeMapEntry";
-    keys ["theme_id", "theme_props"];
-    fields [
-        1 => 1: decode_theme_id_from_decoder(env, decoder)?;
-        2 => 2: decode_slide_theme_props_from_decoder(env, decoder)?;
-    ]
-}
-
-static SHARED_SYMBOL_REFERENCE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SHARED_SYMBOL_REFERENCE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_shared_symbol_reference_from_decoder;
-    fields_fn decode_shared_symbol_reference_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SHARED_SYMBOL_REFERENCE_MODULE_ATOM;
-    keys_static SHARED_SYMBOL_REFERENCE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SharedSymbolReference";
-    keys ["file_key", "symbol_id", "version_hash", "guid_path_mappings", "bytes", "library_guid_to_subscribing_guid", "component_key", "unflattening_mappings", "is_unflattened"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
-        5 => 5: decoder.read_byte_array(env)?;
-        6 => 6: decoder.read_repeated(|decoder| decode_guid_mapping_from_decoder(env, decoder))?;
-        7 => 7: decoder.read_string(env)?;
-        8 => 8: decoder.read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
-        9 => 9: decoder.read_bool()?;
-    ]
-}
-
-static SHARED_COMPONENT_MASTER_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SHARED_COMPONENT_MASTER_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_shared_component_master_data_from_decoder;
-    fields_fn decode_shared_component_master_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SHARED_COMPONENT_MASTER_DATA_MODULE_ATOM;
-    keys_static SHARED_COMPONENT_MASTER_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SharedComponentMasterData";
-    keys ["component_key", "publishing_guid_path_to_team_library_guid", "is_unflattened"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static INSTANCE_OVERRIDE_STASH_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INSTANCE_OVERRIDE_STASH_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_instance_override_stash_from_decoder;
-    fields_fn decode_instance_override_stash_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INSTANCE_OVERRIDE_STASH_MODULE_ATOM;
-    keys_static INSTANCE_OVERRIDE_STASH_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InstanceOverrideStash";
-    keys ["override_path_of_swapped_instance", "component_key", "overrides"];
-    fields [
-        1 => 1: decode_guid_path_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static INSTANCE_OVERRIDE_STASH_V2_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INSTANCE_OVERRIDE_STASH_V2_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_instance_override_stash_v2_from_decoder;
-    fields_fn decode_instance_override_stash_v2_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INSTANCE_OVERRIDE_STASH_V2_MODULE_ATOM;
-    keys_static INSTANCE_OVERRIDE_STASH_V2_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InstanceOverrideStashV2";
-    keys ["override_path_of_swapped_instance", "local_symbol_id", "overrides"];
-    fields [
-        1 => 1: decode_guid_path_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static IMPORTED_CODE_FILE_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static IMPORTED_CODE_FILE_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_imported_code_file_entry_from_decoder;
-    fields_fn decode_imported_code_file_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static IMPORTED_CODE_FILE_ENTRY_MODULE_ATOM;
-    keys_static IMPORTED_CODE_FILE_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ImportedCodeFileEntry";
-    keys ["code_file_id"];
-    fields [
-        1 => 1: decode_code_file_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static IMPORTED_CODE_FILES_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static IMPORTED_CODE_FILES_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_imported_code_files_from_decoder;
-    fields_fn decode_imported_code_files_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static IMPORTED_CODE_FILES_MODULE_ATOM;
-    keys_static IMPORTED_CODE_FILES_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ImportedCodeFiles";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_imported_code_file_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_blur_op_type_from_decoder;
-    variants [
-        0 => "normal";
-        1 => "progressive";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_repeat_type_from_decoder;
-    variants [
-        0 => "linear";
-        1 => "radial";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_unit_type_from_decoder;
-    variants [
-        0 => "pixels";
-        1 => "relative";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_repeat_order_from_decoder;
-    variants [
-        0 => "forward";
-        1 => "reverse";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_effect_axis_from_decoder;
-    variants [
-        0 => "x";
-        1 => "y";
-        2 => "x_and_y";
-    ]
-}
-
-static EFFECT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EFFECT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_effect_from_decoder;
-    fields_fn decode_effect_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EFFECT_MODULE_ATOM;
-    keys_static EFFECT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Effect";
-    keys ["type", "offset", "radius", "visible", "blend_mode", "spread", "show_shadow_behind_node", "radius_var", "color_var", "spread_var", "x_var", "y_var", "count", "repeat_type", "axis", "unit_type", "order", "blur_op_type", "start_offset", "end_offset", "start_radius", "color", "secondary_color", "noise_size", "seed", "clip_to_shape", "density", "noise_type", "opacity", "refraction_radius", "specular_angle", "specular_intensity", "bevel_size", "chromatic_aberration", "reflection_distance", "refraction_intensity", "refraction_radius_var", "specular_angle_var", "specular_intensity_var", "chromatic_aberration_var", "splay_var", "refraction_intensity_var", "custom_effect_id", "component_prop_assignments", "start_radius_var", "start_offset_x_var", "start_offset_y_var", "end_offset_x_var", "end_offset_y_var", "noise_size_x_var", "noise_size_y_var", "density_var", "effect_opacity_var", "secondary_color_var", "id"];
-    fields [
-        1 => 1: decode_effect_type_from_decoder(env, decoder)?;
-        3 => 2: decode_vector_from_decoder(env, decoder)?;
-        4 => 3: decoder.read_var_float(env)?;
-        5 => 4: decoder.read_bool()?;
-        6 => 5: decode_blend_mode_from_decoder(env, decoder)?;
-        7 => 6: decoder.read_var_float(env)?;
-        8 => 7: decoder.read_bool()?;
-        9 => 8: decode_variable_data_from_decoder(env, decoder)?;
-        10 => 9: decode_variable_data_from_decoder(env, decoder)?;
-        11 => 10: decode_variable_data_from_decoder(env, decoder)?;
-        12 => 11: decode_variable_data_from_decoder(env, decoder)?;
-        13 => 12: decode_variable_data_from_decoder(env, decoder)?;
-        14 => 13: decoder.read_var_uint()?;
-        15 => 14: decode_repeat_type_from_decoder(env, decoder)?;
-        16 => 15: decode_effect_axis_from_decoder(env, decoder)?;
-        17 => 16: decode_unit_type_from_decoder(env, decoder)?;
-        18 => 17: decode_repeat_order_from_decoder(env, decoder)?;
-        19 => 18: decode_blur_op_type_from_decoder(env, decoder)?;
-        20 => 19: decode_vector_from_decoder(env, decoder)?;
-        28 => 20: decode_vector_from_decoder(env, decoder)?;
-        21 => 21: decoder.read_var_float(env)?;
-        2 => 22: decode_color_from_decoder(env, decoder)?;
-        24 => 23: decode_color_from_decoder(env, decoder)?;
-        22 => 24: decode_vector_from_decoder(env, decoder)?;
-        29 => 25: decoder.read_var_uint()?;
-        23 => 26: decoder.read_bool()?;
-        25 => 27: decoder.read_var_float(env)?;
-        26 => 28: decode_noise_type_from_decoder(env, decoder)?;
-        27 => 29: decoder.read_var_float(env)?;
-        30 => 30: decoder.read_var_float(env)?;
-        31 => 31: decoder.read_var_float(env)?;
-        32 => 32: decoder.read_var_float(env)?;
-        33 => 33: decoder.read_var_float(env)?;
-        34 => 34: decoder.read_var_float(env)?;
-        35 => 35: decoder.read_var_float(env)?;
-        36 => 36: decoder.read_var_float(env)?;
-        37 => 37: decode_variable_data_from_decoder(env, decoder)?;
-        38 => 38: decode_variable_data_from_decoder(env, decoder)?;
-        39 => 39: decode_variable_data_from_decoder(env, decoder)?;
-        40 => 40: decode_variable_data_from_decoder(env, decoder)?;
-        41 => 41: decode_variable_data_from_decoder(env, decoder)?;
-        42 => 42: decode_variable_data_from_decoder(env, decoder)?;
-        43 => 43: decode_code_component_id_from_decoder(env, decoder)?;
-        44 => 44: decoder.read_repeated(|decoder| decode_component_prop_assignment_from_decoder(env, decoder))?;
-        45 => 45: decode_variable_data_from_decoder(env, decoder)?;
-        46 => 46: decode_variable_data_from_decoder(env, decoder)?;
-        47 => 47: decode_variable_data_from_decoder(env, decoder)?;
-        48 => 48: decode_variable_data_from_decoder(env, decoder)?;
-        49 => 49: decode_variable_data_from_decoder(env, decoder)?;
-        50 => 50: decode_variable_data_from_decoder(env, decoder)?;
-        51 => 51: decode_variable_data_from_decoder(env, decoder)?;
-        52 => 52: decode_variable_data_from_decoder(env, decoder)?;
-        53 => 53: decode_variable_data_from_decoder(env, decoder)?;
-        54 => 54: decode_variable_data_from_decoder(env, decoder)?;
-        55 => 55: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_transform_modifier_type_from_decoder;
-    variants [
-        0 => "repeat";
-        1 => "symmetry";
-        2 => "skew";
-    ]
-}
-
-static TRANSFORM_MODIFIER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_MODIFIER_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transform_modifier_from_decoder;
-    fields_fn decode_transform_modifier_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSFORM_MODIFIER_MODULE_ATOM;
-    keys_static TRANSFORM_MODIFIER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransformModifier";
-    keys ["type", "offset", "visible", "count", "repeat_type", "axis", "unit_type", "order", "skew_x", "skew_y"];
-    fields [
-        1 => 1: decode_transform_modifier_type_from_decoder(env, decoder)?;
-        2 => 2: decode_vector_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-        4 => 4: decoder.read_var_uint()?;
-        5 => 5: decode_repeat_type_from_decoder(env, decoder)?;
-        6 => 6: decode_effect_axis_from_decoder(env, decoder)?;
-        7 => 7: decode_unit_type_from_decoder(env, decoder)?;
-        8 => 8: decode_repeat_order_from_decoder(env, decoder)?;
-        9 => 9: decoder.read_var_float(env)?;
-        10 => 10: decoder.read_var_float(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_transform_schema_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "fixed_order";
-        2 => "freeform";
-    ]
-}
-
-static MATRIX4F_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MATRIX4F_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_matrix4f_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MATRIX4F_MODULE_ATOM;
-    keys_static MATRIX4F_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Matrix4f";
-    keys ["m00", "m01", "m02", "m03", "m10", "m11", "m12", "m13", "m20", "m21", "m22", "m23", "m30", "m31", "m32", "m33"];
-    fields [
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?,
-        decoder.read_var_float(env)?
-    ]
-}
-
-static FIXED_ORDER_TRANSFORM3D_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FIXED_ORDER_TRANSFORM3D_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_fixed_order_transform3d_from_decoder;
-    fields_fn decode_fixed_order_transform3d_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FIXED_ORDER_TRANSFORM3D_MODULE_ATOM;
-    keys_static FIXED_ORDER_TRANSFORM3D_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FixedOrderTransform3d";
-    keys ["perspective", "translate_z", "rotate_x", "rotate_y", "rotate_z"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decoder.read_var_float(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_transform_fn_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "matrix_3_d";
-        2 => "perspective";
-        3 => "translate_z";
-        4 => "rotate_x";
-        5 => "rotate_y";
-        6 => "rotate_z";
-    ]
-}
-
-static TRANSFORM_FN_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_FN_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transform_fn_value_from_decoder;
-    fields_fn decode_transform_fn_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSFORM_FN_VALUE_MODULE_ATOM;
-    keys_static TRANSFORM_FN_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransformFnValue";
-    keys ["matrix3d", "perspective", "rotate_angle", "translate_value"];
-    fields [
-        1 => 1: decode_matrix4f_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_float(env)?;
-    ]
-}
-
-static TRANSFORM_FN_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_FN_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transform_fn_from_decoder;
-    fields_fn decode_transform_fn_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSFORM_FN_MODULE_ATOM;
-    keys_static TRANSFORM_FN_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransformFn";
-    keys ["type", "value"];
-    fields [
-        1 => 1: decode_transform_fn_type_from_decoder(env, decoder)?;
-        2 => 2: decode_transform_fn_value_from_decoder(env, decoder)?;
-    ]
-}
-
-static TRANSFORM_SCHEMA_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_SCHEMA_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transform_schema_value_from_decoder;
-    fields_fn decode_transform_schema_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSFORM_SCHEMA_VALUE_MODULE_ATOM;
-    keys_static TRANSFORM_SCHEMA_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransformSchemaValue";
-    keys ["fixed_order_transform3d", "transform_functions"];
-    fields [
-        1 => 1: decode_fixed_order_transform3d_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_transform_fn_from_decoder(env, decoder))?;
-    ]
-}
-
-static TRANSFORM3D_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM3D_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transform3d_from_decoder;
-    fields_fn decode_transform3d_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSFORM3D_MODULE_ATOM;
-    keys_static TRANSFORM3D_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Transform3d";
-    keys ["type", "value", "backface_hidden"];
-    fields [
-        1 => 1: decode_transform_schema_type_from_decoder(env, decoder)?;
-        2 => 2: decode_transform_schema_value_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static NUMBER_VECTOR2_D_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NUMBER_VECTOR2_D_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_number_vector2_d_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NUMBER_VECTOR2_D_MODULE_ATOM;
-    keys_static NUMBER_VECTOR2_D_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NumberVector2D";
-    keys ["x", "y"];
-    fields [
-        decode_number_from_decoder(env, decoder)?,
-        decode_number_from_decoder(env, decoder)?
-    ]
-}
-
-static SCENE3D_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SCENE3D_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_scene3d_from_decoder;
-    fields_fn decode_scene3d_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SCENE3D_MODULE_ATOM;
-    keys_static SCENE3D_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Scene3d";
-    keys ["perspective", "perspective_origin", "preserve3d"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decode_number_vector2_d_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static TRANSFORM_ORIGIN_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSFORM_ORIGIN_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transform_origin_from_decoder;
-    fields_fn decode_transform_origin_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSFORM_ORIGIN_MODULE_ATOM;
-    keys_static TRANSFORM_ORIGIN_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransformOrigin";
-    keys ["x", "y"];
-    fields [
-        1 => 1: decode_number_from_decoder(env, decoder)?;
-        2 => 2: decode_number_from_decoder(env, decoder)?;
-    ]
-}
-
-static TRANSITION_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transition_info_from_decoder;
-    fields_fn decode_transition_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSITION_INFO_MODULE_ATOM;
-    keys_static TRANSITION_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransitionInfo";
-    keys ["type", "duration"];
-    fields [
-        1 => 1: decode_transition_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_prototype_device_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "preset";
-        2 => "custom";
-        3 => "presentation";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_device_rotation_from_decoder;
-    variants [
-        0 => "none";
-        1 => "ccw_90";
-    ]
-}
-
-static PROTOTYPE_DEVICE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_DEVICE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_prototype_device_from_decoder;
-    fields_fn decode_prototype_device_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PROTOTYPE_DEVICE_MODULE_ATOM;
-    keys_static PROTOTYPE_DEVICE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PrototypeDevice";
-    keys ["type", "size", "preset_identifier", "rotation"];
-    fields [
-        1 => 1: decode_prototype_device_type_from_decoder(env, decoder)?;
-        2 => 2: decode_vector_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decode_device_rotation_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_overlay_position_type_from_decoder;
-    variants [
-        0 => "center";
-        1 => "top_left";
-        2 => "top_center";
-        3 => "top_right";
-        4 => "bottom_left";
-        5 => "bottom_center";
-        6 => "bottom_right";
-        7 => "manual";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_overlay_background_interaction_from_decoder;
-    variants [
-        0 => "none";
-        1 => "close_on_click_outside";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_overlay_background_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "solid_color";
-    ]
-}
-
-static OVERLAY_BACKGROUND_APPEARANCE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static OVERLAY_BACKGROUND_APPEARANCE_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_overlay_background_appearance_from_decoder;
-    fields_fn decode_overlay_background_appearance_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static OVERLAY_BACKGROUND_APPEARANCE_MODULE_ATOM;
-    keys_static OVERLAY_BACKGROUND_APPEARANCE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.OverlayBackgroundAppearance";
-    keys ["background_type", "background_color"];
-    fields [
-        1 => 1: decode_overlay_background_type_from_decoder(env, decoder)?;
-        2 => 2: decode_color_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_navigation_type_from_decoder;
-    variants [
-        0 => "navigate";
-        1 => "overlay";
-        2 => "swap";
-        3 => "swap_state";
-        4 => "scroll_to";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_export_color_profile_from_decoder;
-    variants [
-        0 => "document";
-        1 => "srgb";
-        2 => "display_p3_v4";
-        3 => "cmyk";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_export_background_type_from_decoder;
-    variants [
-        0 => "solid";
-        1 => "transparent";
-        2 => "grid";
-    ]
-}
-
-static EXPORT_SETTINGS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPORT_SETTINGS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_export_settings_from_decoder;
-    fields_fn decode_export_settings_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EXPORT_SETTINGS_MODULE_ATOM;
-    keys_static EXPORT_SETTINGS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ExportSettings";
-    keys ["suffix", "image_type", "constraint", "svg_data_name", "svg_id_mode", "svg_outline_text", "contents_only", "svg_force_stroke_masks", "use_absolute_bounds", "color_profile", "quality", "use_bicubic_sampler", "frame_rate", "loop_count", "background_type"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_image_type_from_decoder(env, decoder)?;
-        3 => 3: decode_export_constraint_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decode_export_svgid_mode_from_decoder(env, decoder)?;
-        6 => 6: decoder.read_bool()?;
-        7 => 7: decoder.read_bool()?;
-        8 => 8: decoder.read_bool()?;
-        9 => 9: decoder.read_bool()?;
-        10 => 10: decode_export_color_profile_from_decoder(env, decoder)?;
-        11 => 11: decoder.read_var_float(env)?;
-        12 => 12: decoder.read_bool()?;
-        13 => 13: decoder.read_var_int()?;
-        14 => 14: decoder.read_var_int()?;
-        15 => 15: decode_export_background_type_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_export_svgid_mode_from_decoder;
-    variants [
-        0 => "if_needed";
-        1 => "always";
-    ]
-}
-
-static LAYOUT_GRID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static LAYOUT_GRID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_layout_grid_from_decoder;
-    fields_fn decode_layout_grid_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static LAYOUT_GRID_MODULE_ATOM;
-    keys_static LAYOUT_GRID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.LayoutGrid";
-    keys ["type", "axis", "visible", "num_sections", "offset", "section_size", "gutter_size", "color", "pattern", "num_sections_var", "offset_var", "section_size_var", "gutter_size_var"];
-    fields [
-        1 => 1: decode_layout_grid_type_from_decoder(env, decoder)?;
-        2 => 2: decode_axis_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-        4 => 4: decoder.read_var_int()?;
-        5 => 5: decoder.read_var_float(env)?;
-        6 => 6: decoder.read_var_float(env)?;
-        7 => 7: decoder.read_var_float(env)?;
-        8 => 8: decode_color_from_decoder(env, decoder)?;
-        9 => 9: decode_layout_grid_pattern_from_decoder(env, decoder)?;
-        10 => 10: decode_variable_data_from_decoder(env, decoder)?;
-        11 => 11: decode_variable_data_from_decoder(env, decoder)?;
-        12 => 12: decode_variable_data_from_decoder(env, decoder)?;
-        13 => 13: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static GUIDE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUIDE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_guide_from_decoder;
-    fields_fn decode_guide_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUIDE_MODULE_ATOM;
-    keys_static GUIDE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Guide";
-    keys ["axis", "offset", "guid"];
-    fields [
-        1 => 1: decode_axis_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static PATH_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PATH_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_path_from_decoder;
-    fields_fn decode_path_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PATH_MODULE_ATOM;
-    keys_static PATH_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Path";
-    keys ["winding_rule", "commands_blob", "style_id"];
-    fields [
-        1 => 1: decode_winding_rule_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decoder.read_var_uint()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_style_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "fill";
-        2 => "stroke";
-        3 => "text";
-        4 => "effect";
-        5 => "export";
-        6 => "grid";
-        7 => "animation";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_brush_orientation_from_decoder;
-    variants [
-        0 => "forward";
-        1 => "reverse";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_brush_type_from_decoder;
-    variants [
-        0 => "stretch";
-        1 => "scatter";
-    ]
-}
-
-static DYNAMIC_STROKE_SETTINGS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DYNAMIC_STROKE_SETTINGS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_dynamic_stroke_settings_from_decoder;
-    fields_fn decode_dynamic_stroke_settings_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DYNAMIC_STROKE_SETTINGS_MODULE_ATOM;
-    keys_static DYNAMIC_STROKE_SETTINGS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.DynamicStrokeSettings";
-    keys ["frequency", "wiggle", "smoothen"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-    ]
-}
-
-static SCATTER_STROKE_SETTINGS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SCATTER_STROKE_SETTINGS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_scatter_stroke_settings_from_decoder;
-    fields_fn decode_scatter_stroke_settings_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SCATTER_STROKE_SETTINGS_MODULE_ATOM;
-    keys_static SCATTER_STROKE_SETTINGS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ScatterStrokeSettings";
-    keys ["gap", "wiggle", "angular_jitter", "rotation", "size_jitter"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decoder.read_var_float(env)?;
-    ]
-}
-
-static STRETCH_STROKE_SETTINGS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STRETCH_STROKE_SETTINGS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_stretch_stroke_settings_from_decoder;
-    fields_fn decode_stretch_stroke_settings_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STRETCH_STROKE_SETTINGS_MODULE_ATOM;
-    keys_static STRETCH_STROKE_SETTINGS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StretchStrokeSettings";
-    keys ["orientation"];
-    fields [
-        1 => 1: decode_brush_orientation_from_decoder(env, decoder)?;
-    ]
-}
-
-static STROKE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_stroke_data_from_decoder;
-    fields_fn decode_stroke_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STROKE_DATA_MODULE_ATOM;
-    keys_static STROKE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StrokeData";
-    keys ["strokes", "version"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_stroke_from_decoder(env, decoder))?;
-        2 => 2: decoder.read_var_uint()?;
-    ]
-}
-
-static STROKE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STROKE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_stroke_from_decoder;
-    fields_fn decode_stroke_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STROKE_MODULE_ATOM;
-    keys_static STROKE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Stroke";
-    keys ["stroke_id", "stroke_weight", "stroke_weight_var", "stroke_paint", "style_id_for_stroke_fill", "stroke_align", "stroke_cap", "stroke_cap_size", "stroke_join", "miter_limit", "dash_pattern", "path_trim", "stroke_offset", "is_deleted"];
-    fields [
-        1 => 1: decoder.read_var_int()?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decode_variable_data_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
-        5 => 5: decode_style_id_from_decoder(env, decoder)?;
-        6 => 6: decode_stroke_align_from_decoder(env, decoder)?;
-        7 => 7: decode_stroke_cap_from_decoder(env, decoder)?;
-        8 => 8: decode_number_from_decoder(env, decoder)?;
-        9 => 9: decode_stroke_join_from_decoder(env, decoder)?;
-        10 => 10: decoder.read_var_float(env)?;
-        11 => 11: decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
-        12 => 12: decode_optional_vector_from_decoder(env, decoder)?;
-        13 => 13: decoder.read_var_float(env)?;
-        14 => 14: decoder.read_bool()?;
-    ]
-}
-
-static VARIABLE_WIDTH_POINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_WIDTH_POINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_width_point_from_decoder;
-    fields_fn decode_variable_width_point_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_WIDTH_POINT_MODULE_ATOM;
-    keys_static VARIABLE_WIDTH_POINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableWidthPoint";
-    keys ["position", "ascent", "descent", "segment_id"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_int()?;
-    ]
-}
-
-static SHARED_STYLE_REFERENCE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SHARED_STYLE_REFERENCE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_shared_style_reference_from_decoder;
-    fields_fn decode_shared_style_reference_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SHARED_STYLE_REFERENCE_MODULE_ATOM;
-    keys_static SHARED_STYLE_REFERENCE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SharedStyleReference";
-    keys ["style_key", "version_hash"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static SHARED_STYLE_MASTER_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SHARED_STYLE_MASTER_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_shared_style_master_data_from_decoder;
-    fields_fn decode_shared_style_master_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SHARED_STYLE_MASTER_DATA_MODULE_ATOM;
-    keys_static SHARED_STYLE_MASTER_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SharedStyleMasterData";
-    keys ["style_key", "sort_position", "file_key"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_scroll_behavior_from_decoder;
-    variants [
-        0 => "scrolls";
-        1 => "fixed_when_child_of_scrolling_frame";
-        2 => "sticky_scrolls";
-    ]
-}
-
-static ARC_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ARC_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_arc_data_from_decoder;
-    fields_fn decode_arc_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ARC_DATA_MODULE_ATOM;
-    keys_static ARC_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ArcData";
-    keys ["starting_angle", "ending_angle", "inner_radius"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-    ]
-}
-
-static SYMBOL_LINK_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SYMBOL_LINK_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_symbol_link_from_decoder;
-    fields_fn decode_symbol_link_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SYMBOL_LINK_MODULE_ATOM;
-    keys_static SYMBOL_LINK_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SymbolLink";
-    keys ["uri", "display_name", "display_text"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static PLUGIN_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PLUGIN_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_plugin_data_from_decoder;
-    fields_fn decode_plugin_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PLUGIN_DATA_MODULE_ATOM;
-    keys_static PLUGIN_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PluginData";
-    keys ["plugin_id", "value", "key"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static PLUGIN_RELAUNCH_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PLUGIN_RELAUNCH_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_plugin_relaunch_data_from_decoder;
-    fields_fn decode_plugin_relaunch_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PLUGIN_RELAUNCH_DATA_MODULE_ATOM;
-    keys_static PLUGIN_RELAUNCH_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PluginRelaunchData";
-    keys ["plugin_id", "message", "command", "is_deleted", "custom_tool_id"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decode_code_component_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static MULTIPLAYER_FIELD_VERSION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MULTIPLAYER_FIELD_VERSION_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_multiplayer_field_version_from_decoder;
-    fields_fn decode_multiplayer_field_version_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MULTIPLAYER_FIELD_VERSION_MODULE_ATOM;
-    keys_static MULTIPLAYER_FIELD_VERSION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.MultiplayerFieldVersion";
-    keys ["counter", "session_id"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decoder.read_var_uint()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_connector_magnet_from_decoder;
-    variants [
-        0 => "none";
-        1 => "auto";
-        2 => "top";
-        3 => "left";
-        4 => "bottom";
-        5 => "right";
-        6 => "center";
-        7 => "auto_horizontal";
-        8 => "edge";
-        9 => "absolute";
-    ]
-}
-
-static CONNECTOR_ENDPOINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_ENDPOINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_connector_endpoint_from_decoder;
-    fields_fn decode_connector_endpoint_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CONNECTOR_ENDPOINT_MODULE_ATOM;
-    keys_static CONNECTOR_ENDPOINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ConnectorEndpoint";
-    keys ["endpoint_node_id", "position", "magnet", "relative_position"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_vector_from_decoder(env, decoder)?;
-        3 => 3: decode_connector_magnet_from_decoder(env, decoder)?;
-        4 => 4: decode_vector_from_decoder(env, decoder)?;
-    ]
-}
-
-static CONNECTOR_CONTROL_POINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_CONTROL_POINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_connector_control_point_from_decoder;
-    fields_fn decode_connector_control_point_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CONNECTOR_CONTROL_POINT_MODULE_ATOM;
-    keys_static CONNECTOR_CONTROL_POINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ConnectorControlPoint";
-    keys ["position", "axis"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-        2 => 2: decode_vector_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_connector_text_section_from_decoder;
-    variants [
-        0 => "middle_to_start";
-        1 => "middle_to_end";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_connector_off_axis_offset_from_decoder;
-    variants [
-        0 => "none";
-        1 => "above";
-        2 => "below";
-    ]
-}
-
-static CONNECTOR_TEXT_MIDPOINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CONNECTOR_TEXT_MIDPOINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_connector_text_midpoint_from_decoder;
-    fields_fn decode_connector_text_midpoint_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CONNECTOR_TEXT_MIDPOINT_MODULE_ATOM;
-    keys_static CONNECTOR_TEXT_MIDPOINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ConnectorTextMidpoint";
-    keys ["section", "offset", "off_axis_offset"];
-    fields [
-        1 => 1: decode_connector_text_section_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decode_connector_off_axis_offset_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_connector_line_style_from_decoder;
-    variants [
-        0 => "elbowed";
-        1 => "straight";
-        2 => "curved";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_connector_type_from_decoder;
-    variants [
-        0 => "manual";
-        1 => "diagram";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_annotation_property_type_from_decoder;
-    variants [
-        0 => "fill";
-        1 => "stroke";
-        2 => "width";
-        3 => "height";
-        4 => "min_width";
-        5 => "min_height";
-        6 => "max_width";
-        7 => "max_height";
-        8 => "stroke_width";
-        9 => "corner_radius";
-        10 => "effect";
-        11 => "text_style";
-        12 => "text_align_horizontal";
-        13 => "font_family";
-        14 => "font_size";
-        15 => "font_weight";
-        16 => "line_height";
-        17 => "letter_spacing";
-        18 => "stack_spacing";
-        19 => "stack_padding";
-        20 => "stack_mode";
-        21 => "stack_alignment";
-        22 => "opacity";
-        23 => "component";
-        24 => "font_style";
-        25 => "grid_row_gap";
-        26 => "grid_column_gap";
-        27 => "grid_row_count";
-        28 => "grid_column_count";
-        29 => "grid_row_anchor_index";
-        30 => "grid_column_anchor_index";
-        31 => "grid_row_span";
-        32 => "grid_column_span";
-    ]
-}
-
-static ANNOTATION_PROPERTY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_PROPERTY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_annotation_property_from_decoder;
-    fields_fn decode_annotation_property_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANNOTATION_PROPERTY_MODULE_ATOM;
-    keys_static ANNOTATION_PROPERTY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnnotationProperty";
-    keys ["type"];
-    fields [
-        1 => 1: decode_annotation_property_type_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_annotation_category_preset_from_decoder;
-    variants [
-        0 => "none";
-        1 => "accessibility";
-        2 => "behavior";
-        3 => "content";
-        4 => "development";
-        5 => "interaction";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_annotation_category_color_from_decoder;
-    variants [
-        0 => "yellow";
-        1 => "orange";
-        2 => "red";
-        3 => "pink";
-        4 => "violet";
-        5 => "blue";
-        6 => "teal";
-        7 => "green";
-    ]
-}
-
-static ANNOTATION_CATEGORY_CUSTOM_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_CUSTOM_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_annotation_category_custom_from_decoder;
-    fields_fn decode_annotation_category_custom_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANNOTATION_CATEGORY_CUSTOM_MODULE_ATOM;
-    keys_static ANNOTATION_CATEGORY_CUSTOM_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnnotationCategoryCustom";
-    keys ["color", "custom_color", "label"];
-    fields [
-        1 => 1: decode_annotation_category_color_from_decoder(env, decoder)?;
-        2 => 2: decode_color_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static ANNOTATION_CATEGORY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_annotation_category_from_decoder;
-    fields_fn decode_annotation_category_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANNOTATION_CATEGORY_MODULE_ATOM;
-    keys_static ANNOTATION_CATEGORY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnnotationCategory";
-    keys ["id", "preset", "custom"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_annotation_category_preset_from_decoder(env, decoder)?;
-        3 => 3: decode_annotation_category_custom_from_decoder(env, decoder)?;
-    ]
-}
-
-static ANNOTATION_CATEGORIES_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_CATEGORIES_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_annotation_categories_from_decoder;
-    fields_fn decode_annotation_categories_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANNOTATION_CATEGORIES_MODULE_ATOM;
-    keys_static ANNOTATION_CATEGORIES_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnnotationCategories";
-    keys ["version", "items"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decoder.read_repeated(|decoder| decode_annotation_category_from_decoder(env, decoder))?;
-    ]
-}
-
-static ANNOTATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_annotation_from_decoder;
-    fields_fn decode_annotation_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANNOTATION_MODULE_ATOM;
-    keys_static ANNOTATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Annotation";
-    keys ["label", "properties", "label_v2", "category_id"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_annotation_property_from_decoder(env, decoder))?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_annotation_measurement_node_side_from_decoder;
-    variants [
-        0 => "top";
-        1 => "bottom";
-        2 => "left";
-        3 => "right";
-    ]
-}
-
-static ANNOTATION_MEASUREMENT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANNOTATION_MEASUREMENT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_annotation_measurement_from_decoder;
-    fields_fn decode_annotation_measurement_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANNOTATION_MEASUREMENT_MODULE_ATOM;
-    keys_static ANNOTATION_MEASUREMENT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnnotationMeasurement";
-    keys ["id", "from_node", "to_node", "from_node_side", "to_same_side", "inner_offset_relative", "outer_offset_fixed", "to_node_stable_path", "free_text"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decode_annotation_measurement_node_side_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_bool()?;
-        6 => 6: decoder.read_var_float(env)?;
-        7 => 7: decoder.read_var_float(env)?;
-        8 => 8: decode_guid_path_from_decoder(env, decoder)?;
-        9 => 9: decoder.read_string(env)?;
-    ]
-}
-
-static LIBRARY_MOVE_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static LIBRARY_MOVE_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_library_move_info_from_decoder;
-    fields_fn decode_library_move_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static LIBRARY_MOVE_INFO_MODULE_ATOM;
-    keys_static LIBRARY_MOVE_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.LibraryMoveInfo";
-    keys ["old_key", "paste_file_key"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static LIBRARY_MOVE_HISTORY_ITEM_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static LIBRARY_MOVE_HISTORY_ITEM_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_library_move_history_item_from_decoder;
-    fields_fn decode_library_move_history_item_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static LIBRARY_MOVE_HISTORY_ITEM_MODULE_ATOM;
-    keys_static LIBRARY_MOVE_HISTORY_ITEM_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.LibraryMoveHistoryItem";
-    keys ["source_node_id", "source_component_key"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static DEVELOPER_RELATED_LINK_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DEVELOPER_RELATED_LINK_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_developer_related_link_from_decoder;
-    fields_fn decode_developer_related_link_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DEVELOPER_RELATED_LINK_MODULE_ATOM;
-    keys_static DEVELOPER_RELATED_LINK_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.DeveloperRelatedLink";
-    keys ["node_id", "file_key", "link_name", "link_url"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-    ]
-}
-
-static WIDGET_POINTER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_POINTER_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_widget_pointer_from_decoder;
-    fields_fn decode_widget_pointer_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static WIDGET_POINTER_MODULE_ATOM;
-    keys_static WIDGET_POINTER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.WidgetPointer";
-    keys ["node_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static EDIT_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_edit_info_from_decoder;
-    fields_fn decode_edit_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EDIT_INFO_MODULE_ATOM;
-    keys_static EDIT_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EditInfo";
-    keys ["timestamp_iso8601", "user_id", "last_edited_at", "created_at"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_var_uint()?;
-        4 => 4: decoder.read_var_uint()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_editor_type_from_decoder;
-    variants [
-        0 => "design";
-        1 => "whiteboard";
-        2 => "slides";
-        3 => "dev_handoff";
-        4 => "sites";
-        5 => "cooper";
-        6 => "illustration";
-        7 => "figmake";
-        8 => "figspec";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_mask_type_from_decoder;
-    variants [
-        0 => "alpha";
-        1 => "outline";
-        2 => "luminance";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_module_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "single_node";
-        2 => "multi_node";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_section_status_from_decoder;
-    variants [
-        0 => "none";
-        1 => "build";
-        2 => "completed";
-    ]
-}
-
-static SECTION_STATUS_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SECTION_STATUS_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_section_status_info_from_decoder;
-    fields_fn decode_section_status_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SECTION_STATUS_INFO_MODULE_ATOM;
-    keys_static SECTION_STATUS_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SectionStatusInfo";
-    keys ["status", "last_update_unix_timestamp", "description", "user_id", "prev_status"];
-    fields [
-        1 => 1: decode_section_status_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decode_section_status_from_decoder(env, decoder)?;
-    ]
-}
-
-static BUZZ_APPROVAL_REQUEST_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BUZZ_APPROVAL_REQUEST_INFO_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_buzz_approval_request_info_from_decoder;
-    fields_fn decode_buzz_approval_request_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BUZZ_APPROVAL_REQUEST_INFO_MODULE_ATOM;
-    keys_static BUZZ_APPROVAL_REQUEST_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.BuzzApprovalRequestInfo";
-    keys ["request_id", "requester_user_id", "requested_at", "reviewer_user_ids", "title", "note", "assets_in_request"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_var_uint()?;
-        4 => 4: decoder.read_repeated(|decoder| decoder.read_string(env))?;
-        5 => 5: decoder.read_string(env)?;
-        6 => 6: decoder.read_string(env)?;
-        7 => 7: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-    ]
-}
-
-static BUZZ_APPROVAL_REQUESTS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BUZZ_APPROVAL_REQUESTS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_buzz_approval_requests_from_decoder;
-    fields_fn decode_buzz_approval_requests_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BUZZ_APPROVAL_REQUESTS_MODULE_ATOM;
-    keys_static BUZZ_APPROVAL_REQUESTS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.BuzzApprovalRequests";
-    keys ["requests"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_buzz_approval_request_info_from_decoder(env, decoder))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_buzz_approval_node_status_from_decoder;
-    variants [
-        0 => "none";
-        1 => "in_review";
-        2 => "approved";
-        3 => "changes_requested";
-    ]
-}
-
-static BUZZ_APPROVAL_NODE_STATUS_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BUZZ_APPROVAL_NODE_STATUS_INFO_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_buzz_approval_node_status_info_from_decoder;
-    fields_fn decode_buzz_approval_node_status_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BUZZ_APPROVAL_NODE_STATUS_INFO_MODULE_ATOM;
-    keys_static BUZZ_APPROVAL_NODE_STATUS_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.BuzzApprovalNodeStatusInfo";
-    keys ["current_status", "was_previously_approved", "approval_revoked_at_history"];
-    fields [
-        1 => 1: decode_buzz_approval_node_status_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_bool()?;
-        3 => 3: decoder.read_repeated(|decoder| decoder.read_var_uint())?;
-    ]
-}
-
-static CODE_EMBED_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_EMBED_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_embed_info_from_decoder;
-    fields_fn decode_code_embed_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_EMBED_INFO_MODULE_ATOM;
-    keys_static CODE_EMBED_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeEmbedInfo";
-    keys ["url", "src_url", "title", "thumbnail_image_hash", "is_published_site"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decoder.read_bool()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_variable_timing_display_unit_from_decoder;
-    variants [
-        0 => "milliseconds";
-        1 => "seconds";
-    ]
-}
-
-static NODE_CHANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHANGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_change_from_decoder;
-    fields_fn decode_node_change_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_CHANGE_MODULE_ATOM;
-    keys_static NODE_CHANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeChange";
-    keys ["guid", "guid_tag", "phase", "phase_tag", "parent_index", "parent_index_tag", "type", "type_tag", "name", "name_tag", "is_publishable", "description", "library_move_info", "library_move_history", "key", "file_asset_ids", "style_id", "style_id_tag", "is_fill_style", "is_stroke_style", "is_override_over_text_style", "style_type", "style_description", "version", "user_facing_version", "sort_position", "ojans_super_secret_node_field", "sev_moonlit_lily_data", "is_soft_deleted_style", "is_non_updateable", "shared_style_master_data", "shared_style_reference", "inherit_fill_style_id", "inherit_stroke_style_id", "inherit_text_style_id", "inherit_export_style_id", "inherit_effect_style_id", "inherit_grid_style_id", "inherit_fill_style_id_for_stroke", "style_id_for_fill", "style_id_for_stroke_fill", "style_id_for_text", "style_id_for_effect", "style_id_for_grid", "style_animations", "background_paints", "inherit_fill_style_id_for_background", "is_state_group", "state_group_property_value_orders", "partial_paste_annotation", "shared_symbol_reference", "is_symbol_publishable", "shared_symbol_mappings", "shared_symbol_version", "shared_component_master_data", "symbol_description", "unflattening_mappings", "force_unflattening_mappings", "publish_file", "source_library_key", "publish_id", "component_key", "is_c2", "published_version", "origin_component_key", "component_prop_defs", "component_prop_refs", "variant_prop_specs", "symbol_data", "symbol_data_tag", "derived_symbol_data", "nested_instance_resize_enabled", "overridden_symbol_id", "component_prop_assignments", "props_are_bubbled", "override_stash", "override_stash_v2", "guid_path", "guid_path_tag", "override_level", "module_type", "is_slot", "is_slot_content", "font_size", "font_size_tag", "paragraph_indent", "paragraph_indent_tag", "paragraph_spacing", "paragraph_spacing_tag", "text_align_horizontal", "text_align_horizontal_tag", "text_align_vertical", "text_align_vertical_tag", "text_case", "text_case_tag", "text_decoration", "text_decoration_tag", "line_height", "line_height_tag", "font_name", "font_name_tag", "text_data", "text_data_tag", "derived_text_data", "font_variant_common_ligatures", "font_variant_contextual_ligatures", "font_variant_discretionary_ligatures", "font_variant_historical_ligatures", "font_variant_ordinal", "font_variant_slashed_zero", "font_variant_numeric_figure", "font_variant_numeric_spacing", "font_variant_numeric_fraction", "font_variant_caps", "font_variant_position", "letter_spacing", "font_version", "leading_trim", "hanging_punctuation", "hanging_list", "fallback_glyphs", "max_lines", "responsive_text_style_variants", "section_status", "section_status_info", "text_user_layout_version", "text_explicit_layout_version", "toggled_on_ot_features", "toggled_off_ot_features", "hyperlink", "mention", "font_variations", "text_bidi_version", "text_truncation", "has_had_rtl_text", "emoji_image_set", "slide_thumbnail_hash", "visible", "visible_tag", "locked", "locked_tag", "lock_mode", "opacity", "opacity_tag", "blend_mode", "blend_mode_tag", "size", "size_tag", "transform", "transform_tag", "dash_pattern", "dash_pattern_tag", "mask", "mask_tag", "rotation_origin", "mask_is_outline", "mask_is_outline_tag", "mask_type", "background_opacity", "background_opacity_tag", "corner_radius", "corner_radius_tag", "stroke_weight", "stroke_weight_tag", "stroke_align", "stroke_align_tag", "stroke_cap", "stroke_cap_tag", "stroke_cap_size", "stroke_join", "stroke_join_tag", "fill_paints", "fill_paints_tag", "stroke_paints", "stroke_paints_tag", "effects", "effects_tag", "background_color", "background_color_tag", "fill_geometry", "fill_geometry_tag", "stroke_geometry", "stroke_geometry_tag", "offset_fill_mask_geometry", "text_decoration_fill_paints", "text_decoration_skip_ink", "text_underline_offset", "text_decoration_thickness", "text_decoration_style", "transform_modifiers", "transform3d", "stroke_data", "scene3d", "transform_origin", "rectangle_top_left_corner_radius", "rectangle_top_right_corner_radius", "rectangle_bottom_left_corner_radius", "rectangle_bottom_right_corner_radius", "rectangle_corner_radii_independent", "rectangle_corner_tool_independent", "proportions_constrained", "target_aspect_ratio", "use_absolute_bounds", "border_top_hidden", "border_bottom_hidden", "border_left_hidden", "border_right_hidden", "borders_take_space", "border_top_weight", "border_bottom_weight", "border_left_weight", "border_right_weight", "border_stroke_weights_independent", "horizontal_constraint", "horizontal_constraint_tag", "stack_mode", "stack_mode_tag", "stack_spacing", "stack_spacing_tag", "stack_padding", "stack_padding_tag", "stack_counter_align", "stack_justify", "stack_align", "stack_horizontal_padding", "stack_vertical_padding", "stack_width", "stack_height", "stack_primary_sizing", "stack_primary_align_items", "stack_counter_align_items", "stack_child_primary_grow", "stack_padding_right", "stack_padding_bottom", "stack_child_align_self", "stack_positioning", "stack_reverse_z_index", "stack_wrap", "stack_counter_spacing", "min_size", "max_size", "stack_counter_align_content", "sorted_moving_child_indices", "stack_layout_version", "grid_rows", "grid_columns", "grid_row_gap", "grid_column_gap", "grid_row_anchor", "grid_column_anchor", "grid_row_span", "grid_column_span", "grid_columns_sizing", "grid_rows_sizing", "grid_child_vertical_align", "grid_child_horizontal_align", "grid_auto_tracks", "grid_reflow_enabled", "is_snake_game_board", "transition_node_id", "prototype_start_node_id", "prototype_background_color", "transition_info", "transition_type", "transition_duration", "easing_type", "transition_preserve_scroll", "connection_type", "connection_url", "prototype_device", "interaction_type", "transition_timeout", "interaction_maintained", "interaction_duration", "destination_is_overlay", "transition_should_smart_animate", "prototype_interactions", "object_animations", "prototype_starting_point", "plugin_data", "plugin_relaunch_data", "connector_start", "connector_end", "connector_line_style", "connector_start_cap", "connector_end_cap", "connector_control_points", "connector_bezier_control_points", "connector_text_midpoint", "connector_type", "connector_version", "annotations", "measurements", "annotation_categories", "shape_with_text_type", "shape_user_height", "is_stroke_paint_derived", "derived_immutable_frame_data", "derived_immutable_frame_data_version", "node_generation_data", "jsx_data", "derived_jsx_data", "stable_key", "code_block_language", "code_block_theme", "link_preview_data", "shape_truncates", "section_contents_hidden", "video_playback", "stamp_data", "section_preset_info", "platform_shape_definition", "widget_synced_state", "widget_sync_cursor", "widget_derived_subtree_cursor", "widget_cached_ancestor", "widget_input_behavior", "widget_tooltip", "widget_hover_style", "is_widget_stickable", "should_hide_cursors_on_widget_hover", "widget_metadata", "widget_events", "widget_property_menu_items", "widget_input_text_node_type", "jsx_props", "table_row_positions", "table_column_positions", "table_row_heights", "table_column_widths", "table_merged_cells", "interactive_slide_config_data", "interactive_slide_participant_data", "flapp_type", "is_embedded_prototype", "slide_speaker_notes", "is_skipped_slide", "presentation_outlines", "theme_id", "slide_theme_data", "slide_theme_map", "slide_template_file_key", "slide_number", "slide_number_separator", "diagram_parent_id", "layout_root", "layout_position", "diagram_layout_rule_type", "diagram_parent_index", "diagram_layout_paused", "is_page_divider", "internal_enum_for_test", "internal_data_for_test", "auto_rename", "auto_rename_tag", "background_enabled", "background_enabled_tag", "export_contents_only", "export_contents_only_tag", "miter_limit", "miter_limit_tag", "text_tracking", "text_tracking_tag", "vertical_constraint", "vertical_constraint_tag", "export_settings", "export_settings_tag", "text_auto_resize", "text_auto_resize_tag", "layout_grids", "layout_grids_tag", "frame_mask_disabled", "frame_mask_disabled_tag", "resize_to_fit", "resize_to_fit_tag", "boolean_operation", "boolean_operation_tag", "handle_mirroring", "handle_mirroring_tag", "count", "count_tag", "star_inner_scale", "star_inner_scale_tag", "arc_data", "vector_data", "vector_data_tag", "vector_operation_version", "text_path_start", "export_background_disabled", "guides", "internal_only", "scroll_direction", "corner_smoothing", "scroll_offset", "export_text_as_svg_text", "scroll_contracted_state", "contracted_size", "fixed_children_divider", "scroll_behavior", "derived_symbol_data_layout_version", "navigation_type", "overlay_position_type", "overlay_relative_position", "overlay_background_interaction", "overlay_background_appearance", "override_key", "container_supports_fill_stroke_and_corners", "stack_counter_sizing", "containers_support_fill_stroke_and_corners", "key_trigger", "voice_event_phrase", "ancestor_path_before_deletion", "symbol_links", "text_list_data", "detach_optical_size_from_font_size", "list_spacing", "embed_data", "rich_media_data", "rendered_synced_state", "simplify_instance_panels", "accessible_html_tag", "aria_role", "aria_attributes", "accessible_label", "is_decorative_image", "variable_data", "variable_consumption_map", "variable_mode_by_set_map", "variable_set_modes", "variable_set_id", "variable_resolved_type", "variable_data_values", "variable_token_name", "timing_display_unit", "variable_scopes", "parameter_consumption_map", "code_syntax", "paste_source", "page_type", "stroke_brush_guid", "stroke_seed", "variable_width_points", "dynamic_stroke_settings", "scatter_stroke_settings", "stretch_stroke_settings", "scatter_brush_transforms", "brush_type", "path_trim", "stroke_offset", "backing_variable_set_id", "overridden_variable_id", "backing_variable_id", "is_collection_extendable", "root_variable_key", "inherited_variable_ids", "handoff_status_map", "agenda_position_map", "agenda_metadata_map", "migration_status", "is_soft_deleted", "edit_info", "color_profile", "detached_symbol_id", "child_reading_direction", "reading_index", "document_color_profile", "developer_related_links", "slide_active_theme_lib_key", "edit_scope_info", "semantic_weight", "semantic_italic", "are_slides_manually_indented", "is_responsive_set", "derived_breakpoint_data", "default_responsive_set_id", "is_primary_breakpoint", "primary_responsive_node_id", "multi_edit_glue_id", "breakpoint_min_width", "is_breakpoint_in_focus", "responsive_set_settings", "behaviors", "source_code", "source_code_collaborative_text_version", "collaborative_source_code", "belongs_to_code_library_id", "imported_code_files", "code_file_canvas_node_id", "is_entrypoint_code_file", "component_or_state_group_key", "component_or_state_group_version", "source_code_library_key", "source_code_library_keys", "used_make_libraries", "make_library_component_id", "should_hide_preview_for_make_kit_creation", "is_make_kit", "code_preview_settings", "code_examples", "exported_from_code_file_id", "code_export_name", "code_component_description", "backing_code_component_id", "is_main_code_component", "code_snapshot_state", "chat_messages", "chat_compression_state", "ai_chat_thread", "code_chat_messages_key", "code_snapshot", "code_snapshot_layers", "code_snapshot_invalidated_at", "is_code_behavior", "auto_fork_code", "has_been_manually_renamed", "code_created_from_design", "code_created_from_design_node_id", "image_imports", "code_object_type", "code_file_path", "code_behavior_data", "code_library_format", "is_code_preview_playing_on_canvas", "code_embed_info", "is_embed_code_layer", "code_source_info", "mime_type", "blob_ref", "cms_selector", "cms_consumption_map", "cms_rich_text_style_map", "repeater_symbol_id", "repeater_cms_override_data", "repeater_symbol_override_data", "repeater_override_data", "ai_edited_node_change_field_numbers", "ai_edit_scope_label", "first_draft_data", "first_draft_kit_element_data", "cooper_revert_data", "cooper_template_data", "buzz_approval_requests", "buzz_approval_node_status_info", "hub_file_attribution", "managed_string_data", "thumbnail_info", "ai_canvas_prompt", "backing_node_id", "page_status", "motion_transform", "timeline_position", "keyframe_value", "keyframe_value_ref", "interpolation_type", "bezier_handles", "easing_data", "keyframe_operation", "timeline_position_type", "is_clip", "clip_id", "timeline_duration", "timeline_offset", "timeline_disabled", "playback_style", "timeline_definitions", "timeline_assignments", "animation_presets", "style_ids_for_animation", "backing_animation_preset_id", "tools", "custom_effects", "transition_overrides", "use_legacy_smart_animate", "source_control_config", "spec_block_type", "spec_block_content", "spec_code_block_language", "spec_block_table_alignment", "spec_block_indent_level", "spec_image_hash", "spec_width", "spec_height", "spec_block_table_row_heights", "spec_block_table_column_widths", "spec_embed_url", "placeholder", "placeholder_client_lifecycle_id", "placeholder_invalidate_at", "disable_jit_dst", "custom_tool_artifact_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        53 => 2: decoder.read_var_uint()?;
-        2 => 3: decode_node_phase_from_decoder(env, decoder)?;
-        54 => 4: decoder.read_var_uint()?;
-        3 => 5: decode_parent_index_from_decoder(env, decoder)?;
-        55 => 6: decoder.read_var_uint()?;
-        4 => 7: decode_node_type_from_decoder(env, decoder)?;
-        56 => 8: decoder.read_var_uint()?;
-        5 => 9: decoder.read_string(env)?;
-        57 => 10: decoder.read_var_uint()?;
-        174 => 11: decoder.read_bool()?;
-        318 => 12: decoder.read_string(env)?;
-        256 => 13: decode_library_move_info_from_decoder(env, decoder)?;
-        281 => 14: decoder.read_repeated(|decoder| decode_library_move_history_item_from_decoder(env, decoder))?;
-        319 => 15: decoder.read_string(env)?;
-        383 => 16: decode_asset_id_map_from_decoder(env, decoder)?;
-        49 => 17: decoder.read_var_uint()?;
-        101 => 18: decoder.read_var_uint()?;
-        157 => 19: decoder.read_bool()?;
-        161 => 20: decoder.read_bool()?;
-        376 => 21: decoder.read_bool()?;
-        163 => 22: decode_style_type_from_decoder(env, decoder)?;
-        191 => 23: decoder.read_string(env)?;
-        171 => 24: decoder.read_string(env)?;
-        399 => 25: decoder.read_string(env)?;
-        320 => 26: decoder.read_string(env)?;
-        345 => 27: decode_shared_style_master_data_from_decoder(env, decoder)?;
-        348 => 28: decode_shared_style_master_data_from_decoder(env, decoder)?;
-        176 => 29: decoder.read_bool()?;
-        177 => 30: decoder.read_bool()?;
-        172 => 31: decode_shared_style_master_data_from_decoder(env, decoder)?;
-        173 => 32: decode_shared_style_reference_from_decoder(env, decoder)?;
-        158 => 33: decode_guid_from_decoder(env, decoder)?;
-        162 => 34: decode_guid_from_decoder(env, decoder)?;
-        167 => 35: decode_guid_from_decoder(env, decoder)?;
-        168 => 36: decode_guid_from_decoder(env, decoder)?;
-        169 => 37: decode_guid_from_decoder(env, decoder)?;
-        170 => 38: decode_guid_from_decoder(env, decoder)?;
-        185 => 39: decode_guid_from_decoder(env, decoder)?;
-        332 => 40: decode_style_id_from_decoder(env, decoder)?;
-        333 => 41: decode_style_id_from_decoder(env, decoder)?;
-        334 => 42: decode_style_id_from_decoder(env, decoder)?;
-        335 => 43: decode_style_id_from_decoder(env, decoder)?;
-        336 => 44: decode_style_id_from_decoder(env, decoder)?;
-        580 => 45: decoder.read_repeated(|decoder| decode_style_animation_from_decoder(env, decoder))?;
-        193 => 46: decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
-        194 => 47: decode_guid_from_decoder(env, decoder)?;
-        225 => 48: decoder.read_bool()?;
-        238 => 49: decoder.read_repeated(|decoder| decode_state_group_property_value_order_from_decoder(env, decoder))?;
-        581 => 50: decode_partial_paste_annotation_from_decoder(env, decoder)?;
-        122 => 51: decode_shared_symbol_reference_from_decoder(env, decoder)?;
-        123 => 52: decoder.read_bool()?;
-        124 => 53: decoder.read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
-        126 => 54: decoder.read_string(env)?;
-        152 => 55: decode_shared_component_master_data_from_decoder(env, decoder)?;
-        144 => 56: decoder.read_string(env)?;
-        164 => 57: decoder.read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
-        228 => 58: decoder.read_repeated(|decoder| decode_guid_path_mapping_from_decoder(env, decoder))?;
-        214 => 59: decoder.read_string(env)?;
-        395 => 60: decoder.read_string(env)?;
-        215 => 61: decode_guid_from_decoder(env, decoder)?;
-        216 => 62: decoder.read_string(env)?;
-        217 => 63: decoder.read_bool()?;
-        218 => 64: decoder.read_string(env)?;
-        252 => 65: decoder.read_string(env)?;
-        266 => 66: decoder.read_repeated(|decoder| decode_component_prop_def_from_decoder(env, decoder))?;
-        267 => 67: decoder.read_repeated(|decoder| decode_component_prop_ref_from_decoder(env, decoder))?;
-        483 => 68: decoder.read_repeated(|decoder| decode_variant_prop_spec_from_decoder(env, decoder))?;
-        113 => 69: decode_symbol_data_from_decoder(env, decoder)?;
-        114 => 70: decoder.read_var_uint()?;
-        125 => 71: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-        394 => 72: decoder.read_bool()?;
-        143 => 73: decode_guid_from_decoder(env, decoder)?;
-        268 => 74: decoder.read_repeated(|decoder| decode_component_prop_assignment_from_decoder(env, decoder))?;
-        305 => 75: decoder.read_bool()?;
-        248 => 76: decoder.read_repeated(|decoder| decode_instance_override_stash_from_decoder(env, decoder))?;
-        250 => 77: decoder.read_repeated(|decoder| decode_instance_override_stash_v2_from_decoder(env, decoder))?;
-        111 => 78: decode_guid_path_from_decoder(env, decoder)?;
-        112 => 79: decoder.read_var_uint()?;
-        321 => 80: decoder.read_var_int()?;
-        382 => 81: decode_module_type_from_decoder(env, decoder)?;
-        463 => 82: decoder.read_bool()?;
-        495 => 83: decoder.read_bool()?;
-        21 => 84: decoder.read_var_float(env)?;
-        73 => 85: decoder.read_var_uint()?;
-        22 => 86: decoder.read_var_float(env)?;
-        74 => 87: decoder.read_var_uint()?;
-        23 => 88: decoder.read_var_float(env)?;
-        75 => 89: decoder.read_var_uint()?;
-        32 => 90: decode_text_align_horizontal_from_decoder(env, decoder)?;
-        84 => 91: decoder.read_var_uint()?;
-        33 => 92: decode_text_align_vertical_from_decoder(env, decoder)?;
-        85 => 93: decoder.read_var_uint()?;
-        34 => 94: decode_text_case_from_decoder(env, decoder)?;
-        86 => 95: decoder.read_var_uint()?;
-        35 => 96: decode_text_decoration_from_decoder(env, decoder)?;
-        87 => 97: decoder.read_var_uint()?;
-        40 => 98: decode_number_from_decoder(env, decoder)?;
-        92 => 99: decoder.read_var_uint()?;
-        41 => 100: decode_font_name_from_decoder(env, decoder)?;
-        93 => 101: decoder.read_var_uint()?;
-        42 => 102: decode_text_data_from_decoder(env, decoder)?;
-        94 => 103: decoder.read_var_uint()?;
-        359 => 104: decode_derived_text_data_from_decoder(env, decoder)?;
-        127 => 105: decoder.read_bool()?;
-        128 => 106: decoder.read_bool()?;
-        129 => 107: decoder.read_bool()?;
-        130 => 108: decoder.read_bool()?;
-        131 => 109: decoder.read_bool()?;
-        132 => 110: decoder.read_bool()?;
-        133 => 111: decode_font_variant_numeric_figure_from_decoder(env, decoder)?;
-        134 => 112: decode_font_variant_numeric_spacing_from_decoder(env, decoder)?;
-        135 => 113: decode_font_variant_numeric_fraction_from_decoder(env, decoder)?;
-        136 => 114: decode_font_variant_caps_from_decoder(env, decoder)?;
-        137 => 115: decode_font_variant_position_from_decoder(env, decoder)?;
-        165 => 116: decode_number_from_decoder(env, decoder)?;
-        202 => 117: decoder.read_string(env)?;
-        322 => 118: decode_leading_trim_from_decoder(env, decoder)?;
-        337 => 119: decoder.read_bool()?;
-        339 => 120: decoder.read_bool()?;
-        550 => 121: decoder.read_bool()?;
-        351 => 122: decoder.read_var_int()?;
-        417 => 123: decoder.read_repeated(|decoder| decode_responsive_text_style_variant_from_decoder(env, decoder))?;
-        352 => 124: decode_section_status_from_decoder(env, decoder)?;
-        355 => 125: decode_section_status_info_from_decoder(env, decoder)?;
-        203 => 126: decoder.read_var_uint()?;
-        396 => 127: decoder.read_var_uint()?;
-        205 => 128: decoder.read_repeated(|decoder| decode_open_type_feature_from_decoder(env, decoder))?;
-        206 => 129: decoder.read_repeated(|decoder| decode_open_type_feature_from_decoder(env, decoder))?;
-        223 => 130: decode_hyperlink_from_decoder(env, decoder)?;
-        340 => 131: decode_mention_from_decoder(env, decoder)?;
-        260 => 132: decoder.read_repeated(|decoder| decode_font_variation_from_decoder(env, decoder))?;
-        279 => 133: decoder.read_var_uint()?;
-        280 => 134: decode_text_truncation_from_decoder(env, decoder)?;
-        292 => 135: decoder.read_bool()?;
-        391 => 136: decode_emoji_image_set_from_decoder(env, decoder)?;
-        392 => 137: decoder.read_string(env)?;
-        6 => 138: decoder.read_bool()?;
-        58 => 139: decoder.read_var_uint()?;
-        7 => 140: decoder.read_bool()?;
-        59 => 141: decoder.read_var_uint()?;
-        434 => 142: decode_lock_mode_from_decoder(env, decoder)?;
-        8 => 143: decoder.read_var_float(env)?;
-        60 => 144: decoder.read_var_uint()?;
-        9 => 145: decode_blend_mode_from_decoder(env, decoder)?;
-        61 => 146: decoder.read_var_uint()?;
-        11 => 147: decode_vector_from_decoder(env, decoder)?;
-        63 => 148: decoder.read_var_uint()?;
-        12 => 149: decode_matrix_from_decoder(env, decoder)?;
-        64 => 150: decoder.read_var_uint()?;
-        13 => 151: decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
-        65 => 152: decoder.read_var_uint()?;
-        16 => 153: decoder.read_bool()?;
-        68 => 154: decoder.read_var_uint()?;
-        424 => 155: decode_vector_from_decoder(env, decoder)?;
-        18 => 156: decoder.read_bool()?;
-        70 => 157: decoder.read_var_uint()?;
-        317 => 158: decode_mask_type_from_decoder(env, decoder)?;
-        19 => 159: decoder.read_var_float(env)?;
-        71 => 160: decoder.read_var_uint()?;
-        20 => 161: decoder.read_var_float(env)?;
-        72 => 162: decoder.read_var_uint()?;
-        26 => 163: decoder.read_var_float(env)?;
-        78 => 164: decoder.read_var_uint()?;
-        29 => 165: decode_stroke_align_from_decoder(env, decoder)?;
-        81 => 166: decoder.read_var_uint()?;
-        30 => 167: decode_stroke_cap_from_decoder(env, decoder)?;
-        82 => 168: decoder.read_var_uint()?;
-        497 => 169: decode_number_from_decoder(env, decoder)?;
-        31 => 170: decode_stroke_join_from_decoder(env, decoder)?;
-        83 => 171: decoder.read_var_uint()?;
-        38 => 172: decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
-        90 => 173: decoder.read_var_uint()?;
-        39 => 174: decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
-        91 => 175: decoder.read_var_uint()?;
-        43 => 176: decoder.read_repeated(|decoder| decode_effect_from_decoder(env, decoder))?;
-        95 => 177: decoder.read_var_uint()?;
-        50 => 178: decode_color_from_decoder(env, decoder)?;
-        102 => 179: decoder.read_var_uint()?;
-        51 => 180: decoder.read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
-        103 => 181: decoder.read_var_uint()?;
-        52 => 182: decoder.read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
-        104 => 183: decoder.read_var_uint()?;
-        564 => 184: decoder.read_repeated(|decoder| decode_path_from_decoder(env, decoder))?;
-        411 => 185: decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
-        412 => 186: decoder.read_bool()?;
-        413 => 187: decode_number_from_decoder(env, decoder)?;
-        415 => 188: decode_number_from_decoder(env, decoder)?;
-        416 => 189: decode_text_decoration_style_from_decoder(env, decoder)?;
-        455 => 190: decoder.read_repeated(|decoder| decode_transform_modifier_from_decoder(env, decoder))?;
-        570 => 191: decode_transform3d_from_decoder(env, decoder)?;
-        571 => 192: decode_stroke_data_from_decoder(env, decoder)?;
-        572 => 193: decode_scene3d_from_decoder(env, decoder)?;
-        587 => 194: decode_transform_origin_from_decoder(env, decoder)?;
-        145 => 195: decoder.read_var_float(env)?;
-        146 => 196: decoder.read_var_float(env)?;
-        147 => 197: decoder.read_var_float(env)?;
-        148 => 198: decoder.read_var_float(env)?;
-        149 => 199: decoder.read_bool()?;
-        150 => 200: decoder.read_bool()?;
-        151 => 201: decoder.read_bool()?;
-        423 => 202: decode_optional_vector_from_decoder(env, decoder)?;
-        258 => 203: decoder.read_bool()?;
-        287 => 204: decoder.read_bool()?;
-        288 => 205: decoder.read_bool()?;
-        289 => 206: decoder.read_bool()?;
-        290 => 207: decoder.read_bool()?;
-        294 => 208: decoder.read_bool()?;
-        295 => 209: decoder.read_var_float(env)?;
-        296 => 210: decoder.read_var_float(env)?;
-        297 => 211: decoder.read_var_float(env)?;
-        298 => 212: decoder.read_var_float(env)?;
-        299 => 213: decoder.read_bool()?;
-        28 => 214: decode_constraint_type_from_decoder(env, decoder)?;
-        80 => 215: decoder.read_var_uint()?;
-        105 => 216: decode_stack_mode_from_decoder(env, decoder)?;
-        106 => 217: decoder.read_var_uint()?;
-        107 => 218: decoder.read_var_float(env)?;
-        108 => 219: decoder.read_var_uint()?;
-        109 => 220: decoder.read_var_float(env)?;
-        110 => 221: decoder.read_var_uint()?;
-        120 => 222: decode_stack_counter_align_from_decoder(env, decoder)?;
-        121 => 223: decode_stack_justify_from_decoder(env, decoder)?;
-        208 => 224: decode_stack_align_from_decoder(env, decoder)?;
-        209 => 225: decoder.read_var_float(env)?;
-        210 => 226: decoder.read_var_float(env)?;
-        211 => 227: decode_stack_size_from_decoder(env, decoder)?;
-        212 => 228: decode_stack_size_from_decoder(env, decoder)?;
-        229 => 229: decode_stack_size_from_decoder(env, decoder)?;
-        230 => 230: decode_stack_justify_from_decoder(env, decoder)?;
-        231 => 231: decode_stack_align_from_decoder(env, decoder)?;
-        232 => 232: decoder.read_var_float(env)?;
-        233 => 233: decoder.read_var_float(env)?;
-        234 => 234: decoder.read_var_float(env)?;
-        236 => 235: decode_stack_counter_align_from_decoder(env, decoder)?;
-        269 => 236: decode_stack_positioning_from_decoder(env, decoder)?;
-        271 => 237: decoder.read_bool()?;
-        323 => 238: decode_stack_wrap_from_decoder(env, decoder)?;
-        324 => 239: decoder.read_var_float(env)?;
-        325 => 240: decode_optional_vector_from_decoder(env, decoder)?;
-        326 => 241: decode_optional_vector_from_decoder(env, decoder)?;
-        343 => 242: decode_stack_counter_align_content_from_decoder(env, decoder)?;
-        406 => 243: decoder.read_repeated(|decoder| decoder.read_var_int())?;
-        574 => 244: decoder.read_var_uint()?;
-        435 => 245: decode_guid_position_map_from_decoder(env, decoder)?;
-        436 => 246: decode_guid_position_map_from_decoder(env, decoder)?;
-        437 => 247: decoder.read_var_float(env)?;
-        438 => 248: decoder.read_var_float(env)?;
-        439 => 249: decode_guid_from_decoder(env, decoder)?;
-        440 => 250: decode_guid_from_decoder(env, decoder)?;
-        441 => 251: decoder.read_var_uint()?;
-        442 => 252: decoder.read_var_uint()?;
-        474 => 253: decode_guid_grid_track_size_map_from_decoder(env, decoder)?;
-        475 => 254: decode_guid_grid_track_size_map_from_decoder(env, decoder)?;
-        476 => 255: decode_grid_child_align_from_decoder(env, decoder)?;
-        477 => 256: decode_grid_child_align_from_decoder(env, decoder)?;
-        555 => 257: decode_grid_auto_tracks_from_decoder(env, decoder)?;
-        556 => 258: decoder.read_bool()?;
-        344 => 259: decoder.read_bool()?;
-        139 => 260: decode_guid_from_decoder(env, decoder)?;
-        140 => 261: decode_guid_from_decoder(env, decoder)?;
-        141 => 262: decode_color_from_decoder(env, decoder)?;
-        153 => 263: decode_transition_info_from_decoder(env, decoder)?;
-        154 => 264: decode_transition_type_from_decoder(env, decoder)?;
-        155 => 265: decoder.read_var_float(env)?;
-        156 => 266: decode_easing_type_from_decoder(env, decoder)?;
-        181 => 267: decoder.read_bool()?;
-        182 => 268: decode_connection_type_from_decoder(env, decoder)?;
-        183 => 269: decoder.read_string(env)?;
-        184 => 270: decode_prototype_device_from_decoder(env, decoder)?;
-        187 => 271: decode_interaction_type_from_decoder(env, decoder)?;
-        188 => 272: decoder.read_var_float(env)?;
-        189 => 273: decoder.read_bool()?;
-        190 => 274: decoder.read_var_float(env)?;
-        192 => 275: decoder.read_bool()?;
-        207 => 276: decoder.read_bool()?;
-        226 => 277: decoder.read_repeated(|decoder| decode_prototype_interaction_from_decoder(env, decoder))?;
-        426 => 278: decoder.read_repeated(|decoder| decode_prototype_interaction_from_decoder(env, decoder))?;
-        249 => 279: decode_prototype_starting_point_from_decoder(env, decoder)?;
-        204 => 280: decoder.read_repeated(|decoder| decode_plugin_data_from_decoder(env, decoder))?;
-        219 => 281: decoder.read_repeated(|decoder| decode_plugin_relaunch_data_from_decoder(env, decoder))?;
-        242 => 282: decode_connector_endpoint_from_decoder(env, decoder)?;
-        243 => 283: decode_connector_endpoint_from_decoder(env, decoder)?;
-        244 => 284: decode_connector_line_style_from_decoder(env, decoder)?;
-        245 => 285: decode_stroke_cap_from_decoder(env, decoder)?;
-        246 => 286: decode_stroke_cap_from_decoder(env, decoder)?;
-        253 => 287: decoder.read_repeated(|decoder| decode_connector_control_point_from_decoder(env, decoder))?;
-        479 => 288: decoder.read_repeated(|decoder| decode_connector_control_point_from_decoder(env, decoder))?;
-        255 => 289: decode_connector_text_midpoint_from_decoder(env, decoder)?;
-        373 => 290: decode_connector_type_from_decoder(env, decoder)?;
-        533 => 291: decoder.read_var_int()?;
-        369 => 292: decoder.read_repeated(|decoder| decode_annotation_from_decoder(env, decoder))?;
-        384 => 293: decoder.read_repeated(|decoder| decode_annotation_measurement_from_decoder(env, decoder))?;
-        453 => 294: decode_annotation_categories_from_decoder(env, decoder)?;
-        241 => 295: decode_shape_with_text_type_from_decoder(env, decoder)?;
-        247 => 296: decoder.read_var_float(env)?;
-        530 => 297: decoder.read_bool()?;
-        254 => 298: decode_derived_immutable_frame_data_from_decoder(env, decoder)?;
-        338 => 299: decode_multiplayer_field_version_from_decoder(env, decoder)?;
-        240 => 300: decode_node_generation_data_from_decoder(env, decoder)?;
-        491 => 301: decode_jsx_data_from_decoder(env, decoder)?;
-        492 => 302: decode_derived_jsx_data_from_decoder(env, decoder)?;
-        493 => 303: decoder.read_string(env)?;
-        259 => 304: decode_code_block_language_from_decoder(env, decoder)?;
-        433 => 305: decode_code_block_theme_from_decoder(env, decoder)?;
-        278 => 306: decode_link_preview_data_from_decoder(env, decoder)?;
-        282 => 307: decoder.read_bool()?;
-        283 => 308: decoder.read_bool()?;
-        300 => 309: decode_video_playback_from_decoder(env, decoder)?;
-        301 => 310: decode_stamp_data_from_decoder(env, decoder)?;
-        370 => 311: decode_section_preset_info_from_decoder(env, decoder)?;
-        409 => 312: decode_platform_shape_definition_from_decoder(env, decoder)?;
-        273 => 313: decode_multiplayer_map_from_decoder(env, decoder)?;
-        274 => 314: decoder.read_var_uint()?;
-        275 => 315: decode_widget_derived_subtree_cursor_from_decoder(env, decoder)?;
-        276 => 316: decode_widget_pointer_from_decoder(env, decoder)?;
-        285 => 317: decode_widget_input_behavior_from_decoder(env, decoder)?;
-        286 => 318: decoder.read_string(env)?;
-        291 => 319: decode_widget_hover_style_from_decoder(env, decoder)?;
-        293 => 320: decoder.read_bool()?;
-        360 => 321: decoder.read_bool()?;
-        262 => 322: decode_widget_metadata_from_decoder(env, decoder)?;
-        263 => 323: decoder.read_repeated(|decoder| decode_widget_event_from_decoder(env, decoder))?;
-        265 => 324: decoder.read_repeated(|decoder| decode_widget_property_menu_item_from_decoder(env, decoder))?;
-        401 => 325: decode_widget_input_text_node_type_from_decoder(env, decoder)?;
-        489 => 326: decode_multiplayer_map_from_decoder(env, decoder)?;
-        308 => 327: decode_table_row_column_position_map_from_decoder(env, decoder)?;
-        309 => 328: decode_table_row_column_position_map_from_decoder(env, decoder)?;
-        310 => 329: decode_table_row_column_size_map_from_decoder(env, decoder)?;
-        311 => 330: decode_table_row_column_size_map_from_decoder(env, decoder)?;
-        538 => 331: decode_table_merged_cell_map_from_decoder(env, decoder)?;
-        371 => 332: decode_multiplayer_map_from_decoder(env, decoder)?;
-        372 => 333: decode_multiplayer_map_from_decoder(env, decoder)?;
-        402 => 334: decode_flapp_type_from_decoder(env, decoder)?;
-        486 => 335: decoder.read_bool()?;
-        389 => 336: decoder.read_string(env)?;
-        410 => 337: decoder.read_bool()?;
-        573 => 338: decode_multiplayer_map_from_decoder(env, decoder)?;
-        379 => 339: decode_theme_id_from_decoder(env, decoder)?;
-        381 => 340: decode_slide_theme_data_from_decoder(env, decoder)?;
-        390 => 341: decode_slide_theme_map_from_decoder(env, decoder)?;
-        393 => 342: decoder.read_string(env)?;
-        443 => 343: decode_slide_number_from_decoder(env, decoder)?;
-        456 => 344: decoder.read_string(env)?;
-        363 => 345: decode_guid_from_decoder(env, decoder)?;
-        362 => 346: decode_guid_from_decoder(env, decoder)?;
-        364 => 347: decoder.read_string(env)?;
-        366 => 348: decode_diagram_layout_rule_type_from_decoder(env, decoder)?;
-        367 => 349: decode_diagram_parent_index_from_decoder(env, decoder)?;
-        368 => 350: decode_diagram_layout_paused_from_decoder(env, decoder)?;
-        380 => 351: decoder.read_bool()?;
-        251 => 352: decode_internal_enum_for_test_from_decoder(env, decoder)?;
-        257 => 353: decode_internal_data_for_test_from_decoder(env, decoder)?;
-        14 => 354: decoder.read_bool()?;
-        66 => 355: decoder.read_var_uint()?;
-        15 => 356: decoder.read_bool()?;
-        67 => 357: decoder.read_var_uint()?;
-        17 => 358: decoder.read_bool()?;
-        69 => 359: decoder.read_var_uint()?;
-        25 => 360: decoder.read_var_float(env)?;
-        77 => 361: decoder.read_var_uint()?;
-        27 => 362: decoder.read_var_float(env)?;
-        79 => 363: decoder.read_var_uint()?;
-        37 => 364: decode_constraint_type_from_decoder(env, decoder)?;
-        89 => 365: decoder.read_var_uint()?;
-        45 => 366: decoder.read_repeated(|decoder| decode_export_settings_from_decoder(env, decoder))?;
-        97 => 367: decoder.read_var_uint()?;
-        46 => 368: decode_text_auto_resize_from_decoder(env, decoder)?;
-        98 => 369: decoder.read_var_uint()?;
-        47 => 370: decoder.read_repeated(|decoder| decode_layout_grid_from_decoder(env, decoder))?;
-        99 => 371: decoder.read_var_uint()?;
-        115 => 372: decoder.read_bool()?;
-        116 => 373: decoder.read_var_uint()?;
-        117 => 374: decoder.read_bool()?;
-        118 => 375: decoder.read_var_uint()?;
-        36 => 376: decode_boolean_operation_from_decoder(env, decoder)?;
-        88 => 377: decoder.read_var_uint()?;
-        44 => 378: decode_vector_mirror_from_decoder(env, decoder)?;
-        96 => 379: decoder.read_var_uint()?;
-        10 => 380: decoder.read_var_uint()?;
-        62 => 381: decoder.read_var_uint()?;
-        24 => 382: decoder.read_var_float(env)?;
-        76 => 383: decoder.read_var_uint()?;
-        195 => 384: decode_arc_data_from_decoder(env, decoder)?;
-        48 => 385: decode_vector_data_from_decoder(env, decoder)?;
-        100 => 386: decoder.read_var_uint()?;
-        425 => 387: decoder.read_var_uint()?;
-        432 => 388: decode_text_path_start_from_decoder(env, decoder)?;
-        119 => 389: decoder.read_bool()?;
-        138 => 390: decoder.read_repeated(|decoder| decode_guide_from_decoder(env, decoder))?;
-        142 => 391: decoder.read_bool()?;
-        159 => 392: decode_scroll_direction_from_decoder(env, decoder)?;
-        160 => 393: decoder.read_var_float(env)?;
-        166 => 394: decode_vector_from_decoder(env, decoder)?;
-        175 => 395: decoder.read_bool()?;
-        178 => 396: decode_scroll_contracted_state_from_decoder(env, decoder)?;
-        179 => 397: decode_vector_from_decoder(env, decoder)?;
-        180 => 398: decoder.read_string(env)?;
-        186 => 399: decode_scroll_behavior_from_decoder(env, decoder)?;
-        196 => 400: decoder.read_var_int()?;
-        197 => 401: decode_navigation_type_from_decoder(env, decoder)?;
-        198 => 402: decode_overlay_position_type_from_decoder(env, decoder)?;
-        199 => 403: decode_vector_from_decoder(env, decoder)?;
-        200 => 404: decode_overlay_background_interaction_from_decoder(env, decoder)?;
-        201 => 405: decode_overlay_background_appearance_from_decoder(env, decoder)?;
-        213 => 406: decode_guid_from_decoder(env, decoder)?;
-        220 => 407: decoder.read_bool()?;
-        221 => 408: decode_stack_size_from_decoder(env, decoder)?;
-        222 => 409: decoder.read_bool()?;
-        224 => 410: decode_key_trigger_from_decoder(env, decoder)?;
-        227 => 411: decoder.read_string(env)?;
-        235 => 412: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-        237 => 413: decoder.read_repeated(|decoder| decode_symbol_link_from_decoder(env, decoder))?;
-        239 => 414: decode_text_list_data_from_decoder(env, decoder)?;
-        261 => 415: decoder.read_bool()?;
-        264 => 416: decoder.read_var_float(env)?;
-        270 => 417: decode_embed_data_from_decoder(env, decoder)?;
-        272 => 418: decode_rich_media_data_from_decoder(env, decoder)?;
-        277 => 419: decode_multiplayer_map_from_decoder(env, decoder)?;
-        284 => 420: decoder.read_bool()?;
-        302 => 421: decode_html_tag_from_decoder(env, decoder)?;
-        303 => 422: decode_aria_role_from_decoder(env, decoder)?;
-        357 => 423: decode_aria_attributes_map_from_decoder(env, decoder)?;
-        304 => 424: decoder.read_string(env)?;
-        490 => 425: decoder.read_bool()?;
-        306 => 426: decode_variable_data_from_decoder(env, decoder)?;
-        307 => 427: decode_variable_data_map_from_decoder(env, decoder)?;
-        316 => 428: decode_variable_mode_by_set_map_from_decoder(env, decoder)?;
-        312 => 429: decoder.read_repeated(|decoder| decode_variable_set_mode_from_decoder(env, decoder))?;
-        313 => 430: decode_variable_set_id_from_decoder(env, decoder)?;
-        314 => 431: decode_variable_resolved_data_type_from_decoder(env, decoder)?;
-        315 => 432: decode_variable_data_values_from_decoder(env, decoder)?;
-        350 => 433: decoder.read_string(env)?;
-        566 => 434: decode_variable_timing_display_unit_from_decoder(env, decoder)?;
-        353 => 435: decoder.read_repeated(|decoder| decode_variable_scope_from_decoder(env, decoder))?;
-        445 => 436: decode_variable_data_map_from_decoder(env, decoder)?;
-        358 => 437: decode_code_syntax_map_from_decoder(env, decoder)?;
-        388 => 438: decode_paste_source_from_decoder(env, decoder)?;
-        397 => 439: decode_editor_type_from_decoder(env, decoder)?;
-        446 => 440: decode_guid_from_decoder(env, decoder)?;
-        482 => 441: decoder.read_var_uint64()?;
-        447 => 442: decoder.read_repeated(|decoder| decode_variable_width_point_from_decoder(env, decoder))?;
-        448 => 443: decode_dynamic_stroke_settings_from_decoder(env, decoder)?;
-        449 => 444: decode_scatter_stroke_settings_from_decoder(env, decoder)?;
-        450 => 445: decode_stretch_stroke_settings_from_decoder(env, decoder)?;
-        488 => 446: decoder.read_repeated(|decoder| decode_matrix_from_decoder(env, decoder))?;
-        452 => 447: decode_brush_type_from_decoder(env, decoder)?;
-        542 => 448: decode_optional_vector_from_decoder(env, decoder)?;
-        554 => 449: decoder.read_var_float(env)?;
-        377 => 450: decode_variable_set_id_from_decoder(env, decoder)?;
-        464 => 451: decode_variable_id_from_decoder(env, decoder)?;
-        378 => 452: decode_variable_id_or_variable_override_id_from_decoder(env, decoder)?;
-        385 => 453: decoder.read_bool()?;
-        386 => 454: decoder.read_string(env)?;
-        517 => 455: decode_inherited_variables_data_from_decoder(env, decoder)?;
-        361 => 456: decode_handoff_status_map_from_decoder(env, decoder)?;
-        327 => 457: decode_agenda_position_map_from_decoder(env, decoder)?;
-        328 => 458: decode_agenda_metadata_map_from_decoder(env, decoder)?;
-        329 => 459: decode_migration_status_from_decoder(env, decoder)?;
-        330 => 460: decoder.read_bool()?;
-        331 => 461: decode_edit_info_from_decoder(env, decoder)?;
-        341 => 462: decode_color_profile_from_decoder(env, decoder)?;
-        342 => 463: decode_symbol_id_from_decoder(env, decoder)?;
-        346 => 464: decode_child_reading_direction_from_decoder(env, decoder)?;
-        347 => 465: decoder.read_string(env)?;
-        349 => 466: decode_document_color_profile_from_decoder(env, decoder)?;
-        354 => 467: decoder.read_repeated(|decoder| decode_developer_related_link_from_decoder(env, decoder))?;
-        356 => 468: decoder.read_string(env)?;
-        365 => 469: decode_edit_scope_info_from_decoder(env, decoder)?;
-        374 => 470: decode_semantic_weight_from_decoder(env, decoder)?;
-        375 => 471: decode_semantic_italic_from_decoder(env, decoder)?;
-        403 => 472: decoder.read_bool()?;
-        387 => 473: decoder.read_bool()?;
-        500 => 474: decode_derived_breakpoint_data_from_decoder(env, decoder)?;
-        398 => 475: decode_guid_from_decoder(env, decoder)?;
-        458 => 476: decoder.read_bool()?;
-        457 => 477: decode_guid_from_decoder(env, decoder)?;
-        462 => 478: decode_guid_from_decoder(env, decoder)?;
-        501 => 479: decoder.read_var_float(env)?;
-        522 => 480: decoder.read_bool()?;
-        400 => 481: decode_responsive_set_settings_from_decoder(env, decoder)?;
-        404 => 482: decode_node_behaviors_from_decoder(env, decoder)?;
-        414 => 483: decoder.read_string(env)?;
-        534 => 484: decoder.read_repeated(|decoder| decode_collaborative_text_op_id_from_decoder(env, decoder))?;
-        444 => 485: decode_collaborative_plain_text_from_decoder(env, decoder)?;
-        427 => 486: decode_code_library_id_from_decoder(env, decoder)?;
-        467 => 487: decode_imported_code_files_from_decoder(env, decoder)?;
-        468 => 488: decode_canvas_node_id_from_decoder(env, decoder)?;
-        498 => 489: decoder.read_bool()?;
-        502 => 490: decoder.read_string(env)?;
-        503 => 491: decoder.read_var_uint()?;
-        504 => 492: decoder.read_string(env)?;
-        515 => 493: decoder.read_repeated(|decoder| decoder.read_string(env))?;
-        524 => 494: decoder.read_repeated(|decoder| decode_used_make_library_from_decoder(env, decoder))?;
-        518 => 495: decoder.read_string(env)?;
-        520 => 496: decoder.read_bool()?;
-        551 => 497: decoder.read_bool()?;
-        531 => 498: decode_prototype_device_from_decoder(env, decoder)?;
-        525 => 499: decoder.read_repeated(|decoder| decode_code_example_from_decoder(env, decoder))?;
-        428 => 500: decode_code_file_id_from_decoder(env, decoder)?;
-        430 => 501: decoder.read_string(env)?;
-        547 => 502: decoder.read_string(env)?;
-        429 => 503: decode_code_component_id_from_decoder(env, decoder)?;
-        487 => 504: decoder.read_bool()?;
-        431 => 505: decode_code_snapshot_state_from_decoder(env, decoder)?;
-        451 => 506: decoder.read_repeated(|decoder| decode_node_chat_message_from_decoder(env, decoder))?;
-        485 => 507: decode_node_chat_compression_state_from_decoder(env, decoder)?;
-        496 => 508: decode_ai_chat_thread_from_decoder(env, decoder)?;
-        484 => 509: decoder.read_string(env)?;
-        459 => 510: decode_code_snapshot_from_decoder(env, decoder)?;
-        589 => 511: decode_code_snapshot_layers_from_decoder(env, decoder)?;
-        480 => 512: decoder.read_var_uint()?;
-        465 => 513: decoder.read_bool()?;
-        469 => 514: decoder.read_bool()?;
-        470 => 515: decoder.read_bool()?;
-        471 => 516: decoder.read_bool()?;
-        481 => 517: decode_canvas_node_id_from_decoder(env, decoder)?;
-        473 => 518: decode_image_import_map_from_decoder(env, decoder)?;
-        516 => 519: decode_code_object_type_from_decoder(env, decoder)?;
-        472 => 520: decoder.read_string(env)?;
-        478 => 521: decode_code_behavior_data_from_decoder(env, decoder)?;
-        519 => 522: decoder.read_var_uint()?;
-        527 => 523: decoder.read_bool()?;
-        532 => 524: decode_code_embed_info_from_decoder(env, decoder)?;
-        546 => 525: decoder.read_bool()?;
-        558 => 526: decode_code_source_info_from_decoder(env, decoder)?;
-        536 => 527: decoder.read_string(env)?;
-        537 => 528: decoder.read_byte_array(env)?;
-        419 => 529: decode_cms_selector_from_decoder(env, decoder)?;
-        420 => 530: decode_cms_consumption_map_from_decoder(env, decoder)?;
-        460 => 531: decode_cms_rich_text_style_map_from_decoder(env, decoder)?;
-        539 => 532: decode_symbol_id_from_decoder(env, decoder)?;
-        540 => 533: decode_repeater_cms_override_data_from_decoder(env, decoder)?;
-        549 => 534: decode_repeater_symbol_override_data_from_decoder(env, decoder)?;
-        541 => 535: decode_repeater_override_data_from_decoder(env, decoder)?;
-        405 => 536: decoder.read_repeated(|decoder| decoder.read_var_uint())?;
-        408 => 537: decoder.read_string(env)?;
-        407 => 538: decode_first_draft_data_from_decoder(env, decoder)?;
-        418 => 539: decode_first_draft_kit_element_data_from_decoder(env, decoder)?;
-        421 => 540: decode_cooper_revert_data_from_decoder(env, decoder)?;
-        461 => 541: decode_cooper_template_data_from_decoder(env, decoder)?;
-        528 => 542: decode_buzz_approval_requests_from_decoder(env, decoder)?;
-        529 => 543: decode_buzz_approval_node_status_info_from_decoder(env, decoder)?;
-        422 => 544: decode_hub_file_attribution_from_decoder(env, decoder)?;
-        454 => 545: decode_managed_string_data_from_decoder(env, decoder)?;
-        466 => 546: decode_thumbnail_info_from_decoder(env, decoder)?;
-        494 => 547: decode_ai_canvas_prompt_from_decoder(env, decoder)?;
-        499 => 548: decode_canvas_node_id_from_decoder(env, decoder)?;
-        548 => 549: decoder.read_string(env)?;
-        523 => 550: decode_trss_transform2_d_from_decoder(env, decoder)?;
-        506 => 551: decoder.read_var_int64()?;
-        507 => 552: decode_keyframe_value_data_from_decoder(env, decoder)?;
-        586 => 553: decode_variable_data_from_decoder(env, decoder)?;
-        505 => 554: decode_interpolation_type_from_decoder(env, decoder)?;
-        508 => 555: decode_bezier_handles_from_decoder(env, decoder)?;
-        535 => 556: decode_easing_data_from_decoder(env, decoder)?;
-        509 => 557: decode_keyframe_operation_from_decoder(env, decoder)?;
-        510 => 558: decode_timeline_position_type_from_decoder(env, decoder)?;
-        545 => 559: decoder.read_bool()?;
-        511 => 560: decode_guid_from_decoder(env, decoder)?;
-        512 => 561: decoder.read_var_uint64()?;
-        513 => 562: decoder.read_var_int64()?;
-        543 => 563: decoder.read_bool()?;
-        514 => 564: decode_playback_style_from_decoder(env, decoder)?;
-        552 => 565: decode_timeline_definitions_map_from_decoder(env, decoder)?;
-        553 => 566: decode_timeline_assignments_map_from_decoder(env, decoder)?;
-        521 => 567: decode_animation_presets_from_decoder(env, decoder)?;
-        582 => 568: decoder.read_repeated(|decoder| decode_style_id_for_animation_from_decoder(env, decoder))?;
-        583 => 569: decode_animation_preset_id_from_decoder(env, decoder)?;
-        568 => 570: decode_tools_from_decoder(env, decoder)?;
-        569 => 571: decode_custom_effects_from_decoder(env, decoder)?;
-        526 => 572: decode_transition_override_data_from_decoder(env, decoder)?;
-        544 => 573: decoder.read_bool()?;
-        557 => 574: decode_source_control_config_from_decoder(env, decoder)?;
-        559 => 575: decode_spec_block_type_from_decoder(env, decoder)?;
-        560 => 576: decode_collaborative_plain_text_from_decoder(env, decoder)?;
-        561 => 577: decoder.read_string(env)?;
-        562 => 578: decoder.read_string(env)?;
-        563 => 579: decoder.read_var_int()?;
-        575 => 580: decoder.read_string(env)?;
-        576 => 581: decoder.read_var_int()?;
-        577 => 582: decoder.read_var_int()?;
-        578 => 583: decode_table_row_column_size_map_from_decoder(env, decoder)?;
-        579 => 584: decode_table_row_column_size_map_from_decoder(env, decoder)?;
-        590 => 585: decoder.read_string(env)?;
-        565 => 586: decoder.read_bool()?;
-        584 => 587: decoder.read_string(env)?;
-        585 => 588: decoder.read_var_int()?;
-        567 => 589: decoder.read_bool()?;
-        588 => 590: decode_custom_tool_artifact_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_git_repo_ref_provider_from_decoder;
-    variants [
-        0 => "ugit";
-        1 => "github";
-        2 => "other";
-    ]
-}
-
-static GIT_REPO_REF_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GIT_REPO_REF_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_git_repo_ref_from_decoder;
-    fields_fn decode_git_repo_ref_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GIT_REPO_REF_MODULE_ATOM;
-    keys_static GIT_REPO_REF_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GitRepoRef";
-    keys ["provider", "git_repo", "git_ref"];
-    fields [
-        1 => 1: decode_git_repo_ref_provider_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static SOURCE_CONTROL_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SOURCE_CONTROL_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_source_control_config_from_decoder;
-    fields_fn decode_source_control_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SOURCE_CONTROL_CONFIG_MODULE_ATOM;
-    keys_static SOURCE_CONTROL_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SourceControlConfig";
-    keys ["origin", "upstream"];
-    fields [
-        1 => 1: decode_git_repo_ref_from_decoder(env, decoder)?;
-        2 => 2: decode_git_repo_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static CODE_SNAPSHOT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SNAPSHOT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_snapshot_from_decoder;
-    fields_fn decode_code_snapshot_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_SNAPSHOT_MODULE_ATOM;
-    keys_static CODE_SNAPSHOT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeSnapshot";
-    keys ["state", "invalidated_at", "paints", "offset", "layout_size", "canvas_size", "device_pixel_ratio"];
-    fields [
-        6 => 1: decode_code_snapshot_state_from_decoder(env, decoder)?;
-        7 => 2: decoder.read_var_uint()?;
-        1 => 3: decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
-        2 => 4: decode_vector_from_decoder(env, decoder)?;
-        3 => 5: decode_vector_from_decoder(env, decoder)?;
-        5 => 6: decode_vector_from_decoder(env, decoder)?;
-        4 => 7: decoder.read_var_uint()?;
-    ]
-}
-
-static CODE_OUTPUT_LAYER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_OUTPUT_LAYER_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_output_layer_from_decoder;
-    fields_fn decode_code_output_layer_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_OUTPUT_LAYER_MODULE_ATOM;
-    keys_static CODE_OUTPUT_LAYER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeOutputLayer";
-    keys ["node"];
-    fields [
-        1 => 1: decode_node_change_from_decoder(env, decoder)?;
-    ]
-}
-
-static CODE_SNAPSHOT_LAYERS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SNAPSHOT_LAYERS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_snapshot_layers_from_decoder;
-    fields_fn decode_code_snapshot_layers_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_SNAPSHOT_LAYERS_MODULE_ATOM;
-    keys_static CODE_SNAPSHOT_LAYERS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeSnapshotLayers";
-    keys ["state", "invalidated_at", "layers"];
-    fields [
-        1 => 1: decode_code_snapshot_state_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decoder.read_repeated(|decoder| decode_code_output_layer_from_decoder(env, decoder))?;
-    ]
-}
-
-static CODE_BEHAVIOR_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BEHAVIOR_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_behavior_data_from_decoder;
-    fields_fn decode_code_behavior_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_BEHAVIOR_DATA_MODULE_ATOM;
-    keys_static CODE_BEHAVIOR_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeBehaviorData";
-    keys ["name", "icon", "node_types", "category", "api_version"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_repeated(|decoder| decoder.read_string(env))?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decoder.read_var_uint()?;
-    ]
-}
-
-static CODE_EXAMPLE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_EXAMPLE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_example_from_decoder;
-    fields_fn decode_code_example_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_EXAMPLE_MODULE_ATOM;
-    keys_static CODE_EXAMPLE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeExample";
-    keys ["example_name", "code_export_name"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static USED_MAKE_LIBRARY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static USED_MAKE_LIBRARY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_used_make_library_from_decoder;
-    fields_fn decode_used_make_library_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static USED_MAKE_LIBRARY_MODULE_ATOM;
-    keys_static USED_MAKE_LIBRARY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.UsedMakeLibrary";
-    keys ["make_library_id"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-    ]
-}
-
-static COOKIE_BANNER_TEXT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COOKIE_BANNER_TEXT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cookie_banner_text_from_decoder;
-    fields_fn decode_cookie_banner_text_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COOKIE_BANNER_TEXT_MODULE_ATOM;
-    keys_static COOKIE_BANNER_TEXT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CookieBannerText";
-    keys ["banner_header", "banner_disclaimer_explicit", "banner_disclaimer_implicit", "policy_label", "accept_text", "acknowledge_text", "manage_text", "reject_text", "necessary_text", "necessary_description", "analytics_text", "analytics_description", "preferences_text", "preferences_description", "marketing_text", "marketing_description", "save_label", "trigger_label"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decoder.read_string(env)?;
-        6 => 6: decoder.read_string(env)?;
-        7 => 7: decoder.read_string(env)?;
-        8 => 8: decoder.read_string(env)?;
-        9 => 9: decoder.read_string(env)?;
-        10 => 10: decoder.read_string(env)?;
-        11 => 11: decoder.read_string(env)?;
-        12 => 12: decoder.read_string(env)?;
-        13 => 13: decoder.read_string(env)?;
-        14 => 14: decoder.read_string(env)?;
-        15 => 15: decoder.read_string(env)?;
-        16 => 16: decoder.read_string(env)?;
-        17 => 17: decoder.read_string(env)?;
-        18 => 18: decoder.read_string(env)?;
-    ]
-}
-
-static COOKIE_BANNER_SETTINGS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COOKIE_BANNER_SETTINGS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cookie_banner_settings_from_decoder;
-    fields_fn decode_cookie_banner_settings_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COOKIE_BANNER_SETTINGS_MODULE_ATOM;
-    keys_static COOKIE_BANNER_SETTINGS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CookieBannerSettings";
-    keys ["enabled", "component_type", "x_alignment", "y_alignment", "trigger_x_alignment", "trigger_y_alignment", "trigger_component_type", "policy_url", "text", "policy_link", "locale"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decode_cookie_banner_component_type_from_decoder(env, decoder)?;
-        3 => 3: decode_cookie_x_alignment_from_decoder(env, decoder)?;
-        4 => 4: decode_cookie_y_alignment_from_decoder(env, decoder)?;
-        5 => 5: decode_cookie_x_alignment_from_decoder(env, decoder)?;
-        6 => 6: decode_cookie_y_alignment_from_decoder(env, decoder)?;
-        7 => 7: decode_trigger_component_type_from_decoder(env, decoder)?;
-        8 => 8: decoder.read_string(env)?;
-        9 => 9: decode_cookie_banner_text_from_decoder(env, decoder)?;
-        10 => 10: decode_guid_from_decoder(env, decoder)?;
-        11 => 11: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cookie_banner_component_type_from_decoder;
-    variants [
-        0 => "banner";
-        1 => "modal";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_trigger_component_type_from_decoder;
-    variants [
-        0 => "banner";
-        1 => "tag";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cookie_x_alignment_from_decoder;
-    variants [
-        0 => "left";
-        1 => "center";
-        2 => "right";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cookie_y_alignment_from_decoder;
-    variants [
-        0 => "top";
-        1 => "center";
-        2 => "bottom";
-    ]
-}
-
-static RESPONSIVE_SET_SETTINGS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static RESPONSIVE_SET_SETTINGS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_responsive_set_settings_from_decoder;
-    fields_fn decode_responsive_set_settings_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static RESPONSIVE_SET_SETTINGS_MODULE_ATOM;
-    keys_static RESPONSIVE_SET_SETTINGS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ResponsiveSetSettings";
-    keys ["title", "description", "scaling_mode", "scaling_min_font_size", "scaling_max_font_size", "scaling_min_layout_width", "scaling_max_layout_width", "lang", "favicon_hash", "social_image_hash", "google_analytics_id", "block_search_indexing", "custom_code_head_start", "custom_code_head_end", "custom_code_body_start", "custom_code_body_end", "favicon_id", "social_image_id", "add_bypass_links", "ignore_reduced_motion", "cookie_banner"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decode_responsive_scaling_mode_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decoder.read_var_float(env)?;
-        6 => 6: decoder.read_var_float(env)?;
-        7 => 7: decoder.read_var_float(env)?;
-        8 => 8: decoder.read_string(env)?;
-        9 => 9: decoder.read_string(env)?;
-        10 => 10: decoder.read_string(env)?;
-        11 => 11: decoder.read_string(env)?;
-        12 => 12: decoder.read_bool()?;
-        13 => 13: decoder.read_string(env)?;
-        14 => 14: decoder.read_string(env)?;
-        15 => 15: decoder.read_string(env)?;
-        16 => 16: decoder.read_string(env)?;
-        17 => 17: decode_guid_from_decoder(env, decoder)?;
-        18 => 18: decode_guid_from_decoder(env, decoder)?;
-        19 => 19: decoder.read_bool()?;
-        20 => 20: decoder.read_bool()?;
-        21 => 21: decode_cookie_banner_settings_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_responsive_scaling_mode_from_decoder;
-    variants [
-        0 => "reflow";
-        1 => "scale";
-    ]
-}
-
-static CMS_SELECTOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_SELECTOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_selector_from_decoder;
-    fields_fn decode_cms_selector_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_SELECTOR_MODULE_ATOM;
-    keys_static CMS_SELECTOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSSelector";
-    keys ["cms_collection_id", "filter_criteria", "sorts", "limit"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_cms_filter_critera_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_cms_selector_sort_from_decoder(env, decoder))?;
-        4 => 4: decoder.read_var_uint()?;
-    ]
-}
-
-static CMS_FILTER_CRITERA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_FILTER_CRITERA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_filter_critera_from_decoder;
-    fields_fn decode_cms_filter_critera_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_FILTER_CRITERA_MODULE_ATOM;
-    keys_static CMS_FILTER_CRITERA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSFilterCritera";
-    keys ["match_type", "filters"];
-    fields [
-        1 => 1: decode_cms_filter_criteria_match_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_cms_selector_filter_from_decoder(env, decoder))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cms_filter_criteria_match_type_from_decoder;
-    variants [
-        0 => "match_all";
-        1 => "match_any";
-    ]
-}
-
-static CMS_SELECTOR_FILTER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_SELECTOR_FILTER_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_selector_filter_from_decoder;
-    fields_fn decode_cms_selector_filter_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_SELECTOR_FILTER_MODULE_ATOM;
-    keys_static CMS_SELECTOR_FILTER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSSelectorFilter";
-    keys ["cms_field_id", "op", "comparison_value"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_cms_selector_filter_operator_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cms_selector_filter_operator_from_decoder;
-    variants [
-        0 => "equals";
-    ]
-}
-
-static CMS_SELECTOR_SORT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_SELECTOR_SORT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_selector_sort_from_decoder;
-    fields_fn decode_cms_selector_sort_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_SELECTOR_SORT_MODULE_ATOM;
-    keys_static CMS_SELECTOR_SORT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSSelectorSort";
-    keys ["cms_field_id", "order_by"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_cms_field_order_by_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cms_field_order_by_from_decoder;
-    variants [
-        0 => "ascending";
-        1 => "descending";
-    ]
-}
-
-static CMS_CONSUMPTION_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_CONSUMPTION_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_consumption_map_from_decoder;
-    fields_fn decode_cms_consumption_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_CONSUMPTION_MAP_MODULE_ATOM;
-    keys_static CMS_CONSUMPTION_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSConsumptionMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_cms_consumption_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static CMS_CONSUMPTION_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_CONSUMPTION_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_consumption_map_entry_from_decoder;
-    fields_fn decode_cms_consumption_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_CONSUMPTION_MAP_ENTRY_MODULE_ATOM;
-    keys_static CMS_CONSUMPTION_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSConsumptionMapEntry";
-    keys ["consumption_field", "cms_field_id"];
-    fields [
-        1 => 1: decode_cms_consumption_field_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cms_consumption_field_from_decoder;
-    variants [
-        0 => "missing";
-        1 => "text_data";
-    ]
-}
-
-static CMS_RICH_TEXT_STYLE_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_rich_text_style_map_from_decoder;
-    fields_fn decode_cms_rich_text_style_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_RICH_TEXT_STYLE_MAP_MODULE_ATOM;
-    keys_static CMS_RICH_TEXT_STYLE_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSRichTextStyleMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_cms_rich_text_style_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static CMS_RICH_TEXT_STYLE_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_STYLE_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_rich_text_style_entry_from_decoder;
-    fields_fn decode_cms_rich_text_style_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_RICH_TEXT_STYLE_ENTRY_MODULE_ATOM;
-    keys_static CMS_RICH_TEXT_STYLE_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSRichTextStyleEntry";
-    keys ["style_class", "text_descriptor"];
-    fields [
-        1 => 1: decode_cms_rich_text_style_class_from_decoder(env, decoder)?;
-        2 => 2: decode_cms_rich_text_descriptor_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cms_rich_text_style_class_from_decoder;
-    variants [
-        0 => "heading1";
-        1 => "heading2";
-        2 => "heading3";
-        3 => "heading4";
-        4 => "heading5";
-        5 => "heading6";
-        6 => "paragraph";
-        7 => "link";
-        8 => "blockquote";
-    ]
-}
-
-static CMS_RICH_TEXT_DESCRIPTOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_RICH_TEXT_DESCRIPTOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_rich_text_descriptor_from_decoder;
-    fields_fn decode_cms_rich_text_descriptor_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_RICH_TEXT_DESCRIPTOR_MODULE_ATOM;
-    keys_static CMS_RICH_TEXT_DESCRIPTOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSRichTextDescriptor";
-    keys ["text_style_id", "font_name_variants"];
-    fields [
-        1 => 1: decode_style_id_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_font_name_from_decoder(env, decoder))?;
-    ]
-}
-
-static REPEATER_CMS_OVERRIDE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static REPEATER_CMS_OVERRIDE_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_repeater_cms_override_data_from_decoder;
-    fields_fn decode_repeater_cms_override_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static REPEATER_CMS_OVERRIDE_DATA_MODULE_ATOM;
-    keys_static REPEATER_CMS_OVERRIDE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.RepeaterCmsOverrideData";
-    keys ["overrides"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static REPEATER_OVERRIDE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static REPEATER_OVERRIDE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_repeater_override_data_from_decoder;
-    fields_fn decode_repeater_override_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static REPEATER_OVERRIDE_DATA_MODULE_ATOM;
-    keys_static REPEATER_OVERRIDE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.RepeaterOverrideData";
-    keys ["parent_index_overrides"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static REPEATER_SYMBOL_OVERRIDE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static REPEATER_SYMBOL_OVERRIDE_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_repeater_symbol_override_data_from_decoder;
-    fields_fn decode_repeater_symbol_override_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static REPEATER_SYMBOL_OVERRIDE_DATA_MODULE_ATOM;
-    keys_static REPEATER_SYMBOL_OVERRIDE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.RepeaterSymbolOverrideData";
-    keys ["overrides_by_position"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_repeater_position_overrides_from_decoder(env, decoder))?;
-    ]
-}
-
-static REPEATER_POSITION_OVERRIDES_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static REPEATER_POSITION_OVERRIDES_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_repeater_position_overrides_from_decoder;
-    fields_fn decode_repeater_position_overrides_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static REPEATER_POSITION_OVERRIDES_MODULE_ATOM;
-    keys_static REPEATER_POSITION_OVERRIDES_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.RepeaterPositionOverrides";
-    keys ["position", "overrides"];
-    fields [
-        1 => 1: decode_parent_index_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-    ]
-}
-
-static INHERITED_VARIABLES_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INHERITED_VARIABLES_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_inherited_variables_data_from_decoder;
-    fields_fn decode_inherited_variables_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INHERITED_VARIABLES_DATA_MODULE_ATOM;
-    keys_static INHERITED_VARIABLES_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InheritedVariablesData";
-    keys ["variable_ids"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_inherited_variable_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static INHERITED_VARIABLE_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INHERITED_VARIABLE_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_inherited_variable_entry_from_decoder;
-    fields_fn decode_inherited_variable_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INHERITED_VARIABLE_ENTRY_MODULE_ATOM;
-    keys_static INHERITED_VARIABLE_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InheritedVariableEntry";
-    keys ["variable_id"];
-    fields [
-        1 => 1: decode_variable_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static HUB_FILE_ATTRIBUTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static HUB_FILE_ATTRIBUTION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_hub_file_attribution_from_decoder;
-    fields_fn decode_hub_file_attribution_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static HUB_FILE_ATTRIBUTION_MODULE_ATOM;
-    keys_static HUB_FILE_ATTRIBUTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.HubFileAttribution";
-    keys ["hub_file_id", "hub_file_name"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static MANAGED_STRING_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_data_from_decoder;
-    fields_fn decode_managed_string_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_DATA_MODULE_ATOM;
-    keys_static MANAGED_STRING_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringData";
-    keys ["key", "context", "locale", "content", "content_schema"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decode_managed_string_node_from_decoder(env, decoder)?;
-        5 => 5: decode_managed_string_content_schema_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_managed_string_content_schema_from_decoder;
-    variants [
-        0 => "v0";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_managed_string_node_type_from_decoder;
-    variants [
-        0 => "text";
-        1 => "concatenate";
-        2 => "plural";
-        3 => "placeholder";
-    ]
-}
-
-static MANAGED_STRING_NODE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_NODE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_node_from_decoder;
-    fields_fn decode_managed_string_node_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_NODE_MODULE_ATOM;
-    keys_static MANAGED_STRING_NODE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringNode";
-    keys ["type", "text_node_data", "concatenate_node_data", "plural_node_data", "placeholder_node_data"];
-    fields [
-        1 => 1: decode_managed_string_node_type_from_decoder(env, decoder)?;
-        2 => 2: decode_managed_string_text_node_data_from_decoder(env, decoder)?;
-        3 => 3: decode_managed_string_concatenate_ast_node_data_from_decoder(env, decoder)?;
-        4 => 4: decode_managed_string_plural_ast_node_data_from_decoder(env, decoder)?;
-        5 => 5: decode_managed_string_placeholder_ast_node_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static MANAGED_STRING_TEXT_NODE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_TEXT_NODE_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_text_node_data_from_decoder;
-    fields_fn decode_managed_string_text_node_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_TEXT_NODE_DATA_MODULE_ATOM;
-    keys_static MANAGED_STRING_TEXT_NODE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringTextNodeData";
-    keys ["value"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-    ]
-}
-
-static MANAGED_STRING_CONCATENATE_AST_NODE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_CONCATENATE_AST_NODE_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_concatenate_ast_node_data_from_decoder;
-    fields_fn decode_managed_string_concatenate_ast_node_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_CONCATENATE_AST_NODE_DATA_MODULE_ATOM;
-    keys_static MANAGED_STRING_CONCATENATE_AST_NODE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringConcatenateAstNodeData";
-    keys ["values"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_managed_string_node_from_decoder(env, decoder))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_managed_string_plural_type_from_decoder;
-    variants [
-        0 => "zero";
-        1 => "one";
-        2 => "two";
-        3 => "few";
-        4 => "many";
-        5 => "other";
-    ]
-}
-
-static MANAGED_STRING_PLURAL_AST_NODE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLURAL_AST_NODE_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_plural_ast_node_data_from_decoder;
-    fields_fn decode_managed_string_plural_ast_node_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_PLURAL_AST_NODE_DATA_MODULE_ATOM;
-    keys_static MANAGED_STRING_PLURAL_AST_NODE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringPluralAstNodeData";
-    keys ["identifier", "conditions"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_managed_string_plural_type_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static MANAGED_STRING_PLURAL_TYPE_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLURAL_TYPE_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_plural_type_map_entry_from_decoder;
-    fields_fn decode_managed_string_plural_type_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_PLURAL_TYPE_MAP_ENTRY_MODULE_ATOM;
-    keys_static MANAGED_STRING_PLURAL_TYPE_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringPluralTypeMapEntry";
-    keys ["key", "value"];
-    fields [
-        1 => 1: decode_managed_string_plural_type_from_decoder(env, decoder)?;
-        2 => 2: decode_managed_string_node_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_managed_string_format_type_from_decoder;
-    variants [
-        0 => "text";
-        1 => "date";
-        2 => "time";
-        3 => "number";
-    ]
-}
-
-static MANAGED_STRING_PLACEHOLDER_AST_NODE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLACEHOLDER_AST_NODE_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_placeholder_ast_node_data_from_decoder;
-    fields_fn decode_managed_string_placeholder_ast_node_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_PLACEHOLDER_AST_NODE_DATA_MODULE_ATOM;
-    keys_static MANAGED_STRING_PLACEHOLDER_AST_NODE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringPlaceholderAstNodeData";
-    keys ["identifier", "format_type", "format_pattern"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_managed_string_format_type_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static COOPER_REVERT_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_REVERT_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cooper_revert_data_from_decoder;
-    fields_fn decode_cooper_revert_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COOPER_REVERT_DATA_MODULE_ATOM;
-    keys_static COOPER_REVERT_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CooperRevertData";
-    keys ["original_values"];
-    fields [
-        1 => 1: decode_node_change_from_decoder(env, decoder)?;
-    ]
-}
-
-static VIDEO_PLAYBACK_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VIDEO_PLAYBACK_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_video_playback_from_decoder;
-    fields_fn decode_video_playback_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VIDEO_PLAYBACK_MODULE_ATOM;
-    keys_static VIDEO_PLAYBACK_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VideoPlayback";
-    keys ["autoplay", "media_loop", "muted", "show_controls", "start_time_ms", "end_time_ms"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decoder.read_bool()?;
-        3 => 3: decoder.read_bool()?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decoder.read_var_uint()?;
-        6 => 6: decoder.read_var_uint()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_media_action_from_decoder;
-    variants [
-        0 => "play";
-        1 => "pause";
-        2 => "toggle_play_pause";
-        3 => "mute";
-        4 => "unmute";
-        5 => "toggle_mute_unmute";
-        6 => "skip_forward";
-        7 => "skip_backward";
-        8 => "skip_to";
-        9 => "set_playback_rate";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_animation_timeline_action_from_decoder;
-    variants [
-        0 => "play";
-        1 => "pause";
-        2 => "toggle_play_pause";
-        3 => "set_playhead";
-    ]
-}
-
-static WIDGET_HOVER_STYLE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_HOVER_STYLE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_widget_hover_style_from_decoder;
-    fields_fn decode_widget_hover_style_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static WIDGET_HOVER_STYLE_MODULE_ATOM;
-    keys_static WIDGET_HOVER_STYLE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.WidgetHoverStyle";
-    keys ["fill_paints", "stroke_paints", "opacity", "are_fill_paints_set", "are_stroke_paints_set", "is_opacity_set"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
-        2 => 2: decoder.read_repeated(|decoder| decode_paint_from_decoder(env, decoder))?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decoder.read_bool()?;
-        6 => 6: decoder.read_bool()?;
-    ]
-}
-
-static WIDGET_DERIVED_SUBTREE_CURSOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_DERIVED_SUBTREE_CURSOR_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_widget_derived_subtree_cursor_from_decoder;
-    fields_fn decode_widget_derived_subtree_cursor_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static WIDGET_DERIVED_SUBTREE_CURSOR_MODULE_ATOM;
-    keys_static WIDGET_DERIVED_SUBTREE_CURSOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.WidgetDerivedSubtreeCursor";
-    keys ["session_id", "counter"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decoder.read_var_uint()?;
-    ]
-}
-
-static MULTIPLAYER_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MULTIPLAYER_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_multiplayer_map_from_decoder;
-    fields_fn decode_multiplayer_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MULTIPLAYER_MAP_MODULE_ATOM;
-    keys_static MULTIPLAYER_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.MultiplayerMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_multiplayer_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static MULTIPLAYER_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MULTIPLAYER_MAP_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_multiplayer_map_entry_from_decoder;
-    fields_fn decode_multiplayer_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MULTIPLAYER_MAP_ENTRY_MODULE_ATOM;
-    keys_static MULTIPLAYER_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.MultiplayerMapEntry";
-    keys ["key", "value"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static VARIABLE_DATA_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_data_map_from_decoder;
-    fields_fn decode_variable_data_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_DATA_MAP_MODULE_ATOM;
-    keys_static VARIABLE_DATA_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableDataMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_variable_data_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static VARIABLE_DATA_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_MAP_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_data_map_entry_from_decoder;
-    fields_fn decode_variable_data_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_DATA_MAP_ENTRY_MODULE_ATOM;
-    keys_static VARIABLE_DATA_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableDataMapEntry";
-    keys ["node_field", "variable_data", "variable_field"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_field_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_variable_field_from_decoder;
-    variants [
-        0 => "missing";
-        1 => "corner_radius";
-        2 => "paragraph_spacing";
-        3 => "paragraph_indent";
-        4 => "stroke_weight";
-        5 => "stack_spacing";
-        6 => "stack_padding_left";
-        7 => "stack_padding_top";
-        8 => "stack_padding_right";
-        9 => "stack_padding_bottom";
-        10 => "visible";
-        11 => "text_data";
-        12 => "width";
-        13 => "height";
-        14 => "rectangle_top_left_corner_radius";
-        15 => "rectangle_top_right_corner_radius";
-        16 => "rectangle_bottom_left_corner_radius";
-        17 => "rectangle_bottom_right_corner_radius";
-        18 => "border_top_weight";
-        19 => "border_bottom_weight";
-        20 => "border_left_weight";
-        21 => "border_right_weight";
-        22 => "variant_properties";
-        23 => "stack_counter_spacing";
-        24 => "min_width";
-        25 => "max_width";
-        26 => "min_height";
-        27 => "max_height";
-        28 => "font_family";
-        29 => "font_style";
-        30 => "font_variations";
-        31 => "opacity";
-        32 => "font_size";
-        34 => "letter_spacing";
-        36 => "line_height";
-        37 => "overridden_symbol_id";
-        38 => "hyperlink";
-        39 => "cms_serialized_rich_text_data";
-        40 => "slot_content_id";
-        41 => "grid_row_gap";
-        42 => "grid_column_gap";
-        43 => "x_position";
-        44 => "y_position";
-        45 => "rotation";
-        46 => "motion_translation_x";
-        47 => "motion_translation_y";
-        48 => "motion_rotation";
-        49 => "motion_scale_x";
-        50 => "motion_scale_y";
-        51 => "motion_shear";
-        52 => "scroll_offset_x";
-        53 => "scroll_offset_y";
-        54 => "path_trim_start";
-        55 => "path_trim_end";
-        56 => "dissolve_progress";
-        57 => "easing_data";
-        58 => "media_current_time";
-        59 => "transform_3_d_perspective";
-        60 => "transform_3_d_translation_z";
-        61 => "transform_3_d_rotation_x";
-        62 => "transform_3_d_rotation_y";
-        63 => "transform_3_d_rotation_z";
-        64 => "polygon_count";
-        65 => "arc_data_starting_angle";
-        66 => "arc_data_ending_angle";
-        67 => "arc_data_inner_radius";
-    ]
-}
-
-static VARIABLE_MODE_BY_SET_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_MODE_BY_SET_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_mode_by_set_map_from_decoder;
-    fields_fn decode_variable_mode_by_set_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_MODE_BY_SET_MAP_MODULE_ATOM;
-    keys_static VARIABLE_MODE_BY_SET_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableModeBySetMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_variable_mode_by_set_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static VARIABLE_MODE_BY_SET_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_MODE_BY_SET_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_mode_by_set_map_entry_from_decoder;
-    fields_fn decode_variable_mode_by_set_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_MODE_BY_SET_MAP_ENTRY_MODULE_ATOM;
-    keys_static VARIABLE_MODE_BY_SET_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableModeBySetMapEntry";
-    keys ["variable_set_id", "variable_mode_id", "variable_set_extension_id"];
-    fields [
-        1 => 1: decode_variable_set_id_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_set_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static CODE_SYNTAX_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SYNTAX_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_syntax_map_from_decoder;
-    fields_fn decode_code_syntax_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_SYNTAX_MAP_MODULE_ATOM;
-    keys_static CODE_SYNTAX_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeSyntaxMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_code_syntax_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static CODE_SYNTAX_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_SYNTAX_MAP_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_syntax_map_entry_from_decoder;
-    fields_fn decode_code_syntax_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_SYNTAX_MAP_ENTRY_MODULE_ATOM;
-    keys_static CODE_SYNTAX_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeSyntaxMapEntry";
-    keys ["platform", "value"];
-    fields [
-        1 => 1: decode_code_syntax_platform_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static TABLE_MERGED_CELL_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TABLE_MERGED_CELL_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_table_merged_cell_map_from_decoder;
-    fields_fn decode_table_merged_cell_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TABLE_MERGED_CELL_MAP_MODULE_ATOM;
-    keys_static TABLE_MERGED_CELL_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TableMergedCellMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_table_merged_cell_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static TABLE_MERGED_CELL_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TABLE_MERGED_CELL_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_table_merged_cell_map_entry_from_decoder;
-    fields_fn decode_table_merged_cell_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TABLE_MERGED_CELL_MAP_ENTRY_MODULE_ATOM;
-    keys_static TABLE_MERGED_CELL_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TableMergedCellMapEntry";
-    keys ["row_id", "col_id", "row_span", "col_span"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_var_int()?;
-        4 => 4: decoder.read_var_int()?;
-    ]
-}
-
-static TABLE_ROW_COLUMN_POSITION_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TABLE_ROW_COLUMN_POSITION_MAP_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_table_row_column_position_map_from_decoder;
-    fields_fn decode_table_row_column_position_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TABLE_ROW_COLUMN_POSITION_MAP_MODULE_ATOM;
-    keys_static TABLE_ROW_COLUMN_POSITION_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TableRowColumnPositionMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_table_row_column_position_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static TABLE_ROW_COLUMN_POSITION_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TABLE_ROW_COLUMN_POSITION_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_table_row_column_position_map_entry_from_decoder;
-    fields_fn decode_table_row_column_position_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TABLE_ROW_COLUMN_POSITION_MAP_ENTRY_MODULE_ATOM;
-    keys_static TABLE_ROW_COLUMN_POSITION_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TableRowColumnPositionMapEntry";
-    keys ["id", "position"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static GUID_POSITION_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_POSITION_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_guid_position_map_from_decoder;
-    fields_fn decode_guid_position_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUID_POSITION_MAP_MODULE_ATOM;
-    keys_static GUID_POSITION_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GUIDPositionMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_guid_position_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static GUID_POSITION_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_POSITION_MAP_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_guid_position_map_entry_from_decoder;
-    fields_fn decode_guid_position_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUID_POSITION_MAP_ENTRY_MODULE_ATOM;
-    keys_static GUID_POSITION_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GUIDPositionMapEntry";
-    keys ["id", "position"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static GUID_GRID_TRACK_SIZE_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_GRID_TRACK_SIZE_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_guid_grid_track_size_map_from_decoder;
-    fields_fn decode_guid_grid_track_size_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUID_GRID_TRACK_SIZE_MAP_MODULE_ATOM;
-    keys_static GUID_GRID_TRACK_SIZE_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GUIDGridTrackSizeMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_guid_grid_track_size_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static GUID_GRID_TRACK_SIZE_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_GRID_TRACK_SIZE_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_guid_grid_track_size_map_entry_from_decoder;
-    fields_fn decode_guid_grid_track_size_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUID_GRID_TRACK_SIZE_MAP_ENTRY_MODULE_ATOM;
-    keys_static GUID_GRID_TRACK_SIZE_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GUIDGridTrackSizeMapEntry";
-    keys ["id", "track_size"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_grid_track_size_from_decoder(env, decoder)?;
-    ]
-}
-
-static OBJECT_ANIMATION_LIST_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static OBJECT_ANIMATION_LIST_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_object_animation_list_from_decoder;
-    fields_fn decode_object_animation_list_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static OBJECT_ANIMATION_LIST_MODULE_ATOM;
-    keys_static OBJECT_ANIMATION_LIST_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ObjectAnimationList";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_object_animation_list_item_from_decoder(env, decoder))?;
-    ]
-}
-
-static OBJECT_ANIMATION_LIST_ITEM_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static OBJECT_ANIMATION_LIST_ITEM_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_object_animation_list_item_from_decoder;
-    fields_fn decode_object_animation_list_item_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static OBJECT_ANIMATION_LIST_ITEM_MODULE_ATOM;
-    keys_static OBJECT_ANIMATION_LIST_ITEM_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ObjectAnimationListItem";
-    keys ["target_node_id", "animation"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_prototype_action_from_decoder(env, decoder)?;
-    ]
-}
-
-static GRID_TRACK_SIZE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GRID_TRACK_SIZE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_grid_track_size_from_decoder;
-    fields_fn decode_grid_track_size_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GRID_TRACK_SIZE_MODULE_ATOM;
-    keys_static GRID_TRACK_SIZE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GridTrackSize";
-    keys ["min_sizing", "max_sizing"];
-    fields [
-        1 => 1: decode_grid_track_sizing_function_from_decoder(env, decoder)?;
-        2 => 2: decode_grid_track_sizing_function_from_decoder(env, decoder)?;
-    ]
-}
-
-static GRID_TRACK_SIZING_FUNCTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GRID_TRACK_SIZING_FUNCTION_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_grid_track_sizing_function_from_decoder;
-    fields_fn decode_grid_track_sizing_function_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GRID_TRACK_SIZING_FUNCTION_MODULE_ATOM;
-    keys_static GRID_TRACK_SIZING_FUNCTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GridTrackSizingFunction";
-    keys ["type", "value"];
-    fields [
-        1 => 1: decode_grid_track_sizing_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_grid_track_sizing_type_from_decoder;
-    variants [
-        0 => "flex";
-        1 => "fixed";
-        2 => "hug";
-    ]
-}
-
-static TABLE_ROW_COLUMN_SIZE_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TABLE_ROW_COLUMN_SIZE_MAP_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_table_row_column_size_map_from_decoder;
-    fields_fn decode_table_row_column_size_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TABLE_ROW_COLUMN_SIZE_MAP_MODULE_ATOM;
-    keys_static TABLE_ROW_COLUMN_SIZE_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TableRowColumnSizeMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_table_row_column_size_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static TABLE_ROW_COLUMN_SIZE_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TABLE_ROW_COLUMN_SIZE_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_table_row_column_size_map_entry_from_decoder;
-    fields_fn decode_table_row_column_size_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TABLE_ROW_COLUMN_SIZE_MAP_ENTRY_MODULE_ATOM;
-    keys_static TABLE_ROW_COLUMN_SIZE_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TableRowColumnSizeMapEntry";
-    keys ["id", "size"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-    ]
-}
-
-static AGENDA_POSITION_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_POSITION_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agenda_position_map_from_decoder;
-    fields_fn decode_agenda_position_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENDA_POSITION_MAP_MODULE_ATOM;
-    keys_static AGENDA_POSITION_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgendaPositionMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_agenda_position_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static AGENDA_POSITION_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_POSITION_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agenda_position_map_entry_from_decoder;
-    fields_fn decode_agenda_position_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENDA_POSITION_MAP_ENTRY_MODULE_ATOM;
-    keys_static AGENDA_POSITION_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgendaPositionMapEntry";
-    keys ["id", "position"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_agenda_item_type_from_decoder;
-    variants [
-        0 => "node";
-        1 => "block";
-    ]
-}
-
-static AGENDA_METADATA_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_METADATA_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agenda_metadata_map_from_decoder;
-    fields_fn decode_agenda_metadata_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENDA_METADATA_MAP_MODULE_ATOM;
-    keys_static AGENDA_METADATA_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgendaMetadataMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_agenda_metadata_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static AGENDA_METADATA_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_METADATA_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agenda_metadata_map_entry_from_decoder;
-    fields_fn decode_agenda_metadata_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENDA_METADATA_MAP_ENTRY_MODULE_ATOM;
-    keys_static AGENDA_METADATA_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgendaMetadataMapEntry";
-    keys ["id", "data"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_agenda_metadata_from_decoder(env, decoder)?;
-    ]
-}
-
-static AGENDA_METADATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_METADATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agenda_metadata_from_decoder;
-    fields_fn decode_agenda_metadata_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENDA_METADATA_MODULE_ATOM;
-    keys_static AGENDA_METADATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgendaMetadata";
-    keys ["name", "type", "target_node_id", "timer_info", "vote_info", "music_info"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_agenda_item_type_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decode_agenda_timer_info_from_decoder(env, decoder)?;
-        5 => 5: decode_agenda_vote_info_from_decoder(env, decoder)?;
-        6 => 6: decode_agenda_music_info_from_decoder(env, decoder)?;
-    ]
-}
-
-static AGENDA_TIMER_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_TIMER_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agenda_timer_info_from_decoder;
-    fields_fn decode_agenda_timer_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENDA_TIMER_INFO_MODULE_ATOM;
-    keys_static AGENDA_TIMER_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgendaTimerInfo";
-    keys ["timer_length"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-    ]
-}
-
-static AGENDA_VOTE_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_VOTE_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agenda_vote_info_from_decoder;
-    fields_fn decode_agenda_vote_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENDA_VOTE_INFO_MODULE_ATOM;
-    keys_static AGENDA_VOTE_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgendaVoteInfo";
-    keys ["vote_count"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-    ]
-}
-
-static AGENDA_MUSIC_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENDA_MUSIC_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agenda_music_info_from_decoder;
-    fields_fn decode_agenda_music_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENDA_MUSIC_INFO_MODULE_ATOM;
-    keys_static AGENDA_MUSIC_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgendaMusicInfo";
-    keys ["song_id", "start_time_ms"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_var_uint()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_diagram_layout_rule_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "tree";
-    ]
-}
-
-static DIAGRAM_PARENT_INDEX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DIAGRAM_PARENT_INDEX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_diagram_parent_index_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DIAGRAM_PARENT_INDEX_MODULE_ATOM;
-    keys_static DIAGRAM_PARENT_INDEX_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.DiagramParentIndex";
-    keys ["guid", "position"];
-    fields [
-        decode_guid_from_decoder(env, decoder)?,
-        decoder.read_string(env)?
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_diagram_layout_paused_from_decoder;
-    variants [
-        0 => "no";
-        1 => "yes";
-    ]
-}
-
-static COMPONENT_PROP_REF_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_REF_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_component_prop_ref_from_decoder;
-    fields_fn decode_component_prop_ref_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COMPONENT_PROP_REF_MODULE_ATOM;
-    keys_static COMPONENT_PROP_REF_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ComponentPropRef";
-    keys ["node_field", "def_id", "zombie_fallback_name", "component_prop_node_field", "is_deleted"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decode_component_prop_node_field_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_bool()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_component_prop_node_field_from_decoder;
-    variants [
-        0 => "visible";
-        1 => "text_data";
-        2 => "overridden_symbol_id";
-        3 => "inherit_fill_style_id";
-        4 => "slot_content_id";
-    ]
-}
-
-static COMPONENT_PROP_ASSIGNMENT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_ASSIGNMENT_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_component_prop_assignment_from_decoder;
-    fields_fn decode_component_prop_assignment_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COMPONENT_PROP_ASSIGNMENT_MODULE_ATOM;
-    keys_static COMPONENT_PROP_ASSIGNMENT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ComponentPropAssignment";
-    keys ["def_id", "value", "var_value", "legacy_derived_text_data"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_component_prop_value_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_data_from_decoder(env, decoder)?;
-        4 => 4: decode_derived_text_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static COMPONENT_PROP_DEF_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_DEF_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_component_prop_def_from_decoder;
-    fields_fn decode_component_prop_def_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COMPONENT_PROP_DEF_MODULE_ATOM;
-    keys_static COMPONENT_PROP_DEF_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ComponentPropDef";
-    keys ["id", "name", "initial_value", "sort_position", "parent_prop_def_id", "type", "is_deleted", "preferred_values", "var_value", "parameter_config", "description", "slot_prop_config", "color_array_config"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decode_component_prop_value_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decode_guid_from_decoder(env, decoder)?;
-        6 => 6: decode_component_prop_type_from_decoder(env, decoder)?;
-        7 => 7: decoder.read_bool()?;
-        8 => 8: decode_component_prop_preferred_values_from_decoder(env, decoder)?;
-        9 => 9: decode_variable_data_from_decoder(env, decoder)?;
-        10 => 10: decode_parameter_config_from_decoder(env, decoder)?;
-        11 => 11: decoder.read_string(env)?;
-        12 => 12: decode_slot_prop_config_from_decoder(env, decoder)?;
-        13 => 13: decode_color_array_config_from_decoder(env, decoder)?;
-    ]
-}
-
-static COMPONENT_PROP_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_component_prop_value_from_decoder;
-    fields_fn decode_component_prop_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COMPONENT_PROP_VALUE_MODULE_ATOM;
-    keys_static COMPONENT_PROP_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ComponentPropValue";
-    keys ["bool_value", "text_value", "guid_value", "float_value", "easing_data", "vector_value", "line_value", "circle_value", "rotation3_d_value", "circle_point_value", "gradient_value", "color_point_value"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decode_text_data_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decode_easing_data_from_decoder(env, decoder)?;
-        6 => 6: decode_vector_from_decoder(env, decoder)?;
-        7 => 7: decode_line_from_decoder(env, decoder)?;
-        8 => 8: decode_circle_from_decoder(env, decoder)?;
-        9 => 9: decode_rotation3_d_from_decoder(env, decoder)?;
-        10 => 10: decode_circle_point_from_decoder(env, decoder)?;
-        11 => 11: decode_gradient_from_decoder(env, decoder)?;
-        12 => 12: decode_color_point_from_decoder(env, decoder)?;
-    ]
-}
-
-static TIMELINE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMELINE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_timeline_data_from_decoder;
-    fields_fn decode_timeline_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TIMELINE_DATA_MODULE_ATOM;
-    keys_static TIMELINE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TimelineData";
-    keys ["duration_us", "default_timeline", "parent_timeline_def_id", "playback_style"];
-    fields [
-        1 => 1: decoder.read_var_uint64()?;
-        2 => 2: decoder.read_bool()?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decode_playback_style_from_decoder(env, decoder)?;
-    ]
-}
-
-static TIMELINE_DEFINITIONS_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMELINE_DEFINITIONS_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_timeline_definitions_map_from_decoder;
-    fields_fn decode_timeline_definitions_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TIMELINE_DEFINITIONS_MAP_MODULE_ATOM;
-    keys_static TIMELINE_DEFINITIONS_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TimelineDefinitionsMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_timeline_definitions_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static TIMELINE_DEFINITIONS_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMELINE_DEFINITIONS_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_timeline_definitions_map_entry_from_decoder;
-    fields_fn decode_timeline_definitions_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TIMELINE_DEFINITIONS_MAP_ENTRY_MODULE_ATOM;
-    keys_static TIMELINE_DEFINITIONS_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TimelineDefinitionsMapEntry";
-    keys ["id", "data"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_timeline_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static TIMELINE_ASSIGNMENT_KEY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMELINE_ASSIGNMENT_KEY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_timeline_assignment_key_from_decoder;
-    fields_fn decode_timeline_assignment_key_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TIMELINE_ASSIGNMENT_KEY_MODULE_ATOM;
-    keys_static TIMELINE_ASSIGNMENT_KEY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TimelineAssignmentKey";
-    keys ["assigned_timeline_id", "containing_timeline_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static TIMELINE_BINDING_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMELINE_BINDING_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_timeline_binding_data_from_decoder;
-    fields_fn decode_timeline_binding_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TIMELINE_BINDING_DATA_MODULE_ATOM;
-    keys_static TIMELINE_BINDING_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TimelineBindingData";
-    keys ["offset_us", "disabled"];
-    fields [
-        1 => 1: decoder.read_var_int64()?;
-        2 => 2: decoder.read_bool()?;
-    ]
-}
-
-static TIMELINE_ASSIGNMENTS_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMELINE_ASSIGNMENTS_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_timeline_assignments_map_from_decoder;
-    fields_fn decode_timeline_assignments_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TIMELINE_ASSIGNMENTS_MAP_MODULE_ATOM;
-    keys_static TIMELINE_ASSIGNMENTS_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TimelineAssignmentsMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_timeline_assignments_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static TIMELINE_ASSIGNMENTS_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMELINE_ASSIGNMENTS_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_timeline_assignments_map_entry_from_decoder;
-    fields_fn decode_timeline_assignments_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TIMELINE_ASSIGNMENTS_MAP_ENTRY_MODULE_ATOM;
-    keys_static TIMELINE_ASSIGNMENTS_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TimelineAssignmentsMapEntry";
-    keys ["key", "value"];
-    fields [
-        1 => 1: decode_timeline_assignment_key_from_decoder(env, decoder)?;
-        2 => 2: decode_timeline_binding_data_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_component_prop_type_from_decoder;
-    variants [
-        0 => "bool";
-        1 => "text";
-        2 => "color";
-        3 => "instance_swap";
-        4 => "variant";
-        5 => "number";
-        6 => "image";
-        7 => "slot";
-        8 => "easing";
-        9 => "color_array";
-        10 => "vector";
-        11 => "line";
-        12 => "circle";
-        13 => "rotation_3_d";
-        14 => "circle_point";
-        15 => "gradient";
-        16 => "color_point";
-    ]
-}
-
-static COMPONENT_PROP_PREFERRED_VALUES_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COMPONENT_PROP_PREFERRED_VALUES_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_component_prop_preferred_values_from_decoder;
-    fields_fn decode_component_prop_preferred_values_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COMPONENT_PROP_PREFERRED_VALUES_MODULE_ATOM;
-    keys_static COMPONENT_PROP_PREFERRED_VALUES_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ComponentPropPreferredValues";
-    keys ["string_values", "instance_swap_values"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decoder.read_string(env))?;
-        2 => 2: decoder.read_repeated(|decoder| decode_instance_swap_preferred_value_from_decoder(env, decoder))?;
-    ]
-}
-
-static PARAMETER_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PARAMETER_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_parameter_config_from_decoder;
-    fields_fn decode_parameter_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PARAMETER_CONFIG_MODULE_ATOM;
-    keys_static PARAMETER_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ParameterConfig";
-    keys ["number_prop_config", "control", "slider_config", "label", "input_config", "select_config", "point_config", "line_config", "point_radius_config", "rotation3_d_config", "circle_point_config", "color_point_config", "show_divider_above"];
-    fields [
-        1 => 1: decode_number_prop_config_from_decoder(env, decoder)?;
-        2 => 2: decode_parameter_config_control_from_decoder(env, decoder)?;
-        3 => 3: decode_slider_config_from_decoder(env, decoder)?;
-        4 => 4: decode_variable_data_from_decoder(env, decoder)?;
-        5 => 5: decode_input_config_from_decoder(env, decoder)?;
-        6 => 6: decode_select_config_from_decoder(env, decoder)?;
-        7 => 7: decode_point_config_from_decoder(env, decoder)?;
-        8 => 8: decode_line_config_from_decoder(env, decoder)?;
-        9 => 9: decode_point_radius_config_from_decoder(env, decoder)?;
-        10 => 10: decode_rotation3_d_config_from_decoder(env, decoder)?;
-        11 => 11: decode_circle_point_config_from_decoder(env, decoder)?;
-        12 => 12: decode_color_point_config_from_decoder(env, decoder)?;
-        13 => 13: decoder.read_bool()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_parameter_config_control_from_decoder;
-    variants [
-        0 => "default";
-        1 => "slider";
-        2 => "input";
-        3 => "select";
-    ]
-}
-
-static INPUT_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INPUT_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_input_config_from_decoder;
-    fields_fn decode_input_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INPUT_CONFIG_MODULE_ATOM;
-    keys_static INPUT_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InputConfig";
-    keys ["unit", "min", "max"];
-    fields [
-        1 => 1: decode_variable_data_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static SLIDER_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDER_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_slider_config_from_decoder;
-    fields_fn decode_slider_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SLIDER_CONFIG_MODULE_ATOM;
-    keys_static SLIDER_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SliderConfig";
-    keys ["min", "max", "step", "unit"];
-    fields [
-        1 => 1: decode_variable_data_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_data_from_decoder(env, decoder)?;
-        4 => 4: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_point_mode_from_decoder;
-    variants [
-        0 => "canvas_and_ui";
-        1 => "canvas";
-        2 => "ui";
-    ]
-}
-
-static POINT_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static POINT_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_point_config_from_decoder;
-    fields_fn decode_point_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static POINT_CONFIG_MODULE_ATOM;
-    keys_static POINT_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PointConfig";
-    keys ["mode", "unit"];
-    fields [
-        1 => 1: decode_point_mode_from_decoder(env, decoder)?;
-        2 => 2: decode_number_units_from_decoder(env, decoder)?;
-    ]
-}
-
-static LINE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static LINE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_line_from_decoder;
-    fields_fn decode_line_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static LINE_MODULE_ATOM;
-    keys_static LINE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Line";
-    keys ["a", "b"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-        2 => 2: decode_vector_from_decoder(env, decoder)?;
-    ]
-}
-
-static LINE_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static LINE_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_line_config_from_decoder;
-    fields_fn decode_line_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static LINE_CONFIG_MODULE_ATOM;
-    keys_static LINE_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.LineConfig";
-    keys ["mode", "unit"];
-    fields [
-        1 => 1: decode_point_mode_from_decoder(env, decoder)?;
-        2 => 2: decode_number_units_from_decoder(env, decoder)?;
-    ]
-}
-
-static CIRCLE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CIRCLE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_circle_from_decoder;
-    fields_fn decode_circle_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CIRCLE_MODULE_ATOM;
-    keys_static CIRCLE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Circle";
-    keys ["center", "radius"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-    ]
-}
-
-static POINT_RADIUS_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static POINT_RADIUS_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_point_radius_config_from_decoder;
-    fields_fn decode_point_radius_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static POINT_RADIUS_CONFIG_MODULE_ATOM;
-    keys_static POINT_RADIUS_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PointRadiusConfig";
-    keys ["mode", "position_unit", "radius_unit", "min_radius", "max_radius"];
-    fields [
-        1 => 1: decode_point_mode_from_decoder(env, decoder)?;
-        2 => 2: decode_number_units_from_decoder(env, decoder)?;
-        3 => 3: decode_number_units_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decoder.read_var_float(env)?;
-    ]
-}
-
-static ROTATION3_D_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ROTATION3_D_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_rotation3_d_from_decoder;
-    fields_fn decode_rotation3_d_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ROTATION3_D_MODULE_ATOM;
-    keys_static ROTATION3_D_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Rotation3D";
-    keys ["x", "y", "z", "translate_z"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_float(env)?;
-    ]
-}
-
-static ROTATION3_D_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ROTATION3_D_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_rotation3_d_config_from_decoder;
-    fields_fn decode_rotation3_d_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ROTATION3_D_CONFIG_MODULE_ATOM;
-    keys_static ROTATION3_D_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Rotation3DConfig";
-    keys ["mode"];
-    fields [
-        1 => 1: decode_point_mode_from_decoder(env, decoder)?;
-    ]
-}
-
-static CIRCLE_POINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CIRCLE_POINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_circle_point_from_decoder;
-    fields_fn decode_circle_point_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CIRCLE_POINT_MODULE_ATOM;
-    keys_static CIRCLE_POINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CirclePoint";
-    keys ["center", "radius", "angle"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-    ]
-}
-
-static CIRCLE_POINT_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CIRCLE_POINT_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_circle_point_config_from_decoder;
-    fields_fn decode_circle_point_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CIRCLE_POINT_CONFIG_MODULE_ATOM;
-    keys_static CIRCLE_POINT_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CirclePointConfig";
-    keys ["mode", "position_unit", "radius_unit", "min_radius", "max_radius"];
-    fields [
-        1 => 1: decode_point_mode_from_decoder(env, decoder)?;
-        2 => 2: decode_number_units_from_decoder(env, decoder)?;
-        3 => 3: decode_number_units_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decoder.read_var_float(env)?;
-    ]
-}
-
-static COLOR_POINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLOR_POINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_color_point_from_decoder;
-    fields_fn decode_color_point_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLOR_POINT_MODULE_ATOM;
-    keys_static COLOR_POINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ColorPoint";
-    keys ["point", "color"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static COLOR_POINT_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLOR_POINT_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_color_point_config_from_decoder;
-    fields_fn decode_color_point_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLOR_POINT_CONFIG_MODULE_ATOM;
-    keys_static COLOR_POINT_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ColorPointConfig";
-    keys ["mode", "unit"];
-    fields [
-        1 => 1: decode_point_mode_from_decoder(env, decoder)?;
-        2 => 2: decode_number_units_from_decoder(env, decoder)?;
-    ]
-}
-
-static GRADIENT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GRADIENT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_gradient_from_decoder;
-    fields_fn decode_gradient_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GRADIENT_MODULE_ATOM;
-    keys_static GRADIENT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Gradient";
-    keys ["stops"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_gradient_stop_from_decoder(env, decoder))?;
-    ]
-}
-
-static GRADIENT_STOP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GRADIENT_STOP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_gradient_stop_from_decoder;
-    fields_fn decode_gradient_stop_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GRADIENT_STOP_MODULE_ATOM;
-    keys_static GRADIENT_STOP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GradientStop";
-    keys ["position", "color"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static SELECT_OPTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SELECT_OPTION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_select_option_from_decoder;
-    fields_fn decode_select_option_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SELECT_OPTION_MODULE_ATOM;
-    keys_static SELECT_OPTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SelectOption";
-    keys ["value", "label"];
-    fields [
-        1 => 1: decode_variable_data_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static SELECT_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SELECT_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_select_config_from_decoder;
-    fields_fn decode_select_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SELECT_CONFIG_MODULE_ATOM;
-    keys_static SELECT_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SelectConfig";
-    keys ["options"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_select_option_from_decoder(env, decoder))?;
-    ]
-}
-
-static COLOR_ARRAY_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLOR_ARRAY_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_color_array_config_from_decoder;
-    fields_fn decode_color_array_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLOR_ARRAY_CONFIG_MODULE_ATOM;
-    keys_static COLOR_ARRAY_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ColorArrayConfig";
-    keys ["min_length", "max_length"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decoder.read_var_uint()?;
-    ]
-}
-
-static SLOT_PROP_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SLOT_PROP_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_slot_prop_config_from_decoder;
-    fields_fn decode_slot_prop_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SLOT_PROP_CONFIG_MODULE_ATOM;
-    keys_static SLOT_PROP_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SlotPropConfig";
-    keys ["stretch_child_on_insert", "display_by_default", "min_children", "max_children", "allow_preferred_values_only"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decoder.read_bool()?;
-        3 => 3: decoder.read_var_uint()?;
-        4 => 4: decoder.read_var_uint()?;
-        5 => 5: decoder.read_bool()?;
-    ]
-}
-
-static NUMBER_PROP_CONFIG_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NUMBER_PROP_CONFIG_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_number_prop_config_from_decoder;
-    fields_fn decode_number_prop_config_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NUMBER_PROP_CONFIG_MODULE_ATOM;
-    keys_static NUMBER_PROP_CONFIG_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NumberPropConfig";
-    keys ["control", "min", "max", "step"];
-    fields [
-        1 => 1: decode_parameter_config_control_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_data_from_decoder(env, decoder)?;
-        4 => 4: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static INSTANCE_SWAP_PREFERRED_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INSTANCE_SWAP_PREFERRED_VALUE_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_instance_swap_preferred_value_from_decoder;
-    fields_fn decode_instance_swap_preferred_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INSTANCE_SWAP_PREFERRED_VALUE_MODULE_ATOM;
-    keys_static INSTANCE_SWAP_PREFERRED_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InstanceSwapPreferredValue";
-    keys ["type", "key"];
-    fields [
-        1 => 1: decode_instance_swap_preferred_value_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_instance_swap_preferred_value_type_from_decoder;
-    variants [
-        0 => "component";
-        1 => "state_group";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_widget_event_from_decoder;
-    variants [
-        0 => "mouse_down";
-        1 => "click";
-        2 => "text_edit_end";
-        3 => "attached_stickables_changed";
-        4 => "stuck_status_changed";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_widget_input_behavior_from_decoder;
-    variants [
-        0 => "wrap";
-        1 => "truncate";
-        2 => "multiline";
-    ]
-}
-
-static WIDGET_METADATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_METADATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_widget_metadata_from_decoder;
-    fields_fn decode_widget_metadata_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static WIDGET_METADATA_MODULE_ATOM;
-    keys_static WIDGET_METADATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.WidgetMetadata";
-    keys ["plugin_id", "plugin_version_id", "widget_name", "is_resizable", "is_rotatable"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decoder.read_bool()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_widget_property_menu_item_type_from_decoder;
-    variants [
-        0 => "action";
-        1 => "separator";
-        2 => "color";
-        3 => "dropdown";
-        4 => "color_selector";
-        5 => "toggle";
-        6 => "link";
-    ]
-}
-
-static WIDGET_PROPERTY_MENU_SELECTOR_OPTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_PROPERTY_MENU_SELECTOR_OPTION_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_widget_property_menu_selector_option_from_decoder;
-    fields_fn decode_widget_property_menu_selector_option_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static WIDGET_PROPERTY_MENU_SELECTOR_OPTION_MODULE_ATOM;
-    keys_static WIDGET_PROPERTY_MENU_SELECTOR_OPTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.WidgetPropertyMenuSelectorOption";
-    keys ["option", "tooltip"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_widget_input_text_node_type_from_decoder;
-    variants [
-        0 => "widget_controlled";
-        1 => "rich_text";
-    ]
-}
-
-static WIDGET_PROPERTY_MENU_ITEM_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static WIDGET_PROPERTY_MENU_ITEM_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_widget_property_menu_item_from_decoder;
-    fields_fn decode_widget_property_menu_item_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static WIDGET_PROPERTY_MENU_ITEM_MODULE_ATOM;
-    keys_static WIDGET_PROPERTY_MENU_ITEM_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.WidgetPropertyMenuItem";
-    keys ["property_name", "tooltip", "item_type", "icon", "options", "selected_option", "is_toggled", "href", "allow_custom_color"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decode_widget_property_menu_item_type_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decoder.read_repeated(|decoder| decode_widget_property_menu_selector_option_from_decoder(env, decoder))?;
-        6 => 6: decoder.read_string(env)?;
-        7 => 7: decoder.read_bool()?;
-        8 => 8: decoder.read_string(env)?;
-        9 => 9: decoder.read_bool()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_code_block_language_from_decoder;
-    variants [
-        0 => "typescript";
-        1 => "cpp";
-        2 => "ruby";
-        3 => "css";
-        4 => "javascript";
-        5 => "html";
-        6 => "json";
-        7 => "graphql";
-        8 => "python";
-        9 => "go";
-        10 => "sql";
-        11 => "swift";
-        12 => "kotlin";
-        13 => "rust";
-        14 => "bash";
-        15 => "plaintext";
-        16 => "markdown";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_code_block_theme_from_decoder;
-    variants [
-        0 => "figjam_dark";
-        1 => "dracula";
-        2 => "duotone_sea";
-        3 => "duotone_space";
-        4 => "duotone_earth";
-        5 => "duotone_forest";
-        6 => "duotone_light";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_spec_block_type_from_decoder;
-    variants [
-        0 => "default";
-        1 => "paragraph";
-        2 => "heading_1";
-        3 => "heading_2";
-        4 => "heading_3";
-        5 => "heading_4";
-        6 => "heading_5";
-        7 => "heading_6";
-        8 => "code_block";
-        9 => "block_quote";
-        10 => "horizontal_rule";
-        11 => "ordered_list_item";
-        12 => "unordered_list_item";
-        13 => "document";
-        14 => "table";
-        15 => "table_row";
-        16 => "table_cell";
-        17 => "todo_list_item_unchecked";
-        18 => "todo_list_item_checked";
-        19 => "image";
-        20 => "embed";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_internal_enum_for_test_from_decoder;
-    variants [
-        1 => "old";
-    ]
-}
-
-static INTERNAL_DATA_FOR_TEST_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERNAL_DATA_FOR_TEST_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_internal_data_for_test_from_decoder;
-    fields_fn decode_internal_data_for_test_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INTERNAL_DATA_FOR_TEST_MODULE_ATOM;
-    keys_static INTERNAL_DATA_FOR_TEST_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InternalDataForTest";
-    keys ["test_field_a"];
-    fields [
-        1 => 1: decoder.read_var_int()?;
-    ]
-}
-
-static STATE_GROUP_PROPERTY_VALUE_ORDER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STATE_GROUP_PROPERTY_VALUE_ORDER_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_state_group_property_value_order_from_decoder;
-    fields_fn decode_state_group_property_value_order_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STATE_GROUP_PROPERTY_VALUE_ORDER_MODULE_ATOM;
-    keys_static STATE_GROUP_PROPERTY_VALUE_ORDER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StateGroupPropertyValueOrder";
-    keys ["property", "values"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_repeated(|decoder| decoder.read_string(env))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_backfill_error_from_decoder;
-    variants [
-        0 => "none";
-        1 => "transient_retrying";
-        2 => "permanently_failed";
-        3 => "paste_failed";
-    ]
-}
-
-static PARTIAL_PASTE_ANNOTATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PARTIAL_PASTE_ANNOTATION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_partial_paste_annotation_from_decoder;
-    fields_fn decode_partial_paste_annotation_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PARTIAL_PASTE_ANNOTATION_MODULE_ATOM;
-    keys_static PARTIAL_PASTE_ANNOTATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PartialPasteAnnotation";
-    keys ["is_partial", "annotated_at", "error_state"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decoder.read_var_uint64()?;
-        3 => 3: decode_backfill_error_from_decoder(env, decoder)?;
-    ]
-}
-
-static VARIANT_PROP_SPEC_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIANT_PROP_SPEC_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variant_prop_spec_from_decoder;
-    fields_fn decode_variant_prop_spec_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIANT_PROP_SPEC_MODULE_ATOM;
-    keys_static VARIANT_PROP_SPEC_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariantPropSpec";
-    keys ["prop_def_id", "value"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static TEXT_LIST_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_LIST_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_text_list_data_from_decoder;
-    fields_fn decode_text_list_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TEXT_LIST_DATA_MODULE_ATOM;
-    keys_static TEXT_LIST_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TextListData";
-    keys ["list_id", "bullet_type", "indentation_level", "line_number"];
-    fields [
-        1 => 1: decoder.read_var_int()?;
-        2 => 2: decode_bullet_type_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_var_int()?;
-        4 => 4: decoder.read_var_int()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_bullet_type_from_decoder;
-    variants [
-        0 => "ordered";
-        1 => "unordered";
-        2 => "indent";
-        3 => "no_list";
-    ]
-}
-
-static TEXT_LINE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_LINE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_text_line_data_from_decoder;
-    fields_fn decode_text_line_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TEXT_LINE_DATA_MODULE_ATOM;
-    keys_static TEXT_LINE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TextLineData";
-    keys ["line_type", "style_id", "indentation_level", "source_directionality", "directionality", "directionality_intent", "downgrade_style_id", "consistency_style_id", "list_start_offset", "is_first_line_of_list"];
-    fields [
-        1 => 1: decode_line_type_from_decoder(env, decoder)?;
-        10 => 2: decoder.read_var_int()?;
-        2 => 3: decoder.read_var_int()?;
-        9 => 4: decode_source_directionality_from_decoder(env, decoder)?;
-        3 => 5: decode_directionality_from_decoder(env, decoder)?;
-        4 => 6: decode_directionality_intent_from_decoder(env, decoder)?;
-        5 => 7: decoder.read_var_int()?;
-        6 => 8: decoder.read_var_int()?;
-        7 => 9: decoder.read_var_int()?;
-        8 => 10: decoder.read_bool()?;
-    ]
-}
-
-static DERIVED_TEXT_LINE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static DERIVED_TEXT_LINE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_derived_text_line_data_from_decoder;
-    fields_fn decode_derived_text_line_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static DERIVED_TEXT_LINE_DATA_MODULE_ATOM;
-    keys_static DERIVED_TEXT_LINE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.DerivedTextLineData";
-    keys ["directionality"];
-    fields [
-        1 => 1: decode_directionality_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_line_type_from_decoder;
-    variants [
-        0 => "plain";
-        1 => "ordered_list";
-        2 => "unordered_list";
-        3 => "blockquote";
-        4 => "header";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_source_directionality_from_decoder;
-    variants [
-        0 => "auto";
-        1 => "ltr";
-        2 => "rtl";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_directionality_from_decoder;
-    variants [
-        0 => "ltr";
-        1 => "rtl";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_directionality_intent_from_decoder;
-    variants [
-        0 => "implicit";
-        1 => "explicit";
-    ]
-}
-
-static PROTOTYPE_INTERACTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_INTERACTION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_prototype_interaction_from_decoder;
-    fields_fn decode_prototype_interaction_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PROTOTYPE_INTERACTION_MODULE_ATOM;
-    keys_static PROTOTYPE_INTERACTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PrototypeInteraction";
-    keys ["id", "event", "actions", "is_deleted", "state_management_version"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_prototype_event_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_prototype_action_from_decoder(env, decoder))?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decoder.read_var_int()?;
-    ]
-}
-
-static PROTOTYPE_EVENT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_EVENT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_prototype_event_from_decoder;
-    fields_fn decode_prototype_event_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PROTOTYPE_EVENT_MODULE_ATOM;
-    keys_static PROTOTYPE_EVENT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PrototypeEvent";
-    keys ["interaction_type", "interaction_maintained", "interaction_duration", "key_trigger", "voice_event_phrase", "transition_timeout", "media_hit_time"];
-    fields [
-        1 => 1: decode_interaction_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_bool()?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decode_key_trigger_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_string(env)?;
-        6 => 6: decoder.read_var_float(env)?;
-        7 => 7: decoder.read_var_float(env)?;
-    ]
-}
-
-static PROTOTYPE_VARIABLE_TARGET_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_VARIABLE_TARGET_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_prototype_variable_target_from_decoder;
-    fields_fn decode_prototype_variable_target_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PROTOTYPE_VARIABLE_TARGET_MODULE_ATOM;
-    keys_static PROTOTYPE_VARIABLE_TARGET_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PrototypeVariableTarget";
-    keys ["id", "node_field_alias"];
-    fields [
-        1 => 1: decode_variable_id_from_decoder(env, decoder)?;
-        2 => 2: decode_node_field_alias_from_decoder(env, decoder)?;
-    ]
-}
-
-static CONDITIONAL_ACTIONS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CONDITIONAL_ACTIONS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_conditional_actions_from_decoder;
-    fields_fn decode_conditional_actions_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CONDITIONAL_ACTIONS_MODULE_ATOM;
-    keys_static CONDITIONAL_ACTIONS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ConditionalActions";
-    keys ["actions", "condition"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_prototype_action_from_decoder(env, decoder))?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static PROTOTYPE_ACTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_ACTION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_prototype_action_from_decoder;
-    fields_fn decode_prototype_action_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PROTOTYPE_ACTION_MODULE_ATOM;
-    keys_static PROTOTYPE_ACTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PrototypeAction";
-    keys ["transition_node_id", "transition_type", "transition_duration", "easing_type", "transition_timeout", "transition_should_smart_animate", "connection_type", "overlay_relative_position", "navigation_type", "transition_preserve_scroll", "easing_function", "extra_scroll_offset", "transition_reset_scroll_position", "transition_reset_interactive_components", "transition_overrides_enabled", "connection_url", "open_url_in_new_tab", "link_param", "cms_target", "target_variable_id", "target_variable_value", "target_variable", "target_variable_data", "media_action", "transition_reset_video_position", "media_skip_to_time", "media_skip_by_amount", "media_playback_rate", "conditions", "conditional_actions", "target_variable_set_id", "target_variable_mode_id", "target_variable_set_key", "variable_set_target_extension_id", "animation_type", "animation_target_id", "animation_phase", "animation_state", "simple_link", "animation_timeline_action", "animation_timeline_def_id", "animation_skip_to_time"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_transition_type_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decode_easing_type_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_var_float(env)?;
-        6 => 6: decoder.read_bool()?;
-        7 => 7: decode_connection_type_from_decoder(env, decoder)?;
-        9 => 8: decode_vector_from_decoder(env, decoder)?;
-        10 => 9: decode_navigation_type_from_decoder(env, decoder)?;
-        11 => 10: decoder.read_bool()?;
-        12 => 11: decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
-        13 => 12: decode_vector_from_decoder(env, decoder)?;
-        25 => 13: decoder.read_bool()?;
-        26 => 14: decoder.read_bool()?;
-        42 => 15: decoder.read_bool()?;
-        8 => 16: decoder.read_string(env)?;
-        18 => 17: decoder.read_bool()?;
-        34 => 18: decode_variable_data_from_decoder(env, decoder)?;
-        35 => 19: decode_cms_item_page_target_from_decoder(env, decoder)?;
-        14 => 20: decode_guid_from_decoder(env, decoder)?;
-        15 => 21: decode_variable_any_value_from_decoder(env, decoder)?;
-        19 => 22: decode_prototype_variable_target_from_decoder(env, decoder)?;
-        20 => 23: decode_variable_data_from_decoder(env, decoder)?;
-        16 => 24: decode_media_action_from_decoder(env, decoder)?;
-        17 => 25: decoder.read_bool()?;
-        21 => 26: decoder.read_var_float(env)?;
-        22 => 27: decoder.read_var_float(env)?;
-        36 => 28: decoder.read_var_float(env)?;
-        23 => 29: decoder.read_repeated(|decoder| decode_variable_data_from_decoder(env, decoder))?;
-        24 => 30: decoder.read_repeated(|decoder| decode_conditional_actions_from_decoder(env, decoder))?;
-        27 => 31: decode_variable_set_id_from_decoder(env, decoder)?;
-        28 => 32: decode_guid_from_decoder(env, decoder)?;
-        29 => 33: decoder.read_string(env)?;
-        38 => 34: decode_variable_set_id_from_decoder(env, decoder)?;
-        30 => 35: decode_animation_type_from_decoder(env, decoder)?;
-        31 => 36: decode_guid_from_decoder(env, decoder)?;
-        32 => 37: decode_animation_phase_from_decoder(env, decoder)?;
-        33 => 38: decode_animation_state_from_decoder(env, decoder)?;
-        37 => 39: decoder.read_bool()?;
-        39 => 40: decode_animation_timeline_action_from_decoder(env, decoder)?;
-        41 => 41: decode_guid_from_decoder(env, decoder)?;
-        40 => 42: decoder.read_var_float(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_animation_phase_from_decoder;
-    variants [
-        0 => "in";
-        1 => "out";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_animation_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "fade";
-        2 => "slide_from_left";
-        3 => "slide_from_right";
-        4 => "slide_from_top";
-        5 => "slide_from_bottom";
-    ]
-}
-
-static ANIMATION_STATE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_STATE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_animation_state_from_decoder;
-    fields_fn decode_animation_state_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANIMATION_STATE_MODULE_ATOM;
-    keys_static ANIMATION_STATE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnimationState";
-    keys ["opacity", "transform"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decode_matrix_from_decoder(env, decoder)?;
-    ]
-}
-
-static PROTOTYPE_STARTING_POINT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PROTOTYPE_STARTING_POINT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_prototype_starting_point_from_decoder;
-    fields_fn decode_prototype_starting_point_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PROTOTYPE_STARTING_POINT_MODULE_ATOM;
-    keys_static PROTOTYPE_STARTING_POINT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PrototypeStartingPoint";
-    keys ["name", "description", "position"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_trigger_device_from_decoder;
-    variants [
-        0 => "keyboard";
-        1 => "unknown_controller";
-        2 => "xbox_one";
-        3 => "ps4";
-        4 => "switch_pro";
-    ]
-}
-
-static KEY_TRIGGER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static KEY_TRIGGER_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_key_trigger_from_decoder;
-    fields_fn decode_key_trigger_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static KEY_TRIGGER_MODULE_ATOM;
-    keys_static KEY_TRIGGER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.KeyTrigger";
-    keys ["key_codes", "trigger_device"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decoder.read_var_int())?;
-        2 => 2: decode_trigger_device_from_decoder(env, decoder)?;
-    ]
-}
-
-static HYPERLINK_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static HYPERLINK_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_hyperlink_from_decoder;
-    fields_fn decode_hyperlink_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static HYPERLINK_MODULE_ATOM;
-    keys_static HYPERLINK_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Hyperlink";
-    keys ["url", "guid", "cms_target", "open_in_new_tab"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        4 => 3: decode_cms_item_page_target_from_decoder(env, decoder)?;
-        3 => 4: decoder.read_bool()?;
-    ]
-}
-
-static CMS_ITEM_PAGE_TARGET_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_ITEM_PAGE_TARGET_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_item_page_target_from_decoder;
-    fields_fn decode_cms_item_page_target_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_ITEM_PAGE_TARGET_MODULE_ATOM;
-    keys_static CMS_ITEM_PAGE_TARGET_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSItemPageTarget";
-    keys ["node_id", "cms_item_id", "field_schema_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_mention_source_from_decoder;
-    variants [
-        0 => "default";
-        1 => "copy_duplicate";
-        2 => "silent_insert";
-    ]
-}
-
-static MENTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MENTION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_mention_from_decoder;
-    fields_fn decode_mention_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MENTION_MODULE_ATOM;
-    keys_static MENTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Mention";
-    keys ["id", "mentioned_user_id", "mentioned_by_user_id", "file_key", "source", "mentioned_user_id_int", "mentioned_by_user_id_int", "mentioned_user_group_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decode_mention_source_from_decoder(env, decoder)?;
-        6 => 6: decoder.read_var_uint64()?;
-        7 => 7: decoder.read_var_uint64()?;
-        8 => 8: decoder.read_string(env)?;
-    ]
-}
-
-static EMBED_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EMBED_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_embed_data_from_decoder;
-    fields_fn decode_embed_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EMBED_DATA_MODULE_ATOM;
-    keys_static EMBED_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EmbedData";
-    keys ["url", "src_url", "title", "thumbnail_url", "width", "height", "embed_type", "thumbnail_image_hash", "favicon_image_hash", "provider", "original_text", "description", "embed_version_id", "is_published_site"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decoder.read_var_float(env)?;
-        6 => 6: decoder.read_var_float(env)?;
-        7 => 7: decoder.read_string(env)?;
-        8 => 8: decoder.read_string(env)?;
-        9 => 9: decoder.read_string(env)?;
-        10 => 10: decoder.read_string(env)?;
-        11 => 11: decoder.read_string(env)?;
-        12 => 12: decoder.read_string(env)?;
-        13 => 13: decoder.read_string(env)?;
-        14 => 14: decoder.read_bool()?;
-    ]
-}
-
-static STAMP_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STAMP_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_stamp_data_from_decoder;
-    fields_fn decode_stamp_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STAMP_DATA_MODULE_ATOM;
-    keys_static STAMP_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StampData";
-    keys ["user_id", "voting_session_id", "stamped_by_user_id"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static LINK_PREVIEW_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static LINK_PREVIEW_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_link_preview_data_from_decoder;
-    fields_fn decode_link_preview_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static LINK_PREVIEW_DATA_MODULE_ATOM;
-    keys_static LINK_PREVIEW_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.LinkPreviewData";
-    keys ["url", "title", "provider", "description", "thumbnail_image_hash", "favicon_image_hash", "thumbnail_image_width", "thumbnail_image_height"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decoder.read_string(env)?;
-        6 => 6: decoder.read_string(env)?;
-        7 => 7: decoder.read_var_float(env)?;
-        8 => 8: decoder.read_var_float(env)?;
-    ]
-}
-
-static VIEWPORT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VIEWPORT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_viewport_from_decoder;
-    fields_fn decode_viewport_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VIEWPORT_MODULE_ATOM;
-    keys_static VIEWPORT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Viewport";
-    keys ["canvas_space_bounds", "pixel_preview", "pixel_density", "canvas_guid"];
-    fields [
-        1 => 1: decode_rect_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_bool()?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static MOUSE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MOUSE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_mouse_from_decoder;
-    fields_fn decode_mouse_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MOUSE_MODULE_ATOM;
-    keys_static MOUSE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Mouse";
-    keys ["cursor", "canvas_space_location", "canvas_space_selection_box", "canvas_guid", "cursor_hidden_reason"];
-    fields [
-        1 => 1: decode_mouse_cursor_from_decoder(env, decoder)?;
-        2 => 2: decode_vector_from_decoder(env, decoder)?;
-        3 => 3: decode_rect_from_decoder(env, decoder)?;
-        4 => 4: decode_guid_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_var_uint()?;
-    ]
-}
-
-static CLICK_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CLICK_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_click_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CLICK_MODULE_ATOM;
-    keys_static CLICK_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Click";
-    keys ["id", "point"];
-    fields [
-        decoder.read_var_uint()?,
-        decode_vector_from_decoder(env, decoder)?
-    ]
-}
-
-static SCROLL_POSITION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_POSITION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_scroll_position_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SCROLL_POSITION_MODULE_ATOM;
-    keys_static SCROLL_POSITION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ScrollPosition";
-    keys ["node", "scroll_offset"];
-    fields [
-        decode_guid_from_decoder(env, decoder)?,
-        decode_vector_from_decoder(env, decoder)?
-    ]
-}
-
-static TRIGGERED_OVERLAY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGERED_OVERLAY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_triggered_overlay_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRIGGERED_OVERLAY_MODULE_ATOM;
-    keys_static TRIGGERED_OVERLAY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TriggeredOverlay";
-    keys ["overlay_guid", "hotspot_guid", "swap_guid"];
-    fields [
-        decode_guid_from_decoder(env, decoder)?,
-        decode_guid_from_decoder(env, decoder)?,
-        decode_guid_from_decoder(env, decoder)?
-    ]
-}
-
-static TRIGGERED_OVERLAY_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGERED_OVERLAY_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_triggered_overlay_data_from_decoder;
-    fields_fn decode_triggered_overlay_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRIGGERED_OVERLAY_DATA_MODULE_ATOM;
-    keys_static TRIGGERED_OVERLAY_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TriggeredOverlayData";
-    keys ["overlay_guid", "hotspot_guid", "swap_guid", "prototype_interaction_guid", "hotspot_blueprint_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decode_guid_from_decoder(env, decoder)?;
-        5 => 5: decode_guid_path_from_decoder(env, decoder)?;
-    ]
-}
-
-static TRIGGERED_SET_VARIABLE_ACTION_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGERED_SET_VARIABLE_ACTION_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_triggered_set_variable_action_data_from_decoder;
-    fields_fn decode_triggered_set_variable_action_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRIGGERED_SET_VARIABLE_ACTION_DATA_MODULE_ATOM;
-    keys_static TRIGGERED_SET_VARIABLE_ACTION_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TriggeredSetVariableActionData";
-    keys ["node_for_finding_topmost_screen_id", "target_variable_id", "target_variable_data", "resolved_variable_modes"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-    ]
-}
-
-static TRIGGERED_SET_VARIABLE_MODE_ACTION_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRIGGERED_SET_VARIABLE_MODE_ACTION_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_triggered_set_variable_mode_action_data_from_decoder;
-    fields_fn decode_triggered_set_variable_mode_action_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRIGGERED_SET_VARIABLE_MODE_ACTION_DATA_MODULE_ATOM;
-    keys_static TRIGGERED_SET_VARIABLE_MODE_ACTION_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TriggeredSetVariableModeActionData";
-    keys ["node_for_finding_topmost_screen_id", "target_variable_set_key", "target_variable_mode_id", "target_variable_set_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decode_variable_set_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static VIDEO_STATE_CHANGE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VIDEO_STATE_CHANGE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_video_state_change_data_from_decoder;
-    fields_fn decode_video_state_change_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VIDEO_STATE_CHANGE_DATA_MODULE_ATOM;
-    keys_static VIDEO_STATE_CHANGE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VideoStateChangeData";
-    keys ["target_node_id", "is_playing", "is_playing_sound", "current_times", "action_taken_timestamp"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_bool()?;
-        3 => 3: decoder.read_bool()?;
-        4 => 4: decoder.read_repeated(|decoder| decoder.read_var_uint())?;
-        5 => 5: decoder.read_var_uint()?;
-    ]
-}
-
-static EMBEDDED_PROTOTYPE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EMBEDDED_PROTOTYPE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_embedded_prototype_data_from_decoder;
-    fields_fn decode_embedded_prototype_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EMBEDDED_PROTOTYPE_DATA_MODULE_ATOM;
-    keys_static EMBEDDED_PROTOTYPE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EmbeddedPrototypeData";
-    keys ["node_id", "session_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-    ]
-}
-
-static PRESENTED_STATE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PRESENTED_STATE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_presented_state_from_decoder;
-    fields_fn decode_presented_state_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PRESENTED_STATE_MODULE_ATOM;
-    keys_static PRESENTED_STATE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PresentedState";
-    keys ["base_screen_id", "overlays"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_triggered_overlay_data_from_decoder(env, decoder))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_transition_direction_from_decoder;
-    variants [
-        0 => "forward";
-        1 => "reverse";
-    ]
-}
-
-static TOP_LEVEL_PLAYBACK_CHANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TOP_LEVEL_PLAYBACK_CHANGE_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_top_level_playback_change_from_decoder;
-    fields_fn decode_top_level_playback_change_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TOP_LEVEL_PLAYBACK_CHANGE_MODULE_ATOM;
-    keys_static TOP_LEVEL_PLAYBACK_CHANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TopLevelPlaybackChange";
-    keys ["old_state", "new_state", "hotspot_blueprint_id", "interaction_id", "is_hotspot_in_new_presented_state", "direction", "instance_stable_path"];
-    fields [
-        1 => 1: decode_presented_state_from_decoder(env, decoder)?;
-        2 => 2: decode_presented_state_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_path_from_decoder(env, decoder)?;
-        4 => 4: decode_guid_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_bool()?;
-        6 => 6: decode_transition_direction_from_decoder(env, decoder)?;
-        7 => 7: decode_guid_path_from_decoder(env, decoder)?;
-    ]
-}
-
-static INSTANCE_STATE_CHANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INSTANCE_STATE_CHANGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_instance_state_change_from_decoder;
-    fields_fn decode_instance_state_change_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INSTANCE_STATE_CHANGE_MODULE_ATOM;
-    keys_static INSTANCE_STATE_CHANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InstanceStateChange";
-    keys ["state_id", "interaction_id", "hotspot_stable_path", "instance_stable_path", "phase"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_path_from_decoder(env, decoder)?;
-        4 => 4: decode_guid_path_from_decoder(env, decoder)?;
-        5 => 5: decode_playback_change_phase_from_decoder(env, decoder)?;
-    ]
-}
-
-static TEXT_CURSOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_CURSOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_text_cursor_from_decoder;
-    fields_fn decode_text_cursor_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TEXT_CURSOR_MODULE_ATOM;
-    keys_static TEXT_CURSOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TextCursor";
-    keys ["selection_box", "canvas_guid", "text_node_guid"];
-    fields [
-        1 => 1: decode_rect_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static TEXT_SELECTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TEXT_SELECTION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_text_selection_from_decoder;
-    fields_fn decode_text_selection_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TEXT_SELECTION_MODULE_ATOM;
-    keys_static TEXT_SELECTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TextSelection";
-    keys ["selection_boxes", "canvas_guid", "text_node_guid", "text_selection_range", "text_node_or_containing_if_guid", "table_cell_row_id", "table_cell_col_id"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_rect_from_decoder(env, decoder))?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decode_vector_from_decoder(env, decoder)?;
-        5 => 5: decode_guid_from_decoder(env, decoder)?;
-        6 => 6: decode_guid_from_decoder(env, decoder)?;
-        7 => 7: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_playback_change_phase_from_decoder;
-    variants [
-        0 => "initiated";
-        1 => "aborted";
-        2 => "committed";
-    ]
-}
-
-static PLAYBACK_CHANGE_KEYFRAME_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PLAYBACK_CHANGE_KEYFRAME_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_playback_change_keyframe_from_decoder;
-    fields_fn decode_playback_change_keyframe_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PLAYBACK_CHANGE_KEYFRAME_MODULE_ATOM;
-    keys_static PLAYBACK_CHANGE_KEYFRAME_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PlaybackChangeKeyframe";
-    keys ["phase", "progress", "timestamp"];
-    fields [
-        1 => 1: decode_playback_change_phase_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-    ]
-}
-
-static STATE_MAPPING_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STATE_MAPPING_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_state_mapping_from_decoder;
-    fields_fn decode_state_mapping_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STATE_MAPPING_MODULE_ATOM;
-    keys_static STATE_MAPPING_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StateMapping";
-    keys ["stable_path", "last_top_level_change", "last_top_level_change_status", "timestamp"];
-    fields [
-        1 => 1: decode_guid_path_from_decoder(env, decoder)?;
-        2 => 2: decode_top_level_playback_change_from_decoder(env, decoder)?;
-        3 => 3: decode_playback_change_keyframe_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_var_float(env)?;
-    ]
-}
-
-static SCROLL_MAPPING_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_MAPPING_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_scroll_mapping_from_decoder;
-    fields_fn decode_scroll_mapping_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SCROLL_MAPPING_MODULE_ATOM;
-    keys_static SCROLL_MAPPING_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ScrollMapping";
-    keys ["blueprint_id", "overlay_index", "scroll_offset"];
-    fields [
-        1 => 1: decode_guid_path_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decode_vector_from_decoder(env, decoder)?;
-    ]
-}
-
-static PLAYBACK_UPDATE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PLAYBACK_UPDATE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_playback_update_from_decoder;
-    fields_fn decode_playback_update_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PLAYBACK_UPDATE_MODULE_ATOM;
-    keys_static PLAYBACK_UPDATE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PlaybackUpdate";
-    keys ["last_top_level_change", "last_top_level_change_status", "scroll_mappings", "timestamp", "pointer_location", "is_top_level_frame_change", "state_mappings"];
-    fields [
-        1 => 1: decode_top_level_playback_change_from_decoder(env, decoder)?;
-        2 => 2: decode_playback_change_keyframe_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_scroll_mapping_from_decoder(env, decoder))?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decode_vector_from_decoder(env, decoder)?;
-        6 => 6: decoder.read_bool()?;
-        7 => 7: decoder.read_repeated(|decoder| decode_state_mapping_from_decoder(env, decoder))?;
-    ]
-}
-
-static CHAT_MESSAGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CHAT_MESSAGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_chat_message_from_decoder;
-    fields_fn decode_chat_message_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CHAT_MESSAGE_MODULE_ATOM;
-    keys_static CHAT_MESSAGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ChatMessage";
-    keys ["text", "previous_text"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static VOICE_METADATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VOICE_METADATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_voice_metadata_from_decoder;
-    fields_fn decode_voice_metadata_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VOICE_METADATA_MODULE_ATOM;
-    keys_static VOICE_METADATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VoiceMetadata";
-    keys ["connected_call_id"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-    ]
-}
-
-static APRIL_FUN_CURSOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static APRIL_FUN_CURSOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_april_fun_cursor_from_decoder;
-    fields_fn decode_april_fun_cursor_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static APRIL_FUN_CURSOR_MODULE_ATOM;
-    keys_static APRIL_FUN_CURSOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AprilFunCursor";
-    keys ["id", "trail_enabled"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_bool()?;
-    ]
-}
-
-static APRIL_FUN_FIG_PAL_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static APRIL_FUN_FIG_PAL_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_april_fun_fig_pal_from_decoder;
-    fields_fn decode_april_fun_fig_pal_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static APRIL_FUN_FIG_PAL_MODULE_ATOM;
-    keys_static APRIL_FUN_FIG_PAL_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AprilFunFigPal";
-    keys ["customization", "name"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_heartbeat_from_decoder;
-    variants [
-        0 => "foreground";
-        1 => "background";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_sites_view_state_from_decoder;
-    variants [
-        0 => "file";
-        1 => "code";
-        2 => "dakota";
-        3 => "settings";
-        4 => "insert";
-        5 => "variables";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_design_full_page_view_state_from_decoder;
-    variants [
-        0 => "none";
-        1 => "design_system";
-        2 => "variables";
-    ]
-}
-
-static AGENT_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AGENT_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_agent_info_from_decoder;
-    fields_fn decode_agent_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AGENT_INFO_MODULE_ATOM;
-    keys_static AGENT_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AgentInfo";
-    keys ["name", "logo", "oauth_client_id"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static USER_CHANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static USER_CHANGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_user_change_from_decoder;
-    fields_fn decode_user_change_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static USER_CHANGE_MODULE_ATOM;
-    keys_static USER_CHANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.UserChange";
-    keys ["session_id", "stable_session_id", "connected", "name", "color", "image_url", "viewport", "mouse", "selection", "observing", "device_name", "recent_clicks", "scroll_positions", "triggered_overlays", "user_id", "last_triggered_hotspot", "last_triggered_prototype_interaction_id", "last_triggered_object_animation_index", "triggered_overlays_data", "playback_updates", "chat_message", "voice_metadata", "can_write", "high_five_status", "instance_state_changes", "text_cursor", "text_selection", "connected_at_time_s", "focus_on_text_cursor", "heartbeat", "triggered_set_variable_action_data", "video_state_change_data", "client_id", "focused_slide_id", "triggered_set_variable_mode_action_data", "april_fun_cursor", "embedded_prototype_data", "active_slides_embeddable_prototype", "active_embedded_prototypes", "active_code_component_id", "april_fun_fig_pal", "collaborative_text_selection", "sites_view_state", "node_chat_exchanges", "design_full_page_view_state", "agent_info"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        44 => 2: decoder.read_string(env)?;
-        2 => 3: decoder.read_bool()?;
-        3 => 4: decoder.read_string(env)?;
-        4 => 5: decode_color_from_decoder(env, decoder)?;
-        5 => 6: decoder.read_string(env)?;
-        6 => 7: decode_viewport_from_decoder(env, decoder)?;
-        7 => 8: decode_mouse_from_decoder(env, decoder)?;
-        8 => 9: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-        9 => 10: decoder.read_repeated(|decoder| decoder.read_var_uint())?;
-        10 => 11: decoder.read_string(env)?;
-        11 => 12: decoder.read_repeated(|decoder| decode_click_from_decoder(env, decoder))?;
-        12 => 13: decoder.read_repeated(|decoder| decode_scroll_position_from_decoder(env, decoder))?;
-        13 => 14: decoder.read_repeated(|decoder| decode_triggered_overlay_from_decoder(env, decoder))?;
-        14 => 15: decoder.read_string(env)?;
-        15 => 16: decode_guid_from_decoder(env, decoder)?;
-        16 => 17: decode_guid_from_decoder(env, decoder)?;
-        38 => 18: decoder.read_var_uint()?;
-        17 => 19: decoder.read_repeated(|decoder| decode_triggered_overlay_data_from_decoder(env, decoder))?;
-        18 => 20: decoder.read_repeated(|decoder| decode_playback_update_from_decoder(env, decoder))?;
-        19 => 21: decode_chat_message_from_decoder(env, decoder)?;
-        20 => 22: decode_voice_metadata_from_decoder(env, decoder)?;
-        21 => 23: decoder.read_bool()?;
-        22 => 24: decoder.read_bool()?;
-        23 => 25: decoder.read_repeated(|decoder| decode_instance_state_change_from_decoder(env, decoder))?;
-        24 => 26: decode_text_cursor_from_decoder(env, decoder)?;
-        25 => 27: decode_text_selection_from_decoder(env, decoder)?;
-        26 => 28: decoder.read_var_uint()?;
-        27 => 29: decoder.read_bool()?;
-        28 => 30: decode_heartbeat_from_decoder(env, decoder)?;
-        29 => 31: decoder.read_repeated(|decoder| decode_triggered_set_variable_action_data_from_decoder(env, decoder))?;
-        30 => 32: decoder.read_repeated(|decoder| decode_video_state_change_data_from_decoder(env, decoder))?;
-        31 => 33: decoder.read_string(env)?;
-        32 => 34: decode_guid_from_decoder(env, decoder)?;
-        33 => 35: decoder.read_repeated(|decoder| decode_triggered_set_variable_mode_action_data_from_decoder(env, decoder))?;
-        34 => 36: decode_april_fun_cursor_from_decoder(env, decoder)?;
-        35 => 37: decoder.read_repeated(|decoder| decode_embedded_prototype_data_from_decoder(env, decoder))?;
-        36 => 38: decode_guid_from_decoder(env, decoder)?;
-        43 => 39: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-        37 => 40: decode_guid_from_decoder(env, decoder)?;
-        39 => 41: decode_april_fun_fig_pal_from_decoder(env, decoder)?;
-        40 => 42: decode_collaborative_text_selection_from_decoder(env, decoder)?;
-        41 => 43: decode_sites_view_state_from_decoder(env, decoder)?;
-        42 => 44: decoder.read_repeated(|decoder| decode_node_chat_exchange_from_decoder(env, decoder))?;
-        45 => 45: decode_design_full_page_view_state_from_decoder(env, decoder)?;
-        46 => 46: decode_agent_info_from_decoder(env, decoder)?;
-    ]
-}
-
-static INTERACTIVE_SLIDE_ELEMENT_CHANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static INTERACTIVE_SLIDE_ELEMENT_CHANGE_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_interactive_slide_element_change_from_decoder;
-    fields_fn decode_interactive_slide_element_change_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static INTERACTIVE_SLIDE_ELEMENT_CHANGE_MODULE_ATOM;
-    keys_static INTERACTIVE_SLIDE_ELEMENT_CHANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.InteractiveSlideElementChange";
-    keys ["user_id", "anonymous_user_id", "node_id", "response_data"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_string(env)?;
-    ]
-}
-
-static NODE_STATUS_CHANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_STATUS_CHANGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_status_change_from_decoder;
-    fields_fn decode_node_status_change_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_STATUS_CHANGE_MODULE_ATOM;
-    keys_static NODE_STATUS_CHANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeStatusChange";
-    keys ["node_ids", "status_info"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-        2 => 2: decode_section_status_info_from_decoder(env, decoder)?;
-    ]
-}
-
-static BUZZ_APPROVAL_ASSET_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BUZZ_APPROVAL_ASSET_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_buzz_approval_asset_entry_from_decoder;
-    fields_fn decode_buzz_approval_asset_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BUZZ_APPROVAL_ASSET_ENTRY_MODULE_ATOM;
-    keys_static BUZZ_APPROVAL_ASSET_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.BuzzApprovalAssetEntry";
-    keys ["asset_node_id", "approved"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_bool()?;
-    ]
-}
-
-static BUZZ_APPROVAL_CHANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BUZZ_APPROVAL_CHANGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_buzz_approval_change_from_decoder;
-    fields_fn decode_buzz_approval_change_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BUZZ_APPROVAL_CHANGE_MODULE_ATOM;
-    keys_static BUZZ_APPROVAL_CHANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.BuzzApprovalChange";
-    keys ["asset_entries", "canvas_grid_node_id", "request_id"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_buzz_approval_asset_entry_from_decoder(env, decoder))?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_scene_graph_query_behavior_from_decoder;
-    variants [
-        0 => "default";
-        1 => "containing_page";
-        2 => "plugin";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_scene_graph_query_mode_from_decoder;
-    variants [
-        0 => "add";
-        1 => "set";
-    ]
-}
-
-static SCENE_GRAPH_QUERY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SCENE_GRAPH_QUERY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_scene_graph_query_from_decoder;
-    fields_fn decode_scene_graph_query_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SCENE_GRAPH_QUERY_MODULE_ATOM;
-    keys_static SCENE_GRAPH_QUERY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SceneGraphQuery";
-    keys ["starting_node", "depth", "behavior"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decode_scene_graph_query_behavior_from_decoder(env, decoder)?;
-    ]
-}
-
-static NODE_CHANGES_METADATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHANGES_METADATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_changes_metadata_from_decoder;
-    fields_fn decode_node_changes_metadata_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_CHANGES_METADATA_MODULE_ATOM;
-    keys_static NODE_CHANGES_METADATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeChangesMetadata";
-    keys ["blobs_field_offset"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-    ]
-}
-
-static CURSOR_REACTION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CURSOR_REACTION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cursor_reaction_from_decoder;
-    fields_fn decode_cursor_reaction_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CURSOR_REACTION_MODULE_ATOM;
-    keys_static CURSOR_REACTION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CursorReaction";
-    keys ["image_url"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-    ]
-}
-
-static TIMER_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TIMER_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_timer_info_from_decoder;
-    fields_fn decode_timer_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TIMER_INFO_MODULE_ATOM;
-    keys_static TIMER_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TimerInfo";
-    keys ["is_paused", "time_remaining_ms", "total_time_ms", "timer_id", "set_by", "song_id", "last_received_song_timestamp_ms", "song_uuid"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decoder.read_var_uint()?;
-        4 => 4: decoder.read_var_uint()?;
-        5 => 5: decoder.read_string(env)?;
-        6 => 6: decoder.read_var_uint()?;
-        7 => 7: decoder.read_var_uint()?;
-        8 => 8: decoder.read_string(env)?;
-    ]
-}
-
-static MUSIC_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MUSIC_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_music_info_from_decoder;
-    fields_fn decode_music_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MUSIC_INFO_MODULE_ATOM;
-    keys_static MUSIC_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.MusicInfo";
-    keys ["is_paused", "message_id", "song_id", "last_received_song_timestamp_ms", "is_stopped"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_var_uint()?;
-        5 => 5: decoder.read_bool()?;
-    ]
-}
-
-static PRESENTER_NOMINATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PRESENTER_NOMINATION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_presenter_nomination_from_decoder;
-    fields_fn decode_presenter_nomination_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PRESENTER_NOMINATION_MODULE_ATOM;
-    keys_static PRESENTER_NOMINATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PresenterNomination";
-    keys ["session_id", "is_cancelled"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decoder.read_bool()?;
-    ]
-}
-
-static PRESENTER_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PRESENTER_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_presenter_info_from_decoder;
-    fields_fn decode_presenter_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PRESENTER_INFO_MODULE_ATOM;
-    keys_static PRESENTER_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PresenterInfo";
-    keys ["session_id", "nomination", "is_reconnected"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decode_presenter_nomination_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static CLIENT_BROADCAST_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CLIENT_BROADCAST_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_client_broadcast_from_decoder;
-    fields_fn decode_client_broadcast_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CLIENT_BROADCAST_MODULE_ATOM;
-    keys_static CLIENT_BROADCAST_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ClientBroadcast";
-    keys ["session_id", "cursor_reaction", "timer", "presenter", "prototype_presenter", "music"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decode_cursor_reaction_from_decoder(env, decoder)?;
-        3 => 3: decode_timer_info_from_decoder(env, decoder)?;
-        4 => 4: decode_presenter_info_from_decoder(env, decoder)?;
-        5 => 5: decode_presenter_info_from_decoder(env, decoder)?;
-        6 => 6: decode_music_info_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_paste_asset_type_from_decoder;
-    variants [
-        0 => "unknown";
-        1 => "variable";
-    ]
-}
-
-static MESSAGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MESSAGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_message_from_decoder;
-    fields_fn decode_message_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MESSAGE_MODULE_ATOM;
-    keys_static MESSAGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Message";
-    keys ["type", "session_id", "stable_session_id", "ack_id", "is_retransmission", "node_changes", "user_changes", "interactive_slide_element_change", "node_status_change", "buzz_approval_change", "blobs", "blob_base_index", "signal_name", "access", "style_set_name", "style_set_type", "style_set_content_type", "paste_id", "paste_offset", "paste_file_key", "signal_payload", "scene_graph_queries", "node_changes_metadata", "file_version", "paste_is_partially_outside_enclosing_frame", "paste_page_id", "is_cut", "local_undo_stack", "local_redo_stack", "broadcasts", "reconnect_sequence_number", "paste_branch_source_file_key", "paste_editor_type", "post_sync_actions", "published_asset_guids", "dirty_from_initial_load", "clipboard_selection_regions", "encoded_offsets_index", "has_repeating_content", "sent_timestamp", "annotation_categories", "client_rendered_metadata", "paste_asset_type", "object_animations", "scene_graph_query_mode"];
-    fields [
-        1 => 1: decode_message_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_uint()?;
-        42 => 3: decoder.read_string(env)?;
-        3 => 4: decoder.read_var_uint()?;
-        37 => 5: decoder.read_bool()?;
-        4 => 6: decoder.read_repeated(|decoder| decode_node_change_from_decoder(env, decoder))?;
-        5 => 7: decoder.read_repeated(|decoder| decode_user_change_from_decoder(env, decoder))?;
-        32 => 8: decode_interactive_slide_element_change_from_decoder(env, decoder)?;
-        36 => 9: decode_node_status_change_from_decoder(env, decoder)?;
-        44 => 10: decode_buzz_approval_change_from_decoder(env, decoder)?;
-        6 => 11: decoder.read_repeated(|decoder| decode_blob_from_decoder(env, decoder))?;
-        30 => 12: decoder.read_var_uint()?;
-        7 => 13: decoder.read_string(env)?;
-        8 => 14: decode_access_from_decoder(env, decoder)?;
-        9 => 15: decoder.read_string(env)?;
-        10 => 16: decode_style_set_type_from_decoder(env, decoder)?;
-        11 => 17: decode_style_set_content_type_from_decoder(env, decoder)?;
-        12 => 18: decoder.read_var_int()?;
-        13 => 19: decode_vector_from_decoder(env, decoder)?;
-        14 => 20: decoder.read_string(env)?;
-        15 => 21: decoder.read_string(env)?;
-        16 => 22: decoder.read_repeated(|decoder| decode_scene_graph_query_from_decoder(env, decoder))?;
-        17 => 23: decode_node_changes_metadata_from_decoder(env, decoder)?;
-        18 => 24: decoder.read_var_uint()?;
-        19 => 25: decoder.read_bool()?;
-        20 => 26: decode_guid_from_decoder(env, decoder)?;
-        21 => 27: decoder.read_bool()?;
-        22 => 28: decoder.read_repeated(|decoder| decode_message_from_decoder(env, decoder))?;
-        23 => 29: decoder.read_repeated(|decoder| decode_message_from_decoder(env, decoder))?;
-        24 => 30: decoder.read_repeated(|decoder| decode_client_broadcast_from_decoder(env, decoder))?;
-        25 => 31: decoder.read_var_uint()?;
-        26 => 32: decoder.read_string(env)?;
-        27 => 33: decode_editor_type_from_decoder(env, decoder)?;
-        28 => 34: decoder.read_string(env)?;
-        29 => 35: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-        31 => 36: decoder.read_bool()?;
-        33 => 37: decoder.read_repeated(|decoder| decode_clipboard_selection_region_from_decoder(env, decoder))?;
-        34 => 38: decode_encoded_offsets_index_from_decoder(env, decoder)?;
-        35 => 39: decoder.read_bool()?;
-        38 => 40: decoder.read_var_uint64()?;
-        39 => 41: decoder.read_repeated(|decoder| decode_annotation_category_from_decoder(env, decoder))?;
-        40 => 42: decode_client_rendered_metadata_from_decoder(env, decoder)?;
-        41 => 43: decode_paste_asset_type_from_decoder(env, decoder)?;
-        43 => 44: decode_object_animation_list_from_decoder(env, decoder)?;
-        45 => 45: decode_scene_graph_query_mode_from_decoder(env, decoder)?;
-    ]
-}
-
-static ENCODED_OFFSETS_INDEX_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ENCODED_OFFSETS_INDEX_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_encoded_offsets_index_from_decoder;
-    fields_fn decode_encoded_offsets_index_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ENCODED_OFFSETS_INDEX_MODULE_ATOM;
-    keys_static ENCODED_OFFSETS_INDEX_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EncodedOffsetsIndex";
-    keys ["node_changes_field_offset", "node_changes_field_length", "blobs_field_offset", "node_change_offsets"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decoder.read_var_uint()?;
-        3 => 3: decoder.read_var_uint()?;
-        4 => 4: decoder.read_repeated(|decoder| decode_guid_and_encoded_offset_from_decoder(env, decoder))?;
-    ]
-}
-
-static GUID_AND_ENCODED_OFFSET_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static GUID_AND_ENCODED_OFFSET_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_struct_decoder! {
-    fn decode_guid_and_encoded_offset_from_decoder;
-    env env;
-    decoder decoder;
-    module_static GUID_AND_ENCODED_OFFSET_MODULE_ATOM;
-    keys_static GUID_AND_ENCODED_OFFSET_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.GUIDAndEncodedOffset";
-    keys ["guid", "offset"];
-    fields [
-        decode_guid_from_decoder(env, decoder)?,
-        decoder.read_var_uint()?
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_rich_media_type_from_decoder;
-    variants [
-        0 => "animated_image";
-        1 => "video";
-    ]
-}
-
-static RICH_MEDIA_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static RICH_MEDIA_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_rich_media_data_from_decoder;
-    fields_fn decode_rich_media_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static RICH_MEDIA_DATA_MODULE_ATOM;
-    keys_static RICH_MEDIA_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.RichMediaData";
-    keys ["media_hash", "rich_media_type"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_rich_media_type_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_variable_data_type_from_decoder;
-    variants [
-        0 => "boolean";
-        1 => "float";
-        2 => "string";
-        3 => "alias";
-        4 => "color";
-        5 => "expression";
-        6 => "map";
-        7 => "symbol_id";
-        8 => "font_style";
-        9 => "text_data";
-        10 => "invalid";
-        11 => "node_field_alias";
-        12 => "cms_alias";
-        13 => "prop_ref";
-        14 => "image";
-        15 => "managed_string_alias";
-        16 => "link";
-        17 => "js_runtime_alias";
-        18 => "slot_content_id";
-        19 => "date";
-        20 => "keyframe_track_id";
-        21 => "keyframe_track_parameter_data";
-        22 => "easing";
-        23 => "timing";
-        24 => "vector";
-        25 => "color_array";
-        26 => "line";
-        27 => "circle";
-        28 => "rotation_3_d";
-        29 => "circle_point";
-        30 => "gradient";
-        31 => "color_point";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_variable_resolved_data_type_from_decoder;
-    variants [
-        0 => "boolean";
-        1 => "float";
-        2 => "string";
-        4 => "color";
-        5 => "map";
-        6 => "symbol_id";
-        7 => "font_style";
-        8 => "text_data";
-        9 => "image";
-        10 => "link";
-        11 => "js_runtime_alias";
-        12 => "slot_content_id";
-        13 => "keyframe_track_id";
-        14 => "keyframe_track_parameter_data";
-        15 => "easing";
-        16 => "timing";
-        17 => "vector";
-        18 => "color_array";
-        19 => "line";
-        20 => "circle";
-        21 => "rotation_3_d";
-        22 => "circle_point";
-        23 => "gradient";
-        24 => "color_point";
-    ]
-}
-
-static VARIABLE_ANY_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_ANY_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_any_value_from_decoder;
-    fields_fn decode_variable_any_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_ANY_VALUE_MODULE_ATOM;
-    keys_static VARIABLE_ANY_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableAnyValue";
-    keys ["bool_value", "text_value", "float_value", "alias", "color_value", "expression_value", "map_value", "symbol_id_value", "font_style_value", "text_data_value", "node_field_alias_value", "cms_alias_value", "prop_ref_value", "image_value", "managed_string_alias_value", "link_value", "js_runtime_alias_value", "slot_content_id_value", "keyframe_track_id_value", "keyframe_track_parameter_value", "easing_value", "vector_value", "color_array_value", "line_value", "circle_value", "rotation3_d_value", "circle_point_value", "gradient_value", "color_point_value"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decode_variable_id_from_decoder(env, decoder)?;
-        5 => 5: decode_color_from_decoder(env, decoder)?;
-        6 => 6: decode_expression_from_decoder(env, decoder)?;
-        7 => 7: decode_variable_map_from_decoder(env, decoder)?;
-        8 => 8: decode_symbol_id_from_decoder(env, decoder)?;
-        9 => 9: decode_variable_font_style_from_decoder(env, decoder)?;
-        10 => 10: decode_text_data_from_decoder(env, decoder)?;
-        11 => 11: decode_node_field_alias_from_decoder(env, decoder)?;
-        12 => 12: decode_cms_alias_from_decoder(env, decoder)?;
-        13 => 13: decode_prop_ref_value_from_decoder(env, decoder)?;
-        14 => 14: decode_image_parameter_value_from_decoder(env, decoder)?;
-        15 => 15: decode_managed_string_alias_from_decoder(env, decoder)?;
-        16 => 16: decode_hyperlink_from_decoder(env, decoder)?;
-        17 => 17: decode_js_runtime_alias_from_decoder(env, decoder)?;
-        18 => 18: decode_slot_content_id_from_decoder(env, decoder)?;
-        19 => 19: decode_keyframe_track_id_from_decoder(env, decoder)?;
-        20 => 20: decode_keyframe_track_parameter_value_from_decoder(env, decoder)?;
-        21 => 21: decode_easing_data_from_decoder(env, decoder)?;
-        22 => 22: decode_vector_from_decoder(env, decoder)?;
-        23 => 23: decode_color_array_from_decoder(env, decoder)?;
-        24 => 24: decode_line_from_decoder(env, decoder)?;
-        25 => 25: decode_circle_from_decoder(env, decoder)?;
-        26 => 26: decode_rotation3_d_from_decoder(env, decoder)?;
-        27 => 27: decode_circle_point_from_decoder(env, decoder)?;
-        28 => 28: decode_gradient_from_decoder(env, decoder)?;
-        29 => 29: decode_color_point_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_expression_function_from_decoder;
-    variants [
-        0 => "addition";
-        1 => "subtraction";
-        2 => "resolve_variant";
-        3 => "multiply";
-        4 => "divide";
-        5 => "equals";
-        6 => "not_equal";
-        7 => "less_than";
-        8 => "less_than_or_equal";
-        9 => "greater_than";
-        10 => "greater_than_or_equal";
-        11 => "and";
-        12 => "or";
-        13 => "not";
-        14 => "stringify";
-        15 => "ternary";
-        16 => "var_mode_lookup";
-        17 => "negate";
-        18 => "is_truthy";
-        19 => "keyframe";
-    ]
-}
-
-static EXPRESSION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EXPRESSION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_expression_from_decoder;
-    fields_fn decode_expression_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EXPRESSION_MODULE_ATOM;
-    keys_static EXPRESSION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Expression";
-    keys ["expression_function", "expression_arguments"];
-    fields [
-        1 => 1: decode_expression_function_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_variable_data_from_decoder(env, decoder))?;
-    ]
-}
-
-static VARIABLE_MAP_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_MAP_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_map_value_from_decoder;
-    fields_fn decode_variable_map_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_MAP_VALUE_MODULE_ATOM;
-    keys_static VARIABLE_MAP_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableMapValue";
-    keys ["key", "value", "guid_key"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static VARIABLE_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_map_from_decoder;
-    fields_fn decode_variable_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_MAP_MODULE_ATOM;
-    keys_static VARIABLE_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableMap";
-    keys ["values"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_variable_map_value_from_decoder(env, decoder))?;
-    ]
-}
-
-static COLOR_ARRAY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COLOR_ARRAY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_color_array_from_decoder;
-    fields_fn decode_color_array_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COLOR_ARRAY_MODULE_ATOM;
-    keys_static COLOR_ARRAY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ColorArray";
-    keys ["colors"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_variable_data_from_decoder(env, decoder))?;
-    ]
-}
-
-static VARIABLE_FONT_STYLE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_FONT_STYLE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_font_style_from_decoder;
-    fields_fn decode_variable_font_style_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_FONT_STYLE_MODULE_ATOM;
-    keys_static VARIABLE_FONT_STYLE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableFontStyle";
-    keys ["as_string", "as_float", "as_variations"];
-    fields [
-        1 => 1: decode_variable_data_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static IMAGE_PARAMETER_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_PARAMETER_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_image_parameter_value_from_decoder;
-    fields_fn decode_image_parameter_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static IMAGE_PARAMETER_VALUE_MODULE_ATOM;
-    keys_static IMAGE_PARAMETER_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ImageParameterValue";
-    keys ["image", "image_thumbnail", "animated_image", "alt_text", "original_image_height", "original_image_width", "animation_frame"];
-    fields [
-        1 => 1: decode_image_from_decoder(env, decoder)?;
-        2 => 2: decode_image_from_decoder(env, decoder)?;
-        6 => 3: decode_image_from_decoder(env, decoder)?;
-        3 => 4: decoder.read_string(env)?;
-        4 => 5: decoder.read_var_uint()?;
-        5 => 6: decoder.read_var_uint()?;
-        7 => 7: decoder.read_var_uint()?;
-    ]
-}
-
-static THUMBNAIL_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static THUMBNAIL_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_thumbnail_info_from_decoder;
-    fields_fn decode_thumbnail_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static THUMBNAIL_INFO_MODULE_ATOM;
-    keys_static THUMBNAIL_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ThumbnailInfo";
-    keys ["node_id", "thumbnail_version"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static AI_CANVAS_PROMPT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CANVAS_PROMPT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_ai_canvas_prompt_from_decoder;
-    fields_fn decode_ai_canvas_prompt_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AI_CANVAS_PROMPT_MODULE_ATOM;
-    keys_static AI_CANVAS_PROMPT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AiCanvasPrompt";
-    keys ["user_prompt", "author_id", "parent_node_ids"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-    ]
-}
-
-static NODE_FIELD_ALIAS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_FIELD_ALIAS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_field_alias_from_decoder;
-    fields_fn decode_node_field_alias_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_FIELD_ALIAS_MODULE_ATOM;
-    keys_static NODE_FIELD_ALIAS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeFieldAlias";
-    keys ["stable_path_to_node", "node_field", "index_or_key"];
-    fields [
-        1 => 1: decode_guid_path_from_decoder(env, decoder)?;
-        2 => 2: decode_node_field_alias_type_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_node_field_alias_type_from_decoder;
-    variants [
-        0 => "missing";
-        1 => "component_prop_assignments";
-    ]
-}
-
-static CMS_ALIAS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CMS_ALIAS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cms_alias_from_decoder;
-    fields_fn decode_cms_alias_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CMS_ALIAS_MODULE_ATOM;
-    keys_static CMS_ALIAS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CMSAlias";
-    keys ["collection_id", "item_id", "field_id", "type"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decode_variable_data_type_from_decoder(env, decoder)?;
-    ]
-}
-
-static JS_RUNTIME_ALIAS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static JS_RUNTIME_ALIAS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_js_runtime_alias_from_decoder;
-    fields_fn decode_js_runtime_alias_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static JS_RUNTIME_ALIAS_MODULE_ATOM;
-    keys_static JS_RUNTIME_ALIAS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.JsRuntimeAlias";
-    keys ["lookup_key"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-    ]
-}
-
-static PROP_REF_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PROP_REF_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_prop_ref_value_from_decoder;
-    fields_fn decode_prop_ref_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PROP_REF_VALUE_MODULE_ATOM;
-    keys_static PROP_REF_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PropRefValue";
-    keys ["def_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static MANAGED_STRING_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_id_from_decoder;
-    fields_fn decode_managed_string_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_ID_MODULE_ATOM;
-    keys_static MANAGED_STRING_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static MANAGED_STRING_PLACEHOLDER_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_PLACEHOLDER_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_placeholder_map_entry_from_decoder;
-    fields_fn decode_managed_string_placeholder_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_PLACEHOLDER_MAP_ENTRY_MODULE_ATOM;
-    keys_static MANAGED_STRING_PLACEHOLDER_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringPlaceholderMapEntry";
-    keys ["key", "value"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static SLOT_CONTENT_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SLOT_CONTENT_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_slot_content_id_from_decoder;
-    fields_fn decode_slot_content_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SLOT_CONTENT_ID_MODULE_ATOM;
-    keys_static SLOT_CONTENT_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SlotContentId";
-    keys ["guid"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static MANAGED_STRING_ALIAS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANAGED_STRING_ALIAS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_managed_string_alias_from_decoder;
-    fields_fn decode_managed_string_alias_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANAGED_STRING_ALIAS_MODULE_ATOM;
-    keys_static MANAGED_STRING_ALIAS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManagedStringAlias";
-    keys ["managed_string_id", "placeholder_values"];
-    fields [
-        1 => 1: decode_managed_string_id_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_managed_string_placeholder_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static KEYFRAME_TRACK_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_TRACK_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_keyframe_track_id_from_decoder;
-    fields_fn decode_keyframe_track_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static KEYFRAME_TRACK_ID_MODULE_ATOM;
-    keys_static KEYFRAME_TRACK_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.KeyframeTrackId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static ANIMATION_PRESET_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_PRESET_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_animation_preset_id_from_decoder;
-    fields_fn decode_animation_preset_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANIMATION_PRESET_ID_MODULE_ATOM;
-    keys_static ANIMATION_PRESET_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnimationPresetId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static TOOL_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TOOL_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_tool_id_from_decoder;
-    fields_fn decode_tool_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TOOL_ID_MODULE_ATOM;
-    keys_static TOOL_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ToolId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static CUSTOM_EFFECT_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CUSTOM_EFFECT_ID_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_custom_effect_id_from_decoder;
-    fields_fn decode_custom_effect_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CUSTOM_EFFECT_ID_MODULE_ATOM;
-    keys_static CUSTOM_EFFECT_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CustomEffectId";
-    keys ["guid", "asset_ref"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_asset_ref_from_decoder(env, decoder)?;
-    ]
-}
-
-static TRSS_TRANSFORM2_D_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRSS_TRANSFORM2_D_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_trss_transform2_d_from_decoder;
-    fields_fn decode_trss_transform2_d_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRSS_TRANSFORM2_D_MODULE_ATOM;
-    keys_static TRSS_TRANSFORM2_D_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TRSSTransform2D";
-    keys ["translation", "rotation", "scale", "shear_x"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decode_vector_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_var_float(env)?;
-    ]
-}
-
-static VARIABLE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_data_from_decoder;
-    fields_fn decode_variable_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_DATA_MODULE_ATOM;
-    keys_static VARIABLE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableData";
-    keys ["value", "data_type", "resolved_data_type"];
-    fields [
-        1 => 1: decode_variable_any_value_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_data_type_from_decoder(env, decoder)?;
-        3 => 3: decode_variable_resolved_data_type_from_decoder(env, decoder)?;
-    ]
-}
-
-static VARIABLE_SET_MODE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_SET_MODE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_set_mode_from_decoder;
-    fields_fn decode_variable_set_mode_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_SET_MODE_MODULE_ATOM;
-    keys_static VARIABLE_SET_MODE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableSetMode";
-    keys ["id", "name", "sort_position", "parent_variable_set_id", "parent_mode_id"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decode_variable_set_id_from_decoder(env, decoder)?;
-        5 => 5: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static VARIABLE_DATA_VALUES_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_VALUES_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_data_values_from_decoder;
-    fields_fn decode_variable_data_values_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_DATA_VALUES_MODULE_ATOM;
-    keys_static VARIABLE_DATA_VALUES_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableDataValues";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_variable_data_values_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static VARIABLE_DATA_VALUES_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_DATA_VALUES_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_data_values_entry_from_decoder;
-    fields_fn decode_variable_data_values_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_DATA_VALUES_ENTRY_MODULE_ATOM;
-    keys_static VARIABLE_DATA_VALUES_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableDataValuesEntry";
-    keys ["mode_id", "variable_data"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_variable_scope_from_decoder;
-    variants [
-        0 => "all_scopes";
-        1 => "text_content";
-        2 => "corner_radius";
-        3 => "width_height";
-        4 => "gap";
-        5 => "all_fills";
-        6 => "frame_fill";
-        7 => "shape_fill";
-        8 => "text_fill";
-        9 => "stroke";
-        10 => "stroke_float";
-        11 => "effect_float";
-        12 => "effect_color";
-        13 => "opacity";
-        14 => "font_style";
-        15 => "font_family";
-        16 => "font_size";
-        17 => "line_height";
-        18 => "letter_spacing";
-        19 => "paragraph_spacing";
-        20 => "paragraph_indent";
-        21 => "font_variations";
-        22 => "transform";
-    ]
-}
-
-static KEYFRAME_ANY_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_ANY_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_keyframe_any_value_from_decoder;
-    fields_fn decode_keyframe_any_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static KEYFRAME_ANY_VALUE_MODULE_ATOM;
-    keys_static KEYFRAME_ANY_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.KeyframeAnyValue";
-    keys ["float_value", "color_value", "text_data_value", "vector_value"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decode_color_from_decoder(env, decoder)?;
-        3 => 3: decode_text_data_from_decoder(env, decoder)?;
-        4 => 4: decode_vector_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_keyframe_value_type_from_decoder;
-    variants [
-        0 => "float";
-        1 => "invalid";
-        2 => "color";
-        3 => "text_data";
-        4 => "vector";
-    ]
-}
-
-static KEYFRAME_VALUE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_VALUE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_keyframe_value_data_from_decoder;
-    fields_fn decode_keyframe_value_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static KEYFRAME_VALUE_DATA_MODULE_ATOM;
-    keys_static KEYFRAME_VALUE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.KeyframeValueData";
-    keys ["value", "value_type"];
-    fields [
-        1 => 1: decode_keyframe_any_value_from_decoder(env, decoder)?;
-        2 => 2: decode_keyframe_value_type_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_keyframe_track_parameter_type_from_decoder;
-    variants [
-        0 => "invalid";
-        1 => "manual";
-        2 => "animation_preset";
-    ]
-}
-
-static MANUAL_KEYFRAME_TRACK_PARAMETER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MANUAL_KEYFRAME_TRACK_PARAMETER_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_manual_keyframe_track_parameter_from_decoder;
-    fields_fn decode_manual_keyframe_track_parameter_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MANUAL_KEYFRAME_TRACK_PARAMETER_MODULE_ATOM;
-    keys_static MANUAL_KEYFRAME_TRACK_PARAMETER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ManualKeyframeTrackParameter";
-    keys ["keyframe_track_id", "timeline_def_id"];
-    fields [
-        1 => 1: decode_keyframe_track_id_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static ANIMATION_PRESET_KEYFRAME_TRACK_PARAMETER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_PRESET_KEYFRAME_TRACK_PARAMETER_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_animation_preset_keyframe_track_parameter_from_decoder;
-    fields_fn decode_animation_preset_keyframe_track_parameter_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANIMATION_PRESET_KEYFRAME_TRACK_PARAMETER_MODULE_ATOM;
-    keys_static ANIMATION_PRESET_KEYFRAME_TRACK_PARAMETER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnimationPresetKeyframeTrackParameter";
-    keys ["animation_preset_id", "keyframe_track_id", "timeline_def_id"];
-    fields [
-        1 => 1: decode_animation_preset_id_from_decoder(env, decoder)?;
-        2 => 2: decode_keyframe_track_id_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static KEYFRAME_TRACK_ANY_PARAMETER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_TRACK_ANY_PARAMETER_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_keyframe_track_any_parameter_from_decoder;
-    fields_fn decode_keyframe_track_any_parameter_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static KEYFRAME_TRACK_ANY_PARAMETER_MODULE_ATOM;
-    keys_static KEYFRAME_TRACK_ANY_PARAMETER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.KeyframeTrackAnyParameter";
-    keys ["manual", "animation_preset", "animation_style_binding_id"];
-    fields [
-        1 => 1: decode_manual_keyframe_track_parameter_from_decoder(env, decoder)?;
-        2 => 2: decode_animation_preset_keyframe_track_parameter_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static KEYFRAME_TRACK_PARAMETER_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_TRACK_PARAMETER_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_keyframe_track_parameter_from_decoder;
-    fields_fn decode_keyframe_track_parameter_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static KEYFRAME_TRACK_PARAMETER_MODULE_ATOM;
-    keys_static KEYFRAME_TRACK_PARAMETER_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.KeyframeTrackParameter";
-    keys ["value", "type"];
-    fields [
-        1 => 1: decode_keyframe_track_any_parameter_from_decoder(env, decoder)?;
-        2 => 2: decode_keyframe_track_parameter_type_from_decoder(env, decoder)?;
-    ]
-}
-
-static KEYFRAME_TRACK_PARAMETER_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static KEYFRAME_TRACK_PARAMETER_VALUE_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_keyframe_track_parameter_value_from_decoder;
-    fields_fn decode_keyframe_track_parameter_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static KEYFRAME_TRACK_PARAMETER_VALUE_MODULE_ATOM;
-    keys_static KEYFRAME_TRACK_PARAMETER_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.KeyframeTrackParameterValue";
-    keys ["parameters"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_keyframe_track_parameter_from_decoder(env, decoder))?;
-    ]
-}
-
-static ANIMATION_PRESETS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_PRESETS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_animation_presets_from_decoder;
-    fields_fn decode_animation_presets_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANIMATION_PRESETS_MODULE_ATOM;
-    keys_static ANIMATION_PRESETS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnimationPresets";
-    keys ["presets"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_animation_preset_data_from_decoder(env, decoder))?;
-    ]
-}
-
-static ANIMATION_PRESET_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ANIMATION_PRESET_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_animation_preset_data_from_decoder;
-    fields_fn decode_animation_preset_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ANIMATION_PRESET_DATA_MODULE_ATOM;
-    keys_static ANIMATION_PRESET_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AnimationPresetData";
-    keys ["animation_preset_id", "timeline_def_id"];
-    fields [
-        1 => 1: decode_animation_preset_id_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-    ]
-}
-
-static STYLE_ANIMATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_ANIMATION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_style_animation_from_decoder;
-    fields_fn decode_style_animation_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STYLE_ANIMATION_MODULE_ATOM;
-    keys_static STYLE_ANIMATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StyleAnimation";
-    keys ["animation_preset_id"];
-    fields [
-        1 => 1: decode_animation_preset_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static STYLE_ID_FOR_ANIMATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static STYLE_ID_FOR_ANIMATION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_style_id_for_animation_from_decoder;
-    fields_fn decode_style_id_for_animation_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static STYLE_ID_FOR_ANIMATION_MODULE_ATOM;
-    keys_static STYLE_ID_FOR_ANIMATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.StyleIdForAnimation";
-    keys ["id", "timeline_def_id", "animation_style_id", "timeline_offset"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_style_id_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_var_int64()?;
-    ]
-}
-
-static TOOLS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TOOLS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_tools_from_decoder;
-    fields_fn decode_tools_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TOOLS_MODULE_ATOM;
-    keys_static TOOLS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.Tools";
-    keys ["tools"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_tool_data_from_decoder(env, decoder))?;
-    ]
-}
-
-static TOOL_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TOOL_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_tool_data_from_decoder;
-    fields_fn decode_tool_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TOOL_DATA_MODULE_ATOM;
-    keys_static TOOL_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ToolData";
-    keys ["tool_id", "backing_code_component_id", "component_prop_assignments"];
-    fields [
-        1 => 1: decode_tool_id_from_decoder(env, decoder)?;
-        2 => 2: decode_code_component_id_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_component_prop_assignment_from_decoder(env, decoder))?;
-    ]
-}
-
-static CUSTOM_EFFECTS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CUSTOM_EFFECTS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_custom_effects_from_decoder;
-    fields_fn decode_custom_effects_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CUSTOM_EFFECTS_MODULE_ATOM;
-    keys_static CUSTOM_EFFECTS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CustomEffects";
-    keys ["custom_effects"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_custom_effect_data_from_decoder(env, decoder))?;
-    ]
-}
-
-static CUSTOM_EFFECT_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CUSTOM_EFFECT_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_custom_effect_data_from_decoder;
-    fields_fn decode_custom_effect_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CUSTOM_EFFECT_DATA_MODULE_ATOM;
-    keys_static CUSTOM_EFFECT_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CustomEffectData";
-    keys ["custom_effect_id"];
-    fields [
-        1 => 1: decode_custom_effect_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static SPRING_PARAMS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SPRING_PARAMS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_spring_params_from_decoder;
-    fields_fn decode_spring_params_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SPRING_PARAMS_MODULE_ATOM;
-    keys_static SPRING_PARAMS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SpringParams";
-    keys ["stiffness", "damping", "mass"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-    ]
-}
-
-static TRANSITION_EASING_ANY_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_EASING_ANY_VALUE_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transition_easing_any_value_from_decoder;
-    fields_fn decode_transition_easing_any_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSITION_EASING_ANY_VALUE_MODULE_ATOM;
-    keys_static TRANSITION_EASING_ANY_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransitionEasingAnyValue";
-    keys ["spring_easing", "bezier_easing"];
-    fields [
-        1 => 1: decode_spring_params_from_decoder(env, decoder)?;
-        2 => 2: decode_bezier_handles_from_decoder(env, decoder)?;
-    ]
-}
-
-static EASING_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EASING_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_easing_data_from_decoder;
-    fields_fn decode_easing_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EASING_DATA_MODULE_ATOM;
-    keys_static EASING_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EasingData";
-    keys ["easing_type", "easing_value"];
-    fields [
-        1 => 1: decode_easing_type_from_decoder(env, decoder)?;
-        2 => 2: decode_transition_easing_any_value_from_decoder(env, decoder)?;
-    ]
-}
-
-static TRANSITION_OVERRIDE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transition_override_from_decoder;
-    fields_fn decode_transition_override_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSITION_OVERRIDE_MODULE_ATOM;
-    keys_static TRANSITION_OVERRIDE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransitionOverride";
-    keys ["id", "duration", "duration_var", "delay", "delay_var", "easing", "easing_var", "created_at_ms", "interaction_i_ds", "disabled"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decode_variable_data_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decode_variable_data_from_decoder(env, decoder)?;
-        6 => 6: decode_easing_data_from_decoder(env, decoder)?;
-        7 => 7: decode_variable_data_from_decoder(env, decoder)?;
-        8 => 8: decoder.read_var_uint64()?;
-        9 => 9: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-        10 => 10: decoder.read_bool()?;
-    ]
-}
-
-static TRANSITION_OVERRIDE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transition_override_data_from_decoder;
-    fields_fn decode_transition_override_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSITION_OVERRIDE_DATA_MODULE_ATOM;
-    keys_static TRANSITION_OVERRIDE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransitionOverrideData";
-    keys ["all", "property_overrides"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_transition_override_from_decoder(env, decoder))?;
-        2 => 2: decode_transition_override_prop_map_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_transition_override_prop_from_decoder;
-    variants [
-        0 => "all";
-        1 => "opacity";
-        2 => "translation";
-        3 => "rotation";
-        4 => "scale";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_transition_override_binding_top_level_field_from_decoder;
-    variants [
-        0 => "missing";
-        1 => "parameter_consumption_map";
-        2 => "effect_data";
-        3 => "fill_paint_data";
-        4 => "stroke_paint_data";
-    ]
-}
-
-static TRANSITION_OVERRIDE_BINDING_LOCATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_BINDING_LOCATION_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transition_override_binding_location_from_decoder;
-    fields_fn decode_transition_override_binding_location_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSITION_OVERRIDE_BINDING_LOCATION_MODULE_ATOM;
-    keys_static TRANSITION_OVERRIDE_BINDING_LOCATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransitionOverrideBindingLocation";
-    keys ["top_level_field", "parameter_field_value", "index", "effect_parametrized_field_value"];
-    fields [
-        1 => 1: decode_transition_override_binding_top_level_field_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_int()?;
-        3 => 3: decoder.read_var_int()?;
-        4 => 4: decoder.read_var_int()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_keyframe_binding_effect_parametrized_field_from_decoder;
-    variants [
-        0 => "missing";
-        1 => "offset_x";
-        2 => "offset_y";
-        3 => "radius";
-        4 => "spread";
-        5 => "color";
-        6 => "refraction_radius";
-        7 => "specular_angle";
-        8 => "specular_intensity";
-        9 => "chromatic_aberration";
-        10 => "splay";
-        11 => "refraction_intensity";
-        12 => "start_radius";
-        13 => "start_offset_x";
-        14 => "start_offset_y";
-        15 => "end_offset_x";
-        16 => "end_offset_y";
-        17 => "noise_size_x";
-        18 => "noise_size_y";
-        19 => "density";
-        20 => "effect_opacity";
-        21 => "secondary_color";
-    ]
-}
-
-static NODE_CONTENTS_KEYFRAME_BINDING_LOCATION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CONTENTS_KEYFRAME_BINDING_LOCATION_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_contents_keyframe_binding_location_from_decoder;
-    fields_fn decode_node_contents_keyframe_binding_location_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_CONTENTS_KEYFRAME_BINDING_LOCATION_MODULE_ATOM;
-    keys_static NODE_CONTENTS_KEYFRAME_BINDING_LOCATION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeContentsKeyframeBindingLocation";
-    keys ["top_level_field", "parameter_field_value", "index", "effect_parametrized_field_value"];
-    fields [
-        1 => 1: decode_transition_override_binding_top_level_field_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_field_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_var_int()?;
-        4 => 4: decode_keyframe_binding_effect_parametrized_field_from_decoder(env, decoder)?;
-    ]
-}
-
-static TRANSITION_OVERRIDE_PROP_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_PROP_MAP_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transition_override_prop_map_from_decoder;
-    fields_fn decode_transition_override_prop_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSITION_OVERRIDE_PROP_MAP_MODULE_ATOM;
-    keys_static TRANSITION_OVERRIDE_PROP_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransitionOverridePropMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_transition_override_prop_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static TRANSITION_OVERRIDE_PROP_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static TRANSITION_OVERRIDE_PROP_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_transition_override_prop_map_entry_from_decoder;
-    fields_fn decode_transition_override_prop_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static TRANSITION_OVERRIDE_PROP_MAP_ENTRY_MODULE_ATOM;
-    keys_static TRANSITION_OVERRIDE_PROP_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.TransitionOverridePropMapEntry";
-    keys ["prop", "overrides", "binding_location", "node_contents_binding_location"];
-    fields [
-        1 => 1: decode_transition_override_prop_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_transition_override_from_decoder(env, decoder))?;
-        3 => 3: decode_transition_override_binding_location_from_decoder(env, decoder)?;
-        4 => 4: decode_node_contents_keyframe_binding_location_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_code_syntax_platform_from_decoder;
-    variants [
-        0 => "web";
-        1 => "android";
-        2 => "i_os";
-    ]
-}
-
-static OPTIONAL_VECTOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static OPTIONAL_VECTOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_optional_vector_from_decoder;
-    fields_fn decode_optional_vector_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static OPTIONAL_VECTOR_MODULE_ATOM;
-    keys_static OPTIONAL_VECTOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.OptionalVector";
-    keys ["value"];
-    fields [
-        1 => 1: decode_vector_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_html_tag_from_decoder;
-    variants [
-        0 => "auto";
-        1 => "article";
-        2 => "section";
-        3 => "nav";
-        4 => "aside";
-        5 => "h1";
-        6 => "h2";
-        7 => "h3";
-        8 => "h4";
-        9 => "h5";
-        10 => "h6";
-        11 => "hgroup";
-        12 => "header";
-        13 => "footer";
-        14 => "address";
-        15 => "p";
-        16 => "hr";
-        17 => "pre";
-        18 => "blockquote";
-        19 => "ol";
-        20 => "ul";
-        21 => "menu";
-        22 => "li";
-        23 => "dl";
-        24 => "dt";
-        25 => "dd";
-        26 => "figure";
-        27 => "figcaption";
-        28 => "main";
-        29 => "div";
-        30 => "a";
-        31 => "em";
-        32 => "strong";
-        33 => "small";
-        34 => "s";
-        35 => "cite";
-        36 => "q";
-        37 => "dfn";
-        38 => "abbr";
-        39 => "ruby";
-        40 => "rt";
-        41 => "rp";
-        42 => "data";
-        43 => "time";
-        44 => "code";
-        45 => "var";
-        46 => "samp";
-        47 => "kbd";
-        48 => "sub";
-        49 => "sup";
-        50 => "i";
-        51 => "b";
-        52 => "u";
-        53 => "mark";
-        54 => "bdi";
-        55 => "bdo";
-        56 => "span";
-        57 => "br";
-        58 => "wbr";
-        59 => "picture";
-        60 => "source";
-        61 => "img";
-        62 => "form";
-        63 => "label";
-        64 => "input";
-        65 => "button";
-        66 => "select";
-        67 => "datalist";
-        68 => "optgroup";
-        69 => "option";
-        70 => "textarea";
-        71 => "output";
-        72 => "progress";
-        73 => "meter";
-        74 => "fieldset";
-        75 => "legend";
-        76 => "video";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_aria_role_from_decoder;
-    variants [
-        0 => "auto";
-        52 => "none";
-        30 => "application";
-        67 => "banner";
-        68 => "complementary";
-        69 => "contentinfo";
-        70 => "form";
-        71 => "main";
-        72 => "navigation";
-        73 => "region";
-        74 => "search";
-        13 => "separator";
-        31 => "article";
-        35 => "columnheader";
-        36 => "definition";
-        38 => "directory";
-        39 => "document";
-        44 => "group";
-        45 => "heading";
-        46 => "img";
-        48 => "list";
-        49 => "listitem";
-        50 => "math";
-        53 => "note";
-        55 => "presentation";
-        56 => "row";
-        57 => "rowgroup";
-        58 => "rowheader";
-        62 => "table";
-        65 => "toolbar";
-        1 => "button";
-        2 => "checkbox";
-        3 => "gridcell";
-        4 => "link";
-        5 => "menuitem";
-        6 => "menuitemcheckbox";
-        7 => "menuitemradio";
-        8 => "option";
-        9 => "progressbar";
-        10 => "radio";
-        11 => "scrollbar";
-        14 => "slider";
-        15 => "spinbutton";
-        17 => "tab";
-        18 => "tabpanel";
-        19 => "textbox";
-        20 => "treeitem";
-        21 => "combobox";
-        22 => "grid";
-        23 => "listbox";
-        24 => "menu";
-        25 => "menubar";
-        26 => "radiogroup";
-        27 => "tablist";
-        28 => "tree";
-        29 => "treegrid";
-        66 => "tooltip";
-        75 => "alert";
-        76 => "log";
-        77 => "marquee";
-        78 => "status";
-        79 => "timer";
-        80 => "alertdialog";
-        81 => "dialog";
-        12 => "searchbox";
-        16 => "switch";
-        32 => "blockquote";
-        33 => "caption";
-        34 => "cell";
-        37 => "deletion";
-        40 => "emphasis";
-        41 => "feed";
-        42 => "figure";
-        43 => "generic";
-        47 => "insertion";
-        51 => "meter";
-        54 => "paragraph";
-        59 => "strong";
-        60 => "subscript";
-        61 => "superscript";
-        63 => "term";
-        64 => "time";
-        82 => "image";
-        83 => "heading_1";
-        84 => "heading_2";
-        85 => "heading_3";
-        86 => "heading_4";
-        87 => "heading_5";
-        88 => "heading_6";
-        89 => "header";
-        90 => "footer";
-        91 => "sidebar";
-        92 => "section";
-        93 => "maincontent";
-        94 => "table_cell";
-        95 => "widget";
-    ]
-}
-
-static MIGRATION_STATUS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MIGRATION_STATUS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_migration_status_from_decoder;
-    fields_fn decode_migration_status_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MIGRATION_STATUS_MODULE_ATOM;
-    keys_static MIGRATION_STATUS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.MigrationStatus";
-    keys ["dsd_cleanup"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_color_profile_from_decoder;
-    variants [
-        0 => "srgb";
-        1 => "display_p3";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_document_color_profile_from_decoder;
-    variants [
-        0 => "legacy";
-        1 => "srgb";
-        2 => "display_p3";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_child_reading_direction_from_decoder;
-    variants [
-        0 => "none";
-        1 => "left_to_right";
-        2 => "right_to_left";
-    ]
-}
-
-static ARIA_ATTRIBUTE_ANY_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ATTRIBUTE_ANY_VALUE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_aria_attribute_any_value_from_decoder;
-    fields_fn decode_aria_attribute_any_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ARIA_ATTRIBUTE_ANY_VALUE_MODULE_ATOM;
-    keys_static ARIA_ATTRIBUTE_ANY_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ARIAAttributeAnyValue";
-    keys ["bool_value", "string_value", "float_value", "int_value", "string_array_value"];
-    fields [
-        1 => 1: decoder.read_bool()?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_int()?;
-        5 => 5: decoder.read_repeated(|decoder| decoder.read_string(env))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_aria_attribute_data_type_from_decoder;
-    variants [
-        0 => "boolean";
-        1 => "string";
-        2 => "float";
-        3 => "int";
-        4 => "string_list";
-    ]
-}
-
-static ARIA_ATTRIBUTE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ATTRIBUTE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_aria_attribute_data_from_decoder;
-    fields_fn decode_aria_attribute_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ARIA_ATTRIBUTE_DATA_MODULE_ATOM;
-    keys_static ARIA_ATTRIBUTE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ARIAAttributeData";
-    keys ["type", "value"];
-    fields [
-        1 => 1: decode_aria_attribute_data_type_from_decoder(env, decoder)?;
-        2 => 2: decode_aria_attribute_any_value_from_decoder(env, decoder)?;
-    ]
-}
-
-static ARIA_ATTRIBUTES_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ATTRIBUTES_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_aria_attributes_map_from_decoder;
-    fields_fn decode_aria_attributes_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ARIA_ATTRIBUTES_MAP_MODULE_ATOM;
-    keys_static ARIA_ATTRIBUTES_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ARIAAttributesMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_aria_attributes_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static ARIA_ATTRIBUTES_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static ARIA_ATTRIBUTES_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_aria_attributes_map_entry_from_decoder;
-    fields_fn decode_aria_attributes_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static ARIA_ATTRIBUTES_MAP_ENTRY_MODULE_ATOM;
-    keys_static ARIA_ATTRIBUTES_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ARIAAttributesMapEntry";
-    keys ["attribute", "value"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_aria_attribute_data_from_decoder(env, decoder)?;
-    ]
-}
-
-static HANDOFF_STATUS_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static HANDOFF_STATUS_MAP_ENTRY_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_handoff_status_map_entry_from_decoder;
-    fields_fn decode_handoff_status_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static HANDOFF_STATUS_MAP_ENTRY_MODULE_ATOM;
-    keys_static HANDOFF_STATUS_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.HandoffStatusMapEntry";
-    keys ["guid", "handoff_status"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_section_status_info_from_decoder(env, decoder)?;
-    ]
-}
-
-static HANDOFF_STATUS_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static HANDOFF_STATUS_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_handoff_status_map_from_decoder;
-    fields_fn decode_handoff_status_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static HANDOFF_STATUS_MAP_MODULE_ATOM;
-    keys_static HANDOFF_STATUS_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.HandoffStatusMap";
-    keys ["entries"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_handoff_status_map_entry_from_decoder(env, decoder))?;
-    ]
-}
-
-static EDIT_SCOPE_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_edit_scope_info_from_decoder;
-    fields_fn decode_edit_scope_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EDIT_SCOPE_INFO_MODULE_ATOM;
-    keys_static EDIT_SCOPE_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EditScopeInfo";
-    keys ["edit_scope_stacks", "snapshots"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_edit_scope_stack_from_decoder(env, decoder))?;
-        2 => 2: decoder.read_repeated(|decoder| decode_edit_scope_snapshot_from_decoder(env, decoder))?;
-    ]
-}
-
-static EDIT_SCOPE_SNAPSHOT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_SNAPSHOT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_edit_scope_snapshot_from_decoder;
-    fields_fn decode_edit_scope_snapshot_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EDIT_SCOPE_SNAPSHOT_MODULE_ATOM;
-    keys_static EDIT_SCOPE_SNAPSHOT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EditScopeSnapshot";
-    keys ["frames", "node_change_field_numbers"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_edit_scope_stack_from_decoder(env, decoder))?;
-        2 => 2: decoder.read_repeated(|decoder| decoder.read_var_uint())?;
-    ]
-}
-
-static EDIT_SCOPE_STACK_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_STACK_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_edit_scope_stack_from_decoder;
-    fields_fn decode_edit_scope_stack_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EDIT_SCOPE_STACK_MODULE_ATOM;
-    keys_static EDIT_SCOPE_STACK_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EditScopeStack";
-    keys ["stack"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_edit_scope_from_decoder(env, decoder))?;
-    ]
-}
-
-static EDIT_SCOPE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static EDIT_SCOPE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_edit_scope_from_decoder;
-    fields_fn decode_edit_scope_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static EDIT_SCOPE_MODULE_ATOM;
-    keys_static EDIT_SCOPE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.EditScope";
-    keys ["type", "label", "editor_type"];
-    fields [
-        1 => 1: decode_edit_scope_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decode_editor_type_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_edit_scope_type_from_decoder;
-    variants [
-        0 => "invalid";
-        1 => "test_setup";
-        2 => "user";
-        3 => "plugin";
-        4 => "system";
-        5 => "rest_api";
-        6 => "onboarding";
-        7 => "autosave";
-        8 => "ai";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_section_preset_state_from_decoder;
-    variants [
-        0 => "inserted";
-        1 => "user_edited";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_emoji_image_set_from_decoder;
-    variants [
-        0 => "apple";
-        1 => "noto";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_selection_region_focus_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "primary";
-        2 => "secondary";
-    ]
-}
-
-static SECTION_PRESET_INFO_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SECTION_PRESET_INFO_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_section_preset_info_from_decoder;
-    fields_fn decode_section_preset_info_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SECTION_PRESET_INFO_MODULE_ATOM;
-    keys_static SECTION_PRESET_INFO_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SectionPresetInfo";
-    keys ["shelf_id", "template_id", "template_name", "state"];
-    fields [
-        1 => 1: decoder.read_var_uint64()?;
-        2 => 2: decoder.read_var_uint64()?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decode_section_preset_state_from_decoder(env, decoder)?;
-    ]
-}
-
-static CLIPBOARD_SELECTION_REGION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CLIPBOARD_SELECTION_REGION_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_clipboard_selection_region_from_decoder;
-    fields_fn decode_clipboard_selection_region_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CLIPBOARD_SELECTION_REGION_MODULE_ATOM;
-    keys_static CLIPBOARD_SELECTION_REGION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ClipboardSelectionRegion";
-    keys ["parent", "nodes", "enclosing_frame_offset", "paste_is_partially_outside_enclosing_frame", "focus_type"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_guid_from_decoder(env, decoder))?;
-        3 => 3: decode_vector_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_bool()?;
-        5 => 5: decode_selection_region_focus_type_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_first_draft_kit_type_from_decoder;
-    variants [
-        0 => "local";
-        1 => "library";
-        2 => "none";
-    ]
-}
-
-static FIRST_DRAFT_KIT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FIRST_DRAFT_KIT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_first_draft_kit_from_decoder;
-    fields_fn decode_first_draft_kit_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FIRST_DRAFT_KIT_MODULE_ATOM;
-    keys_static FIRST_DRAFT_KIT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FirstDraftKit";
-    keys ["key", "type"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_first_draft_kit_type_from_decoder(env, decoder)?;
-    ]
-}
-
-static FIRST_DRAFT_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FIRST_DRAFT_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_first_draft_data_from_decoder;
-    fields_fn decode_first_draft_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FIRST_DRAFT_DATA_MODULE_ATOM;
-    keys_static FIRST_DRAFT_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FirstDraftData";
-    keys ["generation_id", "kit"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_first_draft_kit_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_first_draft_kit_element_type_from_decoder;
-    variants [
-        0 => "none";
-        1 => "building_block";
-        2 => "grouped_component";
-    ]
-}
-
-static FIRST_DRAFT_KIT_ELEMENT_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FIRST_DRAFT_KIT_ELEMENT_DATA_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_first_draft_kit_element_data_from_decoder;
-    fields_fn decode_first_draft_kit_element_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FIRST_DRAFT_KIT_ELEMENT_DATA_MODULE_ATOM;
-    keys_static FIRST_DRAFT_KIT_ELEMENT_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FirstDraftKitElementData";
-    keys ["type"];
-    fields [
-        1 => 1: decode_first_draft_kit_element_type_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_platform_shape_property_from_decoder;
-    variants [
-        0 => "fill";
-        1 => "stroke";
-        2 => "text";
-        3 => "stroke_color";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_platform_shape_behavior_type_from_decoder;
-    variants [
-        0 => "shape";
-        1 => "container";
-        2 => "advanced_container";
-    ]
-}
-
-static PLATFORM_SHAPE_PROPERTY_MAP_ENTRY_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PLATFORM_SHAPE_PROPERTY_MAP_ENTRY_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_platform_shape_property_map_entry_from_decoder;
-    fields_fn decode_platform_shape_property_map_entry_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PLATFORM_SHAPE_PROPERTY_MAP_ENTRY_MODULE_ATOM;
-    keys_static PLATFORM_SHAPE_PROPERTY_MAP_ENTRY_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PlatformShapePropertyMapEntry";
-    keys ["property", "node_paths"];
-    fields [
-        1 => 1: decode_platform_shape_property_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_guid_path_from_decoder(env, decoder))?;
-    ]
-}
-
-static PLATFORM_SHAPE_DEFINITION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PLATFORM_SHAPE_DEFINITION_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_platform_shape_definition_from_decoder;
-    fields_fn decode_platform_shape_definition_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PLATFORM_SHAPE_DEFINITION_MODULE_ATOM;
-    keys_static PLATFORM_SHAPE_DEFINITION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PlatformShapeDefinition";
-    keys ["property_map_entries", "behavior_type", "thumbnail_node"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_platform_shape_property_map_entry_from_decoder(env, decoder))?;
-        2 => 2: decode_platform_shape_behavior_type_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_path_from_decoder(env, decoder)?;
-    ]
-}
-
-static NODE_BEHAVIORS_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_BEHAVIORS_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_behaviors_from_decoder;
-    fields_fn decode_node_behaviors_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_BEHAVIORS_MODULE_ATOM;
-    keys_static NODE_BEHAVIORS_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeBehaviors";
-    keys ["link", "appear", "hover", "press", "focus", "scroll_parallax", "scroll_transform", "cursor", "marquee", "code"];
-    fields [
-        1 => 1: decode_link_behavior_from_decoder(env, decoder)?;
-        2 => 2: decode_appear_behavior_from_decoder(env, decoder)?;
-        3 => 3: decode_hover_behavior_from_decoder(env, decoder)?;
-        4 => 4: decode_press_behavior_from_decoder(env, decoder)?;
-        5 => 5: decode_focus_behavior_from_decoder(env, decoder)?;
-        6 => 6: decode_scroll_parallax_behavior_from_decoder(env, decoder)?;
-        7 => 7: decode_scroll_transform_behavior_from_decoder(env, decoder)?;
-        8 => 8: decode_cursor_behavior_from_decoder(env, decoder)?;
-        9 => 9: decode_marquee_behavior_from_decoder(env, decoder)?;
-        10 => 10: decoder.read_repeated(|decoder| decode_code_behavior_from_decoder(env, decoder))?;
-    ]
-}
-
-static BEHAVIOR_TRANSITION_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BEHAVIOR_TRANSITION_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_behavior_transition_from_decoder;
-    fields_fn decode_behavior_transition_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BEHAVIOR_TRANSITION_MODULE_ATOM;
-    keys_static BEHAVIOR_TRANSITION_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.BehaviorTransition";
-    keys ["easing_type", "easing_function", "transition_duration", "delay", "transition_duration_var", "delay_var"];
-    fields [
-        1 => 1: decode_easing_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decoder.read_var_float(env))?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_float(env)?;
-        5 => 5: decode_variable_data_from_decoder(env, decoder)?;
-        6 => 6: decode_variable_data_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_appear_behavior_trigger_from_decoder;
-    variants [
-        1 => "page_load";
-        2 => "this_layer_in_view";
-        3 => "other_layer_in_view";
-        4 => "scroll_direction";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_relative_direction_from_decoder;
-    variants [
-        1 => "up";
-        2 => "down";
-        3 => "left";
-        4 => "right";
-    ]
-}
-
-static APPEAR_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static APPEAR_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_appear_behavior_from_decoder;
-    fields_fn decode_appear_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static APPEAR_BEHAVIOR_MODULE_ATOM;
-    keys_static APPEAR_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AppearBehavior";
-    keys ["trigger", "direction", "other_layer", "enter_transition", "enter_state", "exit_transition", "exit_state", "plays_once", "plays_once_var", "is_deleted"];
-    fields [
-        1 => 1: decode_appear_behavior_trigger_from_decoder(env, decoder)?;
-        2 => 2: decode_relative_direction_from_decoder(env, decoder)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decode_behavior_transition_from_decoder(env, decoder)?;
-        5 => 5: decode_node_change_from_decoder(env, decoder)?;
-        6 => 6: decode_behavior_transition_from_decoder(env, decoder)?;
-        7 => 7: decode_node_change_from_decoder(env, decoder)?;
-        8 => 8: decoder.read_bool()?;
-        9 => 9: decode_variable_data_from_decoder(env, decoder)?;
-        10 => 10: decoder.read_bool()?;
-    ]
-}
-
-static HOVER_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static HOVER_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_hover_behavior_from_decoder;
-    fields_fn decode_hover_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static HOVER_BEHAVIOR_MODULE_ATOM;
-    keys_static HOVER_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.HoverBehavior";
-    keys ["transition", "state", "is_deleted"];
-    fields [
-        1 => 1: decode_behavior_transition_from_decoder(env, decoder)?;
-        2 => 2: decode_node_change_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static PRESS_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static PRESS_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_press_behavior_from_decoder;
-    fields_fn decode_press_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static PRESS_BEHAVIOR_MODULE_ATOM;
-    keys_static PRESS_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.PressBehavior";
-    keys ["transition", "state", "is_deleted"];
-    fields [
-        1 => 1: decode_behavior_transition_from_decoder(env, decoder)?;
-        2 => 2: decode_node_change_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static FOCUS_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FOCUS_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_focus_behavior_from_decoder;
-    fields_fn decode_focus_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FOCUS_BEHAVIOR_MODULE_ATOM;
-    keys_static FOCUS_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FocusBehavior";
-    keys ["transition", "state", "is_deleted"];
-    fields [
-        1 => 1: decode_behavior_transition_from_decoder(env, decoder)?;
-        2 => 2: decode_node_change_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static SCROLL_PARALLAX_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_PARALLAX_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_scroll_parallax_behavior_from_decoder;
-    fields_fn decode_scroll_parallax_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SCROLL_PARALLAX_BEHAVIOR_MODULE_ATOM;
-    keys_static SCROLL_PARALLAX_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ScrollParallaxBehavior";
-    keys ["axis", "speed", "relative_to_page", "speed_var", "is_deleted"];
-    fields [
-        1 => 1: decode_scroll_direction_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_bool()?;
-        4 => 4: decode_variable_data_from_decoder(env, decoder)?;
-        5 => 5: decoder.read_bool()?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_scroll_transform_behavior_trigger_from_decoder;
-    variants [
-        1 => "page_height";
-        2 => "this_layer_in_view";
-        3 => "other_layer_in_view";
-    ]
-}
-
-static SCROLL_TRANSFORM_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SCROLL_TRANSFORM_BEHAVIOR_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_scroll_transform_behavior_from_decoder;
-    fields_fn decode_scroll_transform_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SCROLL_TRANSFORM_BEHAVIOR_MODULE_ATOM;
-    keys_static SCROLL_TRANSFORM_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ScrollTransformBehavior";
-    keys ["trigger", "other_layer", "transition", "from_state", "to_state", "plays_once", "plays_once_var", "plays_once_var2", "is_deleted"];
-    fields [
-        1 => 1: decode_scroll_transform_behavior_trigger_from_decoder(env, decoder)?;
-        2 => 2: decode_guid_from_decoder(env, decoder)?;
-        3 => 3: decode_behavior_transition_from_decoder(env, decoder)?;
-        4 => 4: decode_node_change_from_decoder(env, decoder)?;
-        5 => 5: decode_node_change_from_decoder(env, decoder)?;
-        6 => 6: decoder.read_bool()?;
-        7 => 7: decoder.read_bool()?;
-        8 => 8: decode_variable_data_from_decoder(env, decoder)?;
-        9 => 9: decoder.read_bool()?;
-    ]
-}
-
-static CURSOR_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CURSOR_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cursor_behavior_from_decoder;
-    fields_fn decode_cursor_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CURSOR_BEHAVIOR_MODULE_ATOM;
-    keys_static CURSOR_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CursorBehavior";
-    keys ["hotspot_x", "hotspot_y", "cursor_guid", "is_deleted"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_bool()?;
-    ]
-}
-
-static MARQUEE_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static MARQUEE_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_marquee_behavior_from_decoder;
-    fields_fn decode_marquee_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static MARQUEE_BEHAVIOR_MODULE_ATOM;
-    keys_static MARQUEE_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.MarqueeBehavior";
-    keys ["direction", "speed", "should_loop_infinitely", "speed_var", "should_loop_infinitely_var", "pause_on_hover", "is_deleted"];
-    fields [
-        1 => 1: decode_relative_direction_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_bool()?;
-        4 => 4: decode_variable_data_from_decoder(env, decoder)?;
-        5 => 5: decode_variable_data_from_decoder(env, decoder)?;
-        6 => 6: decode_variable_data_from_decoder(env, decoder)?;
-        7 => 7: decoder.read_bool()?;
-    ]
-}
-
-static CODE_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CODE_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_code_behavior_from_decoder;
-    fields_fn decode_code_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CODE_BEHAVIOR_MODULE_ATOM;
-    keys_static CODE_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CodeBehavior";
-    keys ["code_component_id", "component_prop_assignments", "is_deleted"];
-    fields [
-        1 => 1: decode_code_component_id_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_component_prop_assignment_from_decoder(env, decoder))?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static CLIENT_RENDERED_METADATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static CLIENT_RENDERED_METADATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_client_rendered_metadata_from_decoder;
-    fields_fn decode_client_rendered_metadata_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static CLIENT_RENDERED_METADATA_MODULE_ATOM;
-    keys_static CLIENT_RENDERED_METADATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ClientRenderedMetadata";
-    keys ["load_id", "tracking_session_id", "tracking_session_sequence_id", "reconnect_id"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_var_uint()?;
-        4 => 4: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_link_behavior_type_from_decoder;
-    variants [
-        1 => "url";
-        2 => "page";
-    ]
-}
-
-static LINK_BEHAVIOR_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static LINK_BEHAVIOR_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_link_behavior_from_decoder;
-    fields_fn decode_link_behavior_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static LINK_BEHAVIOR_MODULE_ATOM;
-    keys_static LINK_BEHAVIOR_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.LinkBehavior";
-    keys ["type", "url", "page", "open_in_new_window"];
-    fields [
-        1 => 1: decode_link_behavior_type_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decode_guid_from_decoder(env, decoder)?;
-        4 => 4: decoder.read_bool()?;
-    ]
-}
-
-static VARIABLE_ID_OR_VARIABLE_OVERRIDE_ID_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static VARIABLE_ID_OR_VARIABLE_OVERRIDE_ID_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_variable_id_or_variable_override_id_from_decoder;
-    fields_fn decode_variable_id_or_variable_override_id_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static VARIABLE_ID_OR_VARIABLE_OVERRIDE_ID_MODULE_ATOM;
-    keys_static VARIABLE_ID_OR_VARIABLE_OVERRIDE_ID_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.VariableIdOrVariableOverrideId";
-    keys ["variable_id", "variable_override_id"];
-    fields [
-        1 => 1: decode_variable_id_from_decoder(env, decoder)?;
-        2 => 2: decode_variable_override_id_from_decoder(env, decoder)?;
-    ]
-}
-
-static SLIDE_THEME_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static SLIDE_THEME_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_slide_theme_data_from_decoder;
-    fields_fn decode_slide_theme_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static SLIDE_THEME_DATA_MODULE_ATOM;
-    keys_static SLIDE_THEME_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.SlideThemeData";
-    keys ["theme_id", "version"];
-    fields [
-        1 => 1: decode_theme_id_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_slide_number_from_decoder;
-    variants [
-        0 => "none";
-        1 => "slide";
-        2 => "section";
-        3 => "subsection";
-        4 => "total_within_deck";
-        5 => "total_within_section";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_node_chat_message_type_from_decoder;
-    variants [
-        0 => "user_message";
-        1 => "assistant_message";
-        2 => "tool_message";
-        3 => "system_message";
-    ]
-}
-
-static NODE_CHAT_MESSAGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHAT_MESSAGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_chat_message_from_decoder;
-    fields_fn decode_node_chat_message_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_CHAT_MESSAGE_MODULE_ATOM;
-    keys_static NODE_CHAT_MESSAGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeChatMessage";
-    keys ["id", "type", "user_id", "text_content", "sent_at", "tool_calls", "tool_results", "sent_at64"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decode_node_chat_message_type_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_string(env)?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decoder.read_var_uint()?;
-        6 => 6: decoder.read_repeated(|decoder| decode_node_chat_tool_call_from_decoder(env, decoder))?;
-        7 => 7: decoder.read_repeated(|decoder| decode_node_chat_tool_result_from_decoder(env, decoder))?;
-        8 => 8: decoder.read_var_uint64()?;
-    ]
-}
-
-static NODE_CHAT_TOOL_CALL_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHAT_TOOL_CALL_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_chat_tool_call_from_decoder;
-    fields_fn decode_node_chat_tool_call_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_CHAT_TOOL_CALL_MODULE_ATOM;
-    keys_static NODE_CHAT_TOOL_CALL_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeChatToolCall";
-    keys ["tool_call_id", "tool_name", "args_json"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static NODE_CHAT_TOOL_RESULT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHAT_TOOL_RESULT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_chat_tool_result_from_decoder;
-    fields_fn decode_node_chat_tool_result_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_CHAT_TOOL_RESULT_MODULE_ATOM;
-    keys_static NODE_CHAT_TOOL_RESULT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeChatToolResult";
-    keys ["tool_call_id", "tool_name", "result_json"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_string(env)?;
-    ]
-}
-
-static NODE_CHAT_EXCHANGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHAT_EXCHANGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_chat_exchange_from_decoder;
-    fields_fn decode_node_chat_exchange_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_CHAT_EXCHANGE_MODULE_ATOM;
-    keys_static NODE_CHAT_EXCHANGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeChatExchange";
-    keys ["node", "messages", "is_typing", "file_updates"];
-    fields [
-        1 => 1: decode_guid_from_decoder(env, decoder)?;
-        2 => 2: decoder.read_repeated(|decoder| decode_node_chat_message_from_decoder(env, decoder))?;
-        3 => 3: decoder.read_bool()?;
-        4 => 4: decoder.read_repeated(|decoder| decode_file_update_from_decoder(env, decoder))?;
-    ]
-}
-
-static NODE_CHAT_COMPRESSION_STATE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static NODE_CHAT_COMPRESSION_STATE_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_node_chat_compression_state_from_decoder;
-    fields_fn decode_node_chat_compression_state_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static NODE_CHAT_COMPRESSION_STATE_MODULE_ATOM;
-    keys_static NODE_CHAT_COMPRESSION_STATE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.NodeChatCompressionState";
-    keys ["start_index", "summary"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decoder.read_string(env)?;
-    ]
-}
-
-static FILE_UPDATE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static FILE_UPDATE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_file_update_from_decoder;
-    fields_fn decode_file_update_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static FILE_UPDATE_MODULE_ATOM;
-    keys_static FILE_UPDATE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.FileUpdate";
-    keys ["name", "contents", "is_deleted"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_string(env)?;
-        3 => 3: decoder.read_bool()?;
-    ]
-}
-
-static AI_CHAT_CONTENT_PART_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_CONTENT_PART_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_ai_chat_content_part_from_decoder;
-    fields_fn decode_ai_chat_content_part_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AI_CHAT_CONTENT_PART_MODULE_ATOM;
-    keys_static AI_CHAT_CONTENT_PART_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AIChatContentPart";
-    keys ["type", "value"];
-    fields [
-        1 => 1: decode_ai_chat_content_part_type_from_decoder(env, decoder)?;
-        2 => 2: decode_ai_chat_content_part_any_value_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_ai_chat_content_part_type_from_decoder;
-    variants [
-        0 => "invalid";
-        1 => "text";
-        2 => "selected_node_ids";
-    ]
-}
-
-static AI_CHAT_CONTENT_PART_ANY_VALUE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_CONTENT_PART_ANY_VALUE_STRUCT_KEYS: OnceLock<
-    Vec<rustler::wrapper::NIF_TERM>,
-> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_ai_chat_content_part_any_value_from_decoder;
-    fields_fn decode_ai_chat_content_part_any_value_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AI_CHAT_CONTENT_PART_ANY_VALUE_MODULE_ATOM;
-    keys_static AI_CHAT_CONTENT_PART_ANY_VALUE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AIChatContentPartAnyValue";
-    keys ["text_value", "selected_node_ids"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decoder.read_repeated(|decoder| decoder.read_string(env))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_ai_chat_message_role_from_decoder;
-    variants [
-        0 => "user";
-        1 => "assistant";
-        2 => "tool";
-        3 => "system";
-    ]
-}
-
-static AI_CHAT_MESSAGE_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_MESSAGE_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_ai_chat_message_from_decoder;
-    fields_fn decode_ai_chat_message_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AI_CHAT_MESSAGE_MODULE_ATOM;
-    keys_static AI_CHAT_MESSAGE_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AIChatMessage";
-    keys ["created_at_ms", "role", "content", "client_id", "created_at_ms64"];
-    fields [
-        1 => 1: decoder.read_var_uint()?;
-        2 => 2: decode_ai_chat_message_role_from_decoder(env, decoder)?;
-        3 => 3: decoder.read_repeated(|decoder| decode_ai_chat_content_part_from_decoder(env, decoder))?;
-        4 => 4: decoder.read_string(env)?;
-        5 => 5: decoder.read_var_uint64()?;
-    ]
-}
-
-static AI_CHAT_THREAD_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static AI_CHAT_THREAD_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_ai_chat_thread_from_decoder;
-    fields_fn decode_ai_chat_thread_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static AI_CHAT_THREAD_MODULE_ATOM;
-    keys_static AI_CHAT_THREAD_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.AIChatThread";
-    keys ["messages"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_ai_chat_message_from_decoder(env, decoder))?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_cooper_template_type_from_decoder;
-    variants [
-        0 => "custom";
-        1 => "twitter_post";
-        2 => "linkedin_post";
-        3 => "insta_post_square";
-        4 => "insta_post_portrait";
-        5 => "insta_story";
-        6 => "insta_ad";
-        7 => "facebook_post";
-        8 => "facebook_cover_photo";
-        9 => "facebook_event_cover";
-        10 => "facebook_ad_portrait";
-        11 => "facebook_ad_square";
-        12 => "pinterest_ad_pin";
-        13 => "twitter_banner";
-        15 => "linkedin_post_square";
-        16 => "linkedin_post_portrait";
-        17 => "linkedin_post_landscape";
-        18 => "linkedin_profile_banner";
-        19 => "linkedin_article_banner";
-        20 => "linkedin_ad_landscape";
-        21 => "linkedin_ad_square";
-        22 => "linkedin_ad_vertical";
-        23 => "youtube_thumbnail";
-        24 => "youtube_banner";
-        25 => "youtube_ad";
-        26 => "twitch_banner";
-        27 => "google_leaderboard_ad";
-        28 => "google_large_ad";
-        29 => "google_med_ad";
-        30 => "google_mobile_banner_ad";
-        31 => "google_skyscraper_ad";
-        32 => "card_horizontal";
-        33 => "card_vertical";
-        34 => "print_us_letter";
-        35 => "poster";
-        36 => "banner_standard";
-        37 => "banner_wide";
-        38 => "banner_ultrawide";
-        39 => "name_tag_portrait";
-        40 => "name_tag_landscape";
-        41 => "insta_reel_cover";
-        42 => "zoom_background";
-        43 => "tiktok_post";
-        44 => "insta_ad_portrait";
-        45 => "insta_post_tall_portrait";
-        46 => "twitter_post_square";
-        47 => "facebook_post_square";
-        48 => "facebook_post_portrait";
-        49 => "facebook_story";
-        50 => "google_square_ad";
-        51 => "google_small_square_ad";
-        52 => "google_narrow_skyscraper_ad";
-        53 => "google_half_page_ad";
-        54 => "google_large_leaderboard_ad";
-        55 => "google_billboard_ad";
-        56 => "google_banner_leaderboard_ad";
-        57 => "google_top_banner_ad";
-        58 => "google_mobile_leaderboard_banner_ad";
-        59 => "google_large_mobile_banner_ad";
-        60 => "google_mobile_interstitial_ad";
-        61 => "google_mobile_med_rectangle_ad";
-        62 => "pinterest_pin_standard";
-        63 => "pinterest_pin_square";
-        64 => "pinterest_ad_square";
-        65 => "print_a4";
-    ]
-}
-
-static COOPER_TEMPLATE_DATA_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static COOPER_TEMPLATE_DATA_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_cooper_template_data_from_decoder;
-    fields_fn decode_cooper_template_data_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static COOPER_TEMPLATE_DATA_MODULE_ATOM;
-    keys_static COOPER_TEMPLATE_DATA_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.CooperTemplateData";
-    keys ["type"];
-    fields [
-        1 => 1: decode_cooper_template_type_from_decoder(env, decoder)?;
-    ]
-}
-
-static IMAGE_IMPORT_MAP_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_IMPORT_MAP_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_image_import_map_from_decoder;
-    fields_fn decode_image_import_map_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static IMAGE_IMPORT_MAP_MODULE_ATOM;
-    keys_static IMAGE_IMPORT_MAP_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ImageImportMap";
-    keys ["imports"];
-    fields [
-        1 => 1: decoder.read_repeated(|decoder| decode_image_import_from_decoder(env, decoder))?;
-    ]
-}
-
-static IMAGE_IMPORT_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static IMAGE_IMPORT_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_image_import_from_decoder;
-    fields_fn decode_image_import_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static IMAGE_IMPORT_MODULE_ATOM;
-    keys_static IMAGE_IMPORT_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.ImageImport";
-    keys ["name", "image"];
-    fields [
-        1 => 1: decoder.read_string(env)?;
-        2 => 2: decode_image_from_decoder(env, decoder)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_interpolation_type_from_decoder;
-    variants [
-        0 => "hold";
-        1 => "bezier";
-        2 => "spring";
-    ]
-}
-
-static BEZIER_HANDLES_MODULE_ATOM: OnceLock<Atom> = OnceLock::new();
-
-
-static BEZIER_HANDLES_STRUCT_KEYS: OnceLock<Vec<rustler::wrapper::NIF_TERM>> = OnceLock::new();
-
-
-kiwi_message_decoder! {
-    fn decode_bezier_handles_from_decoder;
-    fields_fn decode_bezier_handles_fields_from_decoder;
-    env env;
-    decoder decoder;
-    module_static BEZIER_HANDLES_MODULE_ATOM;
-    keys_static BEZIER_HANDLES_STRUCT_KEYS;
-    module "Elixir.Figler.Schema.BezierHandles";
-    keys ["p1x", "p1y", "p2x", "p2y"];
-    fields [
-        1 => 1: decoder.read_var_float(env)?;
-        2 => 2: decoder.read_var_float(env)?;
-        3 => 3: decoder.read_var_float(env)?;
-        4 => 4: decoder.read_var_float(env)?;
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_keyframe_operation_from_decoder;
-    variants [
-        0 => "set";
-        1 => "scale";
-        2 => "offset";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_timeline_position_type_from_decoder;
-    variants [
-        0 => "absolute";
-        1 => "relative";
-    ]
-}
-
-kiwi_enum_decoder! {
-    fn decode_playback_style_from_decoder;
-    variants [
-        0 => "once";
-        1 => "loop";
-        2 => "boomerang";
-    ]
-}
-
-fn decode_sparse_message_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_message_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_axis_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_axis_from_decoder(env, decoder)
-}
-
-fn decode_sparse_access_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_access_from_decoder(env, decoder)
-}
-
-fn decode_sparse_node_phase_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_node_phase_from_decoder(env, decoder)
-}
-
-fn decode_sparse_winding_rule_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_winding_rule_from_decoder(env, decoder)
-}
-
-fn decode_sparse_node_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_node_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_shape_with_text_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_shape_with_text_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_blend_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_blend_mode_from_decoder(env, decoder)
-}
-
-fn decode_sparse_paint_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_paint_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_image_scale_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_image_scale_mode_from_decoder(env, decoder)
-}
-
-fn decode_sparse_effect_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_effect_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_text_case_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_text_case_from_decoder(env, decoder)
-}
-
-fn decode_sparse_text_decoration_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_text_decoration_from_decoder(env, decoder)
-}
-
-fn decode_sparse_text_decoration_style_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_text_decoration_style_from_decoder(env, decoder)
-}
-
-fn decode_sparse_leading_trim_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_leading_trim_from_decoder(env, decoder)
-}
-
-fn decode_sparse_number_units_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_number_units_from_decoder(env, decoder)
-}
-
-fn decode_sparse_constraint_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_constraint_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stroke_align_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stroke_align_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stroke_cap_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stroke_cap_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stroke_join_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stroke_join_from_decoder(env, decoder)
-}
-
-fn decode_sparse_boolean_operation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_boolean_operation_from_decoder(env, decoder)
-}
-
-fn decode_sparse_text_align_horizontal_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_text_align_horizontal_from_decoder(env, decoder)
-}
-
-fn decode_sparse_text_align_vertical_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_text_align_vertical_from_decoder(env, decoder)
-}
-
-fn decode_sparse_mouse_cursor_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_mouse_cursor_from_decoder(env, decoder)
-}
-
-fn decode_sparse_vector_mirror_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_vector_mirror_from_decoder(env, decoder)
-}
-
-fn decode_sparse_image_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_image_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_export_constraint_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_export_constraint_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_layout_grid_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_layout_grid_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_layout_grid_pattern_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_layout_grid_pattern_from_decoder(env, decoder)
-}
-
-fn decode_sparse_text_auto_resize_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_text_auto_resize_from_decoder(env, decoder)
-}
-
-fn decode_sparse_text_truncation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_text_truncation_from_decoder(env, decoder)
-}
-
-fn decode_sparse_style_set_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_style_set_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_style_set_content_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_style_set_content_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stack_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stack_mode_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stack_align_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stack_align_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stack_counter_align_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stack_counter_align_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stack_justify_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stack_justify_from_decoder(env, decoder)
-}
-
-fn decode_sparse_grid_child_align_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_grid_child_align_from_decoder(env, decoder)
-}
-
-fn decode_sparse_grid_auto_tracks_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_grid_auto_tracks_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stack_size_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stack_size_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stack_positioning_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stack_positioning_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stack_wrap_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stack_wrap_from_decoder(env, decoder)
-}
-
-fn decode_sparse_stack_counter_align_content_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_stack_counter_align_content_from_decoder(env, decoder)
-}
-
-fn decode_sparse_connection_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_connection_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_interaction_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_interaction_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_transition_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_transition_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_easing_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_easing_type_from_decoder(env, decoder)
-}
-
-fn decode_sparse_scroll_direction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_scroll_direction_from_decoder(env, decoder)
-}
-
-fn decode_sparse_scroll_contracted_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_scroll_contracted_state_from_decoder(env, decoder)
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_guid_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.GUID";
-    capacity 3;
-    fields [
-        "session_id": decoder.read_var_uint()?.encode(env);
-        "local_id": decoder.read_var_uint()?.encode(env);
-    ]
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_color_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.Color";
-    capacity 5;
-    fields [
-        "r": decoder.read_var_float(env)?.encode(env);
-        "g": decoder.read_var_float(env)?.encode(env);
-        "b": decoder.read_var_float(env)?.encode(env);
-        "a": decoder.read_var_float(env)?.encode(env);
-    ]
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_vector_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.Vector";
-    capacity 3;
-    fields [
-        "x": decoder.read_var_float(env)?.encode(env);
-        "y": decoder.read_var_float(env)?.encode(env);
-    ]
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_rect_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.Rect";
-    capacity 5;
-    fields [
-        "x": decoder.read_var_float(env)?.encode(env);
-        "y": decoder.read_var_float(env)?.encode(env);
-        "w": decoder.read_var_float(env)?.encode(env);
-        "h": decoder.read_var_float(env)?.encode(env);
-    ]
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_color_stop_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.ColorStop";
-    capacity 3;
-    fields [
-        "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        "position": decoder.read_var_float(env)?.encode(env);
-    ]
-}
-
-kiwi_sparse_message_decoder! {
-    fn decode_sparse_color_stop_var_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.ColorStopVar";
-    definition "ColorStopVar";
-    capacity 4;
-    fields [
-        1 => "color": decode_sparse_color_from_decoder(env, decoder)?.encode(env);
-        2 => "color_var": decode_sparse_variable_data_from_decoder(env, decoder)?.encode(env);
-        3 => "position": decoder.read_var_float(env)?.encode(env);
-    ]
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_matrix_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.Matrix";
-    capacity 7;
-    fields [
-        "m00": decoder.read_var_float(env)?.encode(env);
-        "m01": decoder.read_var_float(env)?.encode(env);
-        "m02": decoder.read_var_float(env)?.encode(env);
-        "m10": decoder.read_var_float(env)?.encode(env);
-        "m11": decoder.read_var_float(env)?.encode(env);
-        "m12": decoder.read_var_float(env)?.encode(env);
-    ]
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_parent_index_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.ParentIndex";
-    capacity 3;
-    fields [
-        "guid": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        "position": decoder.read_string(env)?.encode(env);
-    ]
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_number_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.Number";
-    capacity 3;
-    fields [
-        "value": decoder.read_var_float(env)?.encode(env);
-        "units": decode_sparse_number_units_from_decoder(env, decoder)?.encode(env);
-    ]
-}
-
-kiwi_sparse_struct_decoder! {
-    fn decode_sparse_font_name_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.FontName";
-    capacity 4;
-    fields [
-        "family": decoder.read_string(env)?.encode(env);
-        "style": decoder.read_string(env)?.encode(env);
-        "postscript": decoder.read_string(env)?.encode(env);
-    ]
-}
-
-fn decode_sparse_font_variant_numeric_figure_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_font_variant_numeric_figure_from_decoder(env, decoder)
-}
-
-fn decode_sparse_font_variant_numeric_spacing_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_font_variant_numeric_spacing_from_decoder(env, decoder)
-}
-
-fn decode_sparse_font_variant_numeric_fraction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_font_variant_numeric_fraction_from_decoder(env, decoder)
-}
-
-fn decode_sparse_font_variant_caps_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_font_variant_caps_from_decoder(env, decoder)
-}
-
-fn decode_sparse_font_variant_position_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_font_variant_position_from_decoder(env, decoder)
-}
-
-fn decode_sparse_font_style_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_font_style_from_decoder(env, decoder)
-}
-
-fn decode_sparse_semantic_weight_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_semantic_weight_from_decoder(env, decoder)
-}
-
-fn decode_sparse_semantic_italic_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_semantic_italic_from_decoder(env, decoder)
-}
-
-fn decode_sparse_code_snapshot_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_code_snapshot_state_from_decoder(env, decoder)
-}
-
-fn decode_sparse_snapshot_capture_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_snapshot_capture_mode_from_decoder(env, decoder)
-}
-
-kiwi_sparse_message_decoder! {
-    fn decode_sparse_code_source_info_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.CodeSourceInfo";
-    definition "CodeSourceInfo";
-    capacity 7;
-    fields [
-        1 => "origin_reference_id": decoder.read_string(env)?.encode(env);
-        2 => "origin_node_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        3 => "linked_snapshot_id": decode_sparse_guid_from_decoder(env, decoder)?.encode(env);
-        4 => "capture_mode": decode_sparse_snapshot_capture_mode_from_decoder(env, decoder)?.encode(env);
-        5 => "source_blob_ref": decoder.read_string(env)?.encode(env);
-        6 => "source_element_id": decoder.read_string(env)?.encode(env);
-    ]
-}
-
-fn decode_sparse_code_object_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_code_object_type_from_decoder(env, decoder)
-}
-
-kiwi_sparse_message_decoder! {
-    fn decode_sparse_custom_tool_artifact_ref_from_decoder;
-    env env;
-    decoder decoder;
-    module "Elixir.Figler.Schema.CustomToolArtifactRef";
-    definition "CustomToolArtifactRef";
-    capacity 5;
-    fields [
-        1 => "custom_tool_id": decoder.read_string(env)?.encode(env);
-        2 => "custom_tool_version": decoder.read_string(env)?.encode(env);
-        3 => "published_custom_tool_id": decoder.read_string(env)?.encode(env);
-        4 => "published_custom_tool_version_id": decoder.read_string(env)?.encode(env);
-    ]
-}
-
-fn decode_sparse_lock_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_lock_mode_from_decoder(env, decoder)
-}
-
-fn decode_sparse_open_type_feature_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_open_type_feature_from_decoder(env, decoder)
-}
-
 kiwi_sparse_struct_decoder! {
     fn decode_sparse_export_constraint_from_decoder;
     env env;
@@ -13406,24 +1771,62 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_noise_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_noise_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_noise_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "multitone";
+        1 => "monotone";
+        2 => "duotone";
+    ]
 }
 
-fn decode_sparse_pattern_tile_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_pattern_tile_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_pattern_tile_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "rectangular";
+        1 => "horizontal_hexagonal";
+        2 => "vertical_hexagonal";
+    ]
 }
 
-fn decode_sparse_pattern_alignment_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_pattern_alignment_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_pattern_alignment_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "start";
+        1 => "center";
+        2 => "end";
+    ]
 }
 
-fn decode_sparse_interpolation_color_space_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_interpolation_color_space_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_interpolation_color_space_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "default";
+        1 => "oklab";
+        2 => "oklch";
+        3 => "hsl";
+        4 => "srgb_linear";
+    ]
 }
 
-fn decode_sparse_interpolation_hue_method_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_interpolation_hue_method_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_interpolation_hue_method_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "shorter";
+        1 => "longer";
+        2 => "increasing";
+        3 => "decreasing";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -13961,8 +2364,14 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-fn decode_sparse_collaborative_text_op_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_collaborative_text_op_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_collaborative_text_op_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "insert";
+        1 => "delete";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14064,8 +2473,17 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_flapp_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_flapp_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_flapp_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "poll";
+        1 => "embed";
+        2 => "facepile";
+        3 => "alignment";
+        4 => "youtube";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14198,24 +2616,55 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_blur_op_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_blur_op_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_blur_op_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "normal";
+        1 => "progressive";
+    ]
 }
 
-fn decode_sparse_repeat_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_repeat_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_repeat_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "linear";
+        1 => "radial";
+    ]
 }
 
-fn decode_sparse_unit_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_unit_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_unit_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "pixels";
+        1 => "relative";
+    ]
 }
 
-fn decode_sparse_repeat_order_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_repeat_order_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_repeat_order_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "forward";
+        1 => "reverse";
+    ]
 }
 
-fn decode_sparse_effect_axis_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_effect_axis_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_effect_axis_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "x";
+        1 => "y";
+        2 => "x_and_y";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14284,8 +2733,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_transform_modifier_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_transform_modifier_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_transform_modifier_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "repeat";
+        1 => "symmetry";
+        2 => "skew";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14309,8 +2765,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_transform_schema_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_transform_schema_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_transform_schema_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "fixed_order";
+        2 => "freeform";
+    ]
 }
 
 kiwi_sparse_struct_decoder! {
@@ -14355,8 +2818,19 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_transform_fn_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_transform_fn_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_transform_fn_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "matrix_3_d";
+        2 => "perspective";
+        3 => "translate_z";
+        4 => "rotate_x";
+        5 => "rotate_y";
+        6 => "rotate_z";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14466,12 +2940,26 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_prototype_device_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_prototype_device_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_prototype_device_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "preset";
+        2 => "custom";
+        3 => "presentation";
+    ]
 }
 
-fn decode_sparse_device_rotation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_device_rotation_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_device_rotation_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "ccw_90";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14489,16 +2977,40 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_overlay_position_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_overlay_position_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_overlay_position_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "center";
+        1 => "top_left";
+        2 => "top_center";
+        3 => "top_right";
+        4 => "bottom_left";
+        5 => "bottom_center";
+        6 => "bottom_right";
+        7 => "manual";
+    ]
 }
 
-fn decode_sparse_overlay_background_interaction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_overlay_background_interaction_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_overlay_background_interaction_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "close_on_click_outside";
+    ]
 }
 
-fn decode_sparse_overlay_background_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_overlay_background_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_overlay_background_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "solid_color";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14514,16 +3026,40 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_navigation_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_navigation_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_navigation_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "navigate";
+        1 => "overlay";
+        2 => "swap";
+        3 => "swap_state";
+        4 => "scroll_to";
+    ]
 }
 
-fn decode_sparse_export_color_profile_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_export_color_profile_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_export_color_profile_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "document";
+        1 => "srgb";
+        2 => "display_p3_v4";
+        3 => "cmyk";
+    ]
 }
 
-fn decode_sparse_export_background_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_export_background_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_export_background_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "solid";
+        1 => "transparent";
+        2 => "grid";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14552,8 +3088,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_export_svgid_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_export_svgid_mode_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_export_svgid_mode_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "if_needed";
+        1 => "always";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14608,16 +3150,40 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_style_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_style_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_style_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "fill";
+        2 => "stroke";
+        3 => "text";
+        4 => "effect";
+        5 => "export";
+        6 => "grid";
+        7 => "animation";
+    ]
 }
 
-fn decode_sparse_brush_orientation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_brush_orientation_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_brush_orientation_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "forward";
+        1 => "reverse";
+    ]
 }
 
-fn decode_sparse_brush_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_brush_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_brush_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "stretch";
+        1 => "scatter";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14742,8 +3308,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_scroll_behavior_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_scroll_behavior_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_scroll_behavior_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "scrolls";
+        1 => "fixed_when_child_of_scrolling_frame";
+        2 => "sticky_scrolls";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14817,8 +3390,22 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_connector_magnet_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_connector_magnet_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_connector_magnet_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "auto";
+        2 => "top";
+        3 => "left";
+        4 => "bottom";
+        5 => "right";
+        6 => "center";
+        7 => "auto_horizontal";
+        8 => "edge";
+        9 => "absolute";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14849,12 +3436,25 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_connector_text_section_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_connector_text_section_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_connector_text_section_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "middle_to_start";
+        1 => "middle_to_end";
+    ]
 }
 
-fn decode_sparse_connector_off_axis_offset_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_connector_off_axis_offset_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_connector_off_axis_offset_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "above";
+        2 => "below";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14871,16 +3471,66 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_connector_line_style_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_connector_line_style_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_connector_line_style_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "elbowed";
+        1 => "straight";
+        2 => "curved";
+    ]
 }
 
-fn decode_sparse_connector_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_connector_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_connector_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "manual";
+        1 => "diagram";
+    ]
 }
 
-fn decode_sparse_annotation_property_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_annotation_property_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_annotation_property_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "fill";
+        1 => "stroke";
+        2 => "width";
+        3 => "height";
+        4 => "min_width";
+        5 => "min_height";
+        6 => "max_width";
+        7 => "max_height";
+        8 => "stroke_width";
+        9 => "corner_radius";
+        10 => "effect";
+        11 => "text_style";
+        12 => "text_align_horizontal";
+        13 => "font_family";
+        14 => "font_size";
+        15 => "font_weight";
+        16 => "line_height";
+        17 => "letter_spacing";
+        18 => "stack_spacing";
+        19 => "stack_padding";
+        20 => "stack_mode";
+        21 => "stack_alignment";
+        22 => "opacity";
+        23 => "component";
+        24 => "font_style";
+        25 => "grid_row_gap";
+        26 => "grid_column_gap";
+        27 => "grid_row_count";
+        28 => "grid_column_count";
+        29 => "grid_row_anchor_index";
+        30 => "grid_column_anchor_index";
+        31 => "grid_row_span";
+        32 => "grid_column_span";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14895,12 +3545,34 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_annotation_category_preset_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_annotation_category_preset_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_annotation_category_preset_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "accessibility";
+        2 => "behavior";
+        3 => "content";
+        4 => "development";
+        5 => "interaction";
+    ]
 }
 
-fn decode_sparse_annotation_category_color_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_annotation_category_color_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_annotation_category_color_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "yellow";
+        1 => "orange";
+        2 => "red";
+        3 => "pink";
+        4 => "violet";
+        5 => "blue";
+        6 => "teal";
+        7 => "green";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -14959,8 +3631,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_annotation_measurement_node_side_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_annotation_measurement_node_side_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_annotation_measurement_node_side_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "top";
+        1 => "bottom";
+        2 => "left";
+        3 => "right";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -15051,20 +3731,54 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_editor_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_editor_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_editor_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "design";
+        1 => "whiteboard";
+        2 => "slides";
+        3 => "dev_handoff";
+        4 => "sites";
+        5 => "cooper";
+        6 => "illustration";
+        7 => "figmake";
+        8 => "figspec";
+    ]
 }
 
-fn decode_sparse_mask_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_mask_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_mask_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "alpha";
+        1 => "outline";
+        2 => "luminance";
+    ]
 }
 
-fn decode_sparse_module_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_module_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_module_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "single_node";
+        2 => "multi_node";
+    ]
 }
 
-fn decode_sparse_section_status_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_section_status_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_section_status_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "build";
+        2 => "completed";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -15113,8 +3827,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_buzz_approval_node_status_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_buzz_approval_node_status_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_buzz_approval_node_status_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "in_review";
+        2 => "approved";
+        3 => "changes_requested";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -15147,8 +3869,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_variable_timing_display_unit_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_variable_timing_display_unit_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_variable_timing_display_unit_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "milliseconds";
+        1 => "seconds";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -15752,8 +4480,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_git_repo_ref_provider_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_git_repo_ref_provider_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_git_repo_ref_provider_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "ugit";
+        1 => "github";
+        2 => "other";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -15919,20 +4654,46 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_cookie_banner_component_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cookie_banner_component_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cookie_banner_component_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "banner";
+        1 => "modal";
+    ]
 }
 
-fn decode_sparse_trigger_component_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_trigger_component_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_trigger_component_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "banner";
+        1 => "tag";
+    ]
 }
 
-fn decode_sparse_cookie_x_alignment_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cookie_x_alignment_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cookie_x_alignment_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "left";
+        1 => "center";
+        2 => "right";
+    ]
 }
 
-fn decode_sparse_cookie_y_alignment_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cookie_y_alignment_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cookie_y_alignment_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "top";
+        1 => "center";
+        2 => "bottom";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -15967,8 +4728,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_responsive_scaling_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_responsive_scaling_mode_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_responsive_scaling_mode_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "reflow";
+        1 => "scale";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -15999,8 +4766,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_cms_filter_criteria_match_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cms_filter_criteria_match_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cms_filter_criteria_match_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "match_all";
+        1 => "match_any";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16017,8 +4790,13 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_cms_selector_filter_operator_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cms_selector_filter_operator_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cms_selector_filter_operator_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "equals";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16034,8 +4812,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_cms_field_order_by_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cms_field_order_by_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cms_field_order_by_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "ascending";
+        1 => "descending";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16063,8 +4847,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_cms_consumption_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cms_consumption_field_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cms_consumption_field_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "missing";
+        1 => "text_data";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16092,8 +4882,21 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_cms_rich_text_style_class_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cms_rich_text_style_class_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cms_rich_text_style_class_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "heading1";
+        1 => "heading2";
+        2 => "heading3";
+        3 => "heading4";
+        4 => "heading5";
+        5 => "heading6";
+        6 => "paragraph";
+        7 => "link";
+        8 => "blockquote";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16211,12 +5014,25 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_managed_string_content_schema_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_managed_string_content_schema_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_managed_string_content_schema_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "v0";
+    ]
 }
 
-fn decode_sparse_managed_string_node_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_managed_string_node_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_managed_string_node_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "text";
+        1 => "concatenate";
+        2 => "plural";
+        3 => "placeholder";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16259,8 +5075,18 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_managed_string_plural_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_managed_string_plural_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_managed_string_plural_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "zero";
+        1 => "one";
+        2 => "two";
+        3 => "few";
+        4 => "many";
+        5 => "other";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16289,8 +5115,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_managed_string_format_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_managed_string_format_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_managed_string_format_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "text";
+        1 => "date";
+        2 => "time";
+        3 => "number";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16336,12 +5170,34 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_media_action_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_media_action_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_media_action_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "play";
+        1 => "pause";
+        2 => "toggle_play_pause";
+        3 => "mute";
+        4 => "unmute";
+        5 => "toggle_mute_unmute";
+        6 => "skip_forward";
+        7 => "skip_backward";
+        8 => "skip_to";
+        9 => "set_playback_rate";
+    ]
 }
 
-fn decode_sparse_animation_timeline_action_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_animation_timeline_action_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_animation_timeline_action_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "play";
+        1 => "pause";
+        2 => "toggle_play_pause";
+        3 => "set_playhead";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16425,8 +5281,78 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_variable_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_variable_field_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_variable_field_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "missing";
+        1 => "corner_radius";
+        2 => "paragraph_spacing";
+        3 => "paragraph_indent";
+        4 => "stroke_weight";
+        5 => "stack_spacing";
+        6 => "stack_padding_left";
+        7 => "stack_padding_top";
+        8 => "stack_padding_right";
+        9 => "stack_padding_bottom";
+        10 => "visible";
+        11 => "text_data";
+        12 => "width";
+        13 => "height";
+        14 => "rectangle_top_left_corner_radius";
+        15 => "rectangle_top_right_corner_radius";
+        16 => "rectangle_bottom_left_corner_radius";
+        17 => "rectangle_bottom_right_corner_radius";
+        18 => "border_top_weight";
+        19 => "border_bottom_weight";
+        20 => "border_left_weight";
+        21 => "border_right_weight";
+        22 => "variant_properties";
+        23 => "stack_counter_spacing";
+        24 => "min_width";
+        25 => "max_width";
+        26 => "min_height";
+        27 => "max_height";
+        28 => "font_family";
+        29 => "font_style";
+        30 => "font_variations";
+        31 => "opacity";
+        32 => "font_size";
+        34 => "letter_spacing";
+        36 => "line_height";
+        37 => "overridden_symbol_id";
+        38 => "hyperlink";
+        39 => "cms_serialized_rich_text_data";
+        40 => "slot_content_id";
+        41 => "grid_row_gap";
+        42 => "grid_column_gap";
+        43 => "x_position";
+        44 => "y_position";
+        45 => "rotation";
+        46 => "motion_translation_x";
+        47 => "motion_translation_y";
+        48 => "motion_rotation";
+        49 => "motion_scale_x";
+        50 => "motion_scale_y";
+        51 => "motion_shear";
+        52 => "scroll_offset_x";
+        53 => "scroll_offset_y";
+        54 => "path_trim_start";
+        55 => "path_trim_end";
+        56 => "dissolve_progress";
+        57 => "easing_data";
+        58 => "media_current_time";
+        59 => "transform_3_d_perspective";
+        60 => "transform_3_d_translation_z";
+        61 => "transform_3_d_rotation_x";
+        62 => "transform_3_d_rotation_y";
+        63 => "transform_3_d_rotation_z";
+        64 => "polygon_count";
+        65 => "arc_data_starting_angle";
+        66 => "arc_data_ending_angle";
+        67 => "arc_data_inner_radius";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16633,8 +5559,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_grid_track_sizing_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_grid_track_sizing_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_grid_track_sizing_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "flex";
+        1 => "fixed";
+        2 => "hug";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16687,8 +5620,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_agenda_item_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_agenda_item_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_agenda_item_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "node";
+        1 => "block";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16770,8 +5709,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_diagram_layout_rule_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_diagram_layout_rule_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_diagram_layout_rule_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "tree";
+    ]
 }
 
 kiwi_sparse_struct_decoder! {
@@ -16786,8 +5731,14 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-fn decode_sparse_diagram_layout_paused_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_diagram_layout_paused_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_diagram_layout_paused_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "no";
+        1 => "yes";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16806,8 +5757,17 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_component_prop_node_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_component_prop_node_field_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_component_prop_node_field_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "visible";
+        1 => "text_data";
+        2 => "overridden_symbol_id";
+        3 => "inherit_fill_style_id";
+        4 => "slot_content_id";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -16963,8 +5923,29 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_component_prop_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_component_prop_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_component_prop_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "bool";
+        1 => "text";
+        2 => "color";
+        3 => "instance_swap";
+        4 => "variant";
+        5 => "number";
+        6 => "image";
+        7 => "slot";
+        8 => "easing";
+        9 => "color_array";
+        10 => "vector";
+        11 => "line";
+        12 => "circle";
+        13 => "rotation_3_d";
+        14 => "circle_point";
+        15 => "gradient";
+        16 => "color_point";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17004,8 +5985,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_parameter_config_control_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_parameter_config_control_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_parameter_config_control_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "default";
+        1 => "slider";
+        2 => "input";
+        3 => "select";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17037,8 +6026,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_point_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_point_mode_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_point_mode_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "canvas_and_ui";
+        1 => "canvas";
+        2 => "ui";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17299,16 +6295,38 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_instance_swap_preferred_value_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_instance_swap_preferred_value_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_instance_swap_preferred_value_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "component";
+        1 => "state_group";
+    ]
 }
 
-fn decode_sparse_widget_event_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_widget_event_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_widget_event_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "mouse_down";
+        1 => "click";
+        2 => "text_edit_end";
+        3 => "attached_stickables_changed";
+        4 => "stuck_status_changed";
+    ]
 }
 
-fn decode_sparse_widget_input_behavior_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_widget_input_behavior_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_widget_input_behavior_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "wrap";
+        1 => "truncate";
+        2 => "multiline";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17327,8 +6345,19 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_widget_property_menu_item_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_widget_property_menu_item_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_widget_property_menu_item_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "action";
+        1 => "separator";
+        2 => "color";
+        3 => "dropdown";
+        4 => "color_selector";
+        5 => "toggle";
+        6 => "link";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17344,8 +6373,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_widget_input_text_node_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_widget_input_text_node_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_widget_input_text_node_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "widget_controlled";
+        1 => "rich_text";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17368,20 +6403,82 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_code_block_language_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_code_block_language_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_code_block_language_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "typescript";
+        1 => "cpp";
+        2 => "ruby";
+        3 => "css";
+        4 => "javascript";
+        5 => "html";
+        6 => "json";
+        7 => "graphql";
+        8 => "python";
+        9 => "go";
+        10 => "sql";
+        11 => "swift";
+        12 => "kotlin";
+        13 => "rust";
+        14 => "bash";
+        15 => "plaintext";
+        16 => "markdown";
+    ]
 }
 
-fn decode_sparse_code_block_theme_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_code_block_theme_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_code_block_theme_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "figjam_dark";
+        1 => "dracula";
+        2 => "duotone_sea";
+        3 => "duotone_space";
+        4 => "duotone_earth";
+        5 => "duotone_forest";
+        6 => "duotone_light";
+    ]
 }
 
-fn decode_sparse_spec_block_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_spec_block_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_spec_block_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "default";
+        1 => "paragraph";
+        2 => "heading_1";
+        3 => "heading_2";
+        4 => "heading_3";
+        5 => "heading_4";
+        6 => "heading_5";
+        7 => "heading_6";
+        8 => "code_block";
+        9 => "block_quote";
+        10 => "horizontal_rule";
+        11 => "ordered_list_item";
+        12 => "unordered_list_item";
+        13 => "document";
+        14 => "table";
+        15 => "table_row";
+        16 => "table_cell";
+        17 => "todo_list_item_unchecked";
+        18 => "todo_list_item_checked";
+        19 => "image";
+        20 => "embed";
+    ]
 }
 
-fn decode_sparse_internal_enum_for_test_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_internal_enum_for_test_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_internal_enum_for_test_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        1 => "old";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17409,8 +6506,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_backfill_error_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_backfill_error_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_backfill_error_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "transient_retrying";
+        2 => "permanently_failed";
+        3 => "paste_failed";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17455,8 +6560,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_bullet_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_bullet_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_bullet_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "ordered";
+        1 => "unordered";
+        2 => "indent";
+        3 => "no_list";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17492,20 +6605,48 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_line_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_line_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_line_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "plain";
+        1 => "ordered_list";
+        2 => "unordered_list";
+        3 => "blockquote";
+        4 => "header";
+    ]
 }
 
-fn decode_sparse_source_directionality_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_source_directionality_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_source_directionality_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "auto";
+        1 => "ltr";
+        2 => "rtl";
+    ]
 }
 
-fn decode_sparse_directionality_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_directionality_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_directionality_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "ltr";
+        1 => "rtl";
+    ]
 }
 
-fn decode_sparse_directionality_intent_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_directionality_intent_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_directionality_intent_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "implicit";
+        1 => "explicit";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17621,12 +6762,28 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_animation_phase_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_animation_phase_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_animation_phase_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "in";
+        1 => "out";
+    ]
 }
 
-fn decode_sparse_animation_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_animation_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_animation_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "fade";
+        2 => "slide_from_left";
+        3 => "slide_from_right";
+        4 => "slide_from_top";
+        5 => "slide_from_bottom";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17656,8 +6813,17 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_trigger_device_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_trigger_device_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_trigger_device_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "keyboard";
+        1 => "unknown_controller";
+        2 => "xbox_one";
+        3 => "ps4";
+        4 => "switch_pro";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17702,8 +6868,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_mention_source_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_mention_source_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_mention_source_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "default";
+        1 => "copy_duplicate";
+        2 => "silent_insert";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -17939,8 +7112,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_transition_direction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_transition_direction_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_transition_direction_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "forward";
+        1 => "reverse";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18009,8 +7188,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_playback_change_phase_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_playback_change_phase_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_playback_change_phase_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "initiated";
+        1 => "aborted";
+        2 => "committed";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18125,16 +7311,39 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_heartbeat_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_heartbeat_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_heartbeat_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "foreground";
+        1 => "background";
+    ]
 }
 
-fn decode_sparse_sites_view_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_sites_view_state_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_sites_view_state_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "file";
+        1 => "code";
+        2 => "dakota";
+        3 => "settings";
+        4 => "insert";
+        5 => "variables";
+    ]
 }
 
-fn decode_sparse_design_full_page_view_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_design_full_page_view_state_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_design_full_page_view_state_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "design_system";
+        2 => "variables";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18263,12 +7472,25 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_scene_graph_query_behavior_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_scene_graph_query_behavior_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_scene_graph_query_behavior_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "default";
+        1 => "containing_page";
+        2 => "plugin";
+    ]
 }
 
-fn decode_sparse_scene_graph_query_mode_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_scene_graph_query_mode_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_scene_graph_query_mode_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "add";
+        1 => "set";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18388,8 +7610,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_paste_asset_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_paste_asset_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_paste_asset_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "unknown";
+        1 => "variable";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18475,8 +7703,14 @@ kiwi_sparse_struct_decoder! {
     ]
 }
 
-fn decode_sparse_rich_media_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_rich_media_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_rich_media_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "animated_image";
+        1 => "video";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18492,12 +7726,76 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_variable_data_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_variable_data_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_variable_data_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "boolean";
+        1 => "float";
+        2 => "string";
+        3 => "alias";
+        4 => "color";
+        5 => "expression";
+        6 => "map";
+        7 => "symbol_id";
+        8 => "font_style";
+        9 => "text_data";
+        10 => "invalid";
+        11 => "node_field_alias";
+        12 => "cms_alias";
+        13 => "prop_ref";
+        14 => "image";
+        15 => "managed_string_alias";
+        16 => "link";
+        17 => "js_runtime_alias";
+        18 => "slot_content_id";
+        19 => "date";
+        20 => "keyframe_track_id";
+        21 => "keyframe_track_parameter_data";
+        22 => "easing";
+        23 => "timing";
+        24 => "vector";
+        25 => "color_array";
+        26 => "line";
+        27 => "circle";
+        28 => "rotation_3_d";
+        29 => "circle_point";
+        30 => "gradient";
+        31 => "color_point";
+    ]
 }
 
-fn decode_sparse_variable_resolved_data_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_variable_resolved_data_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_variable_resolved_data_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "boolean";
+        1 => "float";
+        2 => "string";
+        4 => "color";
+        5 => "map";
+        6 => "symbol_id";
+        7 => "font_style";
+        8 => "text_data";
+        9 => "image";
+        10 => "link";
+        11 => "js_runtime_alias";
+        12 => "slot_content_id";
+        13 => "keyframe_track_id";
+        14 => "keyframe_track_parameter_data";
+        15 => "easing";
+        16 => "timing";
+        17 => "vector";
+        18 => "color_array";
+        19 => "line";
+        20 => "circle";
+        21 => "rotation_3_d";
+        22 => "circle_point";
+        23 => "gradient";
+        24 => "color_point";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18540,8 +7838,32 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_expression_function_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_expression_function_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_expression_function_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "addition";
+        1 => "subtraction";
+        2 => "resolve_variant";
+        3 => "multiply";
+        4 => "divide";
+        5 => "equals";
+        6 => "not_equal";
+        7 => "less_than";
+        8 => "less_than_or_equal";
+        9 => "greater_than";
+        10 => "greater_than_or_equal";
+        11 => "and";
+        12 => "or";
+        13 => "not";
+        14 => "stringify";
+        15 => "ternary";
+        16 => "var_mode_lookup";
+        17 => "negate";
+        18 => "is_truthy";
+        19 => "keyframe";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18668,8 +7990,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_node_field_alias_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_node_field_alias_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_node_field_alias_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "missing";
+        1 => "component_prop_assignments";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18884,8 +8212,35 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_variable_scope_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_variable_scope_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_variable_scope_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "all_scopes";
+        1 => "text_content";
+        2 => "corner_radius";
+        3 => "width_height";
+        4 => "gap";
+        5 => "all_fills";
+        6 => "frame_fill";
+        7 => "shape_fill";
+        8 => "text_fill";
+        9 => "stroke";
+        10 => "stroke_float";
+        11 => "effect_float";
+        12 => "effect_color";
+        13 => "opacity";
+        14 => "font_style";
+        15 => "font_family";
+        16 => "font_size";
+        17 => "line_height";
+        18 => "letter_spacing";
+        19 => "paragraph_spacing";
+        20 => "paragraph_indent";
+        21 => "font_variations";
+        22 => "transform";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18903,8 +8258,17 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_keyframe_value_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_keyframe_value_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_keyframe_value_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "float";
+        1 => "invalid";
+        2 => "color";
+        3 => "text_data";
+        4 => "vector";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -18920,8 +8284,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_keyframe_track_parameter_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_keyframe_track_parameter_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_keyframe_track_parameter_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "invalid";
+        1 => "manual";
+        2 => "animation_preset";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19166,12 +8537,30 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_transition_override_prop_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_transition_override_prop_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_transition_override_prop_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "all";
+        1 => "opacity";
+        2 => "translation";
+        3 => "rotation";
+        4 => "scale";
+    ]
 }
 
-fn decode_sparse_transition_override_binding_top_level_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_transition_override_binding_top_level_field_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_transition_override_binding_top_level_field_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "missing";
+        1 => "parameter_consumption_map";
+        2 => "effect_data";
+        3 => "fill_paint_data";
+        4 => "stroke_paint_data";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19189,8 +8578,34 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_keyframe_binding_effect_parametrized_field_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_keyframe_binding_effect_parametrized_field_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "missing";
+        1 => "offset_x";
+        2 => "offset_y";
+        3 => "radius";
+        4 => "spread";
+        5 => "color";
+        6 => "refraction_radius";
+        7 => "specular_angle";
+        8 => "specular_intensity";
+        9 => "chromatic_aberration";
+        10 => "splay";
+        11 => "refraction_intensity";
+        12 => "start_radius";
+        13 => "start_offset_x";
+        14 => "start_offset_y";
+        15 => "end_offset_x";
+        16 => "end_offset_y";
+        17 => "noise_size_x";
+        18 => "noise_size_y";
+        19 => "density";
+        20 => "effect_opacity";
+        21 => "secondary_color";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19235,8 +8650,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_code_syntax_platform_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_code_syntax_platform_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_code_syntax_platform_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "web";
+        1 => "android";
+        2 => "i_os";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19251,12 +8673,193 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_html_tag_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_html_tag_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_html_tag_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "auto";
+        1 => "article";
+        2 => "section";
+        3 => "nav";
+        4 => "aside";
+        5 => "h1";
+        6 => "h2";
+        7 => "h3";
+        8 => "h4";
+        9 => "h5";
+        10 => "h6";
+        11 => "hgroup";
+        12 => "header";
+        13 => "footer";
+        14 => "address";
+        15 => "p";
+        16 => "hr";
+        17 => "pre";
+        18 => "blockquote";
+        19 => "ol";
+        20 => "ul";
+        21 => "menu";
+        22 => "li";
+        23 => "dl";
+        24 => "dt";
+        25 => "dd";
+        26 => "figure";
+        27 => "figcaption";
+        28 => "main";
+        29 => "div";
+        30 => "a";
+        31 => "em";
+        32 => "strong";
+        33 => "small";
+        34 => "s";
+        35 => "cite";
+        36 => "q";
+        37 => "dfn";
+        38 => "abbr";
+        39 => "ruby";
+        40 => "rt";
+        41 => "rp";
+        42 => "data";
+        43 => "time";
+        44 => "code";
+        45 => "var";
+        46 => "samp";
+        47 => "kbd";
+        48 => "sub";
+        49 => "sup";
+        50 => "i";
+        51 => "b";
+        52 => "u";
+        53 => "mark";
+        54 => "bdi";
+        55 => "bdo";
+        56 => "span";
+        57 => "br";
+        58 => "wbr";
+        59 => "picture";
+        60 => "source";
+        61 => "img";
+        62 => "form";
+        63 => "label";
+        64 => "input";
+        65 => "button";
+        66 => "select";
+        67 => "datalist";
+        68 => "optgroup";
+        69 => "option";
+        70 => "textarea";
+        71 => "output";
+        72 => "progress";
+        73 => "meter";
+        74 => "fieldset";
+        75 => "legend";
+        76 => "video";
+    ]
 }
 
-fn decode_sparse_aria_role_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_aria_role_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_aria_role_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "auto";
+        52 => "none";
+        30 => "application";
+        67 => "banner";
+        68 => "complementary";
+        69 => "contentinfo";
+        70 => "form";
+        71 => "main";
+        72 => "navigation";
+        73 => "region";
+        74 => "search";
+        13 => "separator";
+        31 => "article";
+        35 => "columnheader";
+        36 => "definition";
+        38 => "directory";
+        39 => "document";
+        44 => "group";
+        45 => "heading";
+        46 => "img";
+        48 => "list";
+        49 => "listitem";
+        50 => "math";
+        53 => "note";
+        55 => "presentation";
+        56 => "row";
+        57 => "rowgroup";
+        58 => "rowheader";
+        62 => "table";
+        65 => "toolbar";
+        1 => "button";
+        2 => "checkbox";
+        3 => "gridcell";
+        4 => "link";
+        5 => "menuitem";
+        6 => "menuitemcheckbox";
+        7 => "menuitemradio";
+        8 => "option";
+        9 => "progressbar";
+        10 => "radio";
+        11 => "scrollbar";
+        14 => "slider";
+        15 => "spinbutton";
+        17 => "tab";
+        18 => "tabpanel";
+        19 => "textbox";
+        20 => "treeitem";
+        21 => "combobox";
+        22 => "grid";
+        23 => "listbox";
+        24 => "menu";
+        25 => "menubar";
+        26 => "radiogroup";
+        27 => "tablist";
+        28 => "tree";
+        29 => "treegrid";
+        66 => "tooltip";
+        75 => "alert";
+        76 => "log";
+        77 => "marquee";
+        78 => "status";
+        79 => "timer";
+        80 => "alertdialog";
+        81 => "dialog";
+        12 => "searchbox";
+        16 => "switch";
+        32 => "blockquote";
+        33 => "caption";
+        34 => "cell";
+        37 => "deletion";
+        40 => "emphasis";
+        41 => "feed";
+        42 => "figure";
+        43 => "generic";
+        47 => "insertion";
+        51 => "meter";
+        54 => "paragraph";
+        59 => "strong";
+        60 => "subscript";
+        61 => "superscript";
+        63 => "term";
+        64 => "time";
+        82 => "image";
+        83 => "heading_1";
+        84 => "heading_2";
+        85 => "heading_3";
+        86 => "heading_4";
+        87 => "heading_5";
+        88 => "heading_6";
+        89 => "header";
+        90 => "footer";
+        91 => "sidebar";
+        92 => "section";
+        93 => "maincontent";
+        94 => "table_cell";
+        95 => "widget";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19271,16 +8874,36 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_color_profile_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_color_profile_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_color_profile_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "srgb";
+        1 => "display_p3";
+    ]
 }
 
-fn decode_sparse_document_color_profile_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_document_color_profile_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_document_color_profile_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "legacy";
+        1 => "srgb";
+        2 => "display_p3";
+    ]
 }
 
-fn decode_sparse_child_reading_direction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_child_reading_direction_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_child_reading_direction_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "left_to_right";
+        2 => "right_to_left";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19299,8 +8922,17 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_aria_attribute_data_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_aria_attribute_data_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_aria_attribute_data_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "boolean";
+        1 => "string";
+        2 => "float";
+        3 => "int";
+        4 => "string_list";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19418,20 +9050,52 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_edit_scope_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_edit_scope_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_edit_scope_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "invalid";
+        1 => "test_setup";
+        2 => "user";
+        3 => "plugin";
+        4 => "system";
+        5 => "rest_api";
+        6 => "onboarding";
+        7 => "autosave";
+        8 => "ai";
+    ]
 }
 
-fn decode_sparse_section_preset_state_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_section_preset_state_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_section_preset_state_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "inserted";
+        1 => "user_edited";
+    ]
 }
 
-fn decode_sparse_emoji_image_set_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_emoji_image_set_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_emoji_image_set_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "apple";
+        1 => "noto";
+    ]
 }
 
-fn decode_sparse_selection_region_focus_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_selection_region_focus_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_selection_region_focus_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "primary";
+        2 => "secondary";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19465,8 +9129,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_first_draft_kit_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_first_draft_kit_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_first_draft_kit_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "local";
+        1 => "library";
+        2 => "none";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19495,8 +9166,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_first_draft_kit_element_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_first_draft_kit_element_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_first_draft_kit_element_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "building_block";
+        2 => "grouped_component";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19511,12 +9189,27 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_platform_shape_property_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_platform_shape_property_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_platform_shape_property_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "fill";
+        1 => "stroke";
+        2 => "text";
+        3 => "stroke_color";
+    ]
 }
 
-fn decode_sparse_platform_shape_behavior_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_platform_shape_behavior_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_platform_shape_behavior_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "shape";
+        1 => "container";
+        2 => "advanced_container";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19584,12 +9277,28 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_appear_behavior_trigger_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_appear_behavior_trigger_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_appear_behavior_trigger_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        1 => "page_load";
+        2 => "this_layer_in_view";
+        3 => "other_layer_in_view";
+        4 => "scroll_direction";
+    ]
 }
 
-fn decode_sparse_relative_direction_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_relative_direction_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_relative_direction_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        1 => "up";
+        2 => "down";
+        3 => "left";
+        4 => "right";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19671,8 +9380,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_scroll_transform_behavior_trigger_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_scroll_transform_behavior_trigger_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_scroll_transform_behavior_trigger_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        1 => "page_height";
+        2 => "this_layer_in_view";
+        3 => "other_layer_in_view";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19757,8 +9473,14 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_link_behavior_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_link_behavior_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_link_behavior_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        1 => "url";
+        2 => "page";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19802,12 +9524,30 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_slide_number_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_slide_number_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_slide_number_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "none";
+        1 => "slide";
+        2 => "section";
+        3 => "subsection";
+        4 => "total_within_deck";
+        5 => "total_within_section";
+    ]
 }
 
-fn decode_sparse_node_chat_message_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_node_chat_message_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_node_chat_message_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "user_message";
+        1 => "assistant_message";
+        2 => "tool_message";
+        3 => "system_message";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19912,8 +9652,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_ai_chat_content_part_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_ai_chat_content_part_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_ai_chat_content_part_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "invalid";
+        1 => "text";
+        2 => "selected_node_ids";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19929,8 +9676,16 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_ai_chat_message_role_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_ai_chat_message_role_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_ai_chat_message_role_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "user";
+        1 => "assistant";
+        2 => "tool";
+        3 => "system";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -19961,8 +9716,77 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_cooper_template_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_cooper_template_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_cooper_template_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "custom";
+        1 => "twitter_post";
+        2 => "linkedin_post";
+        3 => "insta_post_square";
+        4 => "insta_post_portrait";
+        5 => "insta_story";
+        6 => "insta_ad";
+        7 => "facebook_post";
+        8 => "facebook_cover_photo";
+        9 => "facebook_event_cover";
+        10 => "facebook_ad_portrait";
+        11 => "facebook_ad_square";
+        12 => "pinterest_ad_pin";
+        13 => "twitter_banner";
+        15 => "linkedin_post_square";
+        16 => "linkedin_post_portrait";
+        17 => "linkedin_post_landscape";
+        18 => "linkedin_profile_banner";
+        19 => "linkedin_article_banner";
+        20 => "linkedin_ad_landscape";
+        21 => "linkedin_ad_square";
+        22 => "linkedin_ad_vertical";
+        23 => "youtube_thumbnail";
+        24 => "youtube_banner";
+        25 => "youtube_ad";
+        26 => "twitch_banner";
+        27 => "google_leaderboard_ad";
+        28 => "google_large_ad";
+        29 => "google_med_ad";
+        30 => "google_mobile_banner_ad";
+        31 => "google_skyscraper_ad";
+        32 => "card_horizontal";
+        33 => "card_vertical";
+        34 => "print_us_letter";
+        35 => "poster";
+        36 => "banner_standard";
+        37 => "banner_wide";
+        38 => "banner_ultrawide";
+        39 => "name_tag_portrait";
+        40 => "name_tag_landscape";
+        41 => "insta_reel_cover";
+        42 => "zoom_background";
+        43 => "tiktok_post";
+        44 => "insta_ad_portrait";
+        45 => "insta_post_tall_portrait";
+        46 => "twitter_post_square";
+        47 => "facebook_post_square";
+        48 => "facebook_post_portrait";
+        49 => "facebook_story";
+        50 => "google_square_ad";
+        51 => "google_small_square_ad";
+        52 => "google_narrow_skyscraper_ad";
+        53 => "google_half_page_ad";
+        54 => "google_large_leaderboard_ad";
+        55 => "google_billboard_ad";
+        56 => "google_banner_leaderboard_ad";
+        57 => "google_top_banner_ad";
+        58 => "google_mobile_leaderboard_banner_ad";
+        59 => "google_large_mobile_banner_ad";
+        60 => "google_mobile_interstitial_ad";
+        61 => "google_mobile_med_rectangle_ad";
+        62 => "pinterest_pin_standard";
+        63 => "pinterest_pin_square";
+        64 => "pinterest_ad_square";
+        65 => "print_a4";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -20002,8 +9826,15 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_interpolation_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_interpolation_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_interpolation_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "hold";
+        1 => "bezier";
+        2 => "spring";
+    ]
 }
 
 kiwi_sparse_message_decoder! {
@@ -20021,16 +9852,36 @@ kiwi_sparse_message_decoder! {
     ]
 }
 
-fn decode_sparse_keyframe_operation_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_keyframe_operation_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_keyframe_operation_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "set";
+        1 => "scale";
+        2 => "offset";
+    ]
 }
 
-fn decode_sparse_timeline_position_type_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_timeline_position_type_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_timeline_position_type_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "absolute";
+        1 => "relative";
+    ]
 }
 
-fn decode_sparse_playback_style_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-    decode_playback_style_from_decoder(env, decoder)
+kiwi_sparse_enum_decoder! {
+    fn decode_sparse_playback_style_from_decoder;
+    env env;
+    decoder decoder;
+    variants [
+        0 => "once";
+        1 => "loop";
+        2 => "boomerang";
+    ]
 }
 
 kiwi_skip_enum_decoder! {
@@ -26264,111 +16115,6 @@ kiwi_skip_enum_decoder! {
     fn skip_playback_style_from_decoder;
     decoder decoder;
 }
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn decode_guid<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    match decode_guid_from_decoder(env, &mut decoder) {
-        Ok(term) => {
-            match decoder.finish() {
-                Ok(_done) => Ok(term),
-                Err(reason) => Err(reason),
-            }
-        }
-        Err(reason) => Err(reason),
-    }
-}
-
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn decode_image<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    match decode_image_from_decoder(env, &mut decoder) {
-        Ok(term) => {
-            match decoder.finish() {
-                Ok(_done) => Ok(term),
-                Err(reason) => Err(reason),
-            }
-        }
-        Err(reason) => Err(reason),
-    }
-}
-
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn decode_matrix<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    match decode_matrix_from_decoder(env, &mut decoder) {
-        Ok(term) => {
-            match decoder.finish() {
-                Ok(_done) => Ok(term),
-                Err(reason) => Err(reason),
-            }
-        }
-        Err(reason) => Err(reason),
-    }
-}
-
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn decode_message<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    match decode_message_from_decoder(env, &mut decoder) {
-        Ok(term) => {
-            match decoder.finish() {
-                Ok(_done) => Ok(term),
-                Err(reason) => Err(reason),
-            }
-        }
-        Err(reason) => Err(reason),
-    }
-}
-
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn decode_node_change<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    match decode_node_change_from_decoder(env, &mut decoder) {
-        Ok(term) => {
-            match decoder.finish() {
-                Ok(_done) => Ok(term),
-                Err(reason) => Err(reason),
-            }
-        }
-        Err(reason) => Err(reason),
-    }
-}
-
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn decode_parent_index<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    match decode_parent_index_from_decoder(env, &mut decoder) {
-        Ok(term) => {
-            match decoder.finish() {
-                Ok(_done) => Ok(term),
-                Err(reason) => Err(reason),
-            }
-        }
-        Err(reason) => Err(reason),
-    }
-}
-
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn decode_vector<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
-    match decode_vector_from_decoder(env, &mut decoder) {
-        Ok(term) => {
-            match decoder.finish() {
-                Ok(_done) => Ok(term),
-                Err(reason) => Err(reason),
-            }
-        }
-        Err(reason) => Err(reason),
-    }
-}
-
 #[derive(rustler::NifMap)]
 pub struct SceneSummary {
     node_count: usize,
@@ -26556,15 +16302,9 @@ fn graph_focus_skip_symbol_data_field(
     field: u32,
 ) -> NifResult<()> {
     match field {
-        1 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        2 => {
-            kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?;
-        }
-        3 => {
-            kiwi_skip_float_value(decoder)?;
-        }
+        1 => skip_guid_from_decoder(decoder)?,
+        2 => kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?,
+        3 => kiwi_skip_float_value(decoder)?,
         field => {
             return Err(
                 Error::Term(
@@ -26582,18 +16322,10 @@ fn graph_focus_skip_component_prop_assignment_field(
     field: u32,
 ) -> NifResult<()> {
     match field {
-        1 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        2 => {
-            skip_component_prop_value_from_decoder(decoder)?;
-        }
-        3 => {
-            skip_variable_data_from_decoder(decoder)?;
-        }
-        4 => {
-            skip_derived_text_data_from_decoder(decoder)?;
-        }
+        1 => skip_guid_from_decoder(decoder)?,
+        2 => skip_component_prop_value_from_decoder(decoder)?,
+        3 => skip_variable_data_from_decoder(decoder)?,
+        4 => skip_derived_text_data_from_decoder(decoder)?,
         field => {
             return Err(
                 Error::Term(
@@ -26614,42 +16346,18 @@ fn graph_focus_skip_component_prop_value_field(
     field: u32,
 ) -> NifResult<()> {
     match field {
-        1 => {
-            kiwi_skip_bool_value(decoder)?;
-        }
-        2 => {
-            skip_text_data_from_decoder(decoder)?;
-        }
-        3 => {
-            skip_guid_from_decoder(decoder)?;
-        }
-        4 => {
-            kiwi_skip_float_value(decoder)?;
-        }
-        5 => {
-            skip_easing_data_from_decoder(decoder)?;
-        }
-        6 => {
-            skip_vector_from_decoder(decoder)?;
-        }
-        7 => {
-            skip_line_from_decoder(decoder)?;
-        }
-        8 => {
-            skip_circle_from_decoder(decoder)?;
-        }
-        9 => {
-            skip_rotation3_d_from_decoder(decoder)?;
-        }
-        10 => {
-            skip_circle_point_from_decoder(decoder)?;
-        }
-        11 => {
-            skip_gradient_from_decoder(decoder)?;
-        }
-        12 => {
-            skip_color_point_from_decoder(decoder)?;
-        }
+        1 => kiwi_skip_bool_value(decoder)?,
+        2 => skip_text_data_from_decoder(decoder)?,
+        3 => skip_guid_from_decoder(decoder)?,
+        4 => kiwi_skip_float_value(decoder)?,
+        5 => skip_easing_data_from_decoder(decoder)?,
+        6 => skip_vector_from_decoder(decoder)?,
+        7 => skip_line_from_decoder(decoder)?,
+        8 => skip_circle_from_decoder(decoder)?,
+        9 => skip_rotation3_d_from_decoder(decoder)?,
+        10 => skip_circle_point_from_decoder(decoder)?,
+        11 => skip_gradient_from_decoder(decoder)?,
+        12 => skip_color_point_from_decoder(decoder)?,
         field => {
             return Err(
                 Error::Term(
@@ -27808,62 +17516,28 @@ mod scene_xpath_runtime {
             match decoder.read_var_uint()? {
                 0 => break,
                 1 => text = Some(decoder.read_string_value()?),
-                2 => {
-                    kiwi_skip_repeated(decoder, kiwi_skip_uint_value)?;
-                }
-                3 => {
-                    kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?;
-                }
-                12 => {
-                    kiwi_skip_repeated(decoder, skip_text_line_data_from_decoder)?;
-                }
-                8 => {
-                    kiwi_skip_uint_value(decoder)?;
-                }
-                10 => {
-                    kiwi_skip_repeated(decoder, skip_font_name_from_decoder)?;
-                }
-                17 => {
-                    kiwi_skip_float_value(decoder)?;
-                }
-                4 => {
-                    skip_vector_from_decoder(decoder)?;
-                }
-                5 => {
-                    kiwi_skip_repeated(decoder, skip_baseline_from_decoder)?;
-                }
-                6 => {
-                    kiwi_skip_repeated(decoder, skip_glyph_from_decoder)?;
-                }
-                7 => {
-                    kiwi_skip_repeated(decoder, skip_decoration_from_decoder)?;
-                }
-                16 => {
-                    kiwi_skip_repeated(decoder, skip_blockquote_from_decoder)?;
-                }
-                9 => {
-                    kiwi_skip_repeated(decoder, skip_font_meta_data_from_decoder)?;
-                }
-                11 => {
-                    kiwi_skip_repeated(decoder, skip_hyperlink_box_from_decoder)?;
-                }
-                13 => {
-                    kiwi_skip_int_value(decoder)?;
-                }
-                14 => {
-                    kiwi_skip_float_value(decoder)?;
-                }
-                15 => {
-                    kiwi_skip_repeated(decoder, kiwi_skip_float_value)?;
-                }
-                18 => {
-                    kiwi_skip_repeated(decoder, skip_mention_box_from_decoder)?;
-                }
+                2 => kiwi_skip_repeated(decoder, kiwi_skip_uint_value)?,
+                3 => kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?,
+                12 => kiwi_skip_repeated(decoder, skip_text_line_data_from_decoder)?,
+                8 => kiwi_skip_uint_value(decoder)?,
+                10 => kiwi_skip_repeated(decoder, skip_font_name_from_decoder)?,
+                17 => kiwi_skip_float_value(decoder)?,
+                4 => skip_vector_from_decoder(decoder)?,
+                5 => kiwi_skip_repeated(decoder, skip_baseline_from_decoder)?,
+                6 => kiwi_skip_repeated(decoder, skip_glyph_from_decoder)?,
+                7 => kiwi_skip_repeated(decoder, skip_decoration_from_decoder)?,
+                16 => kiwi_skip_repeated(decoder, skip_blockquote_from_decoder)?,
+                9 => kiwi_skip_repeated(decoder, skip_font_meta_data_from_decoder)?,
+                11 => kiwi_skip_repeated(decoder, skip_hyperlink_box_from_decoder)?,
+                13 => kiwi_skip_int_value(decoder)?,
+                14 => kiwi_skip_float_value(decoder)?,
+                15 => kiwi_skip_repeated(decoder, kiwi_skip_float_value)?,
+                18 => kiwi_skip_repeated(decoder, skip_mention_box_from_decoder)?,
                 19 => {
                     kiwi_skip_repeated(
                         decoder,
                         skip_derived_text_line_data_from_decoder,
-                    )?;
+                    )?
                 }
                 field => {
                     return Err(
@@ -27888,9 +17562,7 @@ mod scene_xpath_runtime {
             match decoder.read_var_uint()? {
                 0 => break,
                 1 => guid = Some(read_guid_value(decoder)?.to_string()),
-                2 => {
-                    skip_asset_ref_from_decoder(decoder)?;
-                }
+                2 => skip_asset_ref_from_decoder(decoder)?,
                 field => {
                     return Err(
                         Error::Term(

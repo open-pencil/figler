@@ -10,13 +10,6 @@ defmodule Figler.Native do
   alias Figler.Native.{CodecNifs, SceneNifs}
 
   @codec_delegates [
-    {:decode_guid, [:binary], :decode_guid},
-    {:decode_vector, [:binary], :decode_vector},
-    {:decode_matrix, [:binary], :decode_matrix},
-    {:decode_parent_index, [:binary], :decode_parent_index},
-    {:decode_image, [:binary], :decode_image},
-    {:decode_node_change, [:binary], :decode_node_change},
-    {:decode_message, [:binary], :decode_message},
     {:decode_sparse_message, [:binary], :decode_sparse_message}
   ]
 

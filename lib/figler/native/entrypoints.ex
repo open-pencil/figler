@@ -8,13 +8,6 @@ defmodule Figler.Native.Entrypoints do
   """
 
   @stubs [
-    {:decode_guid, 1},
-    {:decode_vector, 1},
-    {:decode_matrix, 1},
-    {:decode_parent_index, 1},
-    {:decode_image, 1},
-    {:decode_node_change, 1},
-    {:decode_message, 1},
     {:decode_sparse_message, 1},
     {:decode_graph_focused_sparse_message, 2},
     {:decode_scene_summary, 1},
