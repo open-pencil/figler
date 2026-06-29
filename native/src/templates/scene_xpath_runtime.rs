@@ -542,15 +542,6 @@ mod scene_xpath_runtime {
         }
         Ok(guid)
     }
-    fn scene_query_node(index: &SceneIndex, node_index: usize) -> SceneQueryNode {
-        let node = &index.nodes[node_index];
-        SceneQueryNode {
-            guid: node.guid.to_string(),
-            node_type: node.node_type.to_string(),
-            __rq_scene_query_node_build_fields: (),
-        }
-    }
-
     fn wants_field(fields: &[String], field: &str) -> bool {
         fields.iter().any(|selected| selected == field)
     }

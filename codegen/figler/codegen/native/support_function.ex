@@ -77,6 +77,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
       :scene_node_record_base_attr_count,
       :scene_node_record_attr,
       :scene_node_record_attr_count,
+      :scene_query_node,
       :scene_query_node_term
     ])
   end
@@ -165,6 +166,16 @@ defmodule Figler.Codegen.Native.SupportFunction do
     {:__block__, [], Enum.map(fields, &push_optional_scene_query_field/1)}
   end
 
+  defmacro scene_query_node_struct_literal do
+    fields =
+      [
+        guid: quote(do: node.guid.to_string()),
+        node_type: quote(do: node.node_type.to_string())
+      ] ++ Enum.map(optional_field_names(), &scene_query_node_struct_field/1)
+
+    {:struct_literal, [], [{:__aliases__, [], [:SceneQueryNode]}, fields]}
+  end
+
   defmacro lookup_optional_scene_node_record_attrs do
     optional_xpath_attrs()
     |> Enum.map(&lookup_optional_scene_node_record_attr/1)
@@ -211,6 +222,12 @@ defmodule Figler.Codegen.Native.SupportFunction do
     count_optional_scene_node_record_attrs()
 
     count
+  end
+
+  @spec scene_query_node(R.ref(R.raw(:SceneIndex)), R.usize()) :: scene_query_node()
+  defrust scene_query_node(scene, node_index) do
+    node = ref(index(scene.nodes, node_index))
+    scene_query_node_struct_literal()
   end
 
   @spec scene_query_node_term(
@@ -484,6 +501,19 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   defp block(statements), do: {:__block__, [], statements}
+
+  defp scene_query_node_struct_field(:parent_guid) do
+    {:parent_guid, quote(do: node.parent_guid.map(fn guid -> guid.to_string() end))}
+  end
+
+  defp scene_query_node_struct_field(field) do
+    value =
+      if ProjectionNative.rust_copy?(field),
+        do: quote(do: node.unquote(field)),
+        else: quote(do: node.unquote(field).clone())
+
+    {field, value}
+  end
 
   defp push_optional_scene_query_field(:parent_guid) do
     quote do

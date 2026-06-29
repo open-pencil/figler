@@ -43,7 +43,6 @@ defmodule Figler.Codegen.Native.Scene do
         |> Enum.map(&Skip.message_arm(&1, definition_map)),
       scene_query_node_fields: Record.query_node_fields(),
       scene_record_fields: Record.record_fields(),
-      scene_query_node_build_fields: Record.query_node_build_fields(),
       scene_record_build_fields: Record.record_build_fields(),
       scene_decode_locals: scene_decode_locals(),
       scene_decode_arms: scene_decode_arms(definition_map),

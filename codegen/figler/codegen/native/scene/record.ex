@@ -23,18 +23,6 @@ defmodule Figler.Codegen.Native.Scene.Record do
     @type t :: %__MODULE__{name: atom(), rust_type: String.t(), copy?: boolean()}
   end
 
-  defmodule BuildValue do
-    @moduledoc """
-    Semantic description of a `SceneQueryNode` struct-literal field value.
-    """
-
-    @enforce_keys [:kind]
-    defstruct [:kind, :field]
-
-    @type kind :: :node_field | :cloned_node_field | :parent_guid_string
-    @type t :: %__MODULE__{kind: kind(), field: atom() | nil}
-  end
-
   @spec optional_fields() :: [Field.t()]
   def optional_fields do
     Projection.field_names()
@@ -55,13 +43,6 @@ defmodule Figler.Codegen.Native.Scene.Record do
     end)
   end
 
-  @spec query_node_build_fields([Field.t()]) :: [RustQ.Rust.Fragment.t()]
-  def query_node_build_fields(fields \\ optional_fields()) do
-    Enum.map(fields, fn %Field{} = field ->
-      field_entry(field.name, build_value_expr(query_node_build_value(field)))
-    end)
-  end
-
   @spec record_build_fields([Field.t()]) :: [RustQ.Rust.Fragment.t()]
   def record_build_fields(fields \\ optional_fields()) do
     Enum.map(fields, &field_shorthand(&1.name))
@@ -76,31 +57,5 @@ defmodule Figler.Codegen.Native.Scene.Record do
   end
 
   defp field_declaration(%Field{name: name}, rust_type), do: Rust.field(name, rust_type)
-
-  defp query_node_build_value(%Field{name: :parent_guid}) do
-    %BuildValue{kind: :parent_guid_string}
-  end
-
-  defp query_node_build_value(%Field{name: name, copy?: true}) do
-    %BuildValue{kind: :node_field, field: name}
-  end
-
-  defp query_node_build_value(%Field{name: name}) do
-    %BuildValue{kind: :cloned_node_field, field: name}
-  end
-
-  defp build_value_expr(%BuildValue{kind: :parent_guid_string}) do
-    "node.parent_guid.map(|guid| guid.to_string())"
-  end
-
-  defp build_value_expr(%BuildValue{kind: :node_field, field: field}) do
-    ["node.", Atom.to_string(field)]
-  end
-
-  defp build_value_expr(%BuildValue{kind: :cloned_node_field, field: field}) do
-    ["node.", Atom.to_string(field), ".clone()"]
-  end
-
-  defp field_entry(name, value), do: Rust.stmt([Atom.to_string(name), ": ", value, ","])
   defp field_shorthand(name), do: Rust.stmt([Atom.to_string(name), ","])
 end

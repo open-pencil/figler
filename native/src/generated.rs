@@ -27739,6 +27739,35 @@ mod scene_xpath_runtime {
         }
         count
     }
+    fn scene_query_node(scene: &SceneIndex, node_index: usize) -> SceneQueryNode {
+        let node = &scene.nodes[node_index];
+        SceneQueryNode {
+            guid: node.guid.to_string(),
+            node_type: node.node_type.to_string(),
+            name: node.name.clone(),
+            parent_guid: node.parent_guid.map(|guid| guid.to_string()),
+            position: node.position.clone(),
+            size: node.size.clone(),
+            transform: node.transform.clone(),
+            visible: node.visible,
+            locked: node.locked,
+            opacity: node.opacity,
+            text: node.text.clone(),
+            font_family: node.font_family.clone(),
+            font_style: node.font_style.clone(),
+            font_postscript: node.font_postscript.clone(),
+            font_size: node.font_size,
+            text_style_guid: node.text_style_guid.clone(),
+            component_key: node.component_key.clone(),
+            origin_component_key: node.origin_component_key.clone(),
+            fill_style_guid: node.fill_style_guid.clone(),
+            stroke_style_guid: node.stroke_style_guid.clone(),
+            effect_style_guid: node.effect_style_guid.clone(),
+            grid_style_guid: node.grid_style_guid.clone(),
+            fill_count: node.fill_count,
+            stroke_count: node.stroke_count,
+        }
+    }
     fn scene_query_node_term<'a>(
         env: Env<'a>,
         scene: &SceneIndex,
@@ -27976,35 +28005,6 @@ mod scene_xpath_runtime {
             }
         }
         Ok(guid)
-    }
-    fn scene_query_node(index: &SceneIndex, node_index: usize) -> SceneQueryNode {
-        let node = &index.nodes[node_index];
-        SceneQueryNode {
-            guid: node.guid.to_string(),
-            node_type: node.node_type.to_string(),
-            name: node.name.clone(),
-            parent_guid: node.parent_guid.map(|guid| guid.to_string()),
-            position: node.position.clone(),
-            size: node.size.clone(),
-            transform: node.transform.clone(),
-            visible: node.visible,
-            locked: node.locked,
-            opacity: node.opacity,
-            text: node.text.clone(),
-            font_family: node.font_family.clone(),
-            font_style: node.font_style.clone(),
-            font_postscript: node.font_postscript.clone(),
-            font_size: node.font_size,
-            text_style_guid: node.text_style_guid.clone(),
-            component_key: node.component_key.clone(),
-            origin_component_key: node.origin_component_key.clone(),
-            fill_style_guid: node.fill_style_guid.clone(),
-            stroke_style_guid: node.stroke_style_guid.clone(),
-            effect_style_guid: node.effect_style_guid.clone(),
-            grid_style_guid: node.grid_style_guid.clone(),
-            fill_count: node.fill_count,
-            stroke_count: node.stroke_count,
-        }
     }
     fn wants_field(fields: &[String], field: &str) -> bool {
         fields.iter().any(|selected| selected == field)
