@@ -26,6 +26,18 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
           }
   end
 
+  defmodule Field do
+    @moduledoc """
+    One schema field skip operation rendered as a macro arm.
+    """
+
+    @enforce_keys [:id, :mode, :function]
+    defstruct [:id, :mode, :function]
+
+    @type mode :: :one | :repeated | :bytes
+    @type t :: %__MODULE__{id: non_neg_integer(), mode: mode(), function: String.t()}
+  end
+
   @spec decoder(map(), Decoder.t()) :: RustQ.Rust.Fragment.t()
   def decoder(definition_map, %Decoder{
         definition: definition,
@@ -36,7 +48,8 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
       definition_map
       |> Map.fetch!(definition)
       |> then(& &1.fields)
-      |> Enum.map(&field_entry(&1, definition_map))
+      |> Enum.map(&field(&1, definition_map))
+      |> Enum.map(&field_entry/1)
       |> Enum.intersperse("\n")
 
     Rust.item([
@@ -55,18 +68,28 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
     ])
   end
 
-  defp field_entry(field, definition_map) do
-    [Integer.to_string(field.id), " => ", field_kind(field, definition_map), ";"]
+  defp field(%{id: id, array?: true, type: "byte"}, _definition_map) do
+    %Field{id: id, mode: :bytes, function: "kiwi_skip_bytes_value"}
   end
 
-  defp field_kind(%{array?: true, type: "byte"}, _definition_map),
-    do: "bytes kiwi_skip_bytes_value"
+  defp field(%{id: id, array?: true, type: type}, definition_map) do
+    %Field{id: id, mode: :repeated, function: skip_function(type, definition_map)}
+  end
 
-  defp field_kind(%{array?: true, type: type}, definition_map),
-    do: ["repeated ", skip_function(type, definition_map)]
+  defp field(%{id: id, type: type}, definition_map) do
+    %Field{id: id, mode: :one, function: skip_function(type, definition_map)}
+  end
 
-  defp field_kind(%{type: type}, definition_map),
-    do: ["one ", skip_function(type, definition_map)]
+  defp field_entry(%Field{} = field) do
+    [
+      Integer.to_string(field.id),
+      " => ",
+      Atom.to_string(field.mode),
+      " ",
+      field.function,
+      ";"
+    ]
+  end
 
   defp skip_function(type, definition_map) do
     cond do
