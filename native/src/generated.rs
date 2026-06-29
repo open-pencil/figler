@@ -198,13 +198,20 @@ macro_rules! kiwi_sparse_struct_decoder {
     };
 }
 
-type KiwiSparseDecodeFn = for<'a> fn(Env<'a>, &mut Decoder<'_>) -> NifResult<Term<'a>>;
 
-struct KiwiSparseField {
-    id: u32,
-    name: &'static str,
-    repeated: bool,
-    decode: KiwiSparseDecodeFn,
+
+pub type KiwiSparseDecodeFn = for<'a> fn(
+    Env<'a>,
+    &mut Decoder<'_>,
+) -> NifResult<Term<'a>>;
+
+
+#[derive(Clone, Debug)]
+pub struct KiwiSparseField {
+    pub id: u32,
+    pub name: &'static str,
+    pub repeated: bool,
+    pub decode: KiwiSparseDecodeFn,
 }
 
 
