@@ -84,6 +84,27 @@ fn kiwi_skip_repeated(decoder: &mut Decoder<'_>, item: KiwiSkipFn) -> NifResult<
 }
 
 
+fn kiwi_skip_message_fields(
+    decoder: &mut Decoder<'_>,
+    _definition_name: &str,
+    fields: &[KiwiSkipField],
+) -> NifResult<()> {
+    let field_id = decoder.read_var_uint()?;
+    if field_id == 0 {
+        Ok(())
+    } else {
+        match fields.binary_search_by_key(&field_id, |field| field.id) {
+            Ok(index) => {
+                let field = fields.get(index).unwrap();
+                kiwi_skip_kind(decoder, &field.kind)?;
+                kiwi_skip_message_fields(decoder, _definition_name, fields)
+            }
+            Err(_index) => Err(rustler::Error::BadArg),
+        }
+    }
+}
+
+
 fn kiwi_skip_kind(decoder: &mut Decoder<'_>, kind: &KiwiSkipKind) -> NifResult<()> {
     match kind {
         KiwiSkipKind::One(skip) => skip(decoder),
@@ -95,29 +116,6 @@ fn kiwi_skip_kind(decoder: &mut Decoder<'_>, kind: &KiwiSkipKind) -> NifResult<(
 fn kiwi_skip_struct_fields(decoder: &mut Decoder<'_>, fields: &[KiwiSkipKind]) -> NifResult<()> {
     for kind in fields {
         kiwi_skip_kind(decoder, kind)?;
-    }
-    Ok(())
-}
-
-fn kiwi_skip_message_fields(
-    decoder: &mut Decoder<'_>,
-    definition_name: &str,
-    fields: &[KiwiSkipField],
-) -> NifResult<()> {
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            field_id => match fields.iter().find(|field| field.id == field_id) {
-                Some(field) => kiwi_skip_kind(decoder, &field.kind)?,
-                None => {
-                    return Err(Error::Term(Box::new(format!(
-                        "unknown field {} while skipping {}",
-                        field_id,
-                        definition_name
-                    ))));
-                }
-            },
-        }
     }
     Ok(())
 }
