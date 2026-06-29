@@ -353,21 +353,26 @@ fn kiwi_sparse_message_fields_remaining<'a>(
 
 #[allow(unused_macros)]
 macro_rules! kiwi_sparse_repeated {
-    (one) => { false };
-    (repeated) => { true };
+    (one) => {
+        false
+    };
+    (repeated) => {
+        true
+    };
 }
+
+
+
 
 #[allow(unused_macros)]
 macro_rules! kiwi_sparse_message_descriptor_decoder {
-    (
-        fn $name:ident;
-        env $env:ident;
-        decoder $decoder:ident;
-        module $module_name:literal;
-        definition $definition_name:literal;
-        capacity $capacity:literal;
-        fields [$($field_id:literal => $field_name:literal: $field_mode:ident $field_decode:ident;)*]
-    ) => {
+    (fn $name:ident;
+                env $env:ident;
+                decoder $decoder:ident;
+                module $module_name:literal;
+                definition $definition_name:literal;
+                capacity $capacity:literal;
+                fields [$($field_id:literal => $field_name:literal: $field_mode:ident $field_decode:ident;)*]) => {
         fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
             kiwi_sparse_message_fields(
                 $env,
