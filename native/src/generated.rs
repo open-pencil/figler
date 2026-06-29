@@ -291,19 +291,11 @@ fn kiwi_sparse_bytes_value<'a>(
 }
 
 
-fn kiwi_sparse_kind<'a>(env: Env<'a>, decoder: &mut Decoder<'_>, kind: &KiwiSparseKind) -> NifResult<Term<'a>> {
-    match kind {
-        KiwiSparseKind::One(decode) => decode(env, decoder),
-        KiwiSparseKind::Repeated(decode) => Ok(decoder.read_repeated(|decoder| decode(env, decoder))?.encode(env)),
-        KiwiSparseKind::Bytes => kiwi_sparse_bytes_value(env, decoder),
-    }
-}
-
 fn kiwi_sparse_message_fields<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
     module_name: &str,
-    definition_name: &str,
+    _definition_name: &str,
     capacity: usize,
     fields: &[KiwiSparseField],
 ) -> NifResult<Term<'a>> {
@@ -313,26 +305,41 @@ fn kiwi_sparse_message_fields<'a>(
     let mut values = Vec::with_capacity(capacity);
     keys.push(module_key_atom.encode(env));
     values.push(module_atom.encode(env));
-    loop {
-        match decoder.read_var_uint()? {
-            0 => break,
-            field_id => match fields.binary_search_by_key(&field_id, |field| field.id) {
-                Ok(index) => {
-                    let field = &fields[index];
-                    keys.push(Atom::from_str(env, field.name).unwrap().encode(env));
-                    values.push(kiwi_sparse_kind(env, decoder, &field.kind)?);
-                }
-                Err(_) => {
-                    return Err(Error::Term(Box::new(format!(
-                        "unknown field {} while decoding sparse {}",
-                        field_id,
-                        definition_name
-                    ))));
-                }
-            },
+    kiwi_sparse_message_fields_remaining(env, decoder, fields, &mut keys, &mut values)?;
+    Term::map_from_term_arrays(env, &keys, &values)
+}
+
+
+fn kiwi_sparse_message_fields_remaining<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    fields: &[KiwiSparseField],
+    keys: &mut Vec<Term<'a>>,
+    values: &mut Vec<Term<'a>>,
+) -> NifResult<()> {
+    let field_id = decoder.read_var_uint()?;
+    if field_id == 0 {
+        Ok(())
+    } else {
+        match fields.binary_search_by_key(&field_id, |field| field.id) {
+            Ok(index) => {
+                let field = fields.get(index).unwrap();
+                keys.push(Atom::from_str(env, field.name).unwrap().encode(env));
+                values.push(kiwi_sparse_kind(env, decoder, &field.kind)?);
+                kiwi_sparse_message_fields_remaining(env, decoder, fields, keys, values)
+            }
+            Err(_index) => Err(rustler::Error::BadArg),
         }
     }
-    Term::map_from_term_arrays(env, &keys, &values)
+}
+
+
+fn kiwi_sparse_kind<'a>(env: Env<'a>, decoder: &mut Decoder<'_>, kind: &KiwiSparseKind) -> NifResult<Term<'a>> {
+    match kind {
+        KiwiSparseKind::One(decode) => decode(env, decoder),
+        KiwiSparseKind::Repeated(decode) => Ok(decoder.read_repeated(|decoder| decode(env, decoder))?.encode(env)),
+        KiwiSparseKind::Bytes => kiwi_sparse_bytes_value(env, decoder),
+    }
 }
 
 #[allow(unused_macros)]
