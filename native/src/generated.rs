@@ -27507,76 +27507,55 @@ mod scene_xpath_runtime {
         if index == cursor {
             return Some(("guid", record.guid.to_string()));
         }
-        cursor = cursor.saturating_add(1);
+        cursor += 1;
         if index == cursor {
             return Some(("type", record.node_type.to_string()));
         }
-        cursor = cursor.saturating_add(1);
-        match record.name.as_ref() {
-            Some(value) if index == cursor => {
+        cursor += 1;
+        if let Some(value) = record.name.as_ref() {
+            if index == cursor {
                 return Some(("name", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.parent_guid.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.parent_guid.as_ref() {
+            if index == cursor {
                 return Some(("parent_guid", value.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.position.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.position.as_ref() {
+            if index == cursor {
                 return Some(("position", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.size.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.size.as_ref() {
+            if index == cursor {
                 return Some(("x", value.x.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.size.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.size.as_ref() {
+            if index == cursor {
                 return Some(("y", value.y.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.size.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.size.as_ref() {
+            if index == cursor {
                 return Some(("width", value.x.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.size.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.size.as_ref() {
+            if index == cursor {
                 return Some(("height", value.y.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.transform.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.transform.as_ref() {
+            if index == cursor {
                 return Some((
                     "transform",
                     format!(
@@ -27585,231 +27564,178 @@ mod scene_xpath_runtime {
                     ),
                 ));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.visible {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.visible {
+            if index == cursor {
                 return Some(("visible", value.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.locked {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.locked {
+            if index == cursor {
                 return Some(("locked", value.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.opacity {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.opacity {
+            if index == cursor {
                 return Some(("opacity", value.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.text.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.text.as_ref() {
+            if index == cursor {
                 return Some(("text", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.font_family.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.font_family.as_ref() {
+            if index == cursor {
                 return Some(("font_family", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.font_style.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.font_style.as_ref() {
+            if index == cursor {
                 return Some(("font_style", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.font_postscript.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.font_postscript.as_ref() {
+            if index == cursor {
                 return Some(("font_postscript", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.font_size {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.font_size {
+            if index == cursor {
                 return Some(("font_size", value.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.text_style_guid.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.text_style_guid.as_ref() {
+            if index == cursor {
                 return Some(("text_style_guid", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.component_key.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.component_key.as_ref() {
+            if index == cursor {
                 return Some(("component_key", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.origin_component_key.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.origin_component_key.as_ref() {
+            if index == cursor {
                 return Some(("origin_component_key", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.fill_style_guid.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.fill_style_guid.as_ref() {
+            if index == cursor {
                 return Some(("fill_style_guid", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.stroke_style_guid.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.stroke_style_guid.as_ref() {
+            if index == cursor {
                 return Some(("stroke_style_guid", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.effect_style_guid.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.effect_style_guid.as_ref() {
+            if index == cursor {
                 return Some(("effect_style_guid", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.grid_style_guid.as_ref() {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.grid_style_guid.as_ref() {
+            if index == cursor {
                 return Some(("grid_style_guid", value.clone()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.fill_count {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.fill_count {
+            if index == cursor {
                 return Some(("fill_count", value.to_string()));
             }
-            Some(_value) => {
-                cursor = cursor.saturating_add(1);
-            }
-            None => {}
-        };
-        match record.stroke_count {
-            Some(value) if index == cursor => {
+            cursor += 1;
+        }
+        if let Some(value) = record.stroke_count {
+            if index == cursor {
                 return Some(("stroke_count", value.to_string()));
             }
-            Some(_value) => {}
-            None => {}
-        };
+        }
         None
     }
     fn scene_node_record_attr_count(record: &SceneNodeRecord) -> usize {
         let mut count = scene_node_record_base_attr_count();
         if record.name.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.parent_guid.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.position.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.size.is_some() {
-            count = count.saturating_add(4);
+            count += 4;
         }
         if record.transform.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.visible.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.locked.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.opacity.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.text.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.font_family.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.font_style.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.font_postscript.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.font_size.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.text_style_guid.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.component_key.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.origin_component_key.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.fill_style_guid.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.stroke_style_guid.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.effect_style_guid.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.grid_style_guid.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.fill_count.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         if record.stroke_count.is_some() {
-            count = count.saturating_add(1);
+            count += 1;
         }
         count
     }

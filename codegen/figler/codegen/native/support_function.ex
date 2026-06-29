@@ -162,13 +162,13 @@ defmodule Figler.Codegen.Native.SupportFunction do
       return!(some({"guid", record.guid.to_string()}))
     end
 
-    assign!(cursor, cursor.saturating_add(1))
+    assign!(cursor, cursor + 1)
 
     if index == cursor do
       return!(some({"type", record.node_type.to_string()}))
     end
 
-    assign!(cursor, cursor.saturating_add(1))
+    assign!(cursor, cursor + 1)
 
     lookup_optional_scene_node_record_attrs()
 
@@ -226,14 +226,15 @@ defmodule Figler.Codegen.Native.SupportFunction do
     cursor_advance =
       if last?,
         do: quote(do: :ok),
-        else: quote(do: assign!(cursor, cursor.saturating_add(1)))
+        else: quote(do: assign!(cursor, cursor + 1))
 
     quote do
       case unquote(accessor) do
-        {:some, value} when index == cursor ->
-          return!(some({unquote(attr.attr), unquote(value)}))
+        {:some, value} ->
+          if index == cursor do
+            return!(some({unquote(attr.attr), unquote(value)}))
+          end
 
-        {:some, _value} ->
           unquote(cursor_advance)
 
         :none ->
@@ -295,7 +296,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
   defp count_optional_scene_node_record_attr(field, count) do
     quote do
       if record.unquote(field).is_some() do
-        assign!(count, count.saturating_add(unquote(count)))
+        assign!(count, count + unquote(count))
       end
     end
   end
