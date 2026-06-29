@@ -11,14 +11,6 @@ use crate::runtime::Decoder;
 
 
 #[derive(Clone, Debug)]
-pub enum KiwiSkipKind {
-    One(KiwiSkipFn),
-    Repeated(KiwiSkipFn),
-    Bytes,
-}
-
-
-#[derive(Clone, Debug)]
 pub struct KiwiSkipField {
     pub id: u32,
     pub kind: KiwiSkipKind,
@@ -26,6 +18,14 @@ pub struct KiwiSkipField {
 
 
 pub type KiwiSkipFn = fn(&mut Decoder<'_>) -> NifResult<()>;
+
+
+#[derive(Clone, Debug)]
+pub enum KiwiSkipKind {
+    One(KiwiSkipFn),
+    Repeated(KiwiSkipFn),
+    Bytes,
+}
 
 
 fn kiwi_skip_bool_value(decoder: &mut Decoder<'_>) -> NifResult<()> {

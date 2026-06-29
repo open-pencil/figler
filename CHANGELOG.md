@@ -11,7 +11,8 @@
   `@type` / `defrustmacro` support.
 - Share sparse and skip message descriptor field inventories, compact primitive
   descriptor aliases, use RustQ-authored descriptor skip scanning, and generate
-  skip descriptor declarations from RustQ type metadata in native Rust.
+  skip descriptor function/enum/field declarations from RustQ type metadata in
+  native Rust.
 - Reduce checked-in generated native source to about 504 KB / 13,371 lines while
   preserving public sparse decode and graph seed performance paths.
 
