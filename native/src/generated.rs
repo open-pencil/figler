@@ -41,7 +41,7 @@ macro_rules! kiwi_skip_struct_decoder {
         decoder $decoder:ident;
         fields [$($field_repeated:literal $field_bytes:literal $field_skip:ident;)*]) => {
                 fn $name($decoder: &mut Decoder<'_>) -> NifResult<()> {
-                        kiwi_skip_struct_fields($decoder, &[$(KiwiSkipStructField { repeated: $field_repeated, bytes: $field_bytes, skip: $field_skip},)*], 0)
+                        kiwi_skip_struct_fields($decoder, &[$(KiwiSkipStructField { repeated: $field_repeated, bytes: $field_bytes, skip: $field_skip },)*], 0)
                 }
         };
 }
@@ -200,7 +200,7 @@ macro_rules! kiwi_sparse_enum_decoder {
         decoder $decoder:ident;
         variants [$($variant_value:literal $variant_name:literal;)*]) => {
                 fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-                        kiwi_sparse_enum_value($env, $decoder, &[$(KiwiSparseEnumVariant { value: $variant_value, name: $variant_name},)*])
+                        kiwi_sparse_enum_value($env, $decoder, &[$(KiwiSparseEnumVariant { value: $variant_value, name: $variant_name },)*])
                 }
         };
 }
@@ -213,7 +213,7 @@ macro_rules! kiwi_sparse_struct_decoder {
         capacity $capacity:literal;
         fields [$($field_name:literal $field_repeated:literal $field_decode:ident;)*]) => {
                 fn $name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-                        kiwi_sparse_struct_fields($env, $decoder, $module_name, $capacity, &[$(KiwiSparseStructField { name: $field_name, repeated: $field_repeated, decode: $field_decode},)*])
+                        kiwi_sparse_struct_fields($env, $decoder, $module_name, $capacity, &[$(KiwiSparseStructField { name: $field_name, repeated: $field_repeated, decode: $field_decode },)*])
                 }
         };
 }
@@ -228,7 +228,7 @@ macro_rules! kiwi_sparse_skip_message_descriptor_decoder {
         capacity $capacity:literal;
         fields [$($field_id:literal => $field_name:literal: $field_repeated:literal $field_decode:ident; $field_skip_repeated:literal $field_skip_bytes:literal $field_skip:ident;)*]) => {
                 fn $sparse_name<'a>($env: Env<'a>, $decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
-                        kiwi_sparse_message_fields($env, $decoder, $module_name, $definition_name, $capacity, &[$(KiwiSparseField { id: $field_id, name: $field_name, repeated: $field_repeated, decode: $field_decode},)*])
+                        kiwi_sparse_message_fields($env, $decoder, $module_name, $definition_name, $capacity, &[$(KiwiSparseField { id: $field_id, name: $field_name, repeated: $field_repeated, decode: $field_decode },)*])
                 }
                 
                 fn $skip_name($decoder: &mut Decoder<'_>) -> NifResult<()> {
