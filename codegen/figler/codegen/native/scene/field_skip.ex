@@ -8,9 +8,9 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
   consumed by `scene_summary_decoders.rs`.
   """
 
-  alias KiwiCodec.RustlerGenerator.RustExpr
   alias KiwiCodec.Schema.Enum, as: SchemaEnum
   alias RustQ.Rust
+  alias RustQ.Rust.AST.Builder, as: A
 
   defmodule Decoder do
     @moduledoc """
@@ -55,24 +55,13 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
       |> then(& &1.fields)
       |> Enum.map(&field(&1, definition_map))
       |> Enum.sort_by(& &1.id)
-      |> Enum.map(&field_entry/1)
-      |> Enum.intersperse("\n")
 
-    Rust.item([
-      "fig_scene_skip_field_decoder! {\n",
-      "    fn ",
-      Atom.to_string(function),
-      ";\n",
-      "    decoder decoder;\n",
-      "    field field;\n",
-      "    definition ",
-      inspect(error),
-      ";\n",
-      "    skip_fields [\n",
-      RustExpr.indent(fields, 8),
-      "\n    ]\n",
-      "}"
-    ])
+    Rust.ast_item(
+      A.macro_item_token_call(
+        :fig_scene_skip_field_decoder,
+        skip_decoder_tokens(function, error, fields)
+      )
+    )
   end
 
   defp field(%{id: id, array?: true, type: "byte"}, _definition_map) do
@@ -87,21 +76,34 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
     %Field{id: id, repeated: false, bytes: false, function: skip_function(type, definition_map)}
   end
 
-  defp field_entry(%Field{} = field) do
+  defp skip_decoder_tokens(function, error, fields) do
     [
-      Integer.to_string(field.id),
-      " => ",
-      bool_literal(field.repeated),
-      " ",
-      bool_literal(field.bytes),
-      " ",
-      field.function,
-      ";"
+      "fn ",
+      A.path(function),
+      "; decoder ",
+      A.path(:decoder),
+      "; field ",
+      A.path(:field),
+      "; definition ",
+      A.lit(error),
+      "; skip_fields [",
+      Enum.map(fields, &field_tokens/1),
+      "]"
     ]
   end
 
-  defp bool_literal(true), do: "true"
-  defp bool_literal(false), do: "false"
+  defp field_tokens(%Field{} = field) do
+    [
+      A.lit(field.id),
+      " => ",
+      A.lit(field.repeated),
+      " ",
+      A.lit(field.bytes),
+      " ",
+      A.path(field.function),
+      "; "
+    ]
+  end
 
   defp skip_function(type, definition_map) do
     cond do

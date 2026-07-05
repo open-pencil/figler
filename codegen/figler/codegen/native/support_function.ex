@@ -1,6 +1,119 @@
+defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
+  @moduledoc false
+
+  alias Figler.Scene.Projection
+  alias Figler.Scene.Projection.Native, as: ProjectionNative
+  alias Figler.Scene.Projection.Native.XPathAttr
+  alias Figler.Scene.Projection.Native.XPathValue
+
+  defmacro defrust_functions do
+    attrs =
+      Projection.field_names()
+      |> Kernel.--(Projection.required_field_names())
+      |> Enum.flat_map(&ProjectionNative.xpath_attr_entries/1)
+
+    names = optional_attr_function_names(length(attrs))
+
+    functions =
+      attrs
+      |> Enum.with_index()
+      |> Enum.map(fn {%XPathAttr{} = attr, index} ->
+        optional_attr_function(attr, Enum.at(names, index), Enum.at(names, index + 1))
+      end)
+
+    {:__block__, [], functions ++ [optional_attr_base_function(List.last(names))]}
+  end
+
+  defp optional_attr_function_names(count) do
+    for index <- 0..count do
+      String.to_atom("scene_node_record_optional_attr_#{index}")
+    end
+  end
+
+  defp optional_attr_function(%XPathAttr{} = attr, name, next_name) do
+    accessor = xpath_accessor(attr)
+    value = xpath_value(attr.value)
+
+    quote do
+      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.raw(:SceneNodeRecord)), RustQ.Type.usize()) ::
+              RustQ.Type.raw(:"Option<(&'static str, String)>")
+      defrust unquote(name)(record, index) do
+        case unquote(accessor) do
+          {:some, value} ->
+            if index == 0 do
+              some({unquote(attr.attr), unquote(value)})
+            else
+              unquote(next_name)(record, index - 1)
+            end
+
+          :none ->
+            unquote(next_name)(record, index)
+        end
+      end
+    end
+  end
+
+  defp optional_attr_base_function(name) do
+    quote do
+      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.raw(:SceneNodeRecord)), RustQ.Type.usize()) ::
+              RustQ.Type.raw(:"Option<(&'static str, String)>")
+      defrust unquote(name)(_record, _index) do
+        nil
+      end
+    end
+  end
+
+  defp xpath_accessor(%XPathAttr{by_ref?: true, field: field}) do
+    quote do
+      record.unquote(field).as_ref()
+    end
+  end
+
+  defp xpath_accessor(%XPathAttr{by_ref?: false, field: field}) do
+    quote do
+      record.unquote(field)
+    end
+  end
+
+  defp xpath_value(%XPathValue{kind: :field_to_string, field: field}) do
+    quote do
+      value.unquote(field).to_string()
+    end
+  end
+
+  defp xpath_value(%XPathValue{kind: :value_to_string}) do
+    quote do
+      value.to_string()
+    end
+  end
+
+  defp xpath_value(%XPathValue{kind: :value_clone}) do
+    quote do
+      value.clone()
+    end
+  end
+
+  defp xpath_value(%XPathValue{kind: :transform_string}) do
+    quote do
+      format!(
+        "{},{},{},{},{},{}",
+        value.m00,
+        value.m01,
+        value.m02,
+        value.m10,
+        value.m11,
+        value.m12
+      )
+    end
+  end
+end
+
 defmodule Figler.Codegen.Native.SupportFunction do
   use RustQ.Meta,
-    rust_sources: ["native/src/runtime.rs"]
+    rust_sources: [
+      "native/src/runtime.rs",
+      "native/src/templates/graph_focus_decoders.rs"
+    ]
 
   @moduledoc """
   Generated Rust support functions for Figler native codegen.
@@ -12,18 +125,30 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
-  alias Figler.Scene.Projection.Native.XPathAttr
-  alias Figler.Scene.Projection.Native.XPathValue
+  alias Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs
   alias RustQ.Meta.AST, as: MetaAST
   alias RustQ.Type, as: R
+
+  require OptionalRecordAttrs
 
   defrustmod(SceneXpathRuntime, as: :scene_xpath_runtime)
 
   @type decoder :: R.mut_ref(R.path(:Decoder, R.lifetime(:_)))
   @type graph_focus_guid :: term()
   @type scene_query_node :: R.path(:SceneQueryNode)
-  @type scene_size :: R.path(:SceneSize)
-  @type scene_transform :: R.path(:SceneTransform)
+  @type scene_size :: %{
+          required(:x) => R.f64(),
+          required(:y) => R.f64()
+        }
+
+  @type scene_transform :: %{
+          required(:m00) => R.f64(),
+          required(:m01) => R.f64(),
+          required(:m02) => R.f64(),
+          required(:m10) => R.f64(),
+          required(:m11) => R.f64(),
+          required(:m12) => R.f64()
+        }
 
   @scene_query_atom_vars %{
     name: :NAME_ATOM,
@@ -50,6 +175,12 @@ defmodule Figler.Codegen.Native.SupportFunction do
     stroke_count: :STROKE_COUNT_ATOM
   }
 
+  @optional_field_names Projection.field_names() -- Projection.required_field_names()
+  @optional_xpath_attrs Enum.flat_map(
+                          @optional_field_names,
+                          &ProjectionNative.xpath_attr_entries/1
+                        )
+
   @doc """
   Returns graph-focus helper items authored with `defrust`.
   """
@@ -69,13 +200,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
   """
   @spec scene_reader_items() :: [RustQ.Rust.Fragment.t()]
   def scene_reader_items do
-    MetaAST.macro_items(__MODULE__, [
-      :scene_attr_count,
-      :scene_attr_clone,
-      :scene_attr_to_string,
-      :scene_attr_x_to_string,
-      :scene_attr_y_to_string
-    ]) ++
+    optional_scene_node_record_attr_items() ++
       MetaAST.items(__MODULE__, [
         :read_scene_float64_value,
         :read_scene_size_value,
@@ -117,42 +242,33 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   @spec read_scene_float64_value(R.mut_ref(R.path(:Decoder, R.lifetime(:_)))) ::
           R.nif_result(R.f64())
-  # TODO: remove the explicit propagation once RustQ can infer through cast/2.
   defrust read_scene_float64_value(decoder) do
-    value = unwrap!(decoder.read_var_float_value())
-    {:ok, cast(value, R.f64())}
+    {:ok, cast(decoder.read_var_float_value(), R.f64())}
   end
 
   @allow Clippy.redundant_field_names()
   @spec read_scene_size_value(R.mut_ref(R.path(:Decoder, R.lifetime(:_)))) ::
           R.nif_result(scene_size())
-  # TODO: remove the explicit propagation once RustQ can infer struct literal field types.
   defrust read_scene_size_value(decoder) do
-    x = unwrap!(read_scene_float64_value(decoder))
-    y = unwrap!(read_scene_float64_value(decoder))
-    {:ok, struct_literal(SceneSize, x: x, y: y)}
+    {:ok,
+     struct_literal(SceneSize,
+       x: read_scene_float64_value(decoder),
+       y: read_scene_float64_value(decoder)
+     )}
   end
 
   @allow Clippy.redundant_field_names()
   @spec read_scene_transform_value(R.mut_ref(R.path(:Decoder, R.lifetime(:_)))) ::
           R.nif_result(scene_transform())
-  # TODO: remove the explicit propagation once RustQ can infer struct literal field types.
   defrust read_scene_transform_value(decoder) do
-    m00 = unwrap!(read_scene_float64_value(decoder))
-    m01 = unwrap!(read_scene_float64_value(decoder))
-    m02 = unwrap!(read_scene_float64_value(decoder))
-    m10 = unwrap!(read_scene_float64_value(decoder))
-    m11 = unwrap!(read_scene_float64_value(decoder))
-    m12 = unwrap!(read_scene_float64_value(decoder))
-
     {:ok,
      struct_literal(SceneTransform,
-       m00: m00,
-       m01: m01,
-       m02: m02,
-       m10: m10,
-       m11: m11,
-       m12: m12
+       m00: read_scene_float64_value(decoder),
+       m01: read_scene_float64_value(decoder),
+       m02: read_scene_float64_value(decoder),
+       m10: read_scene_float64_value(decoder),
+       m11: read_scene_float64_value(decoder),
+       m12: read_scene_float64_value(decoder)
      )}
   end
 
@@ -180,84 +296,26 @@ defmodule Figler.Codegen.Native.SupportFunction do
         node_type: quote(do: node.node_type.to_string())
       ] ++ Enum.map(optional_field_names(), &scene_query_node_struct_field/1)
 
-    {:struct_literal, [], [{:__aliases__, [], [:SceneQueryNode]}, fields]}
-  end
-
-  defmacro lookup_optional_scene_node_record_attrs do
-    optional_xpath_attrs()
-    |> Enum.map(&lookup_optional_scene_node_record_attr/1)
-    |> block()
+    quote do
+      struct_literal(SceneQueryNode, unquote(fields))
+    end
   end
 
   defmacro count_optional_scene_node_record_attrs do
-    optional_field_names()
-    |> Enum.map(&count_optional_scene_node_record_attr/1)
-    |> block()
-  end
+    case Enum.map(optional_field_names(), &count_optional_scene_node_record_attr/1) do
+      [] ->
+        quote(do: 0)
 
-  defrustmacro scene_attr_count(record, amount) do
-    if record.is_some() do
-      amount
-    else
-      0
+      [first | rest] ->
+        Enum.reduce(rest, first, fn count_expr, acc ->
+          quote do
+            unquote(acc) + unquote(count_expr)
+          end
+        end)
     end
   end
 
-  defrustmacro scene_attr_clone(record, index, cursor, name) do
-    case record do
-      {:some, value} ->
-        if index == cursor do
-          return!(some({name, value.clone()}))
-        end
-
-        1
-
-      :none ->
-        0
-    end
-  end
-
-  defrustmacro scene_attr_to_string(record, index, cursor, name) do
-    case record do
-      {:some, value} ->
-        if index == cursor do
-          return!(some({name, value.to_string()}))
-        end
-
-        1
-
-      :none ->
-        0
-    end
-  end
-
-  defrustmacro scene_attr_x_to_string(record, index, cursor, name) do
-    case record do
-      {:some, value} ->
-        if index == cursor do
-          return!(some({name, value.x.to_string()}))
-        end
-
-        1
-
-      :none ->
-        0
-    end
-  end
-
-  defrustmacro scene_attr_y_to_string(record, index, cursor, name) do
-    case record do
-      {:some, value} ->
-        if index == cursor do
-          return!(some({name, value.y.to_string()}))
-        end
-
-        1
-
-      :none ->
-        0
-    end
-  end
+  OptionalRecordAttrs.defrust_functions()
 
   @spec scene_node_record_base_attr_count() :: R.usize()
   defrust scene_node_record_base_attr_count() do
@@ -267,32 +325,20 @@ defmodule Figler.Codegen.Native.SupportFunction do
   @spec scene_node_record_attr(R.ref(R.raw(:SceneNodeRecord)), R.usize()) ::
           R.raw(:"Option<(&'static str, String)>")
   defrust scene_node_record_attr(record, index) do
-    cursor = 0
-
-    if index == cursor do
-      return!(some({"guid", record.guid.to_string()}))
+    if index == 0 do
+      some({"guid", record.guid.to_string()})
+    else
+      if index == 1 do
+        some({"type", record.node_type.to_string()})
+      else
+        scene_node_record_optional_attr_0(record, index - 2)
+      end
     end
-
-    assign!(cursor, cursor + 1)
-
-    if index == cursor do
-      return!(some({"type", record.node_type.to_string()}))
-    end
-
-    assign!(cursor, cursor + 1)
-
-    lookup_optional_scene_node_record_attrs()
-
-    nil
   end
 
   @spec scene_node_record_attr_count(R.ref(R.raw(:SceneNodeRecord))) :: R.usize()
   defrust scene_node_record_attr_count(record) do
-    count = scene_node_record_base_attr_count()
-
-    count_optional_scene_node_record_attrs()
-
-    count
+    scene_node_record_base_attr_count() + count_optional_scene_node_record_attrs()
   end
 
   @spec scene_query_node(R.ref(R.raw(:SceneIndex)), R.usize()) :: scene_query_node()
@@ -475,158 +521,16 @@ defmodule Figler.Codegen.Native.SupportFunction do
     SceneXpathRuntime.scene_index_with_strokes_value(resource)
   end
 
-  defp optional_field_names do
-    Projection.field_names() -- Projection.required_field_names()
+  defp optional_field_names, do: @optional_field_names
+  defp optional_xpath_attrs, do: @optional_xpath_attrs
+
+  defp optional_scene_node_record_attr_items do
+    MetaAST.items(__MODULE__, optional_attr_function_names())
   end
 
-  defp optional_xpath_attrs do
-    attrs = Enum.flat_map(optional_field_names(), &ProjectionNative.xpath_attr_entries/1)
-
-    attrs
-    |> Enum.with_index()
-    |> Enum.map(fn {%XPathAttr{} = attr, index} ->
-      {attr, index == length(attrs) - 1}
-    end)
-  end
-
-  defp lookup_optional_scene_node_record_attr({%XPathAttr{} = attr, last?}) do
-    accessor = xpath_accessor(attr)
-
-    case scene_attr_lookup_macro(attr.value) do
-      :scene_attr_clone ->
-        if last? do
-          quote do
-            scene_attr_clone!(unquote(accessor), index, cursor, unquote(attr.attr))
-          end
-        else
-          quote do
-            assign!(
-              cursor,
-              cursor + scene_attr_clone!(unquote(accessor), index, cursor, unquote(attr.attr))
-            )
-          end
-        end
-
-      :scene_attr_to_string ->
-        if last? do
-          quote do
-            scene_attr_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
-          end
-        else
-          quote do
-            assign!(
-              cursor,
-              cursor + scene_attr_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
-            )
-          end
-        end
-
-      :scene_attr_x_to_string ->
-        if last? do
-          quote do
-            scene_attr_x_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
-          end
-        else
-          quote do
-            assign!(
-              cursor,
-              cursor +
-                scene_attr_x_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
-            )
-          end
-        end
-
-      :scene_attr_y_to_string ->
-        if last? do
-          quote do
-            scene_attr_y_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
-          end
-        else
-          quote do
-            assign!(
-              cursor,
-              cursor +
-                scene_attr_y_to_string!(unquote(accessor), index, cursor, unquote(attr.attr))
-            )
-          end
-        end
-
-      nil ->
-        value = xpath_value(attr.value)
-
-        cursor_advance =
-          if last?,
-            do: quote(do: :ok),
-            else: quote(do: assign!(cursor, cursor + 1))
-
-        quote do
-          case unquote(accessor) do
-            {:some, value} ->
-              if index == cursor do
-                return!(some({unquote(attr.attr), unquote(value)}))
-              end
-
-              unquote(cursor_advance)
-
-            :none ->
-              :ok
-          end
-        end
-    end
-  end
-
-  defp xpath_accessor(%XPathAttr{by_ref?: true, field: field}) do
-    quote do
-      record.unquote(field).as_ref()
-    end
-  end
-
-  defp xpath_accessor(%XPathAttr{by_ref?: false, field: field}) do
-    quote do
-      record.unquote(field)
-    end
-  end
-
-  defp scene_attr_lookup_macro(%XPathValue{kind: :value_clone}), do: :scene_attr_clone
-  defp scene_attr_lookup_macro(%XPathValue{kind: :value_to_string}), do: :scene_attr_to_string
-
-  defp scene_attr_lookup_macro(%XPathValue{kind: :field_to_string, field: :x}),
-    do: :scene_attr_x_to_string
-
-  defp scene_attr_lookup_macro(%XPathValue{kind: :field_to_string, field: :y}),
-    do: :scene_attr_y_to_string
-
-  defp scene_attr_lookup_macro(%XPathValue{}), do: nil
-
-  defp xpath_value(%XPathValue{kind: :field_to_string, field: field}) do
-    quote do
-      value.unquote(field).to_string()
-    end
-  end
-
-  defp xpath_value(%XPathValue{kind: :value_to_string}) do
-    quote do
-      value.to_string()
-    end
-  end
-
-  defp xpath_value(%XPathValue{kind: :value_clone}) do
-    quote do
-      value.clone()
-    end
-  end
-
-  defp xpath_value(%XPathValue{kind: :transform_string}) do
-    quote do
-      format!(
-        "{},{},{},{},{},{}",
-        value.m00,
-        value.m01,
-        value.m02,
-        value.m10,
-        value.m11,
-        value.m12
-      )
+  defp optional_attr_function_names do
+    for index <- 0..length(optional_xpath_attrs()) do
+      String.to_atom("scene_node_record_optional_attr_#{index}")
     end
   end
 
@@ -638,11 +542,13 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   defp count_optional_scene_node_record_attr(field, count) do
     quote do
-      assign!(count, count + scene_attr_count!(record.unquote(field), unquote(count)))
+      if record.unquote(field).is_some() do
+        unquote(count)
+      else
+        0
+      end
     end
   end
-
-  defp block(statements), do: {:__block__, [], statements}
 
   defp scene_query_node_struct_field(:parent_guid) do
     {:parent_guid, quote(do: node.parent_guid.map(fn guid -> guid.to_string() end))}
@@ -688,7 +594,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
           R.mut_ref(R.option(R.vec(R.raw(:GraphFocusGuid))))
         ) :: R.nif_result(R.unit())
   defrust graph_focus_push_guid_ref(decoder, refs) do
-    graph_focus_push_ref(refs, unwrap!(graph_focus_read_guid(decoder)))
+    graph_focus_push_ref(refs, graph_focus_read_guid(decoder))
     :ok
   end
 
@@ -707,7 +613,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
           R.mut_ref(R.option(R.vec(R.raw(:GraphFocusGuid))))
         ) :: R.nif_result(R.unit())
   defrust graph_focus_extend_component_prop_assignments(decoder, refs) do
-    remaining = unwrap!(decoder.read_var_uint())
+    remaining = decoder.read_var_uint()
     graph_focus_extend_component_prop_assignments_remaining(decoder, refs, remaining)
   end
 
@@ -720,7 +626,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
     if remaining == 0 do
       :ok
     else
-      next = unwrap!(graph_focus_read_component_prop_assignment(decoder))
+      next = graph_focus_read_component_prop_assignment(decoder)
       graph_focus_extend_refs(refs, next)
       graph_focus_extend_component_prop_assignments_remaining(decoder, refs, remaining - 1)
     end
@@ -731,7 +637,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
           R.mut_ref(R.option(R.vec(R.raw(:GraphFocusGuid))))
         ) :: R.nif_result(R.unit())
   defrust graph_focus_extend_component_prop_value(decoder, refs) do
-    next = unwrap!(graph_focus_read_component_prop_value(decoder))
+    next = graph_focus_read_component_prop_value(decoder)
     graph_focus_extend_refs(refs, next)
     :ok
   end

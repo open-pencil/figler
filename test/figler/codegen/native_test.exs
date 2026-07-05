@@ -39,8 +39,8 @@ defmodule Figler.Codegen.NativeTest do
       Skip.fragments(schema.definitions, definition_map)
       |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
 
-    assert sparse_source =~ "kiwi_sparse_message_decoder!"
     assert sparse_source =~ "fn decode_sparse_message_from_decoder"
+    assert sparse_source =~ "kiwi_sparse_message_fields("
     assert skip_source =~ "kiwi_skip_message_decoder!"
     assert skip_source =~ "fn skip_message_from_decoder"
   end
@@ -72,10 +72,11 @@ defmodule Figler.Codegen.NativeTest do
       SupportFunction.scene_reader_items() |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
 
     assert helper_source =~ "fn scene_node_record_attr"
-    assert helper_source =~ "return Some((\"guid\", record.guid.to_string()))"
-    assert helper_source =~ "macro_rules! scene_attr_count"
-    assert helper_source =~ "macro_rules! scene_attr_clone"
-    assert helper_source =~ "macro_rules! scene_attr_to_string"
+    assert helper_source =~ "Some((\"guid\", record.guid.to_string()))"
+    assert helper_source =~ "fn scene_node_record_optional_attr_0"
+    assert helper_source =~ "scene_node_record_optional_attr_1(record, index - 1)"
+    refute helper_source =~ "macro_rules! scene_attr_count"
+    refute helper_source =~ "macro_rules! scene_attr_clone"
     assert helper_source =~ "fn scene_node_record_attr_count"
     assert helper_source =~ "fn scene_query_node"
     assert helper_source =~ "SceneQueryNode {"
