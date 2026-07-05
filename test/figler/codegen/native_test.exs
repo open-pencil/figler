@@ -45,6 +45,32 @@ defmodule Figler.Codegen.NativeTest do
     assert skip_source =~ "fn skip_message_from_decoder"
   end
 
+  test "skip helper generation uses RustQ auto-borrow for descriptor metadata" do
+    schema = Figler.schema()
+
+    skip_source =
+      KiwiCodec.RustlerGenerator.source(schema,
+        entrypoints: [],
+        definitions: ["Message"],
+        features: [:sparse, :skip],
+        sparse_messages: :descriptor,
+        decoder_sources: ["native/src/runtime.rs"],
+        module_prefix: "Figler.Schema"
+      )
+
+    scene_source =
+      schema
+      |> Native.render_splices()
+      |> Keyword.fetch!(:scene_skip_field_helpers)
+      |> List.flatten()
+      |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
+
+    assert skip_source =~ "kiwi_skip_kind(decoder, &field.kind)?;"
+    refute skip_source =~ "kiwi_skip_kind(decoder, field.kind)?;"
+    assert scene_source =~ "kiwi_skip_kind(decoder, &kind)?;"
+    refute scene_source =~ "kiwi_skip_kind(decoder, kind)?;"
+  end
+
   test "focused graph decoder generation follows component references" do
     schema = Figler.schema()
     definition_map = Map.new(schema.definitions, &{&1.name, &1})

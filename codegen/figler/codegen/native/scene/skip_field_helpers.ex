@@ -1,6 +1,7 @@
 defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
   use RustQ.Meta,
-    rust_sources: ["native/src/templates/kiwi_skip_helpers.rs"]
+    rust_sources: ["native/src/templates/kiwi_skip_helpers.rs"],
+    callable_modules: [KiwiCodec.RustlerGenerator.SkipValueHelpers]
 
   @moduledoc """
   RustQ-authored scene skip-field descriptor helpers.
@@ -76,7 +77,7 @@ defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
       {:ok, index} ->
         field = fields.get(index).unwrap()
         kind = kiwi_skip_descriptor_kind(field.repeated, field.bytes, field.skip)
-        kiwi_skip_kind(decoder, ref(kind))
+        kiwi_skip_kind(decoder, kind)
         :ok
 
       {:error, _index} ->
