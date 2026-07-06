@@ -23,9 +23,9 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
 
     functions =
       attrs
-      |> Enum.with_index()
-      |> Enum.map(fn {%XPathAttr{} = attr, index} ->
-        optional_attr_function(attr, Enum.at(names, index), Enum.at(names, index + 1))
+      |> Enum.zip(name_pairs(names))
+      |> Enum.map(fn {%XPathAttr{} = attr, {name, next_name}} ->
+        optional_attr_function(attr, name, next_name)
       end)
 
     functions ++ [optional_attr_base_function(List.last(names))]
@@ -36,23 +36,29 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
 
     functions =
       attrs
-      |> Enum.with_index()
-      |> Enum.map(fn {%XPathAttr{} = attr, index} ->
-        optional_attr_count_function(attr, Enum.at(names, index), Enum.at(names, index + 1))
+      |> Enum.zip(name_pairs(names))
+      |> Enum.map(fn {%XPathAttr{} = attr, {name, next_name}} ->
+        optional_attr_count_function(attr, name, next_name)
       end)
 
     functions ++ [optional_attr_count_base_function(List.last(names))]
   end
 
+  defp name_pairs(names) do
+    names
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.map(fn [name, next_name] -> {name, next_name} end)
+  end
+
   defp optional_attr_function_names(count) do
     for index <- 0..count do
-      String.to_atom("scene_node_record_optional_attr_#{index}")
+      :"scene_node_record_optional_attr_#{index}"
     end
   end
 
   defp optional_attr_count_function_names(count) do
     for index <- 0..count do
-      String.to_atom("scene_node_record_optional_attr_count_#{index}")
+      :"scene_node_record_optional_attr_count_#{index}"
     end
   end
 
@@ -596,13 +602,13 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   defp optional_attr_function_names do
     for index <- 0..length(optional_xpath_attrs()) do
-      String.to_atom("scene_node_record_optional_attr_#{index}")
+      :"scene_node_record_optional_attr_#{index}"
     end
   end
 
   defp optional_attr_count_function_names do
     for index <- 0..length(optional_xpath_attrs()) do
-      String.to_atom("scene_node_record_optional_attr_count_#{index}")
+      :"scene_node_record_optional_attr_count_#{index}"
     end
   end
 
