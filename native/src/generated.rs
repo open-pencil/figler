@@ -139,17 +139,17 @@ fn kiwi_skip_message_fields(
     _definition_name: &str,
     fields: &[KiwiSkipField],
 ) -> NifResult<()> {
-    let field_id = decoder.read_var_uint()?;
-    if field_id == 0 {
-        Ok(())
-    } else {
-        match fields.binary_search_by_key(&field_id, |field| field.id) {
-            Ok(index) => {
-                let matched_field = fields.get(index).unwrap();
-                kiwi_skip_kind(decoder, &matched_field.kind)?;
-                kiwi_skip_message_fields(decoder, _definition_name, fields)
+    match decoder.read_var_uint()? {
+        0 => Ok(()),
+        field_id => {
+            match fields.binary_search_by_key(&field_id, |field| field.id) {
+                Ok(index) => {
+                    let matched_field = fields.get(index).unwrap();
+                    kiwi_skip_kind(decoder, &matched_field.kind)?;
+                    kiwi_skip_message_fields(decoder, _definition_name, fields)
+                }
+                Err(_index) => Err(rustler::Error::BadArg),
             }
-            Err(_index) => Err(rustler::Error::BadArg),
         }
     }
 }
