@@ -65,8 +65,8 @@ defmodule Figler.Codegen.NativeTest do
       |> List.flatten()
       |> Enum.map_join("\n", &RustQ.Rust.to_fragment/1)
 
-    assert skip_source =~ "kiwi_skip_kind(decoder, &field.kind)?;"
-    refute skip_source =~ "kiwi_skip_kind(decoder, field.kind)?;"
+    assert skip_source =~ "kiwi_skip_kind(decoder, &matched_field.kind)?;"
+    refute skip_source =~ "kiwi_skip_kind(decoder, matched_field.kind)?;"
     assert scene_source =~ "kiwi_skip_kind(decoder, &kind)?;"
     refute scene_source =~ "kiwi_skip_kind(decoder, kind)?;"
   end

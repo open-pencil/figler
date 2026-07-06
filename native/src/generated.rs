@@ -145,8 +145,8 @@ fn kiwi_skip_message_fields(
     } else {
         match fields.binary_search_by_key(&field_id, |field| field.id) {
             Ok(index) => {
-                let field = fields.get(index).unwrap();
-                kiwi_skip_kind(decoder, &field.kind)?;
+                let matched_field = fields.get(index).unwrap();
+                kiwi_skip_kind(decoder, &matched_field.kind)?;
                 kiwi_skip_message_fields(decoder, _definition_name, fields)
             }
             Err(_index) => Err(rustler::Error::BadArg),
@@ -391,11 +391,12 @@ fn kiwi_skip_descriptor_kind(
     bytes: bool,
     skip: KiwiSkipFn,
 ) -> KiwiSkipKind {
-    if bytes {
-        KiwiSkipKind::Bytes
+    let non_bytes_kind = if repeated {
+        KiwiSkipKind::Repeated(skip)
     } else {
-        if repeated { KiwiSkipKind::Repeated(skip) } else { KiwiSkipKind::One(skip) }
-    }
+        KiwiSkipKind::One(skip)
+    };
+    if bytes { KiwiSkipKind::Bytes } else { non_bytes_kind }
 }
 
 
