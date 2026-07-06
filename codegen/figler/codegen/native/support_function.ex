@@ -9,7 +9,11 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
   defmacro defrust_functions do
     attrs = optional_xpath_attrs()
 
-    {:__block__, [], optional_attr_functions(attrs) ++ optional_attr_count_functions(attrs)}
+    functions = optional_attr_functions(attrs) ++ optional_attr_count_functions(attrs)
+
+    quote do
+      (unquote_splicing(functions))
+    end
   end
 
   defp optional_xpath_attrs do
@@ -369,7 +373,11 @@ defmodule Figler.Codegen.Native.SupportFunction do
   defmacro push_optional_scene_query_fields do
     fields = Projection.field_names() -- Projection.required_field_names()
 
-    {:__block__, [], Enum.map(fields, &push_optional_scene_query_field/1)}
+    statements = Enum.map(fields, &push_optional_scene_query_field/1)
+
+    quote do
+      (unquote_splicing(statements))
+    end
   end
 
   defmacro scene_query_node_struct_literal do
