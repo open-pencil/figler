@@ -113,6 +113,33 @@ defmodule Figler.Codegen.Native.SupportFunction do
     rust_sources: [
       "native/src/runtime.rs",
       "native/src/templates/graph_focus_decoders.rs"
+    ],
+    callable_modules: [RustQ.Rustler.Atom],
+    static_types: [
+      GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      NODE_TYPE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      NAME_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      PARENT_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      POSITION_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      SIZE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      TRANSFORM_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      VISIBLE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      LOCKED_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      OPACITY_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      TEXT_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      FONT_FAMILY_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      FONT_STYLE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      FONT_POSTSCRIPT_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      FONT_SIZE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      TEXT_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      COMPONENT_KEY_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      ORIGIN_COMPONENT_KEY_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      FILL_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      STROKE_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      EFFECT_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      GRID_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      FILL_COUNT_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
+      STROKE_COUNT_ATOM: RustQ.Type.raw(:"OnceLock<Atom>")
     ]
 
   @moduledoc """
@@ -358,9 +385,9 @@ defmodule Figler.Codegen.Native.SupportFunction do
     keys = Vec.with_capacity(fields.len().max(2))
     values = Vec.with_capacity(fields.len().max(2))
 
-    keys.push(cached_atom(env, ref(GUID_ATOM), "guid").encode(env))
+    keys.push(cached_atom(env, GUID_ATOM, "guid").encode(env))
     values.push(node.guid.to_string().encode(env))
-    keys.push(cached_atom(env, ref(NODE_TYPE_ATOM), "node_type").encode(env))
+    keys.push(cached_atom(env, NODE_TYPE_ATOM, "node_type").encode(env))
     values.push(node.node_type.encode(env))
 
     push_optional_scene_query_fields()
@@ -566,7 +593,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
   defp push_optional_scene_query_field(:parent_guid) do
     quote do
       if wants_field(fields, "parent_guid") do
-        keys.push(cached_atom(env, ref(PARENT_GUID_ATOM), "parent_guid").encode(env))
+        keys.push(cached_atom(env, PARENT_GUID_ATOM, "parent_guid").encode(env))
         values.push(node.parent_guid.map(fn guid -> guid.to_string() end).encode(env))
       end
     end
@@ -579,9 +606,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
     quote do
       if wants_field(fields, unquote(field_name)) do
         keys.push(
-          cached_atom(env, ref(unquote(Macro.var(atom_name, nil))), unquote(field_name)).encode(
-            env
-          )
+          cached_atom(env, unquote(Macro.var(atom_name, nil)), unquote(field_name)).encode(env)
         )
 
         values.push(node.unquote(field).encode(env))
