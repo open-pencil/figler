@@ -9,8 +9,8 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
   """
 
   alias KiwiCodec.Schema.Enum, as: SchemaEnum
-  alias RustQ.Rust
-  alias RustQ.Rust.AST.Builder, as: A
+  alias Figler.Codegen.Native.Scene.SkipFieldHelpers
+  alias RustQ.Meta.AST, as: MetaAST
 
   defmodule Decoder do
     @moduledoc """
@@ -56,11 +56,12 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
       |> Enum.map(&field(&1, definition_map))
       |> Enum.sort_by(& &1.id)
 
-    Rust.ast_item(
-      A.macro_item_token_call(
-        :fig_scene_skip_field_decoder,
-        skip_decoder_tokens(function, error, fields)
-      )
+    MetaAST.macro_call(SkipFieldHelpers, :fig_scene_skip_field_decoder,
+      fn: function,
+      decoder: :decoder,
+      field: :field,
+      definition: error,
+      skip_fields: Enum.map(fields, &field_row/1)
     )
   end
 
@@ -76,32 +77,12 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
     %Field{id: id, repeated: false, bytes: false, function: skip_function(type, definition_map)}
   end
 
-  defp skip_decoder_tokens(function, error, fields) do
+  defp field_row(%Field{} = field) do
     [
-      "fn ",
-      A.path(function),
-      "; decoder ",
-      A.path(:decoder),
-      "; field ",
-      A.path(:field),
-      "; definition ",
-      A.lit(error),
-      "; skip_fields [",
-      Enum.map(fields, &field_tokens/1),
-      "]"
-    ]
-  end
-
-  defp field_tokens(%Field{} = field) do
-    [
-      A.lit(field.id),
-      " => ",
-      A.lit(field.repeated),
-      " ",
-      A.lit(field.bytes),
-      " ",
-      A.path(field.function),
-      "; "
+      field_id: field.id,
+      field_repeated: field.repeated,
+      field_bytes: field.bytes,
+      field_skip: field.function
     ]
   end
 
