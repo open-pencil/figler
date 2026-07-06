@@ -73,7 +73,7 @@ defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
           R.slice(R.path(:FigSceneSkipField))
         ) :: R.nif_result(R.unit())
   defrust fig_scene_skip_field(decoder, field_id, _definition_name, fields) do
-    case fields.binary_search_by_key(ref(field_id), fn field -> field.id end) do
+    case fields.binary_search_by_key(field_id, fn field -> field.id end) do
       {:ok, index} ->
         field = fields.get(index).unwrap()
         kind = kiwi_skip_descriptor_kind(field.repeated, field.bytes, field.skip)
