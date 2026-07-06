@@ -7,11 +7,18 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
   alias Figler.Scene.Projection.Native.XPathValue
 
   defmacro defrust_functions do
-    attrs =
-      Projection.field_names()
-      |> Kernel.--(Projection.required_field_names())
-      |> Enum.flat_map(&ProjectionNative.xpath_attr_entries/1)
+    attrs = optional_xpath_attrs()
 
+    {:__block__, [], optional_attr_functions(attrs) ++ optional_attr_count_functions(attrs)}
+  end
+
+  defp optional_xpath_attrs do
+    Projection.field_names()
+    |> Kernel.--(Projection.required_field_names())
+    |> Enum.flat_map(&ProjectionNative.xpath_attr_entries/1)
+  end
+
+  defp optional_attr_functions(attrs) do
     names = optional_attr_function_names(length(attrs))
 
     functions =
@@ -21,12 +28,31 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
         optional_attr_function(attr, Enum.at(names, index), Enum.at(names, index + 1))
       end)
 
-    {:__block__, [], functions ++ [optional_attr_base_function(List.last(names))]}
+    functions ++ [optional_attr_base_function(List.last(names))]
+  end
+
+  defp optional_attr_count_functions(attrs) do
+    names = optional_attr_count_function_names(length(attrs))
+
+    functions =
+      attrs
+      |> Enum.with_index()
+      |> Enum.map(fn {%XPathAttr{} = attr, index} ->
+        optional_attr_count_function(attr, Enum.at(names, index), Enum.at(names, index + 1))
+      end)
+
+    functions ++ [optional_attr_count_base_function(List.last(names))]
   end
 
   defp optional_attr_function_names(count) do
     for index <- 0..count do
       String.to_atom("scene_node_record_optional_attr_#{index}")
+    end
+  end
+
+  defp optional_attr_count_function_names(count) do
+    for index <- 0..count do
+      String.to_atom("scene_node_record_optional_attr_count_#{index}")
     end
   end
 
@@ -59,6 +85,30 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
               RustQ.Type.raw(:"Option<(&'static str, String)>")
       defrust unquote(name)(_record, _index) do
         nil
+      end
+    end
+  end
+
+  defp optional_attr_count_function(%XPathAttr{} = attr, name, next_name) do
+    accessor = xpath_accessor(attr)
+
+    quote do
+      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.raw(:SceneNodeRecord))) ::
+              RustQ.Type.usize()
+      defrust unquote(name)(record) do
+        case unquote(accessor) do
+          {:some, _value} -> 1 + unquote(next_name)(record)
+          :none -> unquote(next_name)(record)
+        end
+      end
+    end
+  end
+
+  defp optional_attr_count_base_function(name) do
+    quote do
+      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.raw(:SceneNodeRecord))) :: RustQ.Type.usize()
+      defrust unquote(name)(_record) do
+        0
       end
     end
   end
@@ -328,20 +378,6 @@ defmodule Figler.Codegen.Native.SupportFunction do
     end
   end
 
-  defmacro count_optional_scene_node_record_attrs do
-    case Enum.map(optional_field_names(), &count_optional_scene_node_record_attr/1) do
-      [] ->
-        quote(do: 0)
-
-      [first | rest] ->
-        Enum.reduce(rest, first, fn count_expr, acc ->
-          quote do
-            unquote(acc) + unquote(count_expr)
-          end
-        end)
-    end
-  end
-
   OptionalRecordAttrs.defrust_functions()
 
   @spec scene_node_record_base_attr_count() :: R.usize()
@@ -365,7 +401,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   @spec scene_node_record_attr_count(R.ref(R.raw(:SceneNodeRecord))) :: R.usize()
   defrust scene_node_record_attr_count(record) do
-    scene_node_record_base_attr_count() + count_optional_scene_node_record_attrs()
+    scene_node_record_base_attr_count() + scene_node_record_optional_attr_count_0(record)
   end
 
   @spec scene_query_node(R.ref(R.raw(:SceneIndex)), R.usize()) :: scene_query_node()
@@ -552,7 +588,10 @@ defmodule Figler.Codegen.Native.SupportFunction do
   defp optional_xpath_attrs, do: @optional_xpath_attrs
 
   defp optional_scene_node_record_attr_items do
-    MetaAST.items(__MODULE__, optional_attr_function_names())
+    MetaAST.items(
+      __MODULE__,
+      optional_attr_function_names() ++ optional_attr_count_function_names()
+    )
   end
 
   defp optional_attr_function_names do
@@ -561,19 +600,9 @@ defmodule Figler.Codegen.Native.SupportFunction do
     end
   end
 
-  defp count_optional_scene_node_record_attr(:size),
-    do: count_optional_scene_node_record_attr(:size, 4)
-
-  defp count_optional_scene_node_record_attr(field),
-    do: count_optional_scene_node_record_attr(field, 1)
-
-  defp count_optional_scene_node_record_attr(field, count) do
-    quote do
-      if record.unquote(field).is_some() do
-        unquote(count)
-      else
-        0
-      end
+  defp optional_attr_count_function_names do
+    for index <- 0..length(optional_xpath_attrs()) do
+      String.to_atom("scene_node_record_optional_attr_count_#{index}")
     end
   end
 

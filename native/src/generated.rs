@@ -11540,6 +11540,159 @@ mod scene_xpath_runtime {
     ) -> Option<(&'static str, String)> {
         None
     }
+    fn scene_node_record_optional_attr_count_0(record: &SceneNodeRecord) -> usize {
+        match record.name.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_1(record),
+            None => scene_node_record_optional_attr_count_1(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_1(record: &SceneNodeRecord) -> usize {
+        match record.parent_guid.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_2(record),
+            None => scene_node_record_optional_attr_count_2(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_2(record: &SceneNodeRecord) -> usize {
+        match record.position.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_3(record),
+            None => scene_node_record_optional_attr_count_3(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_3(record: &SceneNodeRecord) -> usize {
+        match record.size.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_4(record),
+            None => scene_node_record_optional_attr_count_4(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_4(record: &SceneNodeRecord) -> usize {
+        match record.size.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_5(record),
+            None => scene_node_record_optional_attr_count_5(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_5(record: &SceneNodeRecord) -> usize {
+        match record.size.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_6(record),
+            None => scene_node_record_optional_attr_count_6(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_6(record: &SceneNodeRecord) -> usize {
+        match record.size.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_7(record),
+            None => scene_node_record_optional_attr_count_7(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_7(record: &SceneNodeRecord) -> usize {
+        match record.transform.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_8(record),
+            None => scene_node_record_optional_attr_count_8(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_8(record: &SceneNodeRecord) -> usize {
+        match record.visible {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_9(record),
+            None => scene_node_record_optional_attr_count_9(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_9(record: &SceneNodeRecord) -> usize {
+        match record.locked {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_10(record),
+            None => scene_node_record_optional_attr_count_10(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_10(record: &SceneNodeRecord) -> usize {
+        match record.opacity {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_11(record),
+            None => scene_node_record_optional_attr_count_11(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_11(record: &SceneNodeRecord) -> usize {
+        match record.text.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_12(record),
+            None => scene_node_record_optional_attr_count_12(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_12(record: &SceneNodeRecord) -> usize {
+        match record.font_family.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_13(record),
+            None => scene_node_record_optional_attr_count_13(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_13(record: &SceneNodeRecord) -> usize {
+        match record.font_style.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_14(record),
+            None => scene_node_record_optional_attr_count_14(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_14(record: &SceneNodeRecord) -> usize {
+        match record.font_postscript.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_15(record),
+            None => scene_node_record_optional_attr_count_15(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_15(record: &SceneNodeRecord) -> usize {
+        match record.font_size {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_16(record),
+            None => scene_node_record_optional_attr_count_16(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_16(record: &SceneNodeRecord) -> usize {
+        match record.text_style_guid.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_17(record),
+            None => scene_node_record_optional_attr_count_17(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_17(record: &SceneNodeRecord) -> usize {
+        match record.component_key.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_18(record),
+            None => scene_node_record_optional_attr_count_18(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_18(record: &SceneNodeRecord) -> usize {
+        match record.origin_component_key.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_19(record),
+            None => scene_node_record_optional_attr_count_19(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_19(record: &SceneNodeRecord) -> usize {
+        match record.fill_style_guid.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_20(record),
+            None => scene_node_record_optional_attr_count_20(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_20(record: &SceneNodeRecord) -> usize {
+        match record.stroke_style_guid.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_21(record),
+            None => scene_node_record_optional_attr_count_21(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_21(record: &SceneNodeRecord) -> usize {
+        match record.effect_style_guid.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_22(record),
+            None => scene_node_record_optional_attr_count_22(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_22(record: &SceneNodeRecord) -> usize {
+        match record.grid_style_guid.as_ref() {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_23(record),
+            None => scene_node_record_optional_attr_count_23(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_23(record: &SceneNodeRecord) -> usize {
+        match record.fill_count {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_24(record),
+            None => scene_node_record_optional_attr_count_24(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_24(record: &SceneNodeRecord) -> usize {
+        match record.stroke_count {
+            Some(_value) => 1 + scene_node_record_optional_attr_count_25(record),
+            None => scene_node_record_optional_attr_count_25(record),
+        }
+    }
+    fn scene_node_record_optional_attr_count_25(_record: &SceneNodeRecord) -> usize {
+        0
+    }
     fn read_scene_float64_value(decoder: &mut Decoder<'_>) -> NifResult<f64> {
         Ok(decoder.read_var_float_value()? as f64)
     }
@@ -11589,28 +11742,8 @@ mod scene_xpath_runtime {
         }
     }
     fn scene_node_record_attr_count(record: &SceneNodeRecord) -> usize {
-        scene_node_record_base_attr_count() + if record.name.is_some() { 1 } else { 0 }
-            + if record.parent_guid.is_some() { 1 } else { 0 }
-            + if record.position.is_some() { 1 } else { 0 }
-            + if record.size.is_some() { 4 } else { 0 }
-            + if record.transform.is_some() { 1 } else { 0 }
-            + if record.visible.is_some() { 1 } else { 0 }
-            + if record.locked.is_some() { 1 } else { 0 }
-            + if record.opacity.is_some() { 1 } else { 0 }
-            + if record.text.is_some() { 1 } else { 0 }
-            + if record.font_family.is_some() { 1 } else { 0 }
-            + if record.font_style.is_some() { 1 } else { 0 }
-            + if record.font_postscript.is_some() { 1 } else { 0 }
-            + if record.font_size.is_some() { 1 } else { 0 }
-            + if record.text_style_guid.is_some() { 1 } else { 0 }
-            + if record.component_key.is_some() { 1 } else { 0 }
-            + if record.origin_component_key.is_some() { 1 } else { 0 }
-            + if record.fill_style_guid.is_some() { 1 } else { 0 }
-            + if record.stroke_style_guid.is_some() { 1 } else { 0 }
-            + if record.effect_style_guid.is_some() { 1 } else { 0 }
-            + if record.grid_style_guid.is_some() { 1 } else { 0 }
-            + if record.fill_count.is_some() { 1 } else { 0 }
-            + if record.stroke_count.is_some() { 1 } else { 0 }
+        scene_node_record_base_attr_count()
+            + scene_node_record_optional_attr_count_0(record)
     }
     fn scene_query_node(scene: &SceneIndex, node_index: usize) -> SceneQueryNode {
         let node = &scene.nodes[node_index];
