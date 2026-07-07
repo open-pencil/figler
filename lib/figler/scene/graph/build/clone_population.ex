@@ -50,23 +50,39 @@ defmodule Figler.Scene.Graph.Build.ClonePopulation do
          component_guid,
          scale
        ) do
-    graph.children
-    |> Map.get(source_parent_guid, [])
-    |> Enum.reduce(graph, fn source_child_guid, acc ->
-      clone_subtree(
-        acc,
-        instance_guid,
-        clone_parent_guid,
-        source_child_guid,
-        component_guid,
-        scale
-      )
-    end)
+    {clone_guids, graph} =
+      graph.children
+      |> Map.get(source_parent_guid, [])
+      |> Enum.map_reduce(graph, fn source_child_guid, acc ->
+        clone_guid = GUID.append(clone_parent_guid, source_child_guid)
+
+        graph =
+          clone_subtree(
+            acc,
+            instance_guid,
+            clone_parent_guid,
+            source_child_guid,
+            clone_guid,
+            component_guid,
+            scale
+          )
+
+        {clone_guid, graph}
+      end)
+
+    Nodes.children(graph, clone_parent_guid, clone_guids)
   end
 
-  defp clone_subtree(graph, instance_guid, clone_parent_guid, source_guid, component_guid, scale) do
+  defp clone_subtree(
+         graph,
+         instance_guid,
+         clone_parent_guid,
+         source_guid,
+         clone_guid,
+         component_guid,
+         scale
+       ) do
     source_node = Map.fetch!(graph.nodes, source_guid)
-    clone_guid = GUID.append(clone_parent_guid, source_guid)
 
     cloned_node = %{
       source_node
@@ -80,7 +96,6 @@ defmodule Figler.Scene.Graph.Build.ClonePopulation do
 
     graph
     |> put_clone_node(clone_guid, cloned_node, cloned_seed, instance_guid, source_guid)
-    |> Nodes.child(clone_parent_guid, clone_guid)
     |> Provenance.put_clone(clone_guid, source_guid, instance_guid, component_guid)
     |> clone_children(instance_guid, clone_guid, source_guid, component_guid, scale)
     |> populate_nested_clone(source_seed, instance_guid, clone_guid)

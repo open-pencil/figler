@@ -30,10 +30,18 @@ defmodule Figler.Scene.Graph.Nodes do
   Adds `child` to `parent` if not already present.
   """
   @spec child(Graph.t(), GUID.graph_guid(), GUID.graph_guid()) :: Graph.t()
-  def child(%Graph{} = graph, parent, child) do
+  def child(%Graph{} = graph, parent, child), do: children(graph, parent, [child])
+
+  @doc """
+  Adds already-ordered `children` to `parent` in one append.
+  """
+  @spec children(Graph.t(), GUID.graph_guid(), [GUID.graph_guid()]) :: Graph.t()
+  def children(%Graph{} = graph, _parent, []), do: graph
+
+  def children(%Graph{} = graph, parent, children) when is_list(children) do
     %Graph{
       graph
-      | children: Map.update(graph.children, parent, [child], &append_child(&1, child))
+      | children: Map.update(graph.children, parent, children, &append_children(&1, children))
     }
   end
 
@@ -165,7 +173,7 @@ defmodule Figler.Scene.Graph.Nodes do
     [guid | acc]
   end
 
-  defp append_child(values, value), do: values ++ [value]
+  defp append_children(values, new_values), do: values ++ new_values
 
   defp remove_index_entries(index, guid_set) do
     Map.new(index, fn {key, guids} ->

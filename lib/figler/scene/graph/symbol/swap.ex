@@ -67,16 +67,31 @@ defmodule Figler.Scene.Graph.Symbol.Swap do
   """
   @spec fill(Graph.t(), GUID.graph_guid(), GUID.figma_guid(), {number(), number()}) :: Graph.t()
   def fill(%Graph{} = graph, target_guid, component_guid, scale \\ {1.0, 1.0}) do
-    graph.children
-    |> Map.get(component_guid, [])
-    |> Enum.reduce(graph, fn source_child_guid, acc ->
-      clone(acc, target_guid, target_guid, source_child_guid, component_guid, scale)
-    end)
+    {clone_guids, graph} =
+      graph.children
+      |> Map.get(component_guid, [])
+      |> Enum.map_reduce(graph, fn source_child_guid, acc ->
+        clone_guid = GUID.append(target_guid, source_child_guid)
+
+        graph =
+          clone(
+            acc,
+            target_guid,
+            target_guid,
+            source_child_guid,
+            clone_guid,
+            component_guid,
+            scale
+          )
+
+        {clone_guid, graph}
+      end)
+
+    Nodes.children(graph, target_guid, clone_guids)
   end
 
-  defp clone(graph, instance_guid, parent_guid, source_guid, component_guid, scale) do
+  defp clone(graph, instance_guid, parent_guid, source_guid, clone_guid, component_guid, scale) do
     source_node = Map.fetch!(graph.nodes, source_guid)
-    clone_guid = GUID.append(parent_guid, source_guid)
 
     cloned_node = %{
       source_node
@@ -92,7 +107,6 @@ defmodule Figler.Scene.Graph.Symbol.Swap do
 
     graph
     |> Nodes.put(clone_guid, cloned_node, cloned_seed)
-    |> Nodes.child(parent_guid, clone_guid)
     |> put_index(GUID.root(instance_guid), source_guid, clone_guid)
     |> Provenance.put_clone(clone_guid, source_guid, instance_guid, component_guid)
     |> fill_child(instance_guid, clone_guid, source_guid, component_guid, scale)
@@ -100,11 +114,19 @@ defmodule Figler.Scene.Graph.Symbol.Swap do
   end
 
   defp fill_child(graph, instance_guid, parent_guid, source_guid, component_guid, scale) do
-    graph.children
-    |> Map.get(source_guid, [])
-    |> Enum.reduce(graph, fn child_guid, acc ->
-      clone(acc, instance_guid, parent_guid, child_guid, component_guid, scale)
-    end)
+    {clone_guids, graph} =
+      graph.children
+      |> Map.get(source_guid, [])
+      |> Enum.map_reduce(graph, fn child_guid, acc ->
+        clone_guid = GUID.append(parent_guid, child_guid)
+
+        graph =
+          clone(acc, instance_guid, parent_guid, child_guid, clone_guid, component_guid, scale)
+
+        {clone_guid, graph}
+      end)
+
+    Nodes.children(graph, parent_guid, clone_guids)
   end
 
   defp fill_nested_instance(
