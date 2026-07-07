@@ -14,7 +14,6 @@ defmodule Figler.Scene.Graph.Seed.Node do
   alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Graph.Seed.Value
   alias Figler.Scene.Node
-  alias Figler.Scene.Projection
 
   @projected_fields Node.field_names()
 
@@ -41,16 +40,40 @@ defmodule Figler.Scene.Graph.Seed.Node do
   """
   @spec from_node_change(Figler.Schema.NodeChange.t() | map()) :: t()
   def from_node_change(node_change) when is_map(node_change) do
+    parent_index = get(node_change, :parent_index)
+    text_data = get(node_change, :text_data)
+    font_name = get(node_change, :font_name)
     symbol_data = get(node_change, :symbol_data)
     symbol_id = Value.guid(symbol_data && get(symbol_data, :symbol_id))
-    projected = projected_values(node_change)
 
-    projected
-    |> Map.update!(:guid, &GUID.parse!/1)
-    |> Map.update!(:parent_guid, &GUID.parse/1)
-    |> Map.put(:symbol_id, symbol_id)
-    |> Map.put(:component_guid, symbol_id)
-    |> then(&struct!(__MODULE__, &1))
+    %__MODULE__{
+      guid: Value.guid(get(node_change, :guid)),
+      node_type: node_type(get(node_change, :type)),
+      name: get(node_change, :name),
+      parent_guid: parent_index && Value.guid(get(parent_index, :guid)),
+      position: parent_index && get(parent_index, :position),
+      size: Value.vector(get(node_change, :size)),
+      transform: Value.matrix(get(node_change, :transform)),
+      visible: get(node_change, :visible),
+      locked: get(node_change, :locked),
+      opacity: get(node_change, :opacity),
+      text: text_data && get(text_data, :characters),
+      font_family: font_name && get(font_name, :family),
+      font_style: font_name && get(font_name, :style),
+      font_postscript: font_name && get(font_name, :postscript),
+      font_size: get(node_change, :font_size),
+      text_style_guid: style_guid(get(node_change, :style_id_for_text)),
+      component_key: get(node_change, :component_key),
+      origin_component_key: get(node_change, :origin_component_key),
+      fill_style_guid: style_guid(get(node_change, :style_id_for_fill)),
+      stroke_style_guid: style_guid(get(node_change, :style_id_for_stroke_fill)),
+      effect_style_guid: style_guid(get(node_change, :style_id_for_effect)),
+      grid_style_guid: style_guid(get(node_change, :style_id_for_grid)),
+      fill_count: count(get(node_change, :fill_paints)),
+      stroke_count: count(get(node_change, :stroke_paints)),
+      symbol_id: symbol_id,
+      component_guid: symbol_id
+    }
     |> put_resolver_metadata(node_change)
   end
 
@@ -110,12 +133,32 @@ defmodule Figler.Scene.Graph.Seed.Node do
   """
   @spec to_graph_node(t()) :: Node.t()
   def to_graph_node(%__MODULE__{} = seed) do
-    seed
-    |> Map.from_struct()
-    |> Map.take(@projected_fields)
-    |> Map.update!(:locked, &(&1 || false))
-    |> Map.update!(:text, &(&1 || ""))
-    |> then(&struct!(Node, &1))
+    %Node{
+      guid: seed.guid,
+      node_type: seed.node_type,
+      name: seed.name,
+      parent_guid: seed.parent_guid,
+      position: seed.position,
+      size: seed.size,
+      transform: seed.transform,
+      visible: seed.visible,
+      locked: seed.locked || false,
+      opacity: seed.opacity,
+      text: seed.text || "",
+      font_family: seed.font_family,
+      font_style: seed.font_style,
+      font_postscript: seed.font_postscript,
+      font_size: seed.font_size,
+      text_style_guid: seed.text_style_guid,
+      component_key: seed.component_key,
+      origin_component_key: seed.origin_component_key,
+      fill_style_guid: seed.fill_style_guid,
+      stroke_style_guid: seed.stroke_style_guid,
+      effect_style_guid: seed.effect_style_guid,
+      grid_style_guid: seed.grid_style_guid,
+      fill_count: seed.fill_count,
+      stroke_count: seed.stroke_count
+    }
   end
 
   @doc """
@@ -123,10 +166,11 @@ defmodule Figler.Scene.Graph.Seed.Node do
   """
   @spec to_node(t()) :: Node.t()
   def to_node(%__MODULE__{} = seed) do
-    seed
-    |> to_graph_node()
-    |> Map.update!(:guid, &GUID.format/1)
-    |> Map.update!(:parent_guid, &GUID.format/1)
+    %Node{
+      to_graph_node(seed)
+      | guid: GUID.format(seed.guid),
+        parent_guid: GUID.format(seed.parent_guid)
+    }
   end
 
   defp stack_metadata?(%__MODULE__{} = seed) do
@@ -212,52 +256,8 @@ defmodule Figler.Scene.Graph.Seed.Node do
     end
   end
 
-  defp projected_values(node_change) do
-    Map.new(Projection.fields(), fn %{name: name} = field ->
-      {name, projected_value(field, node_change)}
-    end)
-  end
-
-  defp projected_value(%{name: :guid}, node_change),
-    do: GUID.format(Value.guid(get(node_change, :guid)))
-
-  defp projected_value(%{name: :node_type}, node_change),
-    do: node_change |> get(:type) |> to_string() |> Macro.underscore()
-
-  defp projected_value(%{source: {:parent_index, field}}, node_change) do
-    parent_index = get(node_change, :parent_index)
-    parent_index_value(field, parent_index)
-  end
-
-  defp projected_value(%{source: {:text_data, field}}, node_change) do
-    node_change |> get(:text_data) |> get(field)
-  end
-
-  defp projected_value(%{source: {:font_name, field}}, node_change) do
-    node_change |> get(:font_name) |> get(field)
-  end
-
-  defp projected_value(%{source: {:style_id, :guid}, name: name}, node_change) do
-    node_change |> get(Projection.style_id_field(name)) |> style_guid()
-  end
-
-  defp projected_value(%{source: {:node_change, :type}}, _node_change), do: nil
-
-  defp projected_value(%{source: {:node_change, field}} = projection, node_change) do
-    node_change |> get(field) |> projected_node_change_value(projection)
-  end
-
-  defp parent_index_value(:guid, nil), do: nil
-
-  defp parent_index_value(:guid, parent_index),
-    do: GUID.format(Value.guid(get(parent_index, :guid)))
-
-  defp parent_index_value(field, parent_index), do: parent_index && get(parent_index, field)
-
-  defp projected_node_change_value(value, %{value: :vector}), do: Value.vector(value)
-  defp projected_node_change_value(value, %{value: :matrix}), do: Value.matrix(value)
-  defp projected_node_change_value(value, %{value: :count}), do: count(value)
-  defp projected_node_change_value(value, _projection), do: value
+  defp node_type(type) when is_atom(type), do: Atom.to_string(type)
+  defp node_type(type), do: type |> to_string() |> Macro.underscore()
 
   defp style_guid(nil), do: nil
   defp style_guid(%{guid: guid}), do: guid |> Value.guid() |> GUID.format()
