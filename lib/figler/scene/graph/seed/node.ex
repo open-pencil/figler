@@ -106,18 +106,27 @@ defmodule Figler.Scene.Graph.Seed.Node do
   end
 
   @doc """
+  Converts a seed node to an internal graph node with parsed GUIDs.
+  """
+  @spec to_graph_node(t()) :: Node.t()
+  def to_graph_node(%__MODULE__{} = seed) do
+    seed
+    |> Map.from_struct()
+    |> Map.take(@projected_fields)
+    |> Map.update!(:locked, &(&1 || false))
+    |> Map.update!(:text, &(&1 || ""))
+    |> then(&struct!(Node, &1))
+  end
+
+  @doc """
   Converts a seed node back to the public projected node struct.
   """
   @spec to_node(t()) :: Node.t()
   def to_node(%__MODULE__{} = seed) do
     seed
-    |> Map.from_struct()
-    |> Map.take(@projected_fields)
+    |> to_graph_node()
     |> Map.update!(:guid, &GUID.format/1)
     |> Map.update!(:parent_guid, &GUID.format/1)
-    |> Map.update!(:locked, &(&1 || false))
-    |> Map.update!(:text, &(&1 || ""))
-    |> then(&struct!(Node, &1))
   end
 
   defp stack_metadata?(%__MODULE__{} = seed) do

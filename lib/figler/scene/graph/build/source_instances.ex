@@ -37,7 +37,7 @@ defmodule Figler.Scene.Graph.Build.SourceInstances do
 
   defp definition_symbol_ancestors(graph, guid) do
     case Map.get(graph.nodes, guid) do
-      %{parent_guid: parent_guid} when is_binary(parent_guid) ->
+      %{parent_guid: parent_guid} when is_tuple(parent_guid) ->
         graph
         |> ancestor_nodes(parent_guid)
         |> Enum.filter(&(&1.node_type == "symbol"))
@@ -57,7 +57,7 @@ defmodule Figler.Scene.Graph.Build.SourceInstances do
     |> GUID.parse()
     |> then(&Map.get(graph.nodes, &1))
     |> case do
-      %{parent_guid: next_parent_guid} = node when is_binary(next_parent_guid) ->
+      %{parent_guid: next_parent_guid} = node when is_tuple(next_parent_guid) ->
         [node | ancestor_nodes(graph, next_parent_guid)]
 
       nil ->

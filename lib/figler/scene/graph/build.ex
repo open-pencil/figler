@@ -159,7 +159,7 @@ defmodule Figler.Scene.Graph.Build do
       fn {%SeedNode{} = seed, index}, acc ->
         %{
           acc
-          | nodes: Map.put(acc.nodes, seed.guid, SeedNode.to_node(seed)),
+          | nodes: Map.put(acc.nodes, seed.guid, SeedNode.to_graph_node(seed)),
             seed_nodes: Map.put(acc.seed_nodes, seed.guid, seed),
             guid_set: MapSet.put(acc.guid_set, seed.guid),
             children_entries: add_child_entry(acc.children_entries, seed, index),
