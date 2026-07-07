@@ -151,6 +151,7 @@ defmodule Figler.Scene.Graph.Build.ClonePopulation do
   defp usable_dimension?(value), do: value not in [nil, 0]
 
   defp scale_transform(nil, _scale), do: nil
+  defp scale_transform(transform, {1.0, 1.0}), do: transform
 
   defp scale_transform(transform, scale) do
     transform

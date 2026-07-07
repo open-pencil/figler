@@ -174,6 +174,7 @@ defmodule Figler.Scene.Graph.Symbol.Swap do
   defp size(_node), do: nil
 
   defp scale_transform(nil, _scale), do: nil
+  defp scale_transform(transform, {1.0, 1.0}), do: transform
 
   defp scale_transform(transform, {scale_x, scale_y}) do
     transform
