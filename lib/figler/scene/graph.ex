@@ -21,6 +21,7 @@ defmodule Figler.Scene.Graph do
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Index
   alias Figler.Scene.Node
+  alias Figler.Scene.Query
   alias Figler.Scene.Summary
   alias Figler.Scene.Tree
 
@@ -228,14 +229,16 @@ defmodule Figler.Scene.Graph do
         nil
 
       %Node{} = node ->
+        public_node = Query.public_node(node)
+
         %{
           guid: GUID.format(graph_guid),
-          node: node,
-          source_node: source_node(graph, node.guid),
+          node: public_node,
+          source_node: source_node(graph, public_node.guid),
           source: Map.get(provenance(graph, graph_guid), :source, :projected_index),
           source_guid:
             graph |> provenance(graph_guid) |> Map.get(:source_guid, graph_guid) |> GUID.format(),
-          parent_guid: node.parent_guid,
+          parent_guid: public_node.parent_guid,
           child_guids:
             graph
             |> Map.get(:children, %{})
@@ -243,7 +246,7 @@ defmodule Figler.Scene.Graph do
             |> Enum.map(&GUID.format/1),
           applied: Map.get(provenance(graph, graph_guid), :applied, []),
           unresolved: Map.get(provenance(graph, graph_guid), :unresolved, []),
-          instance: instance(graph, node.guid),
+          instance: instance(graph, public_node.guid),
           stages: graph.stages
         }
     end
@@ -286,12 +289,12 @@ defmodule Figler.Scene.Graph do
     graph_guid = GUID.parse!(guid)
 
     case Map.get(graph.nodes, graph_guid) do
-      %Node{node_type: "instance"} = node ->
+      %Node{node_type: "instance"} ->
         seed = Map.get(graph.seed_nodes, graph_guid)
         component_guid = instance_component_guid(seed)
 
         %{
-          guid: node.guid,
+          guid: GUID.format(graph_guid),
           component_guid: GUID.format(component_guid),
           component: component_node(graph, component_guid),
           component_prop_assignments: Map.get(seed || %{}, :component_prop_assignments, []),
@@ -333,7 +336,7 @@ defmodule Figler.Scene.Graph do
   @spec diff_node(Index.t() | reference(), t(), String.t()) :: map() | nil
   def diff_node(index, %__MODULE__{} = graph, guid) when is_binary(guid) do
     raw = Scene.node(index, guid)
-    resolved = Map.get(graph.nodes, GUID.parse!(guid))
+    resolved = graph.nodes |> Map.get(GUID.parse!(guid)) |> Query.public_node()
 
     cond do
       is_nil(raw) and is_nil(resolved) -> nil
@@ -446,7 +449,7 @@ defmodule Figler.Scene.Graph do
   defp instance_component_guid(_seed), do: nil
 
   defp component_node(_graph, nil), do: nil
-  defp component_node(graph, guid), do: Map.get(graph.nodes, guid)
+  defp component_node(graph, guid), do: graph.nodes |> Map.get(guid) |> Query.public_node()
 
   defp provenance(graph, guid), do: Map.get(graph.provenance, guid, projected_provenance(guid))
 

@@ -86,8 +86,8 @@ defmodule Figler.Scene.Graph.Build.ClonePopulation do
 
     cloned_node = %{
       source_node
-      | guid: GUID.format(clone_guid),
-        parent_guid: GUID.format(clone_parent_guid),
+      | guid: clone_guid,
+        parent_guid: clone_parent_guid,
         transform: scale_transform(source_node.transform, scale)
     }
 

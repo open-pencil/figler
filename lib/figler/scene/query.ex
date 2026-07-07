@@ -8,6 +8,7 @@ defmodule Figler.Scene.Query do
   """
 
   alias Figler.Scene.Graph
+  alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Node
 
   @type scene_node :: Node.t()
@@ -27,6 +28,15 @@ defmodule Figler.Scene.Query do
     guids
     |> Enum.map(&Map.get(graph.nodes, &1))
     |> Enum.reject(&is_nil/1)
+    |> Enum.map(&public_node/1)
+  end
+
+  @doc "Converts an internal graph node to the public scene-node shape."
+  @spec public_node(Node.t() | nil) :: Node.t() | nil
+  def public_node(nil), do: nil
+
+  def public_node(%Node{} = node) do
+    %Node{node | guid: public_guid(node.guid), parent_guid: public_guid(node.parent_guid)}
   end
 
   @spec apply_field_filter([Node.t()], keyword()) :: [Node.t()]
@@ -120,6 +130,10 @@ defmodule Figler.Scene.Query do
   rescue
     ArgumentError -> :__unknown_field__
   end
+
+  defp public_guid(nil), do: nil
+  defp public_guid(guid) when is_tuple(guid), do: GUID.format(guid)
+  defp public_guid(guid), do: guid
 
   defp filter_node_fields(%Node{} = node, fields) do
     fields = Enum.uniq(["guid", "node_type" | fields])

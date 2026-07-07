@@ -10,6 +10,7 @@ defmodule Figler.Scene.Graph.Diff do
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Node
+  alias Figler.Scene.Query
 
   @doc """
   Returns field-level changes between source seed nodes and resolved graph nodes.
@@ -50,7 +51,7 @@ defmodule Figler.Scene.Graph.Diff do
   end
 
   defp diff_guid(graph, guid) do
-    with %Node{} = resolved <- Map.get(graph.nodes, guid),
+    with %Node{} = resolved <- graph.nodes |> Map.get(guid) |> Query.public_node(),
          %Node{} = source <- source_node(graph, guid),
          changes when changes != [] <- node_changes(source, resolved) do
       [%{guid: GUID.format(guid), source: source, resolved: resolved, changed: changes}]
@@ -62,7 +63,7 @@ defmodule Figler.Scene.Graph.Diff do
   defp source_node(graph, guid) do
     case Map.get(graph.seed_nodes, guid) do
       %SeedNode{} = seed ->
-        SeedNode.to_node(seed)
+        seed |> SeedNode.to_node() |> Query.public_node()
 
       nil ->
         graph.provenance
@@ -77,6 +78,8 @@ defmodule Figler.Scene.Graph.Diff do
   defp source_node_from_seed(graph, guid, source_guid) do
     with %SeedNode{} = seed <- Map.get(graph.seed_nodes, source_guid),
          resolved when not is_nil(resolved) <- Map.get(graph.nodes, guid) do
+      resolved = Query.public_node(resolved)
+
       seed
       |> SeedNode.to_node()
       |> Map.put(:guid, resolved.guid)

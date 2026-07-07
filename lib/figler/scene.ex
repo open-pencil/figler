@@ -106,7 +106,7 @@ defmodule Figler.Scene do
   """
   @spec node(binary() | Index.t() | Graph.t() | reference(), String.t()) :: scene_node() | nil
   def node(%Graph{} = graph, guid) when is_binary(guid),
-    do: Map.get(graph.nodes, GUID.parse!(guid))
+    do: graph.nodes |> Map.get(GUID.parse!(guid)) |> Query.public_node()
 
   def node(scene, guid) when is_binary(guid) do
     scene

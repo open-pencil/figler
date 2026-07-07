@@ -95,8 +95,8 @@ defmodule Figler.Scene.Graph.Symbol.Swap do
 
     cloned_node = %{
       source_node
-      | guid: GUID.format(clone_guid),
-        parent_guid: GUID.format(parent_guid),
+      | guid: clone_guid,
+        parent_guid: parent_guid,
         transform: scale_transform(source_node.transform, scale)
     }
 
