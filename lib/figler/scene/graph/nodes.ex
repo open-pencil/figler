@@ -113,12 +113,9 @@ defmodule Figler.Scene.Graph.Nodes do
   """
   @spec subtree(Graph.t(), GUID.graph_guid()) :: [GUID.graph_guid()]
   def subtree(%Graph{} = graph, guid) do
-    descendants =
-      graph.children
-      |> Map.get(guid, [])
-      |> Enum.flat_map(&subtree(graph, &1))
-
-    descendants ++ [guid]
+    graph
+    |> subtree(guid, [])
+    |> Enum.reverse()
   end
 
   defp group_nodes(nodes, key_fun) do
@@ -157,6 +154,15 @@ defmodule Figler.Scene.Graph.Nodes do
 
   defp remove_index(index, key, guid) do
     Map.update(index, key, [], &Enum.reject(&1, fn value -> value == guid end))
+  end
+
+  defp subtree(%Graph{} = graph, guid, acc) do
+    acc =
+      graph.children
+      |> Map.get(guid, [])
+      |> Enum.reduce(acc, &subtree(graph, &1, &2))
+
+    [guid | acc]
   end
 
   defp append_child(values, value), do: values ++ [value]

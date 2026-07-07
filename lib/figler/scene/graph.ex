@@ -442,7 +442,11 @@ defmodule Figler.Scene.Graph do
   defp component_node(_graph, nil), do: nil
   defp component_node(graph, guid), do: Map.get(graph.nodes, guid)
 
-  defp provenance(graph, guid), do: Map.get(graph.provenance, guid, %{})
+  defp provenance(graph, guid), do: Map.get(graph.provenance, guid, projected_provenance(guid))
+
+  defp projected_provenance(guid) do
+    %{source: :projected_index, source_guid: guid, applied: [], unresolved: []}
+  end
 
   defp normalize_options(opts) do
     opts

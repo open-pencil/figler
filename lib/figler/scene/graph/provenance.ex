@@ -7,23 +7,16 @@ defmodule Figler.Scene.Graph.Provenance do
   """
 
   alias Figler.Scene.Graph
-  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
 
   @doc """
-  Builds initial provenance for projected seed nodes.
+  Returns the initial provenance map.
+
+  Projected seed provenance is derivable from the node GUID, so the graph keeps
+  this map sparse and records only clone/patch/variable entries that differ from
+  the default projected-index provenance.
   """
-  @spec initial([SeedNode.t()]) :: %{optional(term()) => map()}
-  def initial(seed_nodes) do
-    Map.new(seed_nodes, fn %SeedNode{} = seed ->
-      {seed.guid,
-       %{
-         source: :projected_index,
-         source_guid: seed.guid,
-         applied: [],
-         unresolved: []
-       }}
-    end)
-  end
+  @spec initial([term()]) :: %{optional(term()) => map()}
+  def initial(seed_nodes) when is_list(seed_nodes), do: %{}
 
   @doc """
   Records provenance for a node cloned while resolving an instance.

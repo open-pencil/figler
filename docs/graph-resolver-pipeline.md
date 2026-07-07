@@ -39,15 +39,32 @@ Applied entries describe what changed; unresolved entries describe preserved or 
 
 ## Performance profiling
 
-Avoid strict timing assertions in CI. For local checks, use rough comparisons and record outputs in `/tmp`:
+Use a representative large `.fig` fixture from local storage; do not commit large
+customer or oracle files. Record baseline and follow-up profile JSON in `/tmp`
+using the same fixture, roots, runtime, and resolver stage cutoff:
 
 ```sh
+export FIGLER_PROFILE_FIXTURE=/tmp/figma-current.fig
+export FIGLER_PROFILE_ROOTS=3740:112537
+export FIGLER_PROFILE_UNTIL=variables
+
 mise exec rust@1.96.0 -- mix figler.profile.graph \
-  --fixture /tmp/figma-current.fig \
-  --root 3740:112537 \
-  --until variables \
-  --output /tmp/figkiwi-profile-current.json
+  --output /tmp/figkiwi-profile-before.json
+
+# after an optimization
+mise exec rust@1.96.0 -- mix figler.profile.graph \
+  --output /tmp/figkiwi-profile-after.json
 ```
+
+The JSON records payload extraction time, initial graph build time, per-stage
+resolver timings, and final graph counts. Optimization commits should compare
+before/after JSON from the same fixture and should be accepted by oracle tests,
+not by intuition.
+
+For per-function investigation on OTP 27+, wrap the same graph build command in
+`:tprof` or `:eprof` locally and keep the profiler output in `/tmp` alongside the
+stage JSON. Commit methodology and code changes, not the fixture or profiler
+output.
 
 For current live-export oracle validation:
 

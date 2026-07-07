@@ -43,11 +43,16 @@ defmodule Figler.Scene.Graph.Seed.Node do
   def from_node_change(node_change) when is_map(node_change) do
     symbol_data = get(node_change, :symbol_data)
     symbol_id = Value.guid(symbol_data && get(symbol_data, :symbol_id))
-    node = public_node_from_change(node_change)
-    %__MODULE__{} = seed = from_node(node)
+    projected = projected_values(node_change)
+    node = struct!(Node, projected)
 
-    seed
-    |> struct!(%{symbol_id: symbol_id, component_guid: symbol_id})
+    projected
+    |> Map.update!(:guid, &GUID.parse!/1)
+    |> Map.update!(:parent_guid, &GUID.parse/1)
+    |> Map.put(:source, node)
+    |> Map.put(:symbol_id, symbol_id)
+    |> Map.put(:component_guid, symbol_id)
+    |> then(&struct!(__MODULE__, &1))
     |> put_resolver_metadata(node_change)
   end
 
@@ -158,12 +163,10 @@ defmodule Figler.Scene.Graph.Seed.Node do
     end
   end
 
-  defp public_node_from_change(node_change) do
-    values =
-      Projection.fields()
-      |> Map.new(fn %{name: name} = field -> {name, projected_value(field, node_change)} end)
-
-    struct!(Node, values)
+  defp projected_values(node_change) do
+    Map.new(Projection.fields(), fn %{name: name} = field ->
+      {name, projected_value(field, node_change)}
+    end)
   end
 
   defp projected_value(%{name: :guid}, node_change),

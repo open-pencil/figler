@@ -28,10 +28,9 @@ defmodule Figler.Scene.Graph.Build do
   def from_seed(seed_nodes, opts \\ []) when is_list(seed_nodes) and is_list(opts) do
     options = Keyword.get(opts, :options, [])
     seed_nodes = Focus.materialize(seed_nodes, options)
-    nodes = Map.new(seed_nodes, &{&1.guid, SeedNode.to_node(&1)})
-    seed_by_guid = Map.new(seed_nodes, &{&1.guid, &1})
-    children = build_children(seed_nodes)
-    roots = build_roots(seed_nodes)
+    initial = initial_indexes(seed_nodes)
+    children = build_children(initial.children_entries)
+    roots = build_roots(seed_nodes, initial.guid_set)
 
     %Graph{
       resource: Keyword.fetch!(opts, :resource),
@@ -39,12 +38,12 @@ defmodule Figler.Scene.Graph.Build do
       mode: :projected,
       stages: Keyword.get(opts, :stages, []),
       options: options,
-      seed_nodes: seed_by_guid,
-      nodes: nodes,
+      seed_nodes: initial.seed_nodes,
+      nodes: initial.nodes,
       children: children,
       roots: roots,
-      by_type: group_guids(seed_nodes, & &1.node_type),
-      by_name: group_guids(seed_nodes, & &1.name),
+      by_type: reverse_group_values(initial.by_type),
+      by_name: reverse_group_values(initial.by_name),
       clone_index: %{},
       clone_source_index: %{},
       component_prop_refs: ComponentProps.index(seed_nodes),
@@ -127,18 +126,45 @@ defmodule Figler.Scene.Graph.Build do
   defp add_unresolved(%Graph{} = graph, item),
     do: %{graph | unresolved: [item | graph.unresolved]}
 
-  defp build_children(seed_nodes) do
+  defp initial_indexes(seed_nodes) do
     seed_nodes
     |> Stream.with_index()
-    |> Enum.reduce(%{}, fn
-      {%SeedNode{parent_guid: nil}, _index}, acc ->
-        acc
+    |> Enum.reduce(
+      %{
+        nodes: %{},
+        seed_nodes: %{},
+        guid_set: MapSet.new(),
+        children_entries: %{},
+        by_type: %{},
+        by_name: %{}
+      },
+      fn {%SeedNode{} = seed, index}, acc ->
+        %{
+          acc
+          | nodes: Map.put(acc.nodes, seed.guid, SeedNode.to_node(seed)),
+            seed_nodes: Map.put(acc.seed_nodes, seed.guid, seed),
+            guid_set: MapSet.put(acc.guid_set, seed.guid),
+            children_entries: add_child_entry(acc.children_entries, seed, index),
+            by_type: add_group_guid(acc.by_type, seed.node_type, seed.guid),
+            by_name: add_group_guid(acc.by_name, seed.name, seed.guid)
+        }
+      end
+    )
+  end
 
-      {%SeedNode{parent_guid: parent_guid, guid: guid, position: position}, index}, acc ->
-        entry = {guid, position || "", index}
-        Map.update(acc, parent_guid, [entry], &[entry | &1])
-    end)
-    |> Map.new(fn {parent_guid, entries} ->
+  defp add_child_entry(children, %SeedNode{parent_guid: nil}, _index), do: children
+
+  defp add_child_entry(
+         children,
+         %SeedNode{parent_guid: parent_guid, guid: guid, position: position},
+         index
+       ) do
+    entry = {guid, position || "", index}
+    Map.update(children, parent_guid, [entry], &[entry | &1])
+  end
+
+  defp build_children(children_entries) do
+    Map.new(children_entries, fn {parent_guid, entries} ->
       children =
         entries
         |> Enum.sort_by(fn {_guid, position, index} -> {position, index} end)
@@ -148,25 +174,15 @@ defmodule Figler.Scene.Graph.Build do
     end)
   end
 
-  defp build_roots(seed_nodes) do
-    guids = MapSet.new(seed_nodes, & &1.guid)
-
+  defp build_roots(seed_nodes, guids) do
     seed_nodes
     |> Enum.filter(&(is_nil(&1.parent_guid) or not MapSet.member?(guids, &1.parent_guid)))
     |> Enum.map(& &1.guid)
   end
 
-  defp group_guids(seed_nodes, key_fun) do
-    seed_nodes
-    |> Enum.reduce(%{}, fn seed, acc ->
-      case key_fun.(seed) do
-        nil -> acc
-        "" -> acc
-        key -> Map.update(acc, key, [seed.guid], &[seed.guid | &1])
-      end
-    end)
-    |> reverse_group_values()
-  end
+  defp add_group_guid(groups, nil, _guid), do: groups
+  defp add_group_guid(groups, "", _guid), do: groups
+  defp add_group_guid(groups, key, guid), do: Map.update(groups, key, [guid], &[guid | &1])
 
   defp reverse_group_values(groups) do
     Map.new(groups, fn {key, values} -> {key, Enum.reverse(values)} end)
