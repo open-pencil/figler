@@ -11,6 +11,9 @@ defmodule Figler.Scene.Graph.Seed.Node do
   """
 
   alias Figler.Scene.Graph.GUID
+  alias Figler.Scene.Graph.Seed.Extraction.ComponentProps
+  alias Figler.Scene.Graph.Seed.Extraction.DerivedData
+  alias Figler.Scene.Graph.Seed.Extraction.SymbolOverrides
   alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Graph.Seed.Value
   alias Figler.Scene.Node
@@ -71,14 +74,24 @@ defmodule Figler.Scene.Graph.Seed.Node do
       grid_style_guid: style_guid(get(node_change, :style_id_for_grid)),
       fill_count: count(get(node_change, :fill_paints)),
       stroke_count: count(get(node_change, :stroke_paints)),
+      override_key: Value.guid(get(node_change, :override_key)),
+      stack_mode: get(node_change, :stack_mode),
+      stack_spacing: get(node_change, :stack_spacing),
+      stack_horizontal_padding: get(node_change, :stack_horizontal_padding),
+      stack_vertical_padding: get(node_change, :stack_vertical_padding),
+      stack_padding_right: get(node_change, :stack_padding_right),
+      stack_padding_bottom: get(node_change, :stack_padding_bottom),
+      symbol_overrides: SymbolOverrides.all(symbol_data),
+      component_prop_defs: ComponentProps.defs(get(node_change, :component_prop_defs)),
+      component_prop_refs: ComponentProps.refs(get(node_change, :component_prop_refs)),
+      component_prop_assignments:
+        ComponentProps.assignments(get(node_change, :component_prop_assignments)),
+      derived_symbol_data: DerivedData.all(get(node_change, :derived_symbol_data)),
+      variable_consumption: multiplayer_entries(get(node_change, :variable_consumption_map)),
+      variable_data_values: multiplayer_entries(get(node_change, :variable_data_values)),
       symbol_id: symbol_id,
       component_guid: symbol_id
     }
-    |> put_resolver_metadata(node_change)
-  end
-
-  defp put_resolver_metadata(%__MODULE__{} = seed, node_change) do
-    struct!(seed, SeedProjection.metadata(node_change))
   end
 
   @doc """
@@ -265,6 +278,10 @@ defmodule Figler.Scene.Graph.Seed.Node do
 
   defp count(nil), do: nil
   defp count(values) when is_list(values), do: length(values)
+
+  defp multiplayer_entries(nil), do: []
+  defp multiplayer_entries(%{entries: entries}) when is_list(entries), do: entries
+  defp multiplayer_entries(_value), do: []
 
   defp get(nil, _key), do: nil
   defp get(map, key) when is_map(map), do: Map.get(map, key)
