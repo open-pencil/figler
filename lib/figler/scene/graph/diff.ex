@@ -27,17 +27,26 @@ defmodule Figler.Scene.Graph.Diff do
     case Keyword.fetch(opts, :root) do
       {:ok, root} ->
         root_guid = GUID.parse!(root)
-        [root_guid | descendant_guids(graph, root_guid)]
+        subtree_guids(graph, root_guid)
 
       :error ->
         Map.keys(graph.nodes)
     end
   end
 
-  defp descendant_guids(graph, guid) do
-    graph.children
-    |> Map.get(guid, [])
-    |> Enum.flat_map(fn child_guid -> [child_guid | descendant_guids(graph, child_guid)] end)
+  defp subtree_guids(graph, guid) do
+    graph
+    |> subtree_guids(guid, [])
+    |> Enum.reverse()
+  end
+
+  defp subtree_guids(graph, guid, acc) do
+    acc =
+      graph.children
+      |> Map.get(guid, [])
+      |> Enum.reduce(acc, &subtree_guids(graph, &1, &2))
+
+    [guid | acc]
   end
 
   defp diff_guid(graph, guid) do
