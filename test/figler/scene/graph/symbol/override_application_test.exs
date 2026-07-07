@@ -13,16 +13,35 @@ defmodule Figler.Scene.Graph.Symbol.OverrideApplicationTest do
         component({1, 1}, name: "Button"),
         text({1, 2}, {1, 1}, "Default"),
         instance({2, 1}, {1, 1},
-          symbol_overrides: [symbol_override([{1, 2}], %{text: "Submit", visible: false})]
+          symbol_overrides: [
+            symbol_override([{1, 2}], %{text: "Submit", visible: false, name: "CTA label"})
+          ]
         )
       ]
       |> resolve(stages: [:symbol_overrides])
 
     assert Scene.node(graph, "1:2").text == "Submit"
     assert Scene.node(graph, "1:2").visible == false
+    assert [%Node{guid: "1:2"}] = Scene.named(graph, "CTA label")
+    assert Scene.named(graph, "Default") == []
 
     assert {:symbol_override, :text, "Default", "Submit"} in Graph.explain(graph, "1:2").applied
     assert {:symbol_override, :visible, nil, false} in Graph.explain(graph, "1:2").applied
+  end
+
+  test "defers symbol override reindex when component props will reindex later" do
+    graph =
+      [
+        component({1, 1}, name: "Button"),
+        text({1, 2}, {1, 1}, "Default"),
+        instance({2, 1}, {1, 1},
+          symbol_overrides: [symbol_override([{1, 2}], %{name: "CTA label"})]
+        )
+      ]
+      |> resolve(stages: [:symbol_overrides, :component_props])
+
+    assert [%Node{guid: "1:2"}] = Scene.named(graph, "CTA label")
+    assert Scene.named(graph, "Default") == []
   end
 
   test "validates nested source paths when resolving symbol overrides" do

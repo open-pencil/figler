@@ -85,7 +85,7 @@ defmodule Figler.Scene.Graph.Build do
   defp apply_symbol_overrides(graph) do
     graph
     |> OverrideApplication.apply(SourceInstances.list(graph))
-    |> Nodes.reindex()
+    |> reindex_unless_later(:symbol_overrides, :component_props)
     |> mark_stage(:symbol_overrides)
   end
 
@@ -121,6 +121,23 @@ defmodule Figler.Scene.Graph.Build do
 
   defp mark_stage(%Graph{} = graph, stage) do
     update_in(graph.stats[:resolved_stages], fn stages -> [stage | stages || []] end)
+  end
+
+  defp reindex_unless_later(%Graph{} = graph, current_stage, later_stage) do
+    if later_stage?(graph.stages, current_stage, later_stage) do
+      graph
+    else
+      Nodes.reindex(graph)
+    end
+  end
+
+  defp later_stage?(stages, current_stage, later_stage) do
+    stages
+    |> Enum.drop_while(&(&1 != current_stage))
+    |> case do
+      [] -> false
+      [_current | later_stages] -> later_stage in later_stages
+    end
   end
 
   defp add_unresolved(%Graph{} = graph, item),
