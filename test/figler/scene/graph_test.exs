@@ -23,8 +23,9 @@ defmodule Figler.Scene.GraphTest do
            } = graph
 
     assert [document_seed, canvas_seed] = Graph.seed_nodes(graph)
-    assert %SeedNode{guid: {0, 0}, node_type: "document", name: "Document"} = document_seed
-    assert %Node{} = document_seed.source
+
+    assert %SeedNode{guid: {0, 0}, node_type: "document", name: "Document", source: nil} =
+             document_seed
 
     assert %SeedNode{
              guid: {0, 1},
@@ -53,7 +54,7 @@ defmodule Figler.Scene.GraphTest do
              m12: 20.0
            }
 
-    assert %Node{} = canvas_seed.source
+    assert canvas_seed.source == nil
 
     assert Scene.query(graph, "//canvas") == [scene_canvas()]
     assert Scene.pages(graph) == [scene_canvas()]

@@ -44,12 +44,10 @@ defmodule Figler.Scene.Graph.Seed.Node do
     symbol_data = get(node_change, :symbol_data)
     symbol_id = Value.guid(symbol_data && get(symbol_data, :symbol_id))
     projected = projected_values(node_change)
-    node = struct!(Node, projected)
 
     projected
     |> Map.update!(:guid, &GUID.parse!/1)
     |> Map.update!(:parent_guid, &GUID.parse/1)
-    |> Map.put(:source, node)
     |> Map.put(:symbol_id, symbol_id)
     |> Map.put(:component_guid, symbol_id)
     |> then(&struct!(__MODULE__, &1))
@@ -70,7 +68,6 @@ defmodule Figler.Scene.Graph.Seed.Node do
     |> Map.take(@projected_fields)
     |> Map.update!(:guid, &GUID.parse!/1)
     |> Map.update!(:parent_guid, &GUID.parse/1)
-    |> Map.put(:source, node)
     |> then(&struct!(__MODULE__, &1))
   end
 
