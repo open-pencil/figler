@@ -30,7 +30,7 @@ defmodule Figler.Scene.Graph.Build do
     seed_nodes = Focus.materialize(seed_nodes, options)
     initial = initial_indexes(seed_nodes)
     children = build_children(initial.children_entries)
-    roots = build_roots(seed_nodes, initial.guid_set)
+    roots = build_roots(seed_nodes, initial.seed_nodes)
 
     %Graph{
       resource: Keyword.fetch!(opts, :resource),
@@ -151,7 +151,6 @@ defmodule Figler.Scene.Graph.Build do
       %{
         nodes: %{},
         seed_nodes: %{},
-        guid_set: MapSet.new(),
         children_entries: %{},
         by_type: %{},
         by_name: %{}
@@ -161,7 +160,6 @@ defmodule Figler.Scene.Graph.Build do
           acc
           | nodes: Map.put(acc.nodes, seed.guid, SeedNode.to_graph_node(seed)),
             seed_nodes: Map.put(acc.seed_nodes, seed.guid, seed),
-            guid_set: MapSet.put(acc.guid_set, seed.guid),
             children_entries: add_child_entry(acc.children_entries, seed, index),
             by_type: add_group_guid(acc.by_type, seed.node_type, seed.guid),
             by_name: add_group_guid(acc.by_name, seed.name, seed.guid)
@@ -192,9 +190,11 @@ defmodule Figler.Scene.Graph.Build do
     end)
   end
 
-  defp build_roots(seed_nodes, guids) do
+  defp build_roots(seed_nodes, seed_nodes_by_guid) do
     seed_nodes
-    |> Enum.filter(&(is_nil(&1.parent_guid) or not MapSet.member?(guids, &1.parent_guid)))
+    |> Enum.filter(
+      &(is_nil(&1.parent_guid) or not Map.has_key?(seed_nodes_by_guid, &1.parent_guid))
+    )
     |> Enum.map(& &1.guid)
   end
 
