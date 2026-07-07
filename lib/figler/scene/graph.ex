@@ -39,6 +39,7 @@ defmodule Figler.Scene.Graph do
     by_name: %{},
     clone_index: %{},
     clone_source_index: %{},
+    source_instance_guids: [],
     component_prop_refs: %{},
     provenance: %{},
     unresolved: [],
@@ -64,6 +65,7 @@ defmodule Figler.Scene.Graph do
             clone_source_index: %{
               optional({GUID.figma_guid(), GUID.figma_guid()}) => GUID.graph_guid()
             },
+            source_instance_guids: [GUID.figma_guid()],
             component_prop_refs: %{optional(GUID.figma_guid()) => {GUID.graph_guid(), atom()}},
             provenance: %{optional(GUID.graph_guid()) => map()},
             unresolved: [term()],
@@ -421,6 +423,10 @@ defmodule Figler.Scene.Graph do
 
   defp seed_count(graph, origin) do
     Enum.count(graph.seed_nodes, fn {_guid, seed} -> seed.origin == origin end)
+  end
+
+  defp instance_count(graph, :source) do
+    Enum.count(graph.source_instance_guids, &Map.has_key?(graph.nodes, &1))
   end
 
   defp instance_count(graph, origin) do

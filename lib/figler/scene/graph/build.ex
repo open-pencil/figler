@@ -46,6 +46,7 @@ defmodule Figler.Scene.Graph.Build do
       by_name: reverse_group_values(initial.by_name),
       clone_index: %{},
       clone_source_index: %{},
+      source_instance_guids: source_instance_guids(initial.seed_nodes),
       component_prop_refs: ComponentProps.index(seed_nodes),
       provenance: Provenance.initial(seed_nodes),
       unresolved: [],
@@ -200,6 +201,13 @@ defmodule Figler.Scene.Graph.Build do
   defp add_group_guid(groups, nil, _guid), do: groups
   defp add_group_guid(groups, "", _guid), do: groups
   defp add_group_guid(groups, key, guid), do: Map.update(groups, key, [guid], &[guid | &1])
+
+  defp source_instance_guids(seed_nodes) do
+    Enum.flat_map(seed_nodes, fn
+      {guid, %SeedNode{origin: :source, node_type: "instance"}} -> [guid]
+      _entry -> []
+    end)
+  end
 
   defp reverse_group_values(groups) do
     Map.new(groups, fn {key, values} -> {key, Enum.reverse(values)} end)
