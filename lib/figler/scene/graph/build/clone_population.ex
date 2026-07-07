@@ -92,7 +92,7 @@ defmodule Figler.Scene.Graph.Build.ClonePopulation do
     }
 
     source_seed = Map.get(graph.seed_nodes, source_guid)
-    cloned_seed = SeedNode.clone(source_seed, clone_guid, clone_parent_guid)
+    cloned_seed = SeedNode.graph_clone(source_seed, clone_guid, clone_parent_guid)
 
     graph
     |> put_clone_node(clone_guid, cloned_node, cloned_seed, instance_guid, source_guid)

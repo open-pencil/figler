@@ -82,6 +82,30 @@ defmodule Figler.Scene.Graph.Seed.Node do
   end
 
   @doc """
+  Builds a cloned seed only when later resolver stages need seed metadata.
+  """
+  @spec graph_clone(t() | nil, GUID.graph_guid(), GUID.graph_guid()) :: t() | nil
+  def graph_clone(nil, _clone_guid, _parent_guid), do: nil
+
+  def graph_clone(%__MODULE__{} = seed, clone_guid, parent_guid) do
+    if graph_clone_seed?(seed), do: clone(seed, clone_guid, parent_guid)
+  end
+
+  @doc """
+  Returns true when a cloned seed carries metadata used after clone population.
+  """
+  @spec graph_clone_seed?(t()) :: boolean()
+  def graph_clone_seed?(%__MODULE__{} = seed) do
+    seed.node_type == "instance" or
+      stack_metadata?(seed) or
+      non_empty?(seed.component_prop_assignments) or
+      non_empty?(seed.derived_symbol_data) or
+      non_empty?(seed.variable_consumption) or
+      non_empty?(seed.variable_data_values) or
+      style_metadata?(seed)
+  end
+
+  @doc """
   Converts a seed node back to the public projected node struct.
   """
   @spec to_node(t()) :: Node.t()
@@ -95,6 +119,25 @@ defmodule Figler.Scene.Graph.Seed.Node do
     |> Map.update!(:text, &(&1 || ""))
     |> then(&struct!(Node, &1))
   end
+
+  defp stack_metadata?(%__MODULE__{} = seed) do
+    not is_nil(seed.stack_mode) or
+      not is_nil(seed.stack_spacing) or
+      not is_nil(seed.stack_horizontal_padding) or
+      not is_nil(seed.stack_vertical_padding) or
+      not is_nil(seed.stack_padding_right) or
+      not is_nil(seed.stack_padding_bottom)
+  end
+
+  defp style_metadata?(%__MODULE__{} = seed) do
+    not is_nil(seed.text_style_guid) or
+      not is_nil(seed.fill_style_guid) or
+      not is_nil(seed.stroke_style_guid) or
+      not is_nil(seed.effect_style_guid) or
+      not is_nil(seed.grid_style_guid)
+  end
+
+  defp non_empty?(value), do: value not in [nil, []]
 
   defp focused_node_changes(node_changes, nil), do: node_changes
   defp focused_node_changes(node_changes, []), do: node_changes

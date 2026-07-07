@@ -103,7 +103,7 @@ defmodule Figler.Scene.Graph.Symbol.Swap do
     cloned_seed =
       graph.seed_nodes
       |> Map.get(source_guid)
-      |> SeedNode.clone(clone_guid, parent_guid)
+      |> SeedNode.graph_clone(clone_guid, parent_guid)
 
     graph
     |> Nodes.put(clone_guid, cloned_node, cloned_seed)

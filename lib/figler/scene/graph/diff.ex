@@ -60,11 +60,29 @@ defmodule Figler.Scene.Graph.Diff do
   end
 
   defp source_node(graph, guid) do
-    graph.seed_nodes
-    |> Map.get(guid)
-    |> case do
-      %SeedNode{} = seed -> SeedNode.to_node(seed)
-      nil -> nil
+    case Map.get(graph.seed_nodes, guid) do
+      %SeedNode{} = seed ->
+        SeedNode.to_node(seed)
+
+      nil ->
+        graph.provenance
+        |> Map.get(guid, %{})
+        |> Map.get(:source_guid)
+        |> then(&source_node_from_seed(graph, guid, &1))
+    end
+  end
+
+  defp source_node_from_seed(_graph, _guid, nil), do: nil
+
+  defp source_node_from_seed(graph, guid, source_guid) do
+    with %SeedNode{} = seed <- Map.get(graph.seed_nodes, source_guid),
+         resolved when not is_nil(resolved) <- Map.get(graph.nodes, guid) do
+      seed
+      |> SeedNode.to_node()
+      |> Map.put(:guid, resolved.guid)
+      |> Map.put(:parent_guid, resolved.parent_guid)
+    else
+      _missing -> nil
     end
   end
 
