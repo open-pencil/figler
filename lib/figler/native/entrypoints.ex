@@ -9,6 +9,7 @@ defmodule Figler.Native.Entrypoints do
 
   @stubs [
     {:decode_sparse_message, 1},
+    {:decode_graph_seed_records, 1},
     {:decode_graph_focused_sparse_message, 2},
     {:decode_scene_summary, 1},
     {:build_scene_index, 1},

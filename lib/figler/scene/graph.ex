@@ -368,13 +368,24 @@ defmodule Figler.Scene.Graph do
     opts = normalize_focus(opts)
 
     if Keyword.get(opts, :native, true) do
-      payload
-      |> sparse_message(opts)
-      |> SeedNode.from_message()
+      native_seed_nodes(payload, opts)
     else
       payload
       |> Figler.decode_message()
       |> SeedNode.from_message(opts)
+    end
+  end
+
+  defp native_seed_nodes(payload, opts) do
+    case Keyword.get(opts, :focus) do
+      nil ->
+        payload |> CodecNifs.decode_graph_seed_records() |> SeedNode.from_native_records()
+
+      [] ->
+        payload |> CodecNifs.decode_graph_seed_records() |> SeedNode.from_native_records()
+
+      _focus ->
+        payload |> sparse_message(opts) |> SeedNode.from_message()
     end
   end
 

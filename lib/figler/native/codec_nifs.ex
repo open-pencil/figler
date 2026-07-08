@@ -10,7 +10,8 @@ defmodule Figler.Native.CodecNifs do
   alias Figler.Native.Module
 
   @delegates [
-    :decode_sparse_message
+    :decode_sparse_message,
+    :decode_graph_seed_records
   ]
 
   for name <- @delegates do

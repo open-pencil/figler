@@ -7,6 +7,14 @@ pub fn decode_sparse_message<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<T
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_graph_seed_records<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
+    let mut decoder = Decoder::new(bytes.as_slice());
+    let value = graph_seed_records_from_decoder(env, &mut decoder)?;
+    decoder.finish()?;
+    Ok(value)
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_graph_focused_sparse_message<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,

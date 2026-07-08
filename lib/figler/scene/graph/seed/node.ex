@@ -38,6 +38,14 @@ defmodule Figler.Scene.Graph.Seed.Node do
   end
 
   @doc """
+  Builds seed nodes from native graph seed records.
+  """
+  @spec from_native_records([list()]) :: [t()]
+  def from_native_records(records) when is_list(records) do
+    Enum.map(records, &from_native_record/1)
+  end
+
+  @doc """
   Builds a seed node from a generated `NodeChange` struct, including initial
   graph resolver metadata.
   """
@@ -89,6 +97,94 @@ defmodule Figler.Scene.Graph.Seed.Node do
       derived_symbol_data: DerivedData.all(get(node_change, :derived_symbol_data)),
       variable_consumption: multiplayer_entries(get(node_change, :variable_consumption_map)),
       variable_data_values: multiplayer_entries(get(node_change, :variable_data_values)),
+      symbol_id: symbol_id,
+      component_guid: symbol_id
+    }
+  end
+
+  defp from_native_record([
+         guid,
+         node_type,
+         name,
+         parent_guid,
+         position,
+         size,
+         transform,
+         visible,
+         locked,
+         opacity,
+         text,
+         font_family,
+         _font_style,
+         _font_postscript,
+         font_size,
+         text_style_guid,
+         component_key,
+         origin_component_key,
+         fill_style_guid,
+         stroke_style_guid,
+         effect_style_guid,
+         grid_style_guid,
+         fill_count,
+         stroke_count,
+         override_key,
+         stack_mode,
+         stack_spacing,
+         stack_horizontal_padding,
+         stack_vertical_padding,
+         stack_padding_right,
+         stack_padding_bottom,
+         symbol_data,
+         component_prop_defs,
+         component_prop_refs,
+         component_prop_assignments,
+         derived_symbol_data,
+         variable_consumption,
+         variable_data_values
+       ]) do
+    symbol_id = Value.guid(get(symbol_data, :symbol_id))
+    text_data = text
+    font_name = font_family
+
+    %__MODULE__{
+      guid: guid,
+      node_type: node_type,
+      name: name,
+      parent_guid: parent_guid,
+      position: position,
+      size: Value.vector(size),
+      transform: Value.matrix(transform),
+      visible: visible,
+      locked: locked,
+      opacity: opacity,
+      text: get(text_data, :characters),
+      font_family: get(font_name, :family),
+      font_style: get(font_name, :style),
+      font_postscript: get(font_name, :postscript),
+      font_size: font_size,
+      text_style_guid: style_guid(text_style_guid),
+      component_key: component_key,
+      origin_component_key: origin_component_key,
+      fill_style_guid: style_guid(fill_style_guid),
+      stroke_style_guid: style_guid(stroke_style_guid),
+      effect_style_guid: style_guid(effect_style_guid),
+      grid_style_guid: style_guid(grid_style_guid),
+      fill_count: fill_count,
+      stroke_count: stroke_count,
+      override_key: override_key,
+      stack_mode: stack_mode,
+      stack_spacing: stack_spacing,
+      stack_horizontal_padding: stack_horizontal_padding,
+      stack_vertical_padding: stack_vertical_padding,
+      stack_padding_right: stack_padding_right,
+      stack_padding_bottom: stack_padding_bottom,
+      symbol_overrides: SymbolOverrides.all(symbol_data),
+      component_prop_defs: ComponentProps.defs(component_prop_defs),
+      component_prop_refs: ComponentProps.refs(component_prop_refs),
+      component_prop_assignments: ComponentProps.assignments(component_prop_assignments),
+      derived_symbol_data: DerivedData.all(derived_symbol_data),
+      variable_consumption: multiplayer_entries(variable_consumption),
+      variable_data_values: multiplayer_entries(variable_data_values),
       symbol_id: symbol_id,
       component_guid: symbol_id
     }

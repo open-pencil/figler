@@ -28,6 +28,7 @@ defmodule Figler.Codegen.Native do
       __rq_include!("templates/scene_types.rs");
       __rq_graph_focus_helpers!();
       __rq_graph_focus_decoders!();
+      __rq_include!("templates/graph_seed_decoders.rs");
       __rq_include!("templates/scene_xpath_runtime.rs");
       __rq_include!("templates/scene_summary_decoders.rs");
       __rq_include!("templates/scene_nifs.rs");
