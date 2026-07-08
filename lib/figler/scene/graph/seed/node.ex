@@ -134,7 +134,8 @@ defmodule Figler.Scene.Graph.Seed.Node do
          stack_vertical_padding,
          stack_padding_right,
          stack_padding_bottom,
-         symbol_data,
+         symbol_id,
+         symbol_overrides,
          component_prop_defs,
          component_prop_refs,
          component_prop_assignments,
@@ -142,7 +143,6 @@ defmodule Figler.Scene.Graph.Seed.Node do
          variable_consumption,
          variable_data_values
        ]) do
-    symbol_id = Value.guid(get(symbol_data, :symbol_id))
     text_data = text
     font_name = font_family
 
@@ -178,7 +178,7 @@ defmodule Figler.Scene.Graph.Seed.Node do
       stack_vertical_padding: stack_vertical_padding,
       stack_padding_right: stack_padding_right,
       stack_padding_bottom: stack_padding_bottom,
-      symbol_overrides: SymbolOverrides.all(symbol_data),
+      symbol_overrides: SymbolOverrides.all(%{symbol_overrides: symbol_overrides}),
       component_prop_defs: ComponentProps.defs(component_prop_defs),
       component_prop_refs: ComponentProps.refs(component_prop_refs),
       component_prop_assignments: ComponentProps.assignments(component_prop_assignments),

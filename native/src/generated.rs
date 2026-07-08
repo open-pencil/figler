@@ -10646,6 +10646,33 @@ fn graph_seed_repeated_terms<'a>(
     let values = decoder.read_repeated(|decoder| decode(env, decoder))?;
     Ok(values.encode(env))
 }
+fn graph_seed_symbol_data<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<(Term<'a>, Term<'a>)> {
+    let nil = graph_seed_nil(env);
+    let empty = Vec::<Term<'a>>::new().encode(env);
+    let mut symbol_id = nil;
+    let mut symbol_overrides = empty;
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => symbol_id = graph_seed_guid(env, decoder)?,
+            2 => {
+                symbol_overrides = graph_seed_repeated_terms(
+                    env,
+                    decoder,
+                    decode_sparse_node_change_from_decoder,
+                )?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => graph_focus_skip_symbol_data_field(decoder, field)?,
+        }
+    }
+    Ok((symbol_id, symbol_overrides))
+}
 fn graph_seed_node_record<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
@@ -10683,7 +10710,8 @@ fn graph_seed_node_record<'a>(
     let mut stack_vertical_padding = nil;
     let mut stack_padding_right = nil;
     let mut stack_padding_bottom = nil;
-    let mut symbol_data = nil;
+    let mut symbol_id = nil;
+    let mut symbol_overrides = empty;
     let mut component_prop_defs = empty;
     let mut component_prop_refs = empty;
     let mut component_prop_assignments = empty;
@@ -10725,7 +10753,14 @@ fn graph_seed_node_record<'a>(
             42 => text = decode_sparse_text_data_from_decoder(env, decoder)?,
             105 => stack_mode = decode_sparse_stack_mode_from_decoder(env, decoder)?,
             107 => stack_spacing = decoder.read_var_float(env)?,
-            113 => symbol_data = decode_sparse_symbol_data_from_decoder(env, decoder)?,
+            113 => {
+                let (next_symbol_id, next_symbol_overrides) = graph_seed_symbol_data(
+                    env,
+                    decoder,
+                )?;
+                symbol_id = next_symbol_id;
+                symbol_overrides = next_symbol_overrides;
+            }
             125 => {
                 derived_symbol_data = graph_seed_repeated_terms(
                     env,
@@ -10787,9 +10822,10 @@ fn graph_seed_node_record<'a>(
         text_style_guid, component_key, origin_component_key, fill_style_guid,
         stroke_style_guid, effect_style_guid, grid_style_guid, fill_count, stroke_count,
         override_key, stack_mode, stack_spacing, stack_horizontal_padding,
-        stack_vertical_padding, stack_padding_right, stack_padding_bottom, symbol_data,
-        component_prop_defs, component_prop_refs, component_prop_assignments,
-        derived_symbol_data, variable_consumption, variable_data_values,
+        stack_vertical_padding, stack_padding_right, stack_padding_bottom, symbol_id,
+        symbol_overrides, component_prop_defs, component_prop_refs,
+        component_prop_assignments, derived_symbol_data, variable_consumption,
+        variable_data_values,
     ];
     Ok(record.encode(env))
 }

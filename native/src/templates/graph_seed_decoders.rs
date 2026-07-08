@@ -37,6 +37,33 @@ fn graph_seed_repeated_terms<'a>(
     Ok(values.encode(env))
 }
 
+fn graph_seed_symbol_data<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<(Term<'a>, Term<'a>)> {
+    let nil = graph_seed_nil(env);
+    let empty = Vec::<Term<'a>>::new().encode(env);
+    let mut symbol_id = nil;
+    let mut symbol_overrides = empty;
+
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => symbol_id = graph_seed_guid(env, decoder)?,
+            2 => {
+                symbol_overrides =
+                    graph_seed_repeated_terms(env, decoder, decode_sparse_node_change_from_decoder)?;
+            }
+            3 => {
+                decoder.read_var_float_value()?;
+            }
+            field => graph_focus_skip_symbol_data_field(decoder, field)?,
+        }
+    }
+
+    Ok((symbol_id, symbol_overrides))
+}
+
 fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
     let nil = graph_seed_nil(env);
     let empty = Vec::<Term<'a>>::new().encode(env);
@@ -72,7 +99,8 @@ fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifRes
     let mut stack_vertical_padding = nil;
     let mut stack_padding_right = nil;
     let mut stack_padding_bottom = nil;
-    let mut symbol_data = nil;
+    let mut symbol_id = nil;
+    let mut symbol_overrides = empty;
     let mut component_prop_defs = empty;
     let mut component_prop_refs = empty;
     let mut component_prop_assignments = empty;
@@ -103,16 +131,35 @@ fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifRes
             42 => text = decode_sparse_text_data_from_decoder(env, decoder)?,
             105 => stack_mode = decode_sparse_stack_mode_from_decoder(env, decoder)?,
             107 => stack_spacing = decoder.read_var_float(env)?,
-            113 => symbol_data = decode_sparse_symbol_data_from_decoder(env, decoder)?,
-            125 => derived_symbol_data = graph_seed_repeated_terms(env, decoder, decode_sparse_node_change_from_decoder)?,
+            113 => {
+                let (next_symbol_id, next_symbol_overrides) = graph_seed_symbol_data(env, decoder)?;
+                symbol_id = next_symbol_id;
+                symbol_overrides = next_symbol_overrides;
+            }
+            125 => {
+                derived_symbol_data =
+                    graph_seed_repeated_terms(env, decoder, decode_sparse_node_change_from_decoder)?;
+            }
             209 => stack_horizontal_padding = decoder.read_var_float(env)?,
             210 => stack_vertical_padding = decoder.read_var_float(env)?,
             213 => override_key = graph_seed_guid(env, decoder)?,
             233 => stack_padding_right = decoder.read_var_float(env)?,
             234 => stack_padding_bottom = decoder.read_var_float(env)?,
-            266 => component_prop_defs = graph_seed_repeated_terms(env, decoder, decode_sparse_component_prop_def_from_decoder)?,
-            267 => component_prop_refs = graph_seed_repeated_terms(env, decoder, decode_sparse_component_prop_ref_from_decoder)?,
-            268 => component_prop_assignments = graph_seed_repeated_terms(env, decoder, decode_sparse_component_prop_assignment_from_decoder)?,
+            266 => {
+                component_prop_defs =
+                    graph_seed_repeated_terms(env, decoder, decode_sparse_component_prop_def_from_decoder)?;
+            }
+            267 => {
+                component_prop_refs =
+                    graph_seed_repeated_terms(env, decoder, decode_sparse_component_prop_ref_from_decoder)?;
+            }
+            268 => {
+                component_prop_assignments = graph_seed_repeated_terms(
+                    env,
+                    decoder,
+                    decode_sparse_component_prop_assignment_from_decoder,
+                )?;
+            }
             307 => variable_consumption = decode_sparse_variable_data_map_from_decoder(env, decoder)?,
             315 => variable_data_values = decode_sparse_variable_data_values_from_decoder(env, decoder)?,
             332 => fill_style_guid = decode_sparse_style_id_from_decoder(env, decoder)?,
@@ -158,7 +205,8 @@ fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifRes
         stack_vertical_padding,
         stack_padding_right,
         stack_padding_bottom,
-        symbol_data,
+        symbol_id,
+        symbol_overrides,
         component_prop_defs,
         component_prop_refs,
         component_prop_assignments,

@@ -1,6 +1,7 @@
 defmodule Figler.Scene.GraphTest do
   use ExUnit.Case, async: true
 
+  alias Figler.Native.CodecNifs
   alias Figler.Scene
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
@@ -99,6 +100,22 @@ defmodule Figler.Scene.GraphTest do
              guid: "0:1",
              changed: []
            }
+  end
+
+  test "native graph seed records match sparse seed decoding" do
+    payload = message_payload()
+
+    sparse_seeds =
+      payload
+      |> CodecNifs.decode_sparse_message()
+      |> SeedNode.from_message()
+
+    native_record_seeds =
+      payload
+      |> CodecNifs.decode_graph_seed_records()
+      |> SeedNode.from_native_records()
+
+    assert native_record_seeds == sparse_seeds
   end
 
   test "profiles graph construction" do
