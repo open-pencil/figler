@@ -168,6 +168,11 @@ defmodule Figler.Scene.Projection do
   def fields, do: @fields
   def field_names, do: Enum.map(@fields, & &1.name)
 
+  def field!(name) do
+    Enum.find(@fields, &(&1.name == name)) ||
+      raise ArgumentError, "unknown scene projection field: #{inspect(name)}"
+  end
+
   def style_id_field(name), do: Map.fetch!(@style_id_fields, name)
 
   def source_name(field) when is_atom(field) do

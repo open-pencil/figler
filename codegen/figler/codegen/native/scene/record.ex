@@ -62,10 +62,12 @@ defmodule Figler.Codegen.Native.Scene.Record do
   end
 
   defp field(name) do
+    descriptor = Projection.field!(name)
+
     %Field{
       name: name,
-      rust_type: ProjectionNative.rust_type(name),
-      copy?: ProjectionNative.rust_copy?(name)
+      rust_type: ProjectionNative.rust_type(descriptor),
+      copy?: ProjectionNative.rust_copy?(descriptor)
     }
   end
 end

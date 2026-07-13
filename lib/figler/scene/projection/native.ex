@@ -34,15 +34,20 @@ defmodule Figler.Scene.Projection.Native do
           }
   end
 
-  def rust_type(:size), do: "Option<SceneSize>"
-  def rust_type(:transform), do: "Option<SceneTransform>"
-  def rust_type(field) when field in [:visible, :locked], do: "Option<bool>"
-  def rust_type(field) when field in [:opacity, :font_size], do: "Option<f32>"
-  def rust_type(field) when field in [:fill_count, :stroke_count], do: "Option<usize>"
-  def rust_type(_field), do: "Option<String>"
+  alias Figler.Scene.Projection
 
-  def rust_copy?(field),
-    do: field in [:visible, :locked, :opacity, :font_size, :fill_count, :stroke_count]
+  def rust_type(field) when is_atom(field), do: field |> Projection.field!() |> rust_type()
+  def rust_type(%{value: :vector}), do: "Option<SceneSize>"
+  def rust_type(%{value: :matrix}), do: "Option<SceneTransform>"
+  def rust_type(%{decode: :bool}), do: "Option<bool>"
+  def rust_type(%{decode: :float}), do: "Option<f32>"
+  def rust_type(%{value: :count}), do: "Option<usize>"
+  def rust_type(%{name: _name}), do: "Option<String>"
+
+  def rust_copy?(field) when is_atom(field), do: field |> Projection.field!() |> rust_copy?()
+  def rust_copy?(%{decode: kind}) when kind in [:bool, :float], do: true
+  def rust_copy?(%{value: :count}), do: true
+  def rust_copy?(%{name: _name}), do: false
 
   @spec xpath_attr_entries(atom()) :: [XPathAttr.t()]
   def xpath_attr_entries(:size) do
