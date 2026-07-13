@@ -6,7 +6,7 @@ defmodule Figler.Scene.Graph.Seed.Projection do
   extraction kinds so seed node construction and native generation stay aligned.
   """
 
-  alias Figler.Scene.Graph.Seed.Extraction
+  alias Figler.Scene.Projection, as: SceneProjection
 
   @resolver_metadata_fields [
     :override_key,
@@ -27,6 +27,13 @@ defmodule Figler.Scene.Graph.Seed.Projection do
 
   @identity_fields [:component_guid, :symbol_id]
 
+  {record_metadata_prefix, record_metadata_suffix} =
+    Enum.split_while(@resolver_metadata_fields, &(&1 != :symbol_overrides))
+
+  @native_record_fields SceneProjection.field_names() ++
+                          record_metadata_prefix ++ [:symbol_id] ++ record_metadata_suffix
+  @native_record_ignored_fields [:font_style, :font_postscript]
+
   @list_fields [
     :symbol_overrides,
     :component_prop_defs,
@@ -39,6 +46,19 @@ defmodule Figler.Scene.Graph.Seed.Projection do
 
   def resolver_metadata_fields, do: @resolver_metadata_fields
   def identity_fields, do: @identity_fields
+  def native_record_fields, do: @native_record_fields
+
+  defmacro native_record_pattern do
+    fields =
+      Enum.map(@native_record_fields, fn field ->
+        name = if field in @native_record_ignored_fields, do: :"_#{field}", else: field
+        Macro.var(name, nil)
+      end)
+
+    quote do
+      [unquote_splicing(fields)]
+    end
+  end
 
   def struct_fields do
     metadata_fields =
@@ -62,8 +82,6 @@ defmodule Figler.Scene.Graph.Seed.Projection do
   def value_kind(:variable_consumption), do: {:multiplayer_entries, :variable_consumption_map}
   def value_kind(:variable_data_values), do: {:multiplayer_entries, :variable_data_values}
   def value_kind(field), do: {:field, field}
-
-  def metadata(node_change), do: Extraction.metadata(node_change)
 
   def list_field?(:symbol_overrides), do: true
   def list_field?(:component_prop_defs), do: true

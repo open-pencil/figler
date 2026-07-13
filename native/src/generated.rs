@@ -10825,7 +10825,7 @@ fn graph_seed_node_record<'a>(
         stack_vertical_padding, stack_padding_right, stack_padding_bottom, symbol_id,
         symbol_overrides, component_prop_defs, component_prop_refs,
         component_prop_assignments, derived_symbol_data, variable_consumption,
-        variable_data_values,
+        variable_data_values
     ];
     Ok(record.encode(env))
 }

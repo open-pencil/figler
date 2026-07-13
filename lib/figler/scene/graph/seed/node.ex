@@ -18,6 +18,8 @@ defmodule Figler.Scene.Graph.Seed.Node do
   alias Figler.Scene.Graph.Seed.Value
   alias Figler.Scene.Node
 
+  require SeedProjection
+
   @projected_fields Node.field_names()
 
   @enforce_keys [:guid, :node_type]
@@ -102,47 +104,7 @@ defmodule Figler.Scene.Graph.Seed.Node do
     }
   end
 
-  defp from_native_record([
-         guid,
-         node_type,
-         name,
-         parent_guid,
-         position,
-         size,
-         transform,
-         visible,
-         locked,
-         opacity,
-         text,
-         font_family,
-         _font_style,
-         _font_postscript,
-         font_size,
-         text_style_guid,
-         component_key,
-         origin_component_key,
-         fill_style_guid,
-         stroke_style_guid,
-         effect_style_guid,
-         grid_style_guid,
-         fill_count,
-         stroke_count,
-         override_key,
-         stack_mode,
-         stack_spacing,
-         stack_horizontal_padding,
-         stack_vertical_padding,
-         stack_padding_right,
-         stack_padding_bottom,
-         symbol_id,
-         symbol_overrides,
-         component_prop_defs,
-         component_prop_refs,
-         component_prop_assignments,
-         derived_symbol_data,
-         variable_consumption,
-         variable_data_values
-       ]) do
+  defp from_native_record(SeedProjection.native_record_pattern()) do
     text_data = text
     font_name = font_family
 

@@ -11,6 +11,10 @@ unless Code.ensure_loaded?(Figler.Scene.Projection.Native) do
   Code.require_file("lib/figler/scene/projection/native.ex")
 end
 
+unless Code.ensure_loaded?(Figler.Scene.Graph.Seed.Projection) do
+  Code.require_file("lib/figler/scene/graph/seed/projection.ex")
+end
+
 unless Code.ensure_loaded?(Figler.Native.Entrypoints) do
   Code.require_file("lib/figler/native/entrypoints.ex")
 end

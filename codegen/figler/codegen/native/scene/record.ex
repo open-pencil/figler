@@ -8,8 +8,10 @@ defmodule Figler.Codegen.Native.Scene.Record do
   scattering ad hoc field-line string construction through `Scene`.
   """
 
+  alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
+  alias RustQ.Rust.AST.Builder, as: A
   alias RustQ.Rustler.Schema
 
   defmodule Field do
@@ -50,6 +52,13 @@ defmodule Figler.Codegen.Native.Scene.Record do
   @spec record_build_fields([Field.t()]) :: [RustQ.Rust.ShorthandField.t()]
   def record_build_fields(fields \\ optional_fields()) do
     fields |> Enum.map(& &1.name) |> Schema.shorthand_fields()
+  end
+
+  @spec seed_record_expr() :: RustQ.Rust.AST.VecLiteral.t()
+  def seed_record_expr do
+    SeedProjection.native_record_fields()
+    |> Enum.map(&A.var/1)
+    |> A.vec()
   end
 
   defp field(name) do

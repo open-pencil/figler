@@ -10,6 +10,7 @@ defmodule Figler.Codegen.Native do
   alias KiwiCodec.RustlerGenerator.Skip
   alias KiwiCodec.Schema
   alias RustQ.Rust
+  alias RustQ.Rust.AST.Render
 
   def render_splices(%Schema{} = schema) do
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
@@ -23,6 +24,11 @@ defmodule Figler.Codegen.Native do
   end
 
   def source(%Schema{} = schema) do
+    {graph_seed_record, splices} =
+      schema
+      |> render_splices()
+      |> Keyword.pop!(:graph_seed_record)
+
     RustQ.render!(
       """
       __rq_include!("templates/scene_types.rs");
@@ -35,7 +41,8 @@ defmodule Figler.Codegen.Native do
       """,
       "native/src/generated.scene.rs",
       include_dir: "native/src",
-      splice: render_splices(schema)
+      bind: [graph_seed_record: {:expr, Render.render_expr(graph_seed_record)}],
+      splice: splices
     )
   end
 
