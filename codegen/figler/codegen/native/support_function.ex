@@ -203,6 +203,12 @@ defmodule Figler.Codegen.Native.SupportFunction do
   @type decoder :: R.mut_ref(R.path(:Decoder, R.lifetime(:_)))
   @type graph_focus_guid :: term()
   @type scene_query_node :: R.path(:SceneQueryNode)
+  @type scene_summary :: %{
+          required(:node_count) => R.usize(),
+          required(:parented_count) => R.usize(),
+          required(:root_count) => R.usize(),
+          required(:type_counts) => R.vec({R.path(:String), R.usize()})
+        }
   @type scene_size :: %{
           required(:x) => R.f64(),
           required(:y) => R.f64()
@@ -240,14 +246,18 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   @doc """
-  Returns scene value structs derived from Rusty-Elixir map types.
+  Returns scene support structs derived from Rusty-Elixir map types.
   """
-  @spec scene_value_type_items() :: [RustQ.Rust.Fragment.t()]
-  def scene_value_type_items do
-    MetaAST.struct_type_items(__MODULE__, [:scene_size, :scene_transform],
-      derive: [:Clone, :Debug, "rustler::NifMap"],
+  @spec scene_type_items() :: [RustQ.Rust.Fragment.t()]
+  def scene_type_items do
+    MetaAST.struct_type_items(__MODULE__, [:scene_summary],
+      derive: ["rustler::NifMap"],
       field_vis: nil
-    )
+    ) ++
+      MetaAST.struct_type_items(__MODULE__, [:scene_size, :scene_transform],
+        derive: [:Clone, :Debug, "rustler::NifMap"],
+        field_vis: nil
+      )
   end
 
   @doc """
