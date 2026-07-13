@@ -169,38 +169,17 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
 end
 
 defmodule Figler.Codegen.Native.SupportFunction do
-  use RustQ.Meta,
+  require Figler.Codegen.Native.AtomCache
+  require Figler.Scene.Projection
+
+  Figler.Codegen.Native.AtomCache.use_rustq_meta(
+    atom_fields: Figler.Scene.Projection.field_names(),
     rust_sources: [
       "native/src/runtime.rs",
       "native/src/templates/graph_focus_decoders.rs"
     ],
-    callable_modules: [RustQ.Rustler.Atom],
-    static_types: [
-      GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      NODE_TYPE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      NAME_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      PARENT_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      POSITION_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      SIZE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      TRANSFORM_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      VISIBLE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      LOCKED_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      OPACITY_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      TEXT_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      FONT_FAMILY_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      FONT_STYLE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      FONT_POSTSCRIPT_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      FONT_SIZE_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      TEXT_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      COMPONENT_KEY_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      ORIGIN_COMPONENT_KEY_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      FILL_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      STROKE_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      EFFECT_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      GRID_STYLE_GUID_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      FILL_COUNT_ATOM: RustQ.Type.raw(:"OnceLock<Atom>"),
-      STROKE_COUNT_ATOM: RustQ.Type.raw(:"OnceLock<Atom>")
-    ]
+    callable_modules: [RustQ.Rustler.Atom]
+  )
 
   @moduledoc """
   Generated Rust support functions for Figler native codegen.
@@ -210,9 +189,10 @@ defmodule Figler.Codegen.Native.SupportFunction do
   rendering belongs in the neighboring codegen modules.
   """
 
+  alias Figler.Codegen.Native.AtomCache
+  alias Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
-  alias Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs
   alias RustQ.Meta.AST, as: MetaAST
   alias RustQ.Type, as: R
 
@@ -237,30 +217,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
           required(:m12) => R.f64()
         }
 
-  @scene_query_atom_vars %{
-    name: :NAME_ATOM,
-    parent_guid: :PARENT_GUID_ATOM,
-    position: :POSITION_ATOM,
-    size: :SIZE_ATOM,
-    transform: :TRANSFORM_ATOM,
-    visible: :VISIBLE_ATOM,
-    locked: :LOCKED_ATOM,
-    opacity: :OPACITY_ATOM,
-    text: :TEXT_ATOM,
-    font_family: :FONT_FAMILY_ATOM,
-    font_style: :FONT_STYLE_ATOM,
-    font_postscript: :FONT_POSTSCRIPT_ATOM,
-    font_size: :FONT_SIZE_ATOM,
-    text_style_guid: :TEXT_STYLE_GUID_ATOM,
-    component_key: :COMPONENT_KEY_ATOM,
-    origin_component_key: :ORIGIN_COMPONENT_KEY_ATOM,
-    fill_style_guid: :FILL_STYLE_GUID_ATOM,
-    stroke_style_guid: :STROKE_STYLE_GUID_ATOM,
-    effect_style_guid: :EFFECT_STYLE_GUID_ATOM,
-    grid_style_guid: :GRID_STYLE_GUID_ATOM,
-    fill_count: :FILL_COUNT_ATOM,
-    stroke_count: :STROKE_COUNT_ATOM
-  }
+  @scene_query_atom_vars AtomCache.static_var_map(Projection.field_names())
 
   @optional_field_names Projection.field_names() -- Projection.required_field_names()
   @optional_xpath_attrs Enum.flat_map(

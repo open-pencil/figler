@@ -154,15 +154,7 @@ defmodule Figler.Codegen.Native.Scene do
   defp scene_decode_arm(id, %Decode.Operation{} = operation), do: Decode.arm(id, operation)
 
   defp scene_query_atom_statics do
-    (["GUID_ATOM", "NODE_TYPE_ATOM"] ++
-       Enum.map(scene_optional_fields(), &query_field_atom_name/1))
+    Projection.field_names()
     |> Enum.map(&AtomCache.static/1)
-  end
-
-  defp query_field_atom_name(field) do
-    field
-    |> to_string()
-    |> String.upcase()
-    |> Kernel.<>("_ATOM")
   end
 end
