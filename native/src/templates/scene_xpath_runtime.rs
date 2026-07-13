@@ -28,14 +28,7 @@ mod scene_xpath_runtime {
         }
     }
 
-    #[derive(Clone, Debug)]
-    struct SceneNodeRecord {
-        guid: SceneGuid,
-        node_type: &'static str,
-        __rq_scene_record_fields: (),
-        parent: Option<usize>,
-        children: Vec<usize>,
-    }
+    __rq_scene_node_record!();
     #[derive(Clone, Debug)]
     struct SceneIndex {
         nodes: Vec<SceneNodeRecord>,

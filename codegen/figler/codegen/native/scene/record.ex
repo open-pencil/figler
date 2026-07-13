@@ -1,62 +1,47 @@
 defmodule Figler.Codegen.Native.Scene.Record do
   @moduledoc """
-  Builds scene record/query-node field splices from projection metadata.
+  Builds complete scene record/query-node structs from projection metadata.
 
-  These splices are Rust struct field declarations and struct literal entries,
-  so they live at the template boundary rather than in `defrust` functions.
-  The module keeps the projection-to-Rust mapping explicit and typed instead of
-  scattering ad hoc field-line string construction through `Scene`.
+  Struct declarations and literal fields live at the template boundary because
+  their shape depends on the projection schema rather than handwritten Rust.
   """
 
   alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
+  alias RustQ.Rust
   alias RustQ.Rust.AST.Builder, as: A
+  alias RustQ.Rust.AST.TypeBuilder, as: T
   alias RustQ.Rustler.Schema
 
-  defmodule Field do
-    @moduledoc """
-    A projected scene field and its Rust storage metadata.
-    """
-
-    @enforce_keys [:name, :rust_type, :copy?]
-    defstruct [:name, :rust_type, :copy?]
-
-    @type t :: %__MODULE__{
-            name: atom(),
-            rust_type: RustQ.Rust.rust_type(),
-            copy?: boolean()
-          }
-  end
-
-  @spec optional_fields() :: [Field.t()]
+  @spec optional_fields() :: [map()]
   def optional_fields do
-    Projection.field_names()
-    |> Kernel.--(Projection.required_field_names())
-    |> Enum.map(&field/1)
+    Enum.reject(Projection.fields(), &Map.get(&1, :required?, false))
   end
 
-  @spec query_node_fields([Field.t()]) :: [RustQ.Rust.Field.t()]
-  def query_node_fields(fields \\ optional_fields()) do
-    fields
-    |> Enum.map(&{&1.name, &1.rust_type})
-    |> Schema.struct_fields()
+  @spec query_node_struct() :: Rust.Struct.t()
+  def query_node_struct do
+    Rust.struct(:SceneQueryNode,
+      vis: :pub,
+      derive: ["rustler::NifMap"],
+      fields:
+        Schema.struct_fields(guid: T.path(:String), node_type: T.path(:String)) ++
+          query_node_fields()
+    )
   end
 
-  @spec record_fields([Field.t()]) :: [RustQ.Rust.Field.t()]
-  def record_fields(fields \\ optional_fields()) do
-    fields
-    |> Enum.map(fn
-      %Field{name: :parent_guid} ->
-        {:parent_guid, A.type_path(:Option, generics: [A.type_path(:SceneGuid)])}
-
-      %Field{name: name, rust_type: rust_type} ->
-        {name, rust_type}
-    end)
-    |> Schema.struct_fields()
+  @spec scene_node_record_struct() :: Rust.Struct.t()
+  def scene_node_record_struct do
+    Rust.struct(:SceneNodeRecord,
+      derive: [:Clone, :Debug],
+      fields:
+        Schema.struct_fields(guid: T.path(:SceneGuid), node_type: T.ref(:str, lifetime: :static)) ++
+          record_fields() ++
+          Schema.struct_fields(parent: option_type(:usize), children: T.vec(:usize))
+    )
   end
 
-  @spec record_build_fields([Field.t()]) :: [RustQ.Rust.ShorthandField.t()]
+  @spec record_build_fields([map()]) :: [RustQ.Rust.ShorthandField.t()]
   def record_build_fields(fields \\ optional_fields()) do
     fields |> Enum.map(& &1.name) |> Schema.shorthand_fields()
   end
@@ -68,13 +53,20 @@ defmodule Figler.Codegen.Native.Scene.Record do
     |> A.vec()
   end
 
-  defp field(name) do
-    descriptor = Projection.field!(name)
-
-    %Field{
-      name: name,
-      rust_type: ProjectionNative.rust_type(descriptor),
-      copy?: ProjectionNative.rust_copy?(descriptor)
-    }
+  defp query_node_fields do
+    optional_fields()
+    |> Enum.map(&{&1.name, ProjectionNative.rust_type(&1)})
+    |> Schema.struct_fields()
   end
+
+  defp record_fields do
+    optional_fields()
+    |> Enum.map(&{&1.name, record_rust_type(&1)})
+    |> Schema.struct_fields()
+  end
+
+  defp record_rust_type(%{source: {:parent_index, :guid}}), do: option_type(:SceneGuid)
+  defp record_rust_type(field), do: ProjectionNative.rust_type(field)
+
+  defp option_type(type), do: T.path(:Option, generics: [T.path(type)])
 end

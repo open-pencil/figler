@@ -22,12 +22,7 @@ pub struct SceneTransform {
     m12: f64,
 }
 
-#[derive(rustler::NifMap)]
-pub struct SceneQueryNode {
-    guid: String,
-    node_type: String,
-    __rq_scene_query_node_fields: (),
-}
+__rq_scene_query_node!();
 
 fn scene_node_type_name(value: u32) -> &'static str {
     match value {

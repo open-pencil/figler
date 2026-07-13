@@ -13,14 +13,16 @@ defmodule Figler.Codegen.NativeTest do
     refute Keyword.has_key?(splices, :sparse_decoders)
     refute Keyword.has_key?(splices, :skip_decoders)
     assert Keyword.has_key?(splices, :graph_focus_decoders)
-    assert Keyword.has_key?(splices, :scene_record_fields)
+    assert Keyword.has_key?(splices, :scene_query_node)
+    assert Keyword.has_key?(splices, :scene_node_record)
   end
 
   test "split generator modules render focused fragments" do
     schema = Figler.schema()
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
 
-    assert Scene.render(definition_map)[:scene_record_fields]
+    assert Scene.render(definition_map)[:scene_query_node]
+    assert Scene.render(definition_map)[:scene_node_record]
   end
 
   test "generic sparse and skip generation are provided by KiwiCodec" do
