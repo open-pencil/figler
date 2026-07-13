@@ -236,7 +236,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
   """
   @spec focus_helper_items() :: [RustQ.Rust.Fragment.t()]
   def focus_helper_items do
-    MetaAST.items(__MODULE__, [
+    MetaAST.functions!(__MODULE__, [
       :graph_focus_push_guid_ref,
       :graph_focus_extend_symbol_refs,
       :graph_focus_extend_component_prop_assignments,
@@ -266,7 +266,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
   @spec scene_reader_items() :: [RustQ.Rust.Fragment.t()]
   def scene_reader_items do
     optional_scene_node_record_attr_items() ++
-      MetaAST.items(__MODULE__, [
+      MetaAST.functions!(__MODULE__, [
         :read_scene_float64_value,
         :read_scene_size_value,
         :read_scene_transform_value,
@@ -284,7 +284,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
   """
   @spec scene_navigation_nif_items() :: [RustQ.Rust.Fragment.t()]
   def scene_navigation_nif_items do
-    MetaAST.items(__MODULE__, [
+    MetaAST.functions!(__MODULE__, [
       :scene_index_node,
       :scene_index_parent,
       :scene_index_roots,
@@ -580,7 +580,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
   defp optional_xpath_attrs, do: @optional_xpath_attrs
 
   defp optional_scene_node_record_attr_items do
-    MetaAST.items(
+    MetaAST.functions!(
       __MODULE__,
       optional_attr_function_names() ++ optional_attr_count_function_names()
     )

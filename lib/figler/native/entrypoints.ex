@@ -43,6 +43,9 @@ defmodule Figler.Native.Entrypoints do
   @spec template_names() :: [atom()]
   def template_names, do: @template_names
 
+  @spec template_nifs() :: [{atom(), keyword()}]
+  def template_nifs, do: Enum.map(@template_names, &{&1, []})
+
   @spec navigation_names() :: [atom()]
   def navigation_names, do: @navigation_names
 end

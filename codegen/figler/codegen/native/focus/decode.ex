@@ -8,11 +8,9 @@ defmodule Figler.Codegen.Native.Focus.Decode do
   fields.
   """
 
-  alias RustQ.Rust
   alias RustQ.Rust.AST
   alias RustQ.Rust.AST.Builder, as: A
   alias RustQ.Rust.AST.PatternBuilder, as: P
-  alias RustQ.Rust.AST.Render
 
   defmodule Operation do
     @moduledoc """
@@ -33,11 +31,9 @@ defmodule Figler.Codegen.Native.Focus.Decode do
     @type t :: %__MODULE__{kind: kind()}
   end
 
-  @spec arm(non_neg_integer(), Operation.t()) :: RustQ.Rust.Fragment.t()
+  @spec arm(non_neg_integer(), Operation.t()) :: AST.Arm.t()
   def arm(field_id, %Operation{} = operation) do
     %AST.Arm{pattern: P.lit(field_id), body: operation_body(operation)}
-    |> Render.render_arm()
-    |> Rust.arm()
   end
 
   @spec guid() :: Operation.t()

@@ -7,7 +7,7 @@ defmodule Figler.Codegen.Native.AtomCache do
   """
 
   alias Figler.Scene.Projection
-  alias RustQ.Rust
+  alias RustQ.Rust.AST
   alias RustQ.Rust.AST.Builder, as: A
 
   @static_names Map.new(Projection.field_names(), fn field ->
@@ -39,7 +39,7 @@ defmodule Figler.Codegen.Native.AtomCache do
   def static_var_map(fields), do: Map.new(fields, &{&1, static_name(&1)})
 
   @doc "Builds a structural `OnceLock<Atom>` static declaration."
-  @spec static(atom()) :: Rust.Fragment.t()
+  @spec static(atom()) :: AST.Static.t()
   def static(field) do
     field
     |> static_name()
@@ -47,6 +47,5 @@ defmodule Figler.Codegen.Native.AtomCache do
       A.type_path(:OnceLock, generics: [A.type_path(:Atom)]),
       A.path_call([:OnceLock, :new])
     )
-    |> Rust.ast_item()
   end
 end

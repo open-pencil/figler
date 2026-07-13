@@ -27,8 +27,8 @@ defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
   @spec fragments() :: [RustQ.Rust.Fragment.t()]
   def fragments do
     __MODULE__.__rustq_type_items__() ++
-      MetaAST.macro_items(__MODULE__, [:fig_scene_skip_field_decoder]) ++
-      MetaAST.items(__MODULE__, [:fig_scene_skip_field])
+      MetaAST.macro_items!(__MODULE__, [:fig_scene_skip_field_decoder]) ++
+      MetaAST.functions!(__MODULE__, [:fig_scene_skip_field])
   end
 
   defrustmacro fig_scene_skip_field_decoder(

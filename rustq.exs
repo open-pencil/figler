@@ -1,7 +1,7 @@
 use RustQ.Config
 
 alias RustQ.Meta.AST, as: MetaAST
-alias RustQ.Rustler
+alias RustQ.Rustler.Nif
 
 unless Code.ensure_loaded?(Figler.Scene.Projection) do
   Code.require_file("lib/figler/scene/projection.ex")
@@ -60,24 +60,17 @@ unless Code.ensure_loaded?(Figler.Codegen.Native) do
 end
 
 template_source = "native/src/templates/scene_nifs.rs"
-template_metadata = template_source |> RustQ.Syn.parse_file!() |> RustQ.Syn.functions()
 
 template_nif_functions =
-  Enum.map(Figler.Native.Entrypoints.template_names(), fn name ->
-    implementation_name = "#{name}_impl"
-    function = Enum.find(template_metadata, &(&1.name == implementation_name))
-
-    function ||
-      raise ArgumentError,
-            "NIF implementation #{implementation_name} not found in #{template_source}"
-
-    {name, function}
-  end)
+  Nif.functions_from_source(
+    template_source,
+    Figler.Native.Entrypoints.template_nifs()
+  )
 
 navigation_nif_functions =
   Enum.map(
     Figler.Native.Entrypoints.navigation_names(),
-    &MetaAST.ast!(Figler.Codegen.Native.SupportFunction, &1)
+    &MetaAST.function!(Figler.Codegen.Native.SupportFunction, &1)
   )
 
 generate "native", "native/src/generated.rs" do
@@ -101,7 +94,7 @@ end
 
 generate "native_stubs", "lib/figler/native/generated_stubs.ex" do
   content(
-    Rustler.nif_stubs_from_functions(
+    Nif.stubs_from_functions(
       template_nif_functions ++ navigation_nif_functions,
       Figler.Native.GeneratedStubs
     )

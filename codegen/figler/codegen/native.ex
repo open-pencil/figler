@@ -9,7 +9,9 @@ defmodule Figler.Codegen.Native do
   alias Figler.Codegen.Native.Scene
   alias KiwiCodec.RustlerGenerator.Skip
   alias KiwiCodec.Schema
-  alias RustQ.Rust
+  alias RustQ.Rust.AST
+  alias RustQ.Rust.AST.Builder, as: A
+  alias RustQ.Rust.AST.PatternBuilder, as: P
   alias RustQ.Rust.AST.Render
 
   def render_splices(%Schema{} = schema) do
@@ -58,7 +60,10 @@ defmodule Figler.Codegen.Native do
     |> Map.fetch!("NodeType")
     |> then(& &1.variants)
     |> Enum.map(fn field ->
-      Rust.arm(Integer.to_string(field.value), ~s("#{Macro.underscore(field.name)}"))
+      %AST.Arm{
+        pattern: P.lit(field.value),
+        body: [%AST.Return{expr: A.lit(Macro.underscore(field.name))}]
+      }
     end)
   end
 end

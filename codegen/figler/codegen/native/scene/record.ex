@@ -9,7 +9,7 @@ defmodule Figler.Codegen.Native.Scene.Record do
   alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
-  alias RustQ.Rust
+  alias RustQ.Rust.AST
   alias RustQ.Rust.AST.Builder, as: A
   alias RustQ.Rust.AST.TypeBuilder, as: T
   alias RustQ.Rustler.Schema
@@ -19,29 +19,31 @@ defmodule Figler.Codegen.Native.Scene.Record do
     Enum.reject(Projection.fields(), &Map.get(&1, :required?, false))
   end
 
-  @spec query_node_struct() :: Rust.Struct.t()
+  @spec query_node_struct() :: AST.Struct.t()
   def query_node_struct do
-    Rust.struct(:SceneQueryNode,
+    %AST.Struct{
+      name: :SceneQueryNode,
       vis: :pub,
       derive: ["rustler::NifMap"],
       fields:
         Schema.struct_fields(guid: T.path(:String), node_type: T.path(:String)) ++
           query_node_fields()
-    )
+    }
   end
 
-  @spec scene_node_record_struct() :: Rust.Struct.t()
+  @spec scene_node_record_struct() :: AST.Struct.t()
   def scene_node_record_struct do
-    Rust.struct(:SceneNodeRecord,
+    %AST.Struct{
+      name: :SceneNodeRecord,
       derive: [:Clone, :Debug],
       fields:
         Schema.struct_fields(guid: T.path(:SceneGuid), node_type: T.ref(:str, lifetime: :static)) ++
           record_fields() ++
           Schema.struct_fields(parent: option_type(:usize), children: T.vec(:usize))
-    )
+    }
   end
 
-  @spec record_build_fields([map()]) :: [RustQ.Rust.ShorthandField.t()]
+  @spec record_build_fields([map()]) :: [RustQ.Rust.Fragment.t()]
   def record_build_fields(fields \\ optional_fields()) do
     fields |> Enum.map(& &1.name) |> Schema.shorthand_fields()
   end

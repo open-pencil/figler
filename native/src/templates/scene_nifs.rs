@@ -94,5 +94,5 @@ pub fn query_scene_index_fields_impl<'a>(
     scene_xpath_runtime::query_scene_index_fields_value(env, resource, xpath, fields)
 }
 
-__rq_scene_nif_exports!();
+__rq_scene_nif_wrappers!();
 __rq_scene_navigation_nifs!();

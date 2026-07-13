@@ -56,7 +56,7 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
       |> Enum.map(&field(&1, definition_map))
       |> Enum.sort_by(& &1.id)
 
-    MetaAST.macro_call(SkipFieldHelpers, :fig_scene_skip_field_decoder,
+    MetaAST.macro_call!(SkipFieldHelpers, :fig_scene_skip_field_decoder,
       fn: function,
       decoder: :decoder,
       field: :field,
