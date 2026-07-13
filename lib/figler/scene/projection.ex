@@ -17,18 +17,30 @@ defmodule Figler.Scene.Projection do
     %{name: :guid, source: {:node_change, :guid}, required?: true, xpath_attrs: [:guid]},
     %{name: :node_type, source: {:node_change, :type}, required?: true, xpath_attrs: [:type]},
     %{name: :name, source: {:node_change, :name}, xpath_attrs: [:name]},
-    %{name: :parent_guid, source: {:parent_index, :guid}, xpath_attrs: [:parent_guid]},
+    %{
+      name: :parent_guid,
+      source: {:parent_index, :guid},
+      xpath_attrs: [:parent_guid],
+      xpath_value: :value_to_string
+    },
     %{name: :position, source: {:parent_index, :position}, xpath_attrs: [:position]},
     %{
       name: :size,
       source: {:node_change, :size},
       xpath_attrs: [:x, :y, :width, :height],
+      xpath_values: [
+        x: {:field_to_string, :x},
+        y: {:field_to_string, :y},
+        width: {:field_to_string, :x},
+        height: {:field_to_string, :y}
+      ],
       value: :vector
     },
     %{
       name: :transform,
       source: {:node_change, :transform},
       xpath_attrs: [:transform],
+      xpath_value: :transform_string,
       value: :matrix
     },
     %{name: :visible, source: {:node_change, :visible}, xpath_attrs: [:visible], decode: :bool},

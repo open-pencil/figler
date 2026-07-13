@@ -49,29 +49,21 @@ defmodule Figler.Scene.Projection.Native do
   def rust_copy?(%{value: :count}), do: true
   def rust_copy?(%{name: _name}), do: false
 
-  @spec xpath_attr_entries(atom()) :: [XPathAttr.t()]
-  def xpath_attr_entries(:size) do
-    [
-      xpath_attr(:size, "x", field_to_string(:x)),
-      xpath_attr(:size, "y", field_to_string(:y)),
-      xpath_attr(:size, "width", field_to_string(:x)),
-      xpath_attr(:size, "height", field_to_string(:y))
-    ]
+  @spec xpath_attr_entries(atom() | map()) :: [XPathAttr.t()]
+  def xpath_attr_entries(field) when is_atom(field),
+    do: field |> Projection.field!() |> xpath_attr_entries()
+
+  def xpath_attr_entries(%{name: name, xpath_values: values}) do
+    Enum.map(values, fn {attr, value} ->
+      xpath_attr(name, Atom.to_string(attr), xpath_value(value))
+    end)
   end
 
-  def xpath_attr_entries(:transform) do
-    [xpath_attr(:transform, "transform", value(:transform_string))]
-  end
-
-  def xpath_attr_entries(:parent_guid) do
-    [xpath_attr(:parent_guid, "parent_guid", value(:value_to_string))]
-  end
-
-  def xpath_attr_entries(field) do
-    value = if rust_copy?(field), do: value(:value_to_string), else: value(:value_clone)
+  def xpath_attr_entries(%{name: name, xpath_attrs: attrs} = field) do
+    value = field |> Map.get(:xpath_value, default_xpath_value(field)) |> xpath_value()
     by_ref? = not rust_copy?(field)
 
-    [xpath_attr(field, Atom.to_string(field), value, by_ref?: by_ref?)]
+    Enum.map(attrs, &xpath_attr(name, Atom.to_string(&1), value, by_ref?: by_ref?))
   end
 
   defp xpath_attr(field, attr, %XPathValue{} = value, opts \\ []) do
@@ -83,6 +75,12 @@ defmodule Figler.Scene.Projection.Native do
     }
   end
 
-  defp field_to_string(field), do: %XPathValue{kind: :field_to_string, field: field}
-  defp value(kind), do: %XPathValue{kind: kind}
+  defp default_xpath_value(field) do
+    if rust_copy?(field), do: :value_to_string, else: :value_clone
+  end
+
+  defp xpath_value({:field_to_string, field}),
+    do: %XPathValue{kind: :field_to_string, field: field}
+
+  defp xpath_value(kind), do: %XPathValue{kind: kind}
 end
