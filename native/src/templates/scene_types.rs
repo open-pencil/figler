@@ -6,21 +6,7 @@ pub struct SceneSummary {
     type_counts: Vec<(String, usize)>,
 }
 
-#[derive(Clone, Debug, rustler::NifMap)]
-pub struct SceneSize {
-    x: f64,
-    y: f64,
-}
-
-#[derive(Clone, Debug, rustler::NifMap)]
-pub struct SceneTransform {
-    m00: f64,
-    m01: f64,
-    m02: f64,
-    m10: f64,
-    m11: f64,
-    m12: f64,
-}
+__rq_scene_value_types!();
 
 __rq_scene_query_node!();
 

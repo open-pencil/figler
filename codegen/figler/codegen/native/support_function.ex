@@ -240,6 +240,17 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   @doc """
+  Returns scene value structs derived from Rusty-Elixir map types.
+  """
+  @spec scene_value_type_items() :: [RustQ.Rust.Fragment.t()]
+  def scene_value_type_items do
+    MetaAST.struct_type_items(__MODULE__, [:scene_size, :scene_transform],
+      derive: [:Clone, :Debug, "rustler::NifMap"],
+      field_vis: nil
+    )
+  end
+
+  @doc """
   Returns scene value reader helpers authored with `defrust`.
   """
   @spec scene_reader_items() :: [RustQ.Rust.Fragment.t()]

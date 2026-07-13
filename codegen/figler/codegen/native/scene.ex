@@ -44,6 +44,7 @@ defmodule Figler.Codegen.Native.Scene do
         |> then(& &1.fields)
         |> Enum.reject(&(&1.id == 1))
         |> Enum.map(&Skip.message_arm(&1, definition_map)),
+      scene_value_types: SupportFunction.scene_value_type_items(),
       scene_query_node: [Record.query_node_struct()],
       scene_node_record: [Record.scene_node_record_struct()],
       scene_record_build_fields: Record.record_build_fields(),
