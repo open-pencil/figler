@@ -165,11 +165,11 @@ defmodule Figler.MixProject do
       json_codec_dep(),
       {:ezstd, "~> 1.2"},
       {:rustler, "~> 0.38"},
+      {:reach, "~> 2.6", runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false},
       {:ex_slop, "~> 0.4", only: [:dev, :test], runtime: false},
-      {:reach, "~> 2.6", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end
@@ -179,7 +179,7 @@ defmodule Figler.MixProject do
   end
 
   defp rustq_dep do
-    {:rustq, "~> 0.9.3", runtime: false}
+    {:rustq, "~> 0.9.4", runtime: false}
   end
 
   defp json_codec_dep do

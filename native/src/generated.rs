@@ -13237,8 +13237,7 @@ fn decode_scene_node_change_from_decoder(
     }
     Ok(())
 }
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn decode_sparse_message<'a>(
+pub fn decode_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
 ) -> NifResult<Term<'a>> {
@@ -13247,8 +13246,7 @@ pub fn decode_sparse_message<'a>(
     decoder.finish()?;
     Ok(value)
 }
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn decode_graph_seed_records<'a>(
+pub fn decode_graph_seed_records_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
 ) -> NifResult<Term<'a>> {
@@ -13257,8 +13255,7 @@ pub fn decode_graph_seed_records<'a>(
     decoder.finish()?;
     Ok(value)
 }
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn decode_graph_focused_sparse_message<'a>(
+pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
     focus: Vec<String>,
@@ -13284,8 +13281,10 @@ pub fn decode_graph_focused_sparse_message<'a>(
 pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
     env.register::<scene_xpath_runtime::SceneIndexResource>().is_ok()
 }
-#[rustler::nif(schedule = "DirtyCpu")]
-pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
+pub fn decode_scene_summary_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+) -> NifResult<Term<'a>> {
     let mut decoder = Decoder::new(bytes.as_slice());
     let mut node_count: usize = 0;
     let mut parented_count: usize = 0;
@@ -13310,11 +13309,79 @@ pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Te
             .encode(env),
     )
 }
+pub fn build_scene_index_impl(
+    bytes: Binary<'_>,
+) -> NifResult<rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>> {
+    scene_xpath_runtime::build_scene_index_value(bytes)
+}
+pub fn build_scene_index_with_summary_impl(
+    bytes: Binary<'_>,
+) -> NifResult<
+    (rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>, SceneSummary),
+> {
+    scene_xpath_runtime::build_scene_index_with_summary_value(bytes)
+}
+pub fn query_scene_xpath_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    xpath: String,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
+}
+pub fn query_scene_xpath_fields_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    xpath: String,
+    fields: Vec<String>,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_xpath_fields_value(env, bytes, xpath, fields)
+}
+pub fn query_scene_index_impl<'a>(
+    env: Env<'a>,
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    xpath: String,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_index_value(env, resource, xpath)
+}
+pub fn query_scene_index_fields_impl<'a>(
+    env: Env<'a>,
+    resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
+    xpath: String,
+    fields: Vec<String>,
+) -> NifResult<Term<'a>> {
+    scene_xpath_runtime::query_scene_index_fields_value(env, resource, xpath, fields)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_sparse_message<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    decode_sparse_message_impl(env, bytes)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_graph_seed_records<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    decode_graph_seed_records_impl(env, bytes)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_graph_focused_sparse_message<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    focus: Vec<String>,
+) -> NifResult<Term<'a>> {
+    decode_graph_focused_sparse_message_impl(env, bytes, focus)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
+    decode_scene_summary_impl(env, bytes)
+}
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn build_scene_index(
     bytes: Binary<'_>,
 ) -> NifResult<rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>> {
-    scene_xpath_runtime::build_scene_index_value(bytes)
+    build_scene_index_impl(bytes)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn build_scene_index_with_summary(
@@ -13322,7 +13389,7 @@ pub fn build_scene_index_with_summary(
 ) -> NifResult<
     (rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>, SceneSummary),
 > {
-    scene_xpath_runtime::build_scene_index_with_summary_value(bytes)
+    build_scene_index_with_summary_impl(bytes)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_xpath<'a>(
@@ -13330,7 +13397,7 @@ pub fn query_scene_xpath<'a>(
     bytes: Binary<'a>,
     xpath: String,
 ) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
+    query_scene_xpath_impl(env, bytes, xpath)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_xpath_fields<'a>(
@@ -13339,7 +13406,7 @@ pub fn query_scene_xpath_fields<'a>(
     xpath: String,
     fields: Vec<String>,
 ) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::query_scene_xpath_fields_value(env, bytes, xpath, fields)
+    query_scene_xpath_fields_impl(env, bytes, xpath, fields)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_index<'a>(
@@ -13347,7 +13414,7 @@ pub fn query_scene_index<'a>(
     resource: rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>,
     xpath: String,
 ) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::query_scene_index_value(env, resource, xpath)
+    query_scene_index_impl(env, resource, xpath)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_index_fields<'a>(
@@ -13356,7 +13423,7 @@ pub fn query_scene_index_fields<'a>(
     xpath: String,
     fields: Vec<String>,
 ) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::query_scene_index_fields_value(env, resource, xpath, fields)
+    query_scene_index_fields_impl(env, resource, xpath, fields)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 fn scene_index_node<'a>(

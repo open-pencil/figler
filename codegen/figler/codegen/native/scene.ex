@@ -15,6 +15,7 @@ defmodule Figler.Codegen.Native.Scene do
   alias KiwiCodec.RustlerGenerator.Skip
   alias Figler.Scene.Projection
   alias RustQ.Rust
+  alias RustQ.Rustler
 
   def render(definition_map) do
     [
@@ -49,9 +50,30 @@ defmodule Figler.Codegen.Native.Scene do
       scene_decode_locals: scene_decode_locals(),
       scene_decode_arms: scene_decode_arms(definition_map),
       scene_query_atom_statics: scene_query_atom_statics(),
+      scene_nif_exports: scene_nif_exports(),
       scene_reader_helpers: SupportFunction.scene_reader_items(),
       scene_navigation_nifs: SupportFunction.scene_navigation_nif_items()
     ]
+  end
+
+  def scene_nif_exports do
+    Rustler.nif_exports_from_source(
+      "native/src/templates/scene_nifs.rs",
+      [
+        decode_sparse_message: [lifetime: :a],
+        decode_graph_seed_records: [lifetime: :a],
+        decode_graph_focused_sparse_message: [lifetime: :a],
+        decode_scene_summary: [lifetime: :a],
+        build_scene_index: [],
+        build_scene_index_with_summary: [],
+        query_scene_xpath: [lifetime: :a],
+        query_scene_xpath_fields: [lifetime: :a],
+        query_scene_index: [lifetime: :a],
+        query_scene_index_fields: [lifetime: :a]
+      ],
+      schedule: :dirty_cpu,
+      vis: :pub
+    )
   end
 
   def render_template(template, bindings) do
