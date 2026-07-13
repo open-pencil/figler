@@ -36,7 +36,7 @@ defmodule Figler.MixProject do
       ci: [
         "compile --warnings-as-errors",
         "kiwi.gen.check",
-        "rustq.gen --check native",
+        "rustq.gen --check",
         "format --check-formatted",
         "rust.fmt --check",
         "rust.check",
@@ -49,8 +49,8 @@ defmodule Figler.MixProject do
         "reach.check --arch --smells"
       ],
       "kiwi.gen.check": &kiwi_gen_check/1,
-      "native.gen": "rustq.gen native",
-      "native.gen.check": "rustq.gen --check native",
+      "native.gen": "rustq.gen",
+      "native.gen.check": "rustq.gen --check",
       "rust.fmt": &rust_fmt/1,
       "rust.check": &rust_check/1,
       "rust.clippy": &rust_clippy/1

@@ -1,42 +1,48 @@
 defmodule Figler.Native.Entrypoints do
   @moduledoc """
-  Declares native entrypoints exposed by Figler.
+  Groups native entrypoint names by their structural signature source.
 
-  The Rustler module uses this list to define Elixir fallback stubs, and RustQ
-  generation uses the same metadata to select schema decoder entrypoints without
-  loading the Rustler module during code generation.
+  Template entrypoints are read from `scene_nifs.rs`; navigation entrypoints are
+  read from Rusty-Elixir AST metadata. Argument lists and Elixir arities are not
+  duplicated here.
   """
 
-  @stubs [
-    {:decode_sparse_message, 1},
-    {:decode_graph_seed_records, 1},
-    {:decode_graph_focused_sparse_message, 2},
-    {:decode_scene_summary, 1},
-    {:build_scene_index, 1},
-    {:build_scene_index_with_summary, 1},
-    {:query_scene_xpath, 2},
-    {:query_scene_xpath_fields, 3},
-    {:query_scene_index, 2},
-    {:query_scene_index_fields, 3},
-    {:scene_index_node, 2},
-    {:scene_index_parent, 2},
-    {:scene_index_roots, 1},
-    {:scene_index_children, 2},
-    {:scene_index_siblings, 2},
-    {:scene_index_by_type, 2},
-    {:scene_index_by_type_fields, 3},
-    {:scene_index_named, 2},
-    {:scene_index_name_contains, 2},
-    {:scene_index_name_contains_fields, 3},
-    {:scene_index_text_contains, 2},
-    {:scene_index_text_contains_fields, 3},
-    {:scene_index_components, 1},
-    {:scene_index_with_fills, 1},
-    {:scene_index_with_strokes, 1},
-    {:scene_index_ancestors, 2},
-    {:scene_index_descendants, 2}
+  @template_names [
+    :decode_sparse_message,
+    :decode_graph_seed_records,
+    :decode_graph_focused_sparse_message,
+    :decode_scene_summary,
+    :build_scene_index,
+    :build_scene_index_with_summary,
+    :query_scene_xpath,
+    :query_scene_xpath_fields,
+    :query_scene_index,
+    :query_scene_index_fields
   ]
 
-  @spec stubs() :: [{atom(), pos_integer()}]
-  def stubs, do: @stubs
+  @navigation_names [
+    :scene_index_node,
+    :scene_index_parent,
+    :scene_index_roots,
+    :scene_index_children,
+    :scene_index_siblings,
+    :scene_index_by_type,
+    :scene_index_by_type_fields,
+    :scene_index_named,
+    :scene_index_name_contains,
+    :scene_index_name_contains_fields,
+    :scene_index_text_contains,
+    :scene_index_text_contains_fields,
+    :scene_index_components,
+    :scene_index_with_fills,
+    :scene_index_with_strokes,
+    :scene_index_ancestors,
+    :scene_index_descendants
+  ]
+
+  @spec template_names() :: [atom()]
+  def template_names, do: @template_names
+
+  @spec navigation_names() :: [atom()]
+  def navigation_names, do: @navigation_names
 end
