@@ -14,19 +14,21 @@ defmodule Figler.Scene.Graph.Build.SourceInstances do
   def list(%Graph{} = graph) do
     focus = focus_set(graph)
 
-    Enum.flat_map(graph.source_instance_guids, fn guid ->
-      case Map.get(graph.seed_nodes, guid) do
-        %{origin: :source, node_type: "instance"} = seed ->
-          if Map.has_key?(graph.nodes, guid) and
-               (is_nil(focus) or MapSet.member?(focus, guid)) and
-               not opaque_definition_instance?(graph, guid),
-             do: [seed],
-             else: []
+    Enum.flat_map(graph.source_instance_guids, &source_instance(graph, focus, &1))
+  end
 
-        _missing_or_not_source_instance ->
-          []
-      end
-    end)
+  defp source_instance(graph, focus, guid) do
+    case Map.get(graph.seed_nodes, guid) do
+      %{origin: :source, node_type: "instance"} = seed ->
+        if Map.has_key?(graph.nodes, guid) and
+             (is_nil(focus) or MapSet.member?(focus, guid)) and
+             not opaque_definition_instance?(graph, guid),
+           do: [seed],
+           else: []
+
+      _missing_or_not_source_instance ->
+        []
+    end
   end
 
   defp opaque_definition_instance?(graph, guid) do

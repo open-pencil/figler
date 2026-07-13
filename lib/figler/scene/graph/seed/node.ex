@@ -95,8 +95,8 @@ defmodule Figler.Scene.Graph.Seed.Node do
       component_prop_assignments:
         ComponentProps.assignments(get(node_change, :component_prop_assignments)),
       derived_symbol_data: DerivedData.all(get(node_change, :derived_symbol_data)),
-      variable_consumption: multiplayer_entries(get(node_change, :variable_consumption_map)),
-      variable_data_values: multiplayer_entries(get(node_change, :variable_data_values)),
+      variable_consumption: Value.entries(get(node_change, :variable_consumption_map)),
+      variable_data_values: Value.entries(get(node_change, :variable_data_values)),
       symbol_id: symbol_id,
       component_guid: symbol_id
     }
@@ -183,8 +183,8 @@ defmodule Figler.Scene.Graph.Seed.Node do
       component_prop_refs: ComponentProps.refs(component_prop_refs),
       component_prop_assignments: ComponentProps.assignments(component_prop_assignments),
       derived_symbol_data: DerivedData.all(derived_symbol_data),
-      variable_consumption: multiplayer_entries(variable_consumption),
-      variable_data_values: multiplayer_entries(variable_data_values),
+      variable_consumption: Value.entries(variable_consumption),
+      variable_data_values: Value.entries(variable_data_values),
       symbol_id: symbol_id,
       component_guid: symbol_id
     }
@@ -374,10 +374,6 @@ defmodule Figler.Scene.Graph.Seed.Node do
 
   defp count(nil), do: nil
   defp count(values) when is_list(values), do: length(values)
-
-  defp multiplayer_entries(nil), do: []
-  defp multiplayer_entries(%{entries: entries}) when is_list(entries), do: entries
-  defp multiplayer_entries(_value), do: []
 
   defp get(nil, _key), do: nil
   defp get(map, key) when is_map(map), do: Map.get(map, key)

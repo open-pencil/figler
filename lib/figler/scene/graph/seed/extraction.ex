@@ -7,9 +7,7 @@ defmodule Figler.Scene.Graph.Seed.Extraction do
   stages.
   """
 
-  alias Figler.Scene.Graph.Seed.Extraction.ComponentProps
-  alias Figler.Scene.Graph.Seed.Extraction.DerivedData
-  alias Figler.Scene.Graph.Seed.Extraction.SymbolOverrides
+  alias Figler.Scene.Graph.Seed.Extraction.{ComponentProps, DerivedData, SymbolOverrides}
   alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Graph.Seed.Value
 
@@ -39,13 +37,9 @@ defmodule Figler.Scene.Graph.Seed.Extraction do
     do: node_change |> get(:derived_symbol_data) |> DerivedData.all()
 
   defp value_for({:multiplayer_entries, source_field}, node_change),
-    do: node_change |> get(source_field) |> multiplayer_entries()
+    do: node_change |> get(source_field) |> Value.entries()
 
   defp value_for({:field, field}, node_change), do: get(node_change, field)
-
-  defp multiplayer_entries(nil), do: []
-  defp multiplayer_entries(%{entries: entries}) when is_list(entries), do: entries
-  defp multiplayer_entries(_value), do: []
 
   defp get(nil, _key), do: nil
   defp get(map, key) when is_map(map), do: Map.get(map, key)

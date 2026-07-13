@@ -9,6 +9,13 @@ defmodule Figler.Scene.Graph.Seed.Value do
   def guid(nil), do: nil
   def guid(%{session_id: session_id, local_id: local_id}), do: {session_id, local_id}
 
+  @doc "Returns a generated multiplayer entry list or an empty list."
+  @spec entries(nil | map() | list()) :: list()
+  def entries(nil), do: []
+  def entries(%{entries: entries}) when is_list(entries), do: entries
+  def entries(entries) when is_list(entries), do: entries
+  def entries(_value), do: []
+
   def vector(nil), do: nil
   def vector(%{x: x, y: y}), do: %{x: x, y: y}
 
