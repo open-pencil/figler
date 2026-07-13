@@ -10,7 +10,7 @@ defmodule Figler.Codegen.Native.Scene.Record do
 
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
-  alias RustQ.Rust
+  alias RustQ.Rustler.Schema
 
   defmodule Field do
     @moduledoc """
@@ -30,22 +30,26 @@ defmodule Figler.Codegen.Native.Scene.Record do
     |> Enum.map(&field/1)
   end
 
-  @spec query_node_fields([Field.t()]) :: [RustQ.Rust.Fragment.t()]
+  @spec query_node_fields([Field.t()]) :: [RustQ.Rust.Field.t()]
   def query_node_fields(fields \\ optional_fields()) do
-    Enum.map(fields, &field_declaration(&1, &1.rust_type))
+    fields
+    |> Enum.map(&{&1.name, &1.rust_type})
+    |> Schema.struct_fields()
   end
 
-  @spec record_fields([Field.t()]) :: [RustQ.Rust.Fragment.t()]
+  @spec record_fields([Field.t()]) :: [RustQ.Rust.Field.t()]
   def record_fields(fields \\ optional_fields()) do
-    Enum.map(fields, fn
-      %Field{name: :parent_guid} = field -> field_declaration(field, "Option<SceneGuid>")
-      %Field{} = field -> field_declaration(field, field.rust_type)
+    fields
+    |> Enum.map(fn
+      %Field{name: :parent_guid} -> {:parent_guid, "Option<SceneGuid>"}
+      %Field{name: name, rust_type: rust_type} -> {name, rust_type}
     end)
+    |> Schema.struct_fields()
   end
 
-  @spec record_build_fields([Field.t()]) :: [RustQ.Rust.Fragment.t()]
+  @spec record_build_fields([Field.t()]) :: [RustQ.Rust.ShorthandField.t()]
   def record_build_fields(fields \\ optional_fields()) do
-    Enum.map(fields, &field_shorthand(&1.name))
+    fields |> Enum.map(& &1.name) |> Schema.shorthand_fields()
   end
 
   defp field(name) do
@@ -55,7 +59,4 @@ defmodule Figler.Codegen.Native.Scene.Record do
       copy?: ProjectionNative.rust_copy?(name)
     }
   end
-
-  defp field_declaration(%Field{name: name}, rust_type), do: Rust.field(name, rust_type)
-  defp field_shorthand(name), do: Rust.stmt([Atom.to_string(name), ","])
 end
