@@ -3,7 +3,7 @@ defmodule Figler.Scene.Projection.NativeTest do
 
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native
-  alias RustQ.Rust.AST.Render
+  alias RustQ.Rust
 
   test "derives native storage from projection semantics" do
     assert render_type(Native.rust_type(:size)) == "Option<SceneSize>"
@@ -48,5 +48,5 @@ defmodule Figler.Scene.Projection.NativeTest do
     end
   end
 
-  defp render_type(type), do: type |> Render.render_type() |> IO.iodata_to_binary()
+  defp render_type(type), do: Rust.render_type(type)
 end

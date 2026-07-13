@@ -9,10 +9,10 @@ defmodule Figler.Codegen.Native do
   alias Figler.Codegen.Native.Scene
   alias KiwiCodec.RustlerGenerator.Skip
   alias KiwiCodec.Schema
+  alias RustQ.Rust
   alias RustQ.Rust.AST
   alias RustQ.Rust.AST.Builder, as: A
   alias RustQ.Rust.AST.PatternBuilder, as: P
-  alias RustQ.Rust.AST.Render
 
   def render_splices(%Schema{} = schema) do
     definition_map = Map.new(schema.definitions, &{&1.name, &1})
@@ -43,7 +43,7 @@ defmodule Figler.Codegen.Native do
       """,
       "native/src/generated.scene.rs",
       include_dir: "native/src",
-      bind: [graph_seed_record: {:expr, Render.render_expr(graph_seed_record)}],
+      bind: [graph_seed_record: {:expr, Rust.render(graph_seed_record)}],
       splice: splices
     )
   end
