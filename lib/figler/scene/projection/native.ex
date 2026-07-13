@@ -35,14 +35,15 @@ defmodule Figler.Scene.Projection.Native do
   end
 
   alias Figler.Scene.Projection
+  alias RustQ.Rust.AST.Builder, as: A
 
   def rust_type(field) when is_atom(field), do: field |> Projection.field!() |> rust_type()
-  def rust_type(%{value: :vector}), do: "Option<SceneSize>"
-  def rust_type(%{value: :matrix}), do: "Option<SceneTransform>"
-  def rust_type(%{decode: :bool}), do: "Option<bool>"
-  def rust_type(%{decode: :float}), do: "Option<f32>"
-  def rust_type(%{value: :count}), do: "Option<usize>"
-  def rust_type(%{name: _name}), do: "Option<String>"
+  def rust_type(%{value: :vector}), do: option_type(:SceneSize)
+  def rust_type(%{value: :matrix}), do: option_type(:SceneTransform)
+  def rust_type(%{decode: :bool}), do: option_type(:bool)
+  def rust_type(%{decode: :float}), do: option_type(:f32)
+  def rust_type(%{value: :count}), do: option_type(:usize)
+  def rust_type(%{name: _name}), do: option_type(:String)
 
   def rust_copy?(field) when is_atom(field), do: field |> Projection.field!() |> rust_copy?()
   def rust_copy?(%{decode: kind}) when kind in [:bool, :float], do: true
@@ -74,6 +75,8 @@ defmodule Figler.Scene.Projection.Native do
       by_ref?: Keyword.get(opts, :by_ref?, true)
     }
   end
+
+  defp option_type(type), do: A.type_path(:Option, generics: [A.type_path(type)])
 
   defp default_xpath_value(field) do
     if rust_copy?(field), do: :value_to_string, else: :value_clone

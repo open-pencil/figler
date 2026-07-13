@@ -3,14 +3,15 @@ defmodule Figler.Scene.Projection.NativeTest do
 
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native
+  alias RustQ.Rust.AST.Render
 
   test "derives native storage from projection semantics" do
-    assert Native.rust_type(:size) == "Option<SceneSize>"
-    assert Native.rust_type(:transform) == "Option<SceneTransform>"
-    assert Native.rust_type(:visible) == "Option<bool>"
-    assert Native.rust_type(:opacity) == "Option<f32>"
-    assert Native.rust_type(:fill_count) == "Option<usize>"
-    assert Native.rust_type(:name) == "Option<String>"
+    assert render_type(Native.rust_type(:size)) == "Option<SceneSize>"
+    assert render_type(Native.rust_type(:transform)) == "Option<SceneTransform>"
+    assert render_type(Native.rust_type(:visible)) == "Option<bool>"
+    assert render_type(Native.rust_type(:opacity)) == "Option<f32>"
+    assert render_type(Native.rust_type(:fill_count)) == "Option<usize>"
+    assert render_type(Native.rust_type(:name)) == "Option<String>"
 
     assert Native.rust_copy?(Projection.field!(:visible))
     assert Native.rust_copy?(Projection.field!(:font_size))
@@ -46,4 +47,6 @@ defmodule Figler.Scene.Projection.NativeTest do
       Projection.field!(:missing)
     end
   end
+
+  defp render_type(type), do: type |> Render.render_type() |> IO.iodata_to_binary()
 end

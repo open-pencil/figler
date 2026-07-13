@@ -22,7 +22,11 @@ defmodule Figler.Codegen.Native.Scene.Record do
     @enforce_keys [:name, :rust_type, :copy?]
     defstruct [:name, :rust_type, :copy?]
 
-    @type t :: %__MODULE__{name: atom(), rust_type: String.t(), copy?: boolean()}
+    @type t :: %__MODULE__{
+            name: atom(),
+            rust_type: RustQ.Rust.rust_type(),
+            copy?: boolean()
+          }
   end
 
   @spec optional_fields() :: [Field.t()]
@@ -43,8 +47,11 @@ defmodule Figler.Codegen.Native.Scene.Record do
   def record_fields(fields \\ optional_fields()) do
     fields
     |> Enum.map(fn
-      %Field{name: :parent_guid} -> {:parent_guid, "Option<SceneGuid>"}
-      %Field{name: name, rust_type: rust_type} -> {name, rust_type}
+      %Field{name: :parent_guid} ->
+        {:parent_guid, A.type_path(:Option, generics: [A.type_path(:SceneGuid)])}
+
+      %Field{name: name, rust_type: rust_type} ->
+        {name, rust_type}
     end)
     |> Schema.struct_fields()
   end
