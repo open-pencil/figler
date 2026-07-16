@@ -1,5 +1,5 @@
 defmodule Figler.Codegen.NativeTest do
-  use ExUnit.Case, async: true
+  use RustQ.Test, async: true
 
   alias Figler.Codegen.Native
   alias Figler.Codegen.Native.Focus
@@ -136,5 +136,14 @@ defmodule Figler.Codegen.NativeTest do
     assert navigation_source =~ "fields,"
 
     assert nifs_source =~ "__rq_scene_navigation_nifs!();"
+  end
+
+  test "navigation boundaries are true defnif definitions" do
+    assert_defnif(
+      SupportFunction,
+      :scene_index_node,
+      2,
+      "scene_xpath_runtime::scene_index_node_value(env, resource, guid)"
+    )
   end
 end

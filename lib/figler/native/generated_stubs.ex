@@ -66,10 +66,6 @@ defmodule Figler.Native.GeneratedStubs do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def scene_index_by_type_fields(_resource, _node_type, _fields) do
-        :erlang.nif_error(:nif_not_loaded)
-      end
-
       def scene_index_named(_resource, _name) do
         :erlang.nif_error(:nif_not_loaded)
       end
@@ -78,11 +74,23 @@ defmodule Figler.Native.GeneratedStubs do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def scene_index_name_contains_fields(_resource, _needle, _fields) do
+      def scene_index_text_contains(_resource, _needle) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def scene_index_text_contains(_resource, _needle) do
+      def scene_index_ancestors(_resource, _guid) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def scene_index_descendants(_resource, _guid) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def scene_index_by_type_fields(_resource, _node_type, _fields) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def scene_index_name_contains_fields(_resource, _needle, _fields) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
@@ -99,14 +107,6 @@ defmodule Figler.Native.GeneratedStubs do
       end
 
       def scene_index_with_strokes(_resource) do
-        :erlang.nif_error(:nif_not_loaded)
-      end
-
-      def scene_index_ancestors(_resource, _guid) do
-        :erlang.nif_error(:nif_not_loaded)
-      end
-
-      def scene_index_descendants(_resource, _guid) do
         :erlang.nif_error(:nif_not_loaded)
       end
     end

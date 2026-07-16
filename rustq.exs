@@ -1,6 +1,5 @@
 use RustQ.Config
 
-alias RustQ.Meta.AST, as: MetaAST
 alias RustQ.Rustler.Nif
 
 unless Code.ensure_loaded?(Figler.Scene.Projection) do
@@ -59,19 +58,13 @@ unless Code.ensure_loaded?(Figler.Codegen.Native) do
   Code.require_file("codegen/figler/codegen/native.ex")
 end
 
-template_source = "native/src/templates/scene_nifs.rs"
-
 template_nif_functions =
   Nif.functions_from_source(
-    template_source,
+    "native/src/templates/scene_nifs.rs",
     Figler.Native.Entrypoints.template_nifs()
   )
 
-navigation_nif_functions =
-  Enum.map(
-    Figler.Native.Entrypoints.navigation_names(),
-    &MetaAST.function!(Figler.Codegen.Native.SupportFunction, &1)
-  )
+navigation_nif_functions = Figler.Codegen.Native.SupportFunction.scene_navigation_nif_items()
 
 generate "native", "native/src/generated.rs" do
   schema =
