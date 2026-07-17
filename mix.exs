@@ -175,7 +175,7 @@ defmodule Figler.MixProject do
   end
 
   defp kiwi_codec_dep do
-    {:kiwi_codec, path: "../kiwi_codec", override: true}
+    {:kiwi_codec, "~> 0.3.0"}
   end
 
   defp rustq_dep do

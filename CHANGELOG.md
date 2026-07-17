@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use released KiwiCodec 0.3.0 instead of a sibling path dependency so clean
+  checkouts and GitHub CI can generate and validate native code.
 - Scan seed metadata directly during stack layout and skip variable/style stage
   work for seeds with no relevant metadata, avoiding broad node-key allocation
   and unnecessary per-node resolver calls.
