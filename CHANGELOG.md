@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Cache the versioned parsed Figma schema and its prepared interpreter indexes,
+  accelerating repeated runtime-schema encode/decode calls across processes.
+- Recognize raw Kiwi payloads and `fig-kiwi` containers structurally instead of
+  raising and rescuing decode errors during every raw-payload operation.
 - Repair the message benchmark after dense native decoder removal and run it
   with Benchee across static, interpreted, sparse, seed, index, and graph paths.
 - Report fixture benchmark p50/p95 timings from configurable warmups and samples,

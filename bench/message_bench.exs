@@ -56,10 +56,12 @@ Benchee.run(
     end,
     "native scene index" => fn -> SceneNifs.build_index(static_binary) end,
     "graph materialization" => fn -> Graph.build(static_binary) end,
-    "runtime encode" => fn ->
+    "prepared runtime encode" => fn -> Figler.encode_message_runtime(runtime_message) end,
+    "prepared runtime decode" => fn -> Figler.decode_message_runtime(runtime_binary) end,
+    "unprepared runtime encode" => fn ->
       KiwiCodec.SchemaInterpreter.encode(schema, "Message", runtime_message)
     end,
-    "runtime decode" => fn ->
+    "unprepared runtime decode" => fn ->
       KiwiCodec.SchemaInterpreter.decode(schema, "Message", runtime_binary)
     end
   },

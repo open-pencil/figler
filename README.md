@@ -213,6 +213,10 @@ message = Figler.decode_message_runtime(payload)
 binary = Figler.encode_message_runtime(%{"type" => "NODE_CHANGES"})
 ```
 
+Figler caches the versioned parsed schema and reuses prepared interpreter indexes
+for these calls. Prefer generated structs or native projections for the hottest
+large-file paths.
+
 ## Generated code
 
 Figler checks in generated Elixir schema modules and generated Rust source so

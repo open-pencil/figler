@@ -6,6 +6,10 @@ defmodule Figler do
   alias Figler.Native.CodecNifs
 
   @schema_path :figler |> :code.priv_dir() |> Path.join("schema/fig.kiwi")
+  @external_resource @schema_path
+  @schema_version @schema_path |> File.read!() |> :erlang.md5()
+  @schema_cache_key {__MODULE__, :schema}
+  @prepared_schema_cache_key {__MODULE__, :prepared_schema}
 
   @doc """
   Returns the vendored Figma Kiwi schema text.
@@ -20,8 +24,7 @@ defmodule Figler do
   """
   @spec schema() :: KiwiCodec.Schema.t()
   def schema do
-    schema_text()
-    |> KiwiCodec.parse_schema!()
+    cached(@schema_cache_key, fn -> schema_text() |> KiwiCodec.parse_schema!() end)
   end
 
   @doc """
@@ -56,7 +59,7 @@ defmodule Figler do
   """
   @spec decode_message_runtime(binary()) :: map()
   def decode_message_runtime(binary) when is_binary(binary) do
-    schema()
+    prepared_schema()
     |> KiwiCodec.SchemaInterpreter.decode("Message", binary)
   end
 
@@ -65,7 +68,23 @@ defmodule Figler do
   """
   @spec encode_message_runtime(map()) :: binary()
   def encode_message_runtime(message) when is_map(message) do
-    schema()
+    prepared_schema()
     |> KiwiCodec.SchemaInterpreter.encode("Message", message)
+  end
+
+  defp prepared_schema do
+    cached(@prepared_schema_cache_key, fn -> KiwiCodec.SchemaInterpreter.prepare(schema()) end)
+  end
+
+  defp cached(key, build) do
+    case :persistent_term.get(key, :missing) do
+      {@schema_version, value} ->
+        value
+
+      _missing_or_stale ->
+        value = build.()
+        :persistent_term.put(key, {@schema_version, value})
+        value
+    end
   end
 end

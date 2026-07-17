@@ -22,12 +22,8 @@ defmodule Figler.Scene.Input do
     |> payload!()
   end
 
-  def payload!(binary) when is_binary(binary) do
-    Container.data(binary)
-  rescue
-    KiwiCodec.DecodeError -> binary
-    MatchError -> binary
-  end
+  def payload!(<<"fig-kiwi", _rest::binary>> = binary), do: Container.data(binary)
+  def payload!(binary) when is_binary(binary), do: binary
 
   @doc """
   Returns a native scene index resource for a binary, graph, index, or resource.
