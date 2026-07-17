@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Repair the message benchmark after dense native decoder removal and run it
+  with Benchee across static, interpreted, sparse, seed, index, and graph paths.
+- Report fixture benchmark p50/p95 timings from configurable warmups and samples,
+  label process-memory deltas as BEAM-only, and preserve sub-millisecond graph
+  profile precision.
 - Drop generated dense native schema decoders; public dense decode remains
   available through `KiwiCodec.decode/2`.
 - Use descriptor-backed sparse message decoders and RustQ-authored sparse

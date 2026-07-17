@@ -246,6 +246,9 @@ Message benchmark:
 elixir bench/message_bench.exs
 ```
 
+This Benchee suite covers static and interpreted codecs plus native sparse,
+graph-seed, scene-index, and graph-materialization paths.
+
 OpenPencil fixture benchmark:
 
 ```sh
@@ -260,6 +263,10 @@ FIGLER_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
 FIGLER_BENCH_FULL_DECODE=0 \
   mix figler.bench.fixtures nuxtui.fig
 ```
+
+Fixture timings report p50/p95 after two warmups and seven measured samples.
+Use `FIGLER_BENCH_WARMUP` and `FIGLER_BENCH_SAMPLES` to tune those counts. Memory
+columns are BEAM process deltas and exclude native resource allocations.
 
 Oracle comparisons can use a Node-compatible OpenPencil CLI build:
 

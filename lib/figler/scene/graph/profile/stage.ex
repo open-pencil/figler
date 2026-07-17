@@ -12,7 +12,11 @@ defmodule Figler.Scene.Graph.Profile.Stage do
 
   defstruct [:stage, :ms, :graph]
 
-  @type t :: %__MODULE__{stage: atom(), ms: non_neg_integer(), graph: GraphStats.t()}
+  @type t :: %__MODULE__{
+          stage: atom(),
+          ms: non_neg_integer() | float(),
+          graph: GraphStats.t()
+        }
 
   codec(:stage, atom: :existing)
 end

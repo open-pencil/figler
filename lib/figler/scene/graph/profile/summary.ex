@@ -26,9 +26,9 @@ defmodule Figler.Scene.Graph.Profile.Summary do
           fixture: String.t(),
           roots: [String.t()],
           until: String.t(),
-          payload_ms: non_neg_integer(),
-          initial_ms: non_neg_integer(),
-          total_ms: non_neg_integer(),
+          payload_ms: non_neg_integer() | float(),
+          initial_ms: non_neg_integer() | float(),
+          total_ms: non_neg_integer() | float(),
           final_graph: FinalGraphStats.t(),
           stages: [Stage.t()]
         }

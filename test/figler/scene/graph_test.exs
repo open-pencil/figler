@@ -122,8 +122,8 @@ defmodule Figler.Scene.GraphTest do
     assert %{graph: %Graph{}, initial_ms: initial_ms, total_ms: total_ms, stages: stages} =
              Graph.profile(message_payload(), until: :populate_instances)
 
-    assert is_integer(initial_ms)
-    assert is_integer(total_ms)
+    assert is_number(initial_ms)
+    assert is_number(total_ms)
     assert [%{stage: :populate_instances, graph: %{node_count: 2}}] = stages
   end
 

@@ -415,8 +415,7 @@ defmodule Figler.Scene.Graph do
     |> Keyword.put(:only, stage)
   end
 
-  defp native_ms(microseconds),
-    do: System.convert_time_unit(microseconds, :microsecond, :millisecond)
+  defp native_ms(microseconds), do: microseconds / 1_000
 
   defp build_from_seed(index, resource, opts, seed_nodes \\ nil) do
     stages = stages(opts)

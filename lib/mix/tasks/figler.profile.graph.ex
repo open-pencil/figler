@@ -117,5 +117,5 @@ defmodule Mix.Tasks.Figler.Profile.Graph do
     Map.get(@stage_atoms, stage) || raise ArgumentError, "unknown graph stage #{inspect(stage)}"
   end
 
-  defp ms(us), do: System.convert_time_unit(us, :microsecond, :millisecond)
+  defp ms(us), do: us / 1_000
 end
