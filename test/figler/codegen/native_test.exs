@@ -139,11 +139,9 @@ defmodule Figler.Codegen.NativeTest do
   end
 
   test "navigation boundaries are true defnif definitions" do
-    assert_defnif(
-      SupportFunction,
-      :scene_index_node,
-      2,
-      "scene_xpath_runtime::scene_index_node_value(env, resource, guid)"
-    )
+    assert nif_exported?(SupportFunction, :scene_index_node, 2)
+
+    assert rust_source!(SupportFunction, :scene_index_node) =~
+             "scene_xpath_runtime::scene_index_node_value(env, resource, guid)"
   end
 end

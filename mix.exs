@@ -179,7 +179,7 @@ defmodule Figler.MixProject do
   end
 
   defp rustq_dep do
-    {:rustq, "~> 1.0.0-rc.1", override: true, runtime: false}
+    {:rustq, "~> 1.0.0-rc.3", override: true, runtime: false}
   end
 
   defp json_codec_dep do
