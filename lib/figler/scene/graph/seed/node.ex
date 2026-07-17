@@ -104,7 +104,9 @@ defmodule Figler.Scene.Graph.Seed.Node do
     }
   end
 
-  defp from_native_record(SeedProjection.native_record_pattern()) do
+  @doc false
+  @spec from_native_record(tuple()) :: t()
+  def from_native_record(SeedProjection.native_record_pattern()) do
     text_data = text
     font_name = font_family
 

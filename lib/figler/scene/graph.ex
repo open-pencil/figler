@@ -126,13 +126,13 @@ defmodule Figler.Scene.Graph do
 
   def build(binary, opts) when is_binary(binary) and is_list(opts) do
     payload = Scene.payload!(binary)
-    seed_nodes = seed_nodes_from_payload(payload, opts)
     opts = maybe_pre_focused_opts(opts)
 
     if focused?(opts) do
+      seed_nodes = seed_nodes_from_payload(payload, opts)
       build_focused_from_seed(payload, opts, seed_nodes)
     else
-      build_with_native_index(payload, opts, seed_nodes)
+      build_with_native_records(payload, opts)
     end
   end
 
@@ -351,11 +351,24 @@ defmodule Figler.Scene.Graph do
     |> Map.put(:source, payload)
   end
 
-  defp build_with_native_index(payload, opts, seed_nodes) do
+  defp build_with_native_records(payload, opts) do
+    records = CodecNifs.decode_graph_seed_records(payload)
     {resource, summary_map} = NativeScene.build_index_with_summary(payload)
     index = %Index{resource: resource}
     summary = Summary.from_map(summary_map)
-    %__MODULE__{} = graph = build_from_seed(index, resource, opts, seed_nodes)
+    stages = stages(opts)
+    options = normalize_options(opts)
+
+    %__MODULE__{} =
+      graph =
+      records
+      |> Build.from_native_records(
+        resource: resource,
+        source: index,
+        stages: stages,
+        options: options
+      )
+      |> Build.resolve()
 
     %__MODULE__{
       graph

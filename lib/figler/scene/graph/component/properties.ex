@@ -14,9 +14,13 @@ defmodule Figler.Scene.Graph.Component.Properties do
   Indexes component property definitions to their source graph node fields.
   """
   @spec index([SeedNode.t()]) :: %{optional(GUID.figma_guid()) => [{GUID.graph_guid(), atom()}]}
-  def index(seed_nodes) do
+  def index(seed_nodes) when is_list(seed_nodes) do
     Enum.reduce(seed_nodes, %{}, &add_refs/2)
   end
+
+  @doc false
+  @spec add_seed_refs(SeedNode.t(), map()) :: map()
+  def add_seed_refs(%SeedNode{} = seed, refs) when is_map(refs), do: add_refs(seed, refs)
 
   @doc """
   Applies component property assignments from all instance seeds in the graph.

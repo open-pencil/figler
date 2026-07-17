@@ -27,10 +27,26 @@ defmodule Figler.Scene.Graph.Build do
   @spec from_seed([SeedNode.t()], keyword()) :: Graph.t()
   def from_seed(seed_nodes, opts \\ []) when is_list(seed_nodes) and is_list(opts) do
     options = Keyword.get(opts, :options, [])
-    seed_nodes = Focus.materialize(seed_nodes, options)
-    initial = initial_indexes(seed_nodes)
+
+    seed_nodes
+    |> Focus.materialize(options)
+    |> initial_indexes()
+    |> from_initial_indexes(opts, options)
+  end
+
+  @doc false
+  @spec from_native_records([tuple()], keyword()) :: Graph.t()
+  def from_native_records(records, opts \\ []) when is_list(records) and is_list(opts) do
+    options = Keyword.get(opts, :options, [])
+
+    records
+    |> initial_native_indexes()
+    |> from_initial_indexes(opts, options)
+  end
+
+  defp from_initial_indexes(initial, opts, options) do
     children = build_children(initial.children_entries)
-    roots = build_roots(seed_nodes, initial.seed_nodes)
+    roots = build_roots(initial.root_entries, initial.seed_nodes)
 
     %Graph{
       resource: Keyword.fetch!(opts, :resource),
@@ -47,10 +63,10 @@ defmodule Figler.Scene.Graph.Build do
       clone_index: %{},
       clone_source_index: %{},
       source_instance_guids: source_instance_guids(initial.seed_nodes),
-      component_prop_refs: ComponentProps.index(seed_nodes),
-      provenance: Provenance.initial(seed_nodes),
+      component_prop_refs: initial.component_prop_refs,
+      provenance: Provenance.initial(),
       unresolved: [],
-      stats: stats(seed_nodes, children, roots)
+      stats: stats(initial.seed_nodes, children, roots)
     }
   end
 
@@ -145,27 +161,40 @@ defmodule Figler.Scene.Graph.Build do
     do: %{graph | unresolved: [item | graph.unresolved]}
 
   defp initial_indexes(seed_nodes) do
-    seed_nodes
-    |> Stream.with_index()
-    |> Enum.reduce(
-      %{
-        nodes: %{},
-        seed_nodes: %{},
-        children_entries: %{},
-        by_type: %{},
-        by_name: %{}
-      },
-      fn {%SeedNode{} = seed, index}, acc ->
-        %{
-          acc
-          | nodes: Map.put(acc.nodes, seed.guid, SeedNode.to_graph_node(seed)),
-            seed_nodes: Map.put(acc.seed_nodes, seed.guid, seed),
-            children_entries: add_child_entry(acc.children_entries, seed, index),
-            by_type: add_group_guid(acc.by_type, seed.node_type, seed.guid),
-            by_name: add_group_guid(acc.by_name, seed.name, seed.guid)
-        }
-      end
-    )
+    Enum.reduce(seed_nodes, initial_indexes(), &add_initial_seed/2)
+  end
+
+  defp initial_native_indexes(records) do
+    Enum.reduce(records, initial_indexes(), fn record, acc ->
+      record |> SeedNode.from_native_record() |> add_initial_seed(acc)
+    end)
+  end
+
+  defp initial_indexes do
+    %{
+      index: 0,
+      nodes: %{},
+      seed_nodes: %{},
+      children_entries: %{},
+      root_entries: [],
+      by_type: %{},
+      by_name: %{},
+      component_prop_refs: %{}
+    }
+  end
+
+  defp add_initial_seed(%SeedNode{} = seed, acc) do
+    %{
+      acc
+      | index: acc.index + 1,
+        nodes: Map.put(acc.nodes, seed.guid, SeedNode.to_graph_node(seed)),
+        seed_nodes: Map.put(acc.seed_nodes, seed.guid, seed),
+        children_entries: add_child_entry(acc.children_entries, seed, acc.index),
+        root_entries: [{seed.guid, seed.parent_guid} | acc.root_entries],
+        by_type: add_group_guid(acc.by_type, seed.node_type, seed.guid),
+        by_name: add_group_guid(acc.by_name, seed.name, seed.guid),
+        component_prop_refs: ComponentProps.add_seed_refs(seed, acc.component_prop_refs)
+    }
   end
 
   defp add_child_entry(children, %SeedNode{parent_guid: nil}, _index), do: children
@@ -190,12 +219,13 @@ defmodule Figler.Scene.Graph.Build do
     end)
   end
 
-  defp build_roots(seed_nodes, seed_nodes_by_guid) do
-    seed_nodes
-    |> Enum.filter(
-      &(is_nil(&1.parent_guid) or not Map.has_key?(seed_nodes_by_guid, &1.parent_guid))
-    )
-    |> Enum.map(& &1.guid)
+  defp build_roots(root_entries, seed_nodes_by_guid) do
+    root_entries
+    |> Enum.reverse()
+    |> Enum.filter(fn {_guid, parent_guid} ->
+      is_nil(parent_guid) or not Map.has_key?(seed_nodes_by_guid, parent_guid)
+    end)
+    |> Enum.map(&elem(&1, 0))
   end
 
   defp add_group_guid(groups, nil, _guid), do: groups
@@ -216,7 +246,7 @@ defmodule Figler.Scene.Graph.Build do
   defp stats(seed_nodes, children, roots) do
     %{
       resolver: :elixir,
-      node_count: length(seed_nodes),
+      node_count: map_size(seed_nodes),
       parented_count:
         Enum.reduce(children, 0, fn {_parent, guids}, count -> count + length(guids) end),
       root_count: length(roots),

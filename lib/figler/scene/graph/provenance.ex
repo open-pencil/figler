@@ -15,8 +15,11 @@ defmodule Figler.Scene.Graph.Provenance do
   this map sparse and records only clone/patch/variable entries that differ from
   the default projected-index provenance.
   """
+  @spec initial() :: %{optional(term()) => map()}
+  def initial, do: %{}
+
   @spec initial([term()]) :: %{optional(term()) => map()}
-  def initial(seed_nodes) when is_list(seed_nodes), do: %{}
+  def initial(_seed_nodes), do: initial()
 
   @doc """
   Records provenance for a node cloned while resolving an instance.

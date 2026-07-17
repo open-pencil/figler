@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Materialize initial graph indexes directly from native seed records instead of
+  allocating a second complete seed list; a 79,261-node external fixture dropped
+  from 8.27s to 5.98s in same-process A/B construction while preserving graph
+  nodes, children, provenance, and unresolved output exactly.
 - Use released KiwiCodec 0.3.0 instead of a sibling path dependency so clean
   checkouts and GitHub CI can generate and validate native code.
 - Scan seed metadata directly during stack layout and skip variable/style stage

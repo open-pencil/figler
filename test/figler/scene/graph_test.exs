@@ -4,6 +4,7 @@ defmodule Figler.Scene.GraphTest do
   alias Figler.Native.CodecNifs
   alias Figler.Scene
   alias Figler.Scene.Graph
+  alias Figler.Scene.Graph.Build
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Node
 
@@ -114,6 +115,16 @@ defmodule Figler.Scene.GraphTest do
     assert Enum.all?(native_records, &is_tuple/1)
 
     assert SeedNode.from_native_records(native_records) == sparse_seeds
+  end
+
+  test "builds identical initial indexes directly from native records" do
+    records = CodecNifs.decode_graph_seed_records(message_payload())
+    resource = make_ref()
+
+    from_records = Build.from_native_records(records, resource: resource)
+    from_seeds = Build.from_seed(SeedNode.from_native_records(records), resource: resource)
+
+    assert from_records == from_seeds
   end
 
   test "profiles graph construction" do
