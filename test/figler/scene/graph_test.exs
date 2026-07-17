@@ -128,8 +128,13 @@ defmodule Figler.Scene.GraphTest do
   end
 
   test "profiles graph construction" do
-    assert %{graph: %Graph{}, initial_ms: initial_ms, total_ms: total_ms, stages: stages} =
+    assert %{graph: %Graph{} = graph, initial_ms: initial_ms, total_ms: total_ms, stages: stages} =
              Graph.profile(message_payload(), until: :populate_instances)
+
+    assert graph.stages == [:populate_instances]
+
+    assert Graph.stats(graph) ==
+             message_payload() |> Graph.build(until: :populate_instances) |> Graph.stats()
 
     assert is_number(initial_ms)
     assert is_number(total_ms)

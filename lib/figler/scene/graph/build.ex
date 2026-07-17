@@ -82,6 +82,12 @@ defmodule Figler.Scene.Graph.Build do
     Enum.reduce(graph.stages, graph, &run_stage/2)
   end
 
+  @doc false
+  @spec resolve_stage(Graph.t(), atom(), [atom()]) :: Graph.t()
+  def resolve_stage(%Graph{} = graph, stage, remaining_stages) do
+    run_stage(stage, %Graph{graph | stages: remaining_stages})
+  end
+
   defp run_stage(:populate_instances, graph), do: populate_instances(graph)
   defp run_stage(:symbol_overrides, graph), do: apply_symbol_overrides(graph)
   defp run_stage(:sync_overrides, graph), do: sync_overrides(graph)

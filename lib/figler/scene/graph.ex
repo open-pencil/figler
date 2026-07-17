@@ -153,14 +153,21 @@ defmodule Figler.Scene.Graph do
 
     {initial_us, graph} = :timer.tc(fn -> build(input, base_opts) end)
 
-    {stage_results, graph} =
-      Enum.map_reduce(selected_stages, graph, fn stage, acc ->
-        {stage_us, next} = :timer.tc(fn -> build(acc, stage_profile_opts(opts, stage)) end)
+    stage_plans =
+      selected_stages
+      |> Enum.with_index()
+      |> Enum.map(fn {stage, index} -> {stage, Enum.drop(selected_stages, index)} end)
+
+    {stage_results, %__MODULE__{} = graph} =
+      Enum.map_reduce(stage_plans, graph, fn {stage, remaining_stages}, acc ->
+        {stage_us, next} =
+          :timer.tc(fn -> Build.resolve_stage(acc, stage, remaining_stages) end)
 
         {%{stage: stage, ms: native_ms(stage_us), graph: stats(next)}, next}
       end)
 
     initial_ms = native_ms(initial_us)
+    graph = %__MODULE__{graph | stages: selected_stages}
 
     %{
       graph: graph,

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Profile each resolver stage with its remaining stage plan intact, so deferred
+  index work and the returned graph match normal full-pipeline execution.
 - Represent extended clone GUID paths with structurally shared tails instead of
   copying the full source path on every append; the 200,140-append external
   profile reduced GUID append time by about 30% while preserving public IDs.
