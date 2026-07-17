@@ -29,7 +29,7 @@ defmodule Figler.Scene.Graph.Component.Properties do
   def apply_all(%Graph{} = graph) do
     graph
     |> instances()
-    |> Enum.reduce(graph, &apply(&2, &1))
+    |> Enum.reduce(graph, &apply_live_instance/2)
   end
 
   @doc """
@@ -40,6 +40,10 @@ defmodule Figler.Scene.Graph.Component.Properties do
 
   def apply(%Graph{} = graph, %SeedNode{} = instance) do
     apply_assignments(graph, instance.guid, instance.component_prop_assignments)
+  end
+
+  defp apply_live_instance(%SeedNode{guid: guid} = instance, graph) do
+    if Map.has_key?(graph.nodes, guid), do: apply(graph, instance), else: graph
   end
 
   @doc """

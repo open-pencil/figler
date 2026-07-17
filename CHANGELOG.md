@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Ignore component-property assignments from instance nodes removed by earlier
+  graph mutations instead of letting stale clone seeds fall back to and mutate
+  source definitions. The 79,261-node fixture skipped 2,001 stale instances and
+  reduced median component-props time from 1.09s to 1.00s.
 - Avoid redundant component-property removal work by fast-pathing already-empty
   child clears and collecting removal subtrees in one pass. On the 79,261-node
   fixture, exact-output A/B runs reduced median component-props time by about 7%.

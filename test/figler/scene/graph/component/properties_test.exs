@@ -3,6 +3,7 @@ defmodule Figler.Scene.Graph.Component.PropertiesTest do
 
   alias Figler.Scene
   alias Figler.Scene.Graph
+  alias Figler.Scene.Graph.Component.Properties
   alias Figler.Scene.Node
 
   import Figler.Test.GraphBuilder
@@ -34,6 +35,30 @@ defmodule Figler.Scene.Graph.Component.PropertiesTest do
     applied = Graph.explain(graph, clone_guid).applied
     assert {:component_prop, :text, "Default", "Submit"} in applied
     assert {:component_prop, :visible, true, false} in applied
+  end
+
+  test "ignores assignments from instances removed by earlier graph mutations" do
+    %Graph{} =
+      graph =
+      [
+        component({1, 1}, name: "Menu"),
+        node({1, 2}, :frame,
+          parent_guid: {1, 1},
+          visible: true,
+          component_prop_refs: [prop_ref({9, 1}, :visible)]
+        ),
+        text({1, 3}, {1, 2}, "Source child"),
+        instance({2, 1}, {1, 1},
+          component_prop_assignments: [prop_assignment({9, 1}, {:bool, false})]
+        )
+      ]
+      |> resolve(stages: [])
+
+    graph = %Graph{graph | nodes: Map.delete(graph.nodes, {2, 1})}
+    graph = Properties.apply_all(graph)
+
+    assert %Node{visible: true} = Scene.node(graph, "1:2")
+    assert [%Node{text: "Source child"}] = Scene.children(graph, "1:2")
   end
 
   test "repeated hidden assignments preserve provenance after children are cleared" do
