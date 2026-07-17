@@ -31,6 +31,7 @@ defmodule Figler.Scene.Graph do
     :source,
     mode: :projected,
     stages: [],
+    projection_stages: :all,
     options: [],
     seed_nodes: %{},
     nodes: %{},
@@ -55,6 +56,7 @@ defmodule Figler.Scene.Graph do
             source: Index.t() | binary() | nil,
             mode: :projected | :resolved,
             stages: [atom()],
+            projection_stages: :all | [atom()],
             options: keyword(),
             seed_nodes: %{optional(GUID.graph_guid()) => SeedNode.t()},
             nodes: %{optional(GUID.graph_guid()) => Node.t()},
@@ -115,7 +117,10 @@ defmodule Figler.Scene.Graph do
     if opts == [] do
       graph
     else
-      %__MODULE__{graph | stages: stages(opts), options: normalize_options(opts)}
+      selected_stages = stages(opts)
+      ensure_projected_stages!(graph, selected_stages)
+
+      %__MODULE__{graph | stages: selected_stages, options: normalize_options(opts)}
       |> Build.resolve()
     end
   end
@@ -149,7 +154,11 @@ defmodule Figler.Scene.Graph do
   @spec profile(binary() | Index.t() | reference() | t(), keyword()) :: map()
   def profile(input, opts \\ []) when is_list(opts) do
     selected_stages = stages(opts)
-    base_opts = stage_profile_opts(opts, [])
+
+    base_opts =
+      opts
+      |> stage_profile_opts([])
+      |> Keyword.put(:projection_stages, selected_stages)
 
     {initial_us, graph} = :timer.tc(fn -> build(input, base_opts) end)
 
@@ -359,11 +368,12 @@ defmodule Figler.Scene.Graph do
   end
 
   defp build_with_native_records(payload, opts) do
-    records = CodecNifs.decode_graph_seed_records(payload)
+    stages = stages(opts)
+    projected_stages = projection_stages(opts, stages)
+    records = CodecNifs.decode_graph_seed_records(payload, projected_stages)
     {resource, summary_map} = NativeScene.build_index_with_summary(payload)
     index = %Index{resource: resource}
     summary = Summary.from_map(summary_map)
-    stages = stages(opts)
     options = normalize_options(opts)
 
     %__MODULE__{} =
@@ -373,6 +383,7 @@ defmodule Figler.Scene.Graph do
         resource: resource,
         source: index,
         stages: stages,
+        projection_stages: projected_stages,
         options: options
       )
       |> Build.resolve()
@@ -397,12 +408,19 @@ defmodule Figler.Scene.Graph do
   end
 
   defp native_seed_nodes(payload, opts) do
+    selected_stages = stages(opts)
+    projected_stages = projection_stages(opts, selected_stages)
+
     case Keyword.get(opts, :focus) do
       nil ->
-        payload |> CodecNifs.decode_graph_seed_records() |> SeedNode.from_native_records()
+        payload
+        |> CodecNifs.decode_graph_seed_records(projected_stages)
+        |> SeedNode.from_native_records()
 
       [] ->
-        payload |> CodecNifs.decode_graph_seed_records() |> SeedNode.from_native_records()
+        payload
+        |> CodecNifs.decode_graph_seed_records(projected_stages)
+        |> SeedNode.from_native_records()
 
       _focus ->
         payload |> sparse_message(opts) |> SeedNode.from_message()
@@ -489,6 +507,7 @@ defmodule Figler.Scene.Graph do
 
   defp normalize_options(opts) do
     opts
+    |> Keyword.delete(:projection_stages)
     |> normalize_focus()
     |> Keyword.put_new(:resolve_variables, :known)
     |> Keyword.put_new(:resolve_styles, false)
@@ -522,6 +541,24 @@ defmodule Figler.Scene.Graph do
 
     skip = opts |> Keyword.get(:skip, []) |> List.wrap()
     Enum.reject(selected, &(&1 in skip))
+  end
+
+  defp projection_stages(opts, selected_stages) do
+    Keyword.get(opts, :projection_stages, selected_stages)
+  end
+
+  defp ensure_projected_stages!(%__MODULE__{projection_stages: :all}, _stages), do: :ok
+
+  defp ensure_projected_stages!(%__MODULE__{projection_stages: projected}, stages) do
+    case stages -- projected do
+      [] ->
+        :ok
+
+      missing ->
+        raise ArgumentError,
+              "graph seed metadata was not projected for stages #{inspect(missing)}; " <>
+                "rebuild the graph from its original input with the broader stage plan"
+    end
   end
 
   defp stages_until(until) do

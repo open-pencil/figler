@@ -26,6 +26,14 @@ Use `skip:` for targeted experiments, not public performance flags:
 graph = Figler.Scene.graph(fig_binary, skip: [:sync_overrides])
 ```
 
+The native seed decoder follows the selected stage plan. Builds using `only:`,
+`until:`, or `stages:` do not materialize resolver metadata belonging solely to
+later omitted stages. The fixed seed-record shape and clone-retention marker keep
+projected builds behaviorally equivalent to full metadata decoding for the stages
+that do run. To add a stage omitted from the original plan, rebuild from the
+original input; an existing graph rejects stages whose seed metadata was not
+materialized.
+
 ## Provenance and unresolved diagnostics
 
 Resolver stages record provenance on effective nodes. Inspect it with:

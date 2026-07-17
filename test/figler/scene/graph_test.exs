@@ -117,6 +117,51 @@ defmodule Figler.Scene.GraphTest do
     assert SeedNode.from_native_records(native_records) == sparse_seeds
   end
 
+  test "native graph seed projection follows selected resolver stages" do
+    payload = resolver_metadata_payload()
+
+    [full] = payload |> CodecNifs.decode_graph_seed_records() |> SeedNode.from_native_records()
+
+    [minimal] =
+      payload
+      |> CodecNifs.decode_graph_seed_records([:populate_instances])
+      |> SeedNode.from_native_records()
+
+    [overrides] =
+      payload
+      |> CodecNifs.decode_graph_seed_records([:symbol_overrides])
+      |> SeedNode.from_native_records()
+
+    [derived] =
+      payload
+      |> CodecNifs.decode_graph_seed_records([:derived_symbol_data])
+      |> SeedNode.from_native_records()
+
+    [stack] =
+      payload
+      |> CodecNifs.decode_graph_seed_records([:stack_layout])
+      |> SeedNode.from_native_records()
+
+    assert minimal.symbol_id == full.symbol_id
+    assert minimal.symbol_overrides == []
+    assert minimal.derived_symbol_data == []
+    assert minimal.stack_mode == nil
+    assert minimal.native_clone_seed
+
+    assert overrides.symbol_overrides == full.symbol_overrides
+    assert overrides.derived_symbol_data == []
+    assert overrides.stack_mode == nil
+
+    assert derived.symbol_overrides == []
+    assert derived.derived_symbol_data == full.derived_symbol_data
+    assert derived.stack_mode == nil
+
+    assert stack.symbol_overrides == []
+    assert stack.derived_symbol_data == []
+    assert stack.stack_mode == :horizontal
+    assert stack.stack_spacing == 8.0
+  end
+
   test "builds identical initial indexes directly from native records" do
     records = CodecNifs.decode_graph_seed_records(message_payload())
     resource = make_ref()
@@ -132,6 +177,11 @@ defmodule Figler.Scene.GraphTest do
              Graph.profile(message_payload(), until: :populate_instances)
 
     assert graph.stages == [:populate_instances]
+    assert graph.projection_stages == [:populate_instances]
+
+    assert_raise ArgumentError, ~r/not projected for stages \[:symbol_overrides\]/, fn ->
+      Graph.build(graph, only: :symbol_overrides)
+    end
 
     assert Graph.stats(graph) ==
              message_payload() |> Graph.build(until: :populate_instances) |> Graph.stats()
@@ -176,5 +226,37 @@ defmodule Figler.Scene.GraphTest do
     graph = [component({1, 1}, name: "Button")] |> resolve(stages: [])
 
     assert Graph.instance(graph, "1:1") == nil
+  end
+
+  defp resolver_metadata_payload do
+    target_guid = struct(Figler.Schema.GUID, session_id: 1, local_id: 2)
+
+    node =
+      struct(Figler.Schema.NodeChange,
+        guid: struct(Figler.Schema.GUID, session_id: 2, local_id: 1),
+        type: :instance,
+        stack_mode: :horizontal,
+        stack_spacing: 8.0,
+        symbol_data:
+          struct(Figler.Schema.SymbolData,
+            symbol_id: struct(Figler.Schema.GUID, session_id: 1, local_id: 1),
+            symbol_overrides: [
+              struct(Figler.Schema.NodeChange,
+                guid_path: struct(Figler.Schema.GUIDPath, guids: [target_guid]),
+                visible: false
+              )
+            ]
+          ),
+        derived_symbol_data: [
+          struct(Figler.Schema.NodeChange,
+            guid_path: struct(Figler.Schema.GUIDPath, guids: [target_guid]),
+            size: struct(Figler.Schema.Vector, x: 10.0, y: 20.0)
+          )
+        ]
+      )
+
+    Figler.Schema.Message
+    |> struct(type: :node_changes, session_id: 0, node_changes: [node])
+    |> KiwiCodec.encode()
   end
 end

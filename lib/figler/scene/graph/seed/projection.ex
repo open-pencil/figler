@@ -6,7 +6,17 @@ defmodule Figler.Scene.Graph.Seed.Projection do
   extraction kinds so seed node construction and native generation stay aligned.
   """
 
+  import Bitwise, only: [bor: 2]
+
   alias Figler.Scene.Projection, as: SceneProjection
+
+  @native_stage_flags [
+    symbol_overrides: 1,
+    component_props: 2,
+    derived_symbol_data: 4,
+    stack_layout: 8,
+    variables: 16
+  ]
 
   @resolver_metadata_fields [
     :override_key,
@@ -31,7 +41,10 @@ defmodule Figler.Scene.Graph.Seed.Projection do
     Enum.split_while(@resolver_metadata_fields, &(&1 != :symbol_overrides))
 
   @native_record_fields SceneProjection.field_names() ++
-                          record_metadata_prefix ++ [:symbol_id] ++ record_metadata_suffix
+                          record_metadata_prefix ++
+                          [:symbol_id] ++
+                          record_metadata_suffix ++
+                          [:native_clone_seed]
   @native_record_ignored_fields [:font_style, :font_postscript]
 
   @list_fields [
@@ -47,6 +60,19 @@ defmodule Figler.Scene.Graph.Seed.Projection do
   def resolver_metadata_fields, do: @resolver_metadata_fields
   def identity_fields, do: @identity_fields
   def native_record_fields, do: @native_record_fields
+  def native_stage_flags, do: @native_stage_flags
+
+  def native_stage_mask(stages) when is_list(stages) do
+    Enum.reduce(stages, 0, fn stage, mask ->
+      bor(mask, Keyword.get(@native_stage_flags, stage, 0))
+    end)
+  end
+
+  def native_all_stage_mask do
+    @native_stage_flags
+    |> Keyword.keys()
+    |> native_stage_mask()
+  end
 
   defmacro native_record_pattern do
     fields =
@@ -64,7 +90,8 @@ defmodule Figler.Scene.Graph.Seed.Projection do
         if list_field?(field), do: {field, []}, else: field
       end)
 
-    metadata_fields ++ @identity_fields ++ [origin: :source, source: nil]
+    metadata_fields ++
+      @identity_fields ++ [native_clone_seed: false, origin: :source, source: nil]
   end
 
   def default_value(field) when field in @list_fields, do: []

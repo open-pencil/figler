@@ -28,6 +28,14 @@ defmodule Figler.Scene.Graph.Seed.ProjectionTest do
     end
   end
 
+  test "native stage masks compose from the resolver plan" do
+    assert SeedProjection.native_stage_mask([]) == 0
+    assert SeedProjection.native_stage_mask([:symbol_overrides]) == 1
+    assert SeedProjection.native_stage_mask([:component_props, :variables]) == 18
+    assert SeedProjection.native_stage_mask([:unknown_stage]) == 0
+    assert SeedProjection.native_all_stage_mask() == 31
+  end
+
   test "scene node projection is backed by generated Kiwi schema metadata" do
     assert Node.source_module() == Figler.Schema.NodeChange
 

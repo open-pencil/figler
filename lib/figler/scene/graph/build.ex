@@ -53,6 +53,7 @@ defmodule Figler.Scene.Graph.Build do
       source: Keyword.get(opts, :source),
       mode: :projected,
       stages: Keyword.get(opts, :stages, []),
+      projection_stages: Keyword.get(opts, :projection_stages, :all),
       options: options,
       seed_nodes: initial.seed_nodes,
       nodes: initial.nodes,

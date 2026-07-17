@@ -1,3 +1,9 @@
+__rq_graph_seed_stage_flags!();
+
+fn graph_seed_stage_enabled(stage_flags: u8, stage: u8) -> bool {
+    stage_flags & stage != 0
+}
+
 fn graph_seed_nil<'a>(env: Env<'a>) -> Term<'a> {
     Atom::from_str(env, "nil").unwrap().encode(env)
 }
@@ -37,9 +43,33 @@ fn graph_seed_repeated_terms<'a>(
     Ok(values.encode(env))
 }
 
+fn graph_seed_skip_entries_message(
+    decoder: &mut Decoder<'_>,
+    skip_entry: fn(&mut Decoder<'_>) -> NifResult<()>,
+) -> NifResult<bool> {
+    let mut has_entries = false;
+
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            1 => {
+                let len = decoder.read_var_uint()? as usize;
+                has_entries = has_entries || len > 0;
+                for _ in 0..len {
+                    skip_entry(decoder)?;
+                }
+            }
+            _field => return Err(Error::BadArg),
+        }
+    }
+
+    Ok(has_entries)
+}
+
 fn graph_seed_symbol_data<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
+    decode_overrides: bool,
 ) -> NifResult<(Term<'a>, Term<'a>)> {
     let nil = graph_seed_nil(env);
     let empty = Vec::<Term<'a>>::new().encode(env);
@@ -50,10 +80,11 @@ fn graph_seed_symbol_data<'a>(
         match decoder.read_var_uint()? {
             0 => break,
             1 => symbol_id = graph_seed_guid(env, decoder)?,
-            2 => {
+            2 if decode_overrides => {
                 symbol_overrides =
                     graph_seed_repeated_terms(env, decoder, decode_sparse_node_change_from_decoder)?;
             }
+            2 => graph_focus_skip_symbol_data_field(decoder, 2)?,
             3 => {
                 decoder.read_var_float_value()?;
             }
@@ -64,7 +95,11 @@ fn graph_seed_symbol_data<'a>(
     Ok((symbol_id, symbol_overrides))
 }
 
-fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn graph_seed_node_record<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    stage_flags: u8,
+) -> NifResult<Term<'a>> {
     let nil = graph_seed_nil(env);
     let empty = Vec::<Term<'a>>::new().encode(env);
 
@@ -107,6 +142,18 @@ fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifRes
     let mut derived_symbol_data = empty;
     let mut variable_consumption = nil;
     let mut variable_data_values = nil;
+    let mut retain_clone_seed = false;
+
+    let symbol_overrides_enabled =
+        graph_seed_stage_enabled(stage_flags, GRAPH_SEED_STAGE_SYMBOL_OVERRIDES);
+    let component_props_enabled =
+        graph_seed_stage_enabled(stage_flags, GRAPH_SEED_STAGE_COMPONENT_PROPS);
+    let component_metadata_enabled = symbol_overrides_enabled || component_props_enabled;
+    let derived_symbol_data_enabled =
+        graph_seed_stage_enabled(stage_flags, GRAPH_SEED_STAGE_DERIVED_SYMBOL_DATA);
+    let variables_enabled = graph_seed_stage_enabled(stage_flags, GRAPH_SEED_STAGE_VARIABLES);
+    let stack_layout_enabled =
+        graph_seed_stage_enabled(stage_flags, GRAPH_SEED_STAGE_STACK_LAYOUT) || variables_enabled;
 
     loop {
         match decoder.read_var_uint()? {
@@ -129,39 +176,113 @@ fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifRes
             39 => stroke_count = graph_seed_count_repeated(decoder, skip_paint_from_decoder)?.encode(env),
             41 => font_family = decode_sparse_font_name_from_decoder(env, decoder)?,
             42 => text = decode_sparse_text_data_from_decoder(env, decoder)?,
-            105 => stack_mode = decode_sparse_stack_mode_from_decoder(env, decoder)?,
-            107 => stack_spacing = decoder.read_var_float(env)?,
+            105 => {
+                if stack_layout_enabled {
+                    stack_mode = decode_sparse_stack_mode_from_decoder(env, decoder)?;
+                } else {
+                    retain_clone_seed = true;
+                    skip_fig_node_change_field(decoder, 105)?;
+                }
+            }
+            107 => {
+                if stack_layout_enabled {
+                    stack_spacing = decoder.read_var_float(env)?;
+                } else {
+                    retain_clone_seed = true;
+                    skip_fig_node_change_field(decoder, 107)?;
+                }
+            }
             113 => {
-                let (next_symbol_id, next_symbol_overrides) = graph_seed_symbol_data(env, decoder)?;
+                let (next_symbol_id, next_symbol_overrides) =
+                    graph_seed_symbol_data(env, decoder, symbol_overrides_enabled)?;
                 symbol_id = next_symbol_id;
                 symbol_overrides = next_symbol_overrides;
             }
             125 => {
-                derived_symbol_data =
-                    graph_seed_repeated_terms(env, decoder, decode_sparse_node_change_from_decoder)?;
+                if derived_symbol_data_enabled {
+                    derived_symbol_data = graph_seed_repeated_terms(
+                        env,
+                        decoder,
+                        decode_sparse_node_change_from_decoder,
+                    )?;
+                } else {
+                    retain_clone_seed = true;
+                    skip_fig_node_change_field(decoder, 125)?;
+                }
             }
-            209 => stack_horizontal_padding = decoder.read_var_float(env)?,
-            210 => stack_vertical_padding = decoder.read_var_float(env)?,
-            213 => override_key = graph_seed_guid(env, decoder)?,
-            233 => stack_padding_right = decoder.read_var_float(env)?,
-            234 => stack_padding_bottom = decoder.read_var_float(env)?,
-            266 => {
+            209 => {
+                if stack_layout_enabled {
+                    stack_horizontal_padding = decoder.read_var_float(env)?;
+                } else {
+                    retain_clone_seed = true;
+                    skip_fig_node_change_field(decoder, 209)?;
+                }
+            }
+            210 => {
+                if stack_layout_enabled {
+                    stack_vertical_padding = decoder.read_var_float(env)?;
+                } else {
+                    retain_clone_seed = true;
+                    skip_fig_node_change_field(decoder, 210)?;
+                }
+            }
+            213 if symbol_overrides_enabled => override_key = graph_seed_guid(env, decoder)?,
+            233 => {
+                if stack_layout_enabled {
+                    stack_padding_right = decoder.read_var_float(env)?;
+                } else {
+                    retain_clone_seed = true;
+                    skip_fig_node_change_field(decoder, 233)?;
+                }
+            }
+            234 => {
+                if stack_layout_enabled {
+                    stack_padding_bottom = decoder.read_var_float(env)?;
+                } else {
+                    retain_clone_seed = true;
+                    skip_fig_node_change_field(decoder, 234)?;
+                }
+            }
+            266 if component_metadata_enabled => {
                 component_prop_defs =
                     graph_seed_repeated_terms(env, decoder, decode_sparse_component_prop_def_from_decoder)?;
             }
-            267 => {
+            267 if component_metadata_enabled => {
                 component_prop_refs =
                     graph_seed_repeated_terms(env, decoder, decode_sparse_component_prop_ref_from_decoder)?;
             }
             268 => {
-                component_prop_assignments = graph_seed_repeated_terms(
-                    env,
-                    decoder,
-                    decode_sparse_component_prop_assignment_from_decoder,
-                )?;
+                if component_props_enabled {
+                    component_prop_assignments = graph_seed_repeated_terms(
+                        env,
+                        decoder,
+                        decode_sparse_component_prop_assignment_from_decoder,
+                    )?;
+                } else {
+                    retain_clone_seed = true;
+                    skip_fig_node_change_field(decoder, 268)?;
+                }
             }
-            307 => variable_consumption = decode_sparse_variable_data_map_from_decoder(env, decoder)?,
-            315 => variable_data_values = decode_sparse_variable_data_values_from_decoder(env, decoder)?,
+            307 => {
+                if variables_enabled {
+                    variable_consumption = decode_sparse_variable_data_map_from_decoder(env, decoder)?;
+                } else {
+                    retain_clone_seed = graph_seed_skip_entries_message(
+                        decoder,
+                        skip_variable_data_map_entry_from_decoder,
+                    )? || retain_clone_seed;
+                }
+            }
+            315 => {
+                if variables_enabled {
+                    variable_data_values = decode_sparse_variable_data_values_from_decoder(env, decoder)?;
+                } else {
+                    retain_clone_seed = graph_seed_skip_entries_message(
+                        decoder,
+                        skip_variable_data_values_entry_from_decoder,
+                    )? || retain_clone_seed;
+                }
+            }
             332 => fill_style_guid = decode_sparse_style_id_from_decoder(env, decoder)?,
             333 => stroke_style_guid = decode_sparse_style_id_from_decoder(env, decoder)?,
             334 => text_style_guid = decode_sparse_style_id_from_decoder(env, decoder)?,
@@ -173,12 +294,17 @@ fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifRes
         }
     }
 
+    let native_clone_seed = retain_clone_seed.encode(env);
     let record = __rq_graph_seed_record!();
 
     Ok(rustler::types::tuple::make_tuple(env, &record))
 }
 
-fn graph_seed_records_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+fn graph_seed_records_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    stage_flags: u8,
+) -> NifResult<Term<'a>> {
     let mut records = Vec::new();
 
     loop {
@@ -188,7 +314,7 @@ fn graph_seed_records_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) 
                 let len = decoder.read_var_uint()? as usize;
                 records.reserve(len);
                 for _ in 0..len {
-                    records.push(graph_seed_node_record(env, decoder)?);
+                    records.push(graph_seed_node_record(env, decoder, stage_flags)?);
                 }
             }
             field => skip_fig_message_field(decoder, field)?,

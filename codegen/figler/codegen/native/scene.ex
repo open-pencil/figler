@@ -13,8 +13,9 @@ defmodule Figler.Codegen.Native.Scene do
   alias Figler.Codegen.Native.Scene.Record
   alias Figler.Codegen.Native.Scene.SkipFieldHelpers
   alias Figler.Native.Entrypoints
-  alias KiwiCodec.RustlerGenerator.Skip
+  alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Projection
+  alias KiwiCodec.RustlerGenerator.Skip
   alias RustQ.Rust.AST.Builder, as: A
   alias RustQ.Rustler.Nif
 
@@ -50,6 +51,7 @@ defmodule Figler.Codegen.Native.Scene do
       scene_node_record: [Record.scene_node_record_struct()],
       scene_record_build_fields: Record.record_build_fields(),
       graph_seed_record: Record.seed_record_expr(),
+      graph_seed_stage_flags: graph_seed_stage_flags(),
       scene_decode_locals: scene_decode_locals(),
       scene_decode_arms: scene_decode_arms(definition_map),
       scene_query_atom_statics: scene_query_atom_statics(),
@@ -73,6 +75,13 @@ defmodule Figler.Codegen.Native.Scene do
     {splices, bindings} = Keyword.pop(bindings, :splice, [])
 
     RustQ.render!(File.read!(path), path, bind: bindings, splice: splices)
+  end
+
+  defp graph_seed_stage_flags do
+    Enum.map(SeedProjection.native_stage_flags(), fn {stage, flag} ->
+      name = stage |> Atom.to_string() |> String.upcase() |> then(&"GRAPH_SEED_STAGE_#{&1}")
+      A.const(name, :u8, A.lit(flag))
+    end)
   end
 
   defp scene_optional_fields, do: Enum.map(Record.optional_fields(), & &1.name)

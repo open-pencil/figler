@@ -150,7 +150,8 @@ defmodule Figler.Scene.Graph.Seed.Node do
       variable_consumption: Value.entries(variable_consumption),
       variable_data_values: Value.entries(variable_data_values),
       symbol_id: symbol_id,
-      component_guid: symbol_id
+      component_guid: symbol_id,
+      native_clone_seed: native_clone_seed
     }
   end
 
@@ -192,13 +193,7 @@ defmodule Figler.Scene.Graph.Seed.Node do
   """
   @spec graph_clone_seed?(t()) :: boolean()
   def graph_clone_seed?(%__MODULE__{} = seed) do
-    seed.node_type == "instance" or
-      stack_metadata?(seed) or
-      non_empty?(seed.component_prop_assignments) or
-      non_empty?(seed.derived_symbol_data) or
-      non_empty?(seed.variable_consumption) or
-      non_empty?(seed.variable_data_values) or
-      style_metadata?(seed)
+    seed.node_type == "instance" or seed.native_clone_seed or clone_seed_metadata?(seed)
   end
 
   @doc """
@@ -244,6 +239,15 @@ defmodule Figler.Scene.Graph.Seed.Node do
       | guid: GUID.format(seed.guid),
         parent_guid: GUID.format(seed.parent_guid)
     }
+  end
+
+  defp clone_seed_metadata?(%__MODULE__{} = seed) do
+    stack_metadata?(seed) or
+      non_empty?(seed.component_prop_assignments) or
+      non_empty?(seed.derived_symbol_data) or
+      non_empty?(seed.variable_consumption) or
+      non_empty?(seed.variable_data_values) or
+      style_metadata?(seed)
   end
 
   defp stack_metadata?(%__MODULE__{} = seed) do

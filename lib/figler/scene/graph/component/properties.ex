@@ -83,15 +83,26 @@ defmodule Figler.Scene.Graph.Component.Properties do
   end
 
   defp instances(graph) do
-    graph.seed_nodes
-    |> Enum.flat_map(fn
-      {_guid, %{node_type: "instance", component_prop_assignments: assignments} = seed}
-      when assignments != [] ->
-        [seed]
+    Enum.flat_map(graph.roots, &instance_subtree(graph, &1))
+  end
 
-      _entry ->
-        []
-    end)
+  defp instance_subtree(graph, guid) do
+    current =
+      case {Map.get(graph.nodes, guid), Map.get(graph.seed_nodes, guid)} do
+        {%{node_type: "instance"}, %{component_prop_assignments: assignments} = seed}
+        when assignments != [] ->
+          [seed]
+
+        _missing_or_irrelevant ->
+          []
+      end
+
+    children =
+      graph.children
+      |> Map.get(guid, [])
+      |> Enum.flat_map(&instance_subtree(graph, &1))
+
+    current ++ children
   end
 
   defp reduce(graph, instance_guid, assignments, predicate) do

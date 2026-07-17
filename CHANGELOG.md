@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Project native graph-seed metadata from the selected resolver stage plan while
+  preserving fixed records, clone retention, resolver output, and profiling
+  semantics. On the 79,261-node fixture, initial/population-only seed decoding
+  fell from about 1.37s and 562 MB to 0.30s and 157 MB; through component props
+  fell to about 0.67s and 325 MB.
+- Traverse component-property instances in stable graph order so full and
+  stage-projected seed records produce identical resolver output.
 - Ignore component-property assignments from instance nodes removed by earlier
   graph mutations instead of letting stale clone seeds fall back to and mutate
   source definitions. The 79,261-node fixture skipped 2,001 stale instances and

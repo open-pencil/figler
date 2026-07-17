@@ -6,7 +6,7 @@ defmodule Figler.Native.GeneratedStubs do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def decode_graph_seed_records(_bytes) do
+      def decode_graph_seed_records(_bytes, _stage_flags) do
         :erlang.nif_error(:nif_not_loaded)
       end
 

@@ -5,9 +5,13 @@ pub fn decode_sparse_message_impl<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifRes
     Ok(value)
 }
 
-pub fn decode_graph_seed_records_impl<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
+pub fn decode_graph_seed_records_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    stage_flags: u8,
+) -> NifResult<Term<'a>> {
     let mut decoder = Decoder::new(bytes.as_slice());
-    let value = graph_seed_records_from_decoder(env, &mut decoder)?;
+    let value = graph_seed_records_from_decoder(env, &mut decoder, stage_flags)?;
     decoder.finish()?;
     Ok(value)
 }
