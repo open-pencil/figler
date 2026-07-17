@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Avoid redundant component-property removal work by fast-pathing already-empty
+  child clears and collecting removal subtrees in one pass. On the 79,261-node
+  fixture, exact-output A/B runs reduced median component-props time by about 7%.
 - Profile each resolver stage with its remaining stage plan intact, so deferred
   index work and the returned graph match normal full-pipeline execution.
 - Represent extended clone GUID paths with structurally shared tails instead of

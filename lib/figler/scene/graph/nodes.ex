@@ -68,7 +68,7 @@ defmodule Figler.Scene.Graph.Nodes do
   """
   @spec remove_many(Graph.t(), [GUID.graph_guid()], keyword()) :: Graph.t()
   def remove_many(%Graph{} = graph, root_guids, opts \\ []) when is_list(root_guids) do
-    guids = Enum.flat_map(root_guids, &subtree(graph, &1))
+    guids = Enum.reduce(root_guids, [], &subtree(graph, &1, &2))
     guid_set = MapSet.new(guids)
 
     %Graph{
@@ -86,18 +86,28 @@ defmodule Figler.Scene.Graph.Nodes do
   """
   @spec clear_children(Graph.t(), GUID.graph_guid(), keyword()) :: Graph.t()
   def clear_children(%Graph{} = graph, parent_guid, opts \\ []) do
-    root_guids = Map.get(graph.children, parent_guid, [])
-    guids = Enum.flat_map(root_guids, &subtree(graph, &1))
-    guid_set = MapSet.new(guids)
+    case Map.get(graph.children, parent_guid, []) do
+      [] ->
+        %Graph{graph | children: Map.put(graph.children, parent_guid, [])}
 
-    %Graph{
-      graph
-      | nodes: Map.drop(graph.nodes, guids),
-        seed_nodes: Map.drop(graph.seed_nodes, guids),
-        children: graph.children |> Map.drop(guids) |> Map.put(parent_guid, []),
-        provenance: Map.drop(graph.provenance, guids)
-    }
-    |> maybe_remove_index_entries(guid_set, opts)
+      root_guids ->
+        guids = Enum.reduce(root_guids, [], &subtree(graph, &1, &2))
+
+        %Graph{
+          graph
+          | nodes: Map.drop(graph.nodes, guids),
+            seed_nodes: Map.drop(graph.seed_nodes, guids),
+            children: graph.children |> Map.drop(guids) |> Map.put(parent_guid, []),
+            provenance: Map.drop(graph.provenance, guids)
+        }
+        |> maybe_remove_cleared_index_entries(guids, opts)
+    end
+  end
+
+  defp maybe_remove_cleared_index_entries(%Graph{} = graph, _guids, indexes: false), do: graph
+
+  defp maybe_remove_cleared_index_entries(%Graph{} = graph, guids, opts) do
+    maybe_remove_index_entries(graph, MapSet.new(guids), opts)
   end
 
   defp maybe_remove_index_entries(%Graph{} = graph, guid_set, opts) do

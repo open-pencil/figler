@@ -36,6 +36,34 @@ defmodule Figler.Scene.Graph.Component.PropertiesTest do
     assert {:component_prop, :visible, true, false} in applied
   end
 
+  test "repeated hidden assignments preserve provenance after children are cleared" do
+    graph =
+      [
+        component({1, 1}, name: "Menu"),
+        node({1, 2}, :frame,
+          parent_guid: {1, 1},
+          visible: true,
+          component_prop_refs: [prop_ref({9, 1}, :visible)]
+        ),
+        text({1, 3}, {1, 2}, "Hidden child"),
+        instance({2, 1}, {1, 1},
+          component_prop_assignments: [
+            prop_assignment({9, 1}, {:bool, false}),
+            prop_assignment({9, 1}, {:bool, false})
+          ]
+        )
+      ]
+      |> resolve(stages: [:populate_instances, :component_props])
+
+    assert [%Node{guid: clone_guid, visible: false}] = Scene.children(graph, "2:1")
+    assert Scene.children(graph, clone_guid) == []
+
+    assert Graph.explain(graph, clone_guid).applied == [
+             {:component_prop, :visible, false, false},
+             {:component_prop, :visible, true, false}
+           ]
+  end
+
   test "component prop assignments apply to all matching refs" do
     graph =
       [

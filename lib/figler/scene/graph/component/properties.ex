@@ -203,8 +203,10 @@ defmodule Figler.Scene.Graph.Component.Properties do
     do: Patch.swap(target_guid, value, source: :component_prop)
 
   defp patches(graph, target_guid, :visible, false) do
-    [Patch.set(target_guid, :visible, false, source: :component_prop)] ++
-      source_transform_patch(graph, target_guid)
+    [
+      Patch.set(target_guid, :visible, false, source: :component_prop)
+      | source_transform_patch(graph, target_guid)
+    ]
   end
 
   defp patches(_graph, target_guid, field, value),
