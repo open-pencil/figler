@@ -16,13 +16,12 @@ defmodule Figler.Scene.Graph.Build.StackLayout do
   """
   @spec apply(Graph.t()) :: Graph.t()
   def apply(%Graph{} = graph) do
-    graph.nodes
-    |> Map.keys()
-    |> Enum.reduce(graph, &layout_node/2)
+    Enum.reduce(graph.seed_nodes, graph, fn {parent_guid, parent}, acc ->
+      layout_node(acc, parent_guid, parent)
+    end)
   end
 
-  defp layout_node(parent_guid, graph) do
-    parent = Map.get(graph.seed_nodes, parent_guid)
+  defp layout_node(graph, parent_guid, parent) do
     effective_parent = Map.get(graph.nodes, parent_guid)
 
     if horizontal_stack?(parent) and stack_left_padding(parent) != 0 and

@@ -23,15 +23,33 @@ defmodule Figler.Scene.Graph.Build.Variables do
   """
   @spec apply(Graph.t()) :: Graph.t()
   def apply(%Graph{} = graph) do
-    Enum.reduce(graph.seed_nodes, graph, fn {_guid, seed}, acc ->
-      {acc, variable_applied, variable_unresolved} = apply_variable_refs(acc, seed)
+    Enum.reduce(graph.seed_nodes, graph, fn {_guid, seed}, acc -> apply_seed(acc, seed) end)
+  end
+
+  defp apply_seed(%Graph{} = graph, seed) do
+    if relevant?(graph, seed) do
+      {graph, variable_applied, variable_unresolved} = apply_variable_refs(graph, seed)
       unresolved = Enum.reverse(variable_unresolved, style_refs(graph, seed))
       applied = Enum.reverse(variable_applied, variable_values(graph, seed))
 
-      acc
+      graph
       |> put_applied(seed.guid, applied)
       |> put_unresolved(seed.guid, unresolved)
-    end)
+    else
+      graph
+    end
+  end
+
+  defp relevant?(%Graph{options: options}, seed) do
+    variables? =
+      Keyword.get(options, :resolve_variables, :known) != false and
+        (seed.variable_consumption != [] or seed.variable_data_values != [])
+
+    styles? =
+      Keyword.get(options, :resolve_styles, false) != false and
+        Enum.any?(@style_fields, &(not is_nil(Map.get(seed, &1))))
+
+    variables? or styles?
   end
 
   defp apply_variable_refs(%Graph{options: options} = graph, seed) do

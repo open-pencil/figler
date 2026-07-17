@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Scan seed metadata directly during stack layout and skip variable/style stage
+  work for seeds with no relevant metadata, avoiding broad node-key allocation
+  and unnecessary per-node resolver calls.
 - Build the native exact-name index lazily so scene indexes that only navigate,
   query by type, or evaluate XPath do not duplicate every node name.
 - Resolve XPath `id()` lookups through the native GUID hash index instead of
