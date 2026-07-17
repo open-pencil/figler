@@ -110,12 +110,10 @@ defmodule Figler.Scene.GraphTest do
       |> CodecNifs.decode_sparse_message()
       |> SeedNode.from_message()
 
-    native_record_seeds =
-      payload
-      |> CodecNifs.decode_graph_seed_records()
-      |> SeedNode.from_native_records()
+    native_records = CodecNifs.decode_graph_seed_records(payload)
+    assert Enum.all?(native_records, &is_tuple/1)
 
-    assert native_record_seeds == sparse_seeds
+    assert SeedNode.from_native_records(native_records) == sparse_seeds
   end
 
   test "profiles graph construction" do

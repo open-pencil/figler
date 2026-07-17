@@ -10827,7 +10827,7 @@ fn graph_seed_node_record<'a>(
         component_prop_assignments, derived_symbol_data, variable_consumption,
         variable_data_values
     ];
-    Ok(record.encode(env))
+    Ok(rustler::types::tuple::make_tuple(env, &record))
 }
 fn graph_seed_records_from_decoder<'a>(
     env: Env<'a>,

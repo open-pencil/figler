@@ -175,7 +175,7 @@ fn graph_seed_node_record<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifRes
 
     let record = __rq_graph_seed_record!();
 
-    Ok(record.encode(env))
+    Ok(rustler::types::tuple::make_tuple(env, &record))
 }
 
 fn graph_seed_records_from_decoder<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {

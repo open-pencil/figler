@@ -42,7 +42,7 @@ defmodule Figler.Scene.Graph.Seed.Node do
   @doc """
   Builds seed nodes from native graph seed records.
   """
-  @spec from_native_records([list()]) :: [t()]
+  @spec from_native_records([tuple()]) :: [t()]
   def from_native_records(records) when is_list(records) do
     Enum.map(records, &from_native_record/1)
   end

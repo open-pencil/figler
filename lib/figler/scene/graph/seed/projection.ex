@@ -55,9 +55,7 @@ defmodule Figler.Scene.Graph.Seed.Projection do
         Macro.var(name, nil)
       end)
 
-    quote do
-      [unquote_splicing(fields)]
-    end
+    {:{}, [], fields}
   end
 
   def struct_fields do
