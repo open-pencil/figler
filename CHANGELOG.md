@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Build the native exact-name index lazily so scene indexes that only navigate,
+  query by type, or evaluate XPath do not duplicate every node name.
+- Resolve XPath `id()` lookups through the native GUID hash index instead of
+  reparsing the requested ID while scanning every scene node.
 - Return fixed graph-seed records as tuples instead of cons-cell lists, reducing
   the record-container footprint by roughly 42% on a 2,000-node synthetic scene.
 - Cache the versioned parsed Figma schema and its prepared interpreter indexes,

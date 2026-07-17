@@ -37,7 +37,7 @@ mod scene_xpath_runtime {
         ranks: Vec<usize>,
         by_guid: std::collections::HashMap<SceneGuid, usize>,
         by_type: std::collections::HashMap<&'static str, Vec<usize>>,
-        by_name: std::collections::HashMap<String, Vec<usize>>,
+        by_name: std::sync::OnceLock<std::collections::HashMap<String, Vec<usize>>>,
     }
     #[derive(Clone, Debug, Eq, PartialEq, std::hash::Hash)]
     enum SceneHandleKind {
@@ -128,12 +128,8 @@ mod scene_xpath_runtime {
                 ranks[index] = rank;
             }
             let mut by_type: std::collections::HashMap<&'static str, Vec<usize>> = std::collections::HashMap::new();
-            let mut by_name: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
             for index in preorder.iter().copied() {
                 by_type.entry(nodes[index].node_type).or_default().push(index);
-                if let Some(name) = nodes[index].name.as_ref() {
-                    by_name.entry(name.clone()).or_default().push(index);
-                }
             }
             Self {
                 nodes,
@@ -142,7 +138,7 @@ mod scene_xpath_runtime {
                 ranks,
                 by_guid,
                 by_type,
-                by_name,
+                by_name: std::sync::OnceLock::new(),
             }
         }
         fn push_preorder(nodes: &[SceneNodeRecord], index: usize, out: &mut Vec<usize>) {
@@ -150,6 +146,17 @@ mod scene_xpath_runtime {
             for child in nodes[index].children.iter().copied() {
                 Self::push_preorder(nodes, child, out);
             }
+        }
+        fn by_name(&self) -> &std::collections::HashMap<String, Vec<usize>> {
+            self.by_name.get_or_init(|| {
+                let mut by_name = std::collections::HashMap::new();
+                for index in self.preorder.iter().copied() {
+                    if let Some(name) = self.nodes[index].name.as_ref() {
+                        by_name.entry(name.clone()).or_insert_with(Vec::new).push(index);
+                    }
+                }
+                by_name
+            })
         }
         fn children_of(&self, handle: &SceneHandleKind) -> Vec<usize> {
             match handle {
@@ -414,17 +421,10 @@ mod scene_xpath_runtime {
             id: &str,
         ) -> impl Iterator<Item = <Self::Node as Node>::Element> {
             let scene = self.0.clone();
-            let indexes = scene
-                .preorder
-                .iter()
-                .copied()
-                .filter(|index| SceneGuid::parse(id).is_some_and(|guid| scene.nodes[*index].guid == guid))
-                .collect::<Vec<_>>();
-            indexes
+            let index = SceneGuid::parse(id).and_then(|guid| scene.by_guid.get(&guid).copied());
+            index
                 .into_iter()
-                .map(move |index| SceneElement(
-                    SceneHandle::element(scene.clone(), index),
-                ))
+                .map(move |index| SceneElement(SceneHandle::element(scene.clone(), index)))
         }
     }
     impl Element for SceneElement {
@@ -787,7 +787,7 @@ mod scene_xpath_runtime {
     ) -> Vec<SceneQueryNode> {
         let index = resource.index.clone();
         index
-            .by_name
+            .by_name()
             .get(&name)
             .into_iter()
             .flatten()

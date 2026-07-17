@@ -37,6 +37,7 @@ defmodule Figler.SceneTest do
     index = Scene.index(message_payload())
 
     assert Scene.query(index, "//canvas") == [scene_canvas()]
+    assert Scene.query(index, "id('0:1')") == [scene_canvas()]
     assert Scene.query(index, "//*[@parent_guid='0:0']") == [scene_canvas()]
   end
 
