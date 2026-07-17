@@ -194,6 +194,5 @@ defmodule Figler.Scene.Graph.Symbol.Swap do
     }
   end
 
-  defp source_leaf({:clone, _root_guid, source_path}), do: List.last(source_path)
-  defp source_leaf(source_guid), do: source_guid
+  defp source_leaf(source_guid), do: GUID.leaf(source_guid)
 end

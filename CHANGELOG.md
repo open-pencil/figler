@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Represent extended clone GUID paths with structurally shared tails instead of
+  copying the full source path on every append; the 200,140-append external
+  profile reduced GUID append time by about 30% while preserving public IDs.
+- Defer clone type/name index maintenance when a later component-props stage will
+  rebuild those indexes; a 79,261-node full-stage A/B improved median resolver
+  time from 8.46s to 7.95s with identical node/provenance output hashes.
 - Materialize initial graph indexes directly from native seed records instead of
   allocating a second complete seed list; a 79,261-node external fixture dropped
   from 8.27s to 5.98s in same-process A/B construction while preserving graph

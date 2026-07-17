@@ -174,7 +174,7 @@ defmodule Figler.Scene.Graph.Build.ClonePopulation do
          instance_guid,
          source_guid
        ) do
-    %Graph{} = graph = Nodes.put(graph, clone_guid, cloned_node, cloned_seed)
+    %Graph{} = graph = put_node(graph, clone_guid, cloned_node, cloned_seed)
 
     root_guid = GUID.root(instance_guid)
 
@@ -186,8 +186,22 @@ defmodule Figler.Scene.Graph.Build.ClonePopulation do
     }
   end
 
-  defp source_leaf({:clone, _root_guid, source_path}), do: List.last(source_path)
-  defp source_leaf(source_guid), do: source_guid
+  defp put_node(graph, clone_guid, cloned_node, cloned_seed) do
+    if later_component_props?(graph.stages) do
+      Nodes.put_unindexed(graph, clone_guid, cloned_node, cloned_seed)
+    else
+      Nodes.put(graph, clone_guid, cloned_node, cloned_seed)
+    end
+  end
+
+  defp later_component_props?(stages) do
+    case Enum.drop_while(stages, &(&1 != :populate_instances)) do
+      [_populate_instances | later_stages] -> :component_props in later_stages
+      [] -> false
+    end
+  end
+
+  defp source_leaf(source_guid), do: GUID.leaf(source_guid)
 
   defp unresolved(%Graph{} = graph, item),
     do: %Graph{graph | unresolved: [item | graph.unresolved]}

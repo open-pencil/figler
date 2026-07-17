@@ -6,6 +6,14 @@ defmodule Figler.Scene.Graph.Symbol.TargetTest do
 
   import Figler.Test.GraphBuilder
 
+  test "round-trips structurally shared clone paths" do
+    clone_guid = {2, 1} |> GUID.append({1, 2}) |> GUID.append({3, 2})
+
+    assert GUID.format(clone_guid) == "clone:2:1/1:2/3:2"
+    assert GUID.parse("clone:2:1/1:2/3:2") == clone_guid
+    assert GUID.leaf(clone_guid) == {3, 2}
+  end
+
   test "falls back to deepest source target for invalid nested override paths" do
     graph =
       [

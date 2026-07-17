@@ -8,14 +8,19 @@ defmodule Figler.Scene.Graph.GUID do
   """
 
   @type figma_guid :: {non_neg_integer(), non_neg_integer()}
-  @type graph_guid :: figma_guid() | {:clone, figma_guid(), [figma_guid()]}
+  @type clone_path :: [figma_guid()] | {clone_path(), figma_guid()}
+  @type graph_guid :: figma_guid() | {:clone, figma_guid(), clone_path()}
 
   @doc """
   Parses a public GUID string or returns an already parsed graph GUID.
   """
   @spec parse(String.t() | graph_guid() | nil) :: graph_guid() | nil
   def parse(nil), do: nil
-  def parse({:clone, {_session_id, _local_id}, path} = guid) when is_list(path), do: guid
+
+  def parse({:clone, {_session_id, _local_id}, path} = guid)
+      when is_list(path) or is_tuple(path),
+      do: guid
+
   def parse({_session_id, _local_id} = guid), do: guid
 
   def parse("clone:" <> clone) do
@@ -51,7 +56,7 @@ defmodule Figler.Scene.Graph.GUID do
   def format({session_id, local_id}), do: "#{session_id}:#{local_id}"
 
   def format({:clone, root_guid, source_path}) do
-    path = Enum.map_join(source_path, "/", &format/1)
+    path = source_path |> path_guids() |> Enum.map_join("/", &format/1)
     "clone:#{format(root_guid)}/#{path}"
   end
 
@@ -78,11 +83,11 @@ defmodule Figler.Scene.Graph.GUID do
   """
   @spec append(graph_guid(), graph_guid()) :: graph_guid()
   def append(parent_guid, {:clone, _source_root, source_path}) do
-    Enum.reduce(source_path, parent_guid, &append(&2, &1))
+    source_path |> path_guids() |> Enum.reduce(parent_guid, &append(&2, &1))
   end
 
   def append({:clone, root_guid, source_path}, {_source_session, _source_local} = source_guid) do
-    {:clone, root_guid, source_path ++ [source_guid]}
+    {:clone, root_guid, {source_path, source_guid}}
   end
 
   def append({_session_id, _local_id} = root_guid, {_source_session, _source_local} = source_guid) do
@@ -96,6 +101,18 @@ defmodule Figler.Scene.Graph.GUID do
   def root({:clone, root_guid, _source_path}), do: root_guid
   def root({_session_id, _local_id} = guid), do: guid
 
+  @doc false
+  @spec leaf(graph_guid()) :: figma_guid()
+  def leaf({:clone, _root_guid, source_path}), do: path_leaf(source_path)
+  def leaf({_session_id, _local_id} = guid), do: guid
+
+  defp path_guids(source_path), do: path_guids(source_path, [])
+  defp path_guids(source_path, tail) when is_list(source_path), do: source_path ++ tail
+  defp path_guids({prefix, guid}, tail), do: path_guids(prefix, [guid | tail])
+
+  defp path_leaf(source_path) when is_list(source_path), do: List.last(source_path)
+  defp path_leaf({_prefix, guid}), do: guid
+
   defp parse_path(parts) do
     Enum.reduce_while(parts, [], fn part, acc ->
       case parse_figma(part) do
@@ -105,9 +122,12 @@ defmodule Figler.Scene.Graph.GUID do
     end)
     |> case do
       nil -> nil
-      path -> Enum.reverse(path)
+      path -> path |> Enum.reverse() |> compact_path()
     end
   end
+
+  defp compact_path([guid]), do: [guid]
+  defp compact_path([first | rest]), do: Enum.reduce(rest, [first], &{&2, &1})
 
   defp parse_figma(value) do
     with {session_id, ":" <> rest} <- Integer.parse(value),

@@ -26,6 +26,16 @@ defmodule Figler.Scene.Graph.Nodes do
     end)
   end
 
+  @doc false
+  @spec put_unindexed(Graph.t(), GUID.graph_guid(), Node.t(), SeedNode.t() | nil) :: Graph.t()
+  def put_unindexed(%Graph{} = graph, guid, %Node{} = node, seed \\ nil) do
+    %Graph{
+      graph
+      | nodes: Map.put(graph.nodes, guid, node),
+        seed_nodes: put_seed(graph.seed_nodes, guid, seed)
+    }
+  end
+
   @doc """
   Adds `child` to `parent` if not already present.
   """
