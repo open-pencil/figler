@@ -29,8 +29,9 @@ defmodule Figler.Render.Oracle.Runner do
       }
 
   Paths are resolved relative to the manifest. Large fixtures and references
-  can remain outside the repository. Optional `oracle` metadata is copied into
-  reports so source-renderer IDs can be recorded when importers remap nodes.
+  can remain outside the repository. Optional manifest-level and per-case
+  `oracle` metadata is copied into reports so source-renderer IDs can be
+  recorded when importers remap nodes.
   """
 
   alias Figler.Document
@@ -108,6 +109,7 @@ defmodule Figler.Render.Oracle.Runner do
          {:ok, reference_png} <- File.read(reference_path),
          {:ok, render_opts} <- render_options(entry, base_dir),
          {:ok, threshold_opts} <- threshold_options(entry),
+         {:ok, case_oracle} <- case_oracle(entry),
          {:ok, expected_warning_codes} <- expected_warning_codes(entry),
          {:ok, actual, metadata} <- Render.render(document, render_opts),
          {:ok, metrics} <- Oracle.compare_png(reference_png, actual, threshold_opts) do
@@ -116,6 +118,7 @@ defmodule Figler.Render.Oracle.Runner do
       %{
         name: name,
         reference: reference_path,
+        oracle: case_oracle,
         passed?: metrics.passed? and warning_check.passed?,
         metrics: metrics,
         warning_check: warning_check,
@@ -128,6 +131,13 @@ defmodule Figler.Render.Oracle.Runner do
     else
       {:error, reason} ->
         %{name: name, passed?: false, error: inspect(reason)}
+    end
+  end
+
+  defp case_oracle(entry) do
+    case Map.get(entry, "oracle", %{}) do
+      oracle when is_map(oracle) -> {:ok, oracle}
+      _invalid -> {:error, :invalid_render_oracle_metadata}
     end
   end
 

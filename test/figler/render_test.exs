@@ -84,6 +84,7 @@ defmodule Figler.RenderTest do
           %{
             "name" => "solid rectangle",
             "reference" => "rectangle.png",
+            "oracle" => %{"source_root" => "source-rectangle"},
             "root" => "1:1",
             "scale" => 1.0,
             "background" => "transparent",
@@ -101,6 +102,7 @@ defmodule Figler.RenderTest do
               cases: [
                 %{
                   passed?: true,
+                  oracle: %{"source_root" => "source-rectangle"},
                   metrics: %{changed_pixels: 0},
                   warning_check: %{checked?: true, passed?: true, expected: [], actual: []}
                 }
