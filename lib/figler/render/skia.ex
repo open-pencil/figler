@@ -1,6 +1,5 @@
 defmodule Figler.Render.Skia do
-  @compile {:no_warn_undefined,
-            [Skia, Skia.ColorFilter, Skia.Document, Skia.Image, Skia.ImageFilter]}
+  @compile {:no_warn_undefined, [Skia, Skia.ColorFilter, Skia.Document, Skia.ImageFilter]}
 
   @moduledoc """
   Compiles a `Figler.Render.Scene` into one batched `%Skia.Document{}`.
@@ -11,18 +10,16 @@ defmodule Figler.Render.Skia do
 
   alias Figler.Render.Affine
   alias Figler.Render.Bounds
-  alias Figler.Render.Geometry
   alias Figler.Render.Scene, as: RenderScene
+  alias Figler.Render.Skia.Assets
+  alias Figler.Render.Skia.Bounds, as: BoundsCompiler
+  alias Figler.Render.Skia.Diagnostics
   alias Figler.Render.Skia.Effects
-  alias Figler.Render.Skia.Paint
+  alias Figler.Render.Skia.Shape
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Node
 
-  @identity {1.0, 0.0, 0.0, 0.0, 1.0, 0.0}
   @container_types ["canvas", "component", "frame", "instance", "symbol"]
-  @rectangular_types ["frame", "instance", "rectangle", "rounded_rectangle", "section", "symbol"]
-  @supported_shape_types @rectangular_types ++
-                           ["boolean_operation", "ellipse", "line", "text", "vector"]
 
   @type bounds :: Bounds.t()
 
@@ -32,15 +29,15 @@ defmodule Figler.Render.Skia do
            %{document: Skia.Document.t(), root: String.t(), bounds: bounds(), warnings: [map()]}}
           | {:error, term()}
   def compile(%RenderScene{root: root_guid} = scene, opts \\ []) do
-    with {:ok, bounds} <- content_bounds(scene, root_guid) do
+    with {:ok, bounds} <- BoundsCompiler.content(scene, root_guid) do
       compile_root(scene, root_guid, bounds, opts)
     end
   end
 
   defp compile_root(scene, root_guid, bounds, opts) do
-    child_guids = render_guids(scene, root_guid)
-    assets = load_render_assets(scene)
-    warnings = collect_warnings(scene, child_guids, assets)
+    child_guids = BoundsCompiler.render_guids(scene, root_guid)
+    assets = Assets.load(scene)
+    warnings = Diagnostics.collect(scene, child_guids, assets)
 
     if Keyword.get(opts, :strict, false) and warnings != [] do
       {:error, {:unsupported_render_features, warnings}}
@@ -76,130 +73,6 @@ defmodule Figler.Render.Skia do
     end)
   end
 
-  defp content_bounds(scene, root_guid) do
-    bounds =
-      scene
-      |> render_guids(root_guid)
-      |> Enum.reduce(nil, &node_bounds(scene, &1, @identity, &2))
-
-    if bounds, do: {:ok, bounds}, else: {:error, :empty_render_root}
-  end
-
-  defp render_guids(scene, root_guid) do
-    case Map.get(scene.graph.nodes, root_guid) do
-      %Node{node_type: "canvas"} -> Map.get(scene.graph.children, root_guid, [])
-      %Node{} -> [root_guid]
-      nil -> []
-    end
-  end
-
-  defp node_bounds(scene, guid, parent_matrix, bounds) do
-    case Map.get(scene.graph.nodes, guid) do
-      %Node{visible: visible, node_type: "boolean_operation"} = node when visible != false ->
-        matrix = Affine.multiply(parent_matrix, matrix(node.transform))
-
-        bounds
-        |> include_rect(matrix, node.size)
-        |> include_effect_bounds(matrix, node.size, source_node(scene, guid))
-
-      %Node{visible: visible} = node when visible != false ->
-        matrix = Affine.multiply(parent_matrix, matrix(node.transform))
-
-        bounds =
-          bounds
-          |> include_rect(matrix, node.size)
-          |> include_effect_bounds(matrix, node.size, source_node(scene, guid))
-
-        scene.graph.children
-        |> Map.get(guid, [])
-        |> Enum.reduce(bounds, &node_bounds(scene, &1, matrix, &2))
-
-      _missing_or_hidden ->
-        bounds
-    end
-  end
-
-  defp include_rect(bounds, _matrix, nil), do: bounds
-
-  defp include_rect(bounds, matrix, %{x: width, y: height})
-       when is_number(width) and is_number(height) do
-    include_local_rect(bounds, matrix, {0.0, 0.0, width, height})
-  end
-
-  defp include_rect(bounds, _matrix, _size), do: bounds
-
-  defp include_local_rect(bounds, matrix, {x, y, width, height}) do
-    points = [
-      point(matrix, x, y),
-      point(matrix, x + width, y),
-      point(matrix, x, y + height),
-      point(matrix, x + width, y + height)
-    ]
-
-    [first | rest] = points
-
-    point_bounds =
-      Enum.reduce(rest, point_bounds(first), fn {x, y}, acc ->
-        %Bounds{
-          min_x: min(acc.min_x, x),
-          min_y: min(acc.min_y, y),
-          max_x: max(acc.max_x, x),
-          max_y: max(acc.max_y, y)
-        }
-      end)
-
-    union(bounds, point_bounds)
-  end
-
-  defp include_effect_bounds(bounds, _matrix, _size, nil), do: bounds
-  defp include_effect_bounds(bounds, _matrix, nil, _source), do: bounds
-
-  defp include_effect_bounds(bounds, matrix, %{x: width, y: height}, source) do
-    source.effects
-    |> Kernel.||([])
-    |> Enum.reject(&(Map.get(&1, :visible) == false))
-    |> Enum.reduce(bounds, fn effect, expanded ->
-      include_effect_bound(expanded, matrix, width, height, effect)
-    end)
-  end
-
-  defp include_effect_bound(bounds, matrix, width, height, %{type: :drop_shadow} = effect) do
-    offset = Map.get(effect, :offset) || %{}
-    x = Map.get(offset, :x) || 0.0
-    y = Map.get(offset, :y) || 0.0
-    padding = max((Map.get(effect, :radius) || 0.0) * 2, abs(Map.get(effect, :spread) || 0.0))
-    left = min(0.0, x) - padding
-    top = min(0.0, y) - padding
-    right = max(width, width + x) + padding
-    bottom = max(height, height + y) + padding
-    include_local_rect(bounds, matrix, {left, top, right - left, bottom - top})
-  end
-
-  defp include_effect_bound(bounds, matrix, width, height, %{type: :foreground_blur} = effect) do
-    padding = (Map.get(effect, :radius) || 0.0) * 2
-
-    include_local_rect(
-      bounds,
-      matrix,
-      {-padding, -padding, width + padding * 2, height + padding * 2}
-    )
-  end
-
-  defp include_effect_bound(bounds, _matrix, _width, _height, _effect), do: bounds
-
-  defp point_bounds({x, y}), do: %Bounds{min_x: x, min_y: y, max_x: x, max_y: y}
-
-  defp union(nil, bounds), do: bounds
-
-  defp union(left, right) do
-    %Bounds{
-      min_x: min(left.min_x, right.min_x),
-      min_y: min(left.min_y, right.min_y),
-      max_x: max(left.max_x, right.max_x),
-      max_y: max(left.max_y, right.max_y)
-    }
-  end
-
   defp render_nodes(document, scene, guids, assets) do
     Enum.reduce(guids, document, &render_node(scene, assets, &1, &2))
   end
@@ -209,7 +82,7 @@ defmodule Figler.Render.Skia do
       %Node{visible: visible} = node when visible != false ->
         source = source_node(scene, guid)
 
-        Skia.group(document, [concat: matrix(node.transform)], fn transformed ->
+        Skia.group(document, [concat: Affine.from_value(node.transform)], fn transformed ->
           render_transformed(transformed, scene, guid, node, source, assets)
         end)
 
@@ -232,7 +105,7 @@ defmodule Figler.Render.Skia do
 
   defp render_node_content(document, scene, guid, node, source, assets) do
     document
-    |> draw_node(node, source, assets)
+    |> Shape.draw_node(node, source, assets)
     |> render_children(scene, node, source, guid, assets)
   end
 
@@ -316,8 +189,8 @@ defmodule Figler.Render.Skia do
       %Node{visible: visible} = node when visible != false ->
         source = source_node(scene, guid)
 
-        Skia.group(document, [concat: matrix(node.transform)], fn transformed ->
-          draw_node(transformed, node, source, assets)
+        Skia.group(document, [concat: Affine.from_value(node.transform)], fn transformed ->
+          Shape.draw_node(transformed, node, source, assets)
         end)
 
       _missing_or_hidden ->
@@ -370,349 +243,5 @@ defmodule Figler.Render.Skia do
   end
 
   defp maybe_clip(document, _node, _source), do: document
-
-  defp draw_node(document, node, source, assets) do
-    paints = if source, do: source.fill_paints || [], else: []
-    document = Enum.reduce(paints, document, &draw_fill(&2, node, source, &1, assets))
-    strokes = if source, do: source.stroke_paints || [], else: []
-    weight = if source, do: source.stroke_weight || 1, else: 1
-    Enum.reduce(strokes, document, &draw_stroke(&2, node, source, &1, weight, assets))
-  end
-
-  defp draw_fill(document, node, source, paint, assets) do
-    case Paint.resolve(paint, node.size, assets.images) do
-      {:ok, resolved} ->
-        draw_resolved(document, node, source, :fill, [fill: resolved.paint], resolved, assets)
-
-      {:error, _reason} ->
-        document
-    end
-  end
-
-  defp draw_stroke(
-         document,
-         %Node{node_type: node_type},
-         _source,
-         %{type: paint_type},
-         _weight,
-         _assets
-       )
-       when node_type not in ["vector", "boolean_operation"] and paint_type != :solid,
-       do: document
-
-  defp draw_stroke(document, node, source, paint, weight, assets) do
-    case Paint.resolve(paint, node.size, assets.images) do
-      {:ok, resolved} ->
-        opts = [stroke: resolved.paint, stroke_width: weight]
-        draw_resolved(document, node, source, :stroke, opts, resolved, assets)
-
-      {:error, _reason} ->
-        document
-    end
-  end
-
-  defp draw_resolved(document, node, source, kind, opts, %{opacity: opacity}, assets)
-       when is_number(opacity) and opacity < 1 do
-    Skia.layer(document, [opacity: opacity], &draw_shape(&1, node, source, kind, opts, assets))
-  end
-
-  defp draw_resolved(document, node, source, kind, opts, _resolved, assets),
-    do: draw_shape(document, node, source, kind, opts, assets)
-
-  defp draw_shape(
-         document,
-         %Node{node_type: type},
-         source,
-         kind,
-         opts,
-         assets
-       )
-       when type in ["vector", "boolean_operation"] do
-    paths = geometry_paths(assets, source, kind)
-    path_opts = geometry_paint_opts(opts, kind)
-
-    Enum.reduce(paths, document, fn geometry, rendered ->
-      Skia.path(rendered, geometry.path, Keyword.put(path_opts, :fill_rule, geometry.fill_rule))
-    end)
-  end
-
-  defp draw_shape(
-         document,
-         %Node{node_type: "ellipse", size: size},
-         _source,
-         _kind,
-         opts,
-         _assets
-       ),
-       do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
-
-  defp draw_shape(document, %Node{node_type: "line", size: size}, _source, _kind, opts, _assets) do
-    Skia.line(document,
-      from: {0, 0},
-      to: {size.x, size.y},
-      stroke: Keyword.get(opts, :stroke, Keyword.get(opts, :fill, :black)),
-      stroke_width: Keyword.get(opts, :stroke_width, 1)
-    )
-  end
-
-  defp draw_shape(
-         document,
-         %Node{node_type: "text", text: text, size: size} = node,
-         _source,
-         _kind,
-         opts,
-         _assets
-       ) do
-    text_opts = [
-      x: 0,
-      y: 0,
-      size: node.font_size || 14,
-      font_family: node.font_family || "Arial",
-      fill: Keyword.get(opts, :fill, Keyword.get(opts, :stroke, :black))
-    ]
-
-    text_opts = if size, do: Keyword.put(text_opts, :width, size.x), else: text_opts
-    Skia.text(document, text || "", text_opts)
-  end
-
-  defp draw_shape(
-         document,
-         %Node{node_type: type, size: %{x: width, y: height}},
-         source,
-         _kind,
-         opts,
-         _assets
-       )
-       when type in @rectangular_types do
-    Skia.rect(
-      document,
-      Keyword.merge(
-        [x: 0, y: 0, width: width, height: height, radius: (source && source.corner_radius) || 0],
-        opts
-      )
-    )
-  end
-
-  defp draw_shape(document, _node, _source, _kind, _opts, _assets), do: document
-
-  defp geometry_paths(_assets, nil, _kind), do: []
-
-  defp geometry_paths(assets, source, kind) do
-    assets.geometries
-    |> Map.get(source.guid, %{})
-    |> Map.get(kind, [])
-  end
-
-  defp geometry_paint_opts(opts, :fill), do: opts
-
-  defp geometry_paint_opts(opts, :stroke) do
-    [fill: Keyword.get(opts, :stroke, :black)]
-  end
-
-  defp load_render_assets(scene) do
-    scene
-    |> load_image_assets()
-    |> load_geometry_assets(scene)
-  end
-
-  defp load_image_assets(scene) do
-    scene.source_nodes
-    |> Map.values()
-    |> Enum.flat_map(&source_image_keys/1)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> Enum.reduce(
-      %{images: %{}, errors: %{}, geometries: %{}, geometry_errors: %{}},
-      &load_image_asset(scene, &1, &2)
-    )
-  end
-
-  defp source_image_keys(source) do
-    [source.fill_paints || [], source.stroke_paints || []]
-    |> Enum.flat_map(&Enum.map(&1, fn paint -> Paint.image_key(paint) end))
-  end
-
-  defp load_image_asset(scene, key, assets) do
-    with data when is_binary(data) <- find_image_asset(scene.document, key),
-         {:ok, image} <- Skia.Image.decode(data) do
-      put_in(assets, [:images, key], image)
-    else
-      nil -> put_in(assets, [:errors, key], :missing_image_asset)
-      {:error, reason} -> put_in(assets, [:errors, key], {:invalid_image_asset, reason})
-    end
-  end
-
-  defp find_image_asset(document, {:blob, index}), do: Enum.at(document.blobs, index)
-
-  defp find_image_asset(document, hash) do
-    Map.get(document.images, hash) ||
-      Enum.find_value(document.images, fn {path, data} ->
-        if path |> Path.basename() |> Path.rootname() |> String.downcase() == hash, do: data
-      end)
-  end
-
-  defp load_geometry_assets(assets, scene) do
-    Enum.reduce(scene.source_nodes, assets, fn {_guid, source}, loaded ->
-      loaded
-      |> load_geometry_kind(source, :fill, source.fill_geometry || [], scene.document.blobs)
-      |> load_geometry_kind(source, :stroke, source.stroke_geometry || [], scene.document.blobs)
-    end)
-  end
-
-  defp load_geometry_kind(assets, _source, _kind, [], _blobs), do: assets
-
-  defp load_geometry_kind(assets, source, kind, references, blobs) do
-    case Geometry.paths(references, blobs) do
-      {:ok, paths} -> put_geometry_result(assets, :geometries, source.guid, kind, paths)
-      {:error, reason} -> put_geometry_result(assets, :geometry_errors, source.guid, kind, reason)
-    end
-  end
-
-  defp put_geometry_result(assets, collection, guid, kind, value) do
-    source_values = assets |> Map.fetch!(collection) |> Map.get(guid, %{}) |> Map.put(kind, value)
-    put_in(assets, [collection, guid], source_values)
-  end
-
-  defp collect_warnings(scene, guids, assets) do
-    guids
-    |> Enum.reduce([], &node_warnings(scene, assets, &1, &2))
-    |> Enum.reverse()
-    |> Enum.uniq()
-  end
-
-  defp node_warnings(scene, assets, guid, warnings) do
-    case Map.get(scene.graph.nodes, guid) do
-      %Node{visible: visible} = node when visible != false ->
-        source = source_node(scene, guid)
-        warnings = prepend_source_warnings(warnings, source, node, guid, assets)
-
-        scene.graph.children
-        |> Map.get(guid, [])
-        |> Enum.reduce(warnings, &node_warnings(scene, assets, &1, &2))
-
-      _missing_or_hidden ->
-        warnings
-    end
-  end
-
-  defp prepend_source_warnings(warnings, nil, _node, _guid, _assets), do: warnings
-
-  defp prepend_source_warnings(warnings, source, node, guid, assets) do
-    source_warnings =
-      paint_warnings(guid, :fill, source.fill_paints || [], node, assets) ++
-        paint_warnings(guid, :stroke, source.stroke_paints || [], node, assets) ++
-        geometry_warnings(guid, node, source, assets) ++
-        effect_warnings(guid, node, source) ++
-        mask_warnings(guid, source) ++ shape_warnings(guid, node, source)
-
-    Enum.reduce(source_warnings, warnings, &[&1 | &2])
-  end
-
-  defp paint_warnings(guid, kind, paints, node, assets) do
-    Enum.flat_map(paints, &paint_warning(&1, guid, kind, node, assets))
-  end
-
-  defp paint_warning(%{visible: false}, _guid, _kind, _node, _assets), do: []
-
-  defp paint_warning(
-         %{type: paint_type},
-         guid,
-         :stroke,
-         %Node{node_type: node_type},
-         _assets
-       )
-       when node_type not in ["vector", "boolean_operation"] and paint_type != :solid,
-       do: [warning(guid, :stroke, {paint_type, :non_solid_stroke_unsupported})]
-
-  defp paint_warning(paint, guid, kind, node, assets) do
-    case Paint.resolve(paint, node.size, assets.images) do
-      {:ok, resolved} ->
-        Enum.map(resolved.warnings, &warning(guid, kind, &1))
-
-      {:error, :missing_image_asset} ->
-        reason = Map.get(assets.errors, Paint.image_key(paint), :missing_image_asset)
-        [warning(guid, kind, reason)]
-
-      {:error, reason} ->
-        [warning(guid, kind, {Map.get(paint, :type), reason})]
-    end
-  end
-
-  defp shape_warnings(guid, %Node{node_type: type}, source)
-       when type not in @supported_shape_types do
-    if visible_paints?(source) do
-      [warning(guid, :shape, {:shape_unsupported, type})]
-    else
-      []
-    end
-  end
-
-  defp shape_warnings(_guid, _node, _source), do: []
-
-  defp visible_paints?(source) do
-    Enum.any?((source.fill_paints || []) ++ (source.stroke_paints || []), fn paint ->
-      Map.get(paint, :visible) != false
-    end)
-  end
-
-  defp mask_warnings(guid, %{mask: true, mask_type: :outline}),
-    do: [warning(guid, :mask, :outline_mask_approximated)]
-
-  defp mask_warnings(guid, %{mask: true, mask_type: type})
-       when type not in [nil, :alpha, :luminance],
-       do: [warning(guid, :mask, {:mask_type_unsupported, type})]
-
-  defp mask_warnings(_guid, _source), do: []
-
-  defp effect_warnings(guid, node, source) do
-    source
-    |> Effects.resolve(node.opacity)
-    |> Map.fetch!(:warnings)
-    |> Enum.map(&warning(guid, :effect, &1))
-  end
-
-  defp geometry_warnings(guid, %Node{node_type: type}, source, assets)
-       when type in ["vector", "boolean_operation"] do
-    []
-    |> geometry_warning(guid, source, assets, :fill, source.fill_paints || [])
-    |> geometry_warning(guid, source, assets, :stroke, source.stroke_paints || [])
-  end
-
-  defp geometry_warnings(_guid, _node, _source, _assets), do: []
-
-  defp geometry_warning(warnings, guid, source, assets, kind, paints) do
-    if Enum.any?(paints, &(Map.get(&1, :visible) != false)) do
-      case get_in(assets, [:geometry_errors, source.guid, kind]) do
-        nil -> missing_geometry_warning(warnings, guid, source, kind)
-        reason -> [warning(guid, kind, {:invalid_geometry, reason}) | warnings]
-      end
-    else
-      warnings
-    end
-  end
-
-  defp missing_geometry_warning(warnings, guid, source, kind) do
-    if geometry_references(source, kind) == [] do
-      [warning(guid, kind, :geometry_missing) | warnings]
-    else
-      warnings
-    end
-  end
-
-  defp geometry_references(source, :fill), do: source.fill_geometry || []
-  defp geometry_references(source, :stroke), do: source.stroke_geometry || []
-
-  defp warning(guid, kind, value),
-    do: %{guid: GUID.format(guid), feature: kind, value: value}
-
   defp source_node(scene, guid), do: Map.get(scene.render_nodes, guid)
-
-  defp matrix(nil), do: @identity
-
-  defp matrix(value) do
-    {value.m00 || 1.0, value.m01 || 0.0, value.m02 || 0.0, value.m10 || 0.0, value.m11 || 1.0,
-     value.m12 || 0.0}
-  end
-
-  defp point({a, b, c, d, e, f}, x, y), do: {a * x + b * y + c, d * x + e * y + f}
 end

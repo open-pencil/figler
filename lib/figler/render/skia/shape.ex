@@ -1,0 +1,151 @@
+defmodule Figler.Render.Skia.Shape do
+  @moduledoc false
+  @compile {:no_warn_undefined, [Skia]}
+
+  alias Figler.Render.Skia.Paint
+  alias Figler.Scene.Node
+
+  @rectangular_types ["frame", "instance", "rectangle", "rounded_rectangle", "section", "symbol"]
+  @supported_types @rectangular_types ++
+                     ["boolean_operation", "ellipse", "line", "text", "vector"]
+
+  @spec supported_type?(String.t()) :: boolean()
+  def supported_type?(type), do: type in @supported_types
+
+  @spec visible_paints?(Figler.Render.SourceNode.t()) :: boolean()
+  def visible_paints?(source) do
+    Enum.any?([source.fill_paints || [], source.stroke_paints || []], fn paints ->
+      Enum.any?(paints, &(Map.get(&1, :visible) != false))
+    end)
+  end
+
+  @spec draw_node(Skia.Document.t(), Node.t(), Figler.Render.SourceNode.t() | nil, map()) ::
+          Skia.Document.t()
+  def draw_node(document, node, source, assets) do
+    paints = if source, do: source.fill_paints || [], else: []
+    document = Enum.reduce(paints, document, &draw_fill(&2, node, source, &1, assets))
+    strokes = if source, do: source.stroke_paints || [], else: []
+    weight = if source, do: source.stroke_weight || 1, else: 1
+    Enum.reduce(strokes, document, &draw_stroke(&2, node, source, &1, weight, assets))
+  end
+
+  defp draw_fill(document, node, source, paint, assets) do
+    case Paint.resolve(paint, node.size, assets.images) do
+      {:ok, resolved} ->
+        draw_resolved(document, node, source, :fill, [fill: resolved.paint], resolved, assets)
+
+      {:error, _reason} ->
+        document
+    end
+  end
+
+  defp draw_stroke(
+         document,
+         %Node{node_type: node_type},
+         _source,
+         %{type: paint_type},
+         _weight,
+         _assets
+       )
+       when node_type not in ["vector", "boolean_operation"] and paint_type != :solid,
+       do: document
+
+  defp draw_stroke(document, node, source, paint, weight, assets) do
+    case Paint.resolve(paint, node.size, assets.images) do
+      {:ok, resolved} ->
+        opts = [stroke: resolved.paint, stroke_width: weight]
+        draw_resolved(document, node, source, :stroke, opts, resolved, assets)
+
+      {:error, _reason} ->
+        document
+    end
+  end
+
+  defp draw_resolved(document, node, source, kind, opts, %{opacity: opacity}, assets)
+       when is_number(opacity) and opacity < 1 do
+    Skia.layer(document, [opacity: opacity], &draw_shape(&1, node, source, kind, opts, assets))
+  end
+
+  defp draw_resolved(document, node, source, kind, opts, _resolved, assets),
+    do: draw_shape(document, node, source, kind, opts, assets)
+
+  defp draw_shape(document, %Node{node_type: type}, source, kind, opts, assets)
+       when type in ["vector", "boolean_operation"] do
+    paths = geometry_paths(assets, source, kind)
+    path_opts = geometry_paint_opts(opts, kind)
+
+    Enum.reduce(paths, document, fn geometry, rendered ->
+      Skia.path(rendered, geometry.path, Keyword.put(path_opts, :fill_rule, geometry.fill_rule))
+    end)
+  end
+
+  defp draw_shape(
+         document,
+         %Node{node_type: "ellipse", size: size},
+         _source,
+         _kind,
+         opts,
+         _assets
+       ),
+       do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
+
+  defp draw_shape(document, %Node{node_type: "line", size: size}, _source, _kind, opts, _assets) do
+    Skia.line(document,
+      from: {0, 0},
+      to: {size.x, size.y},
+      stroke: Keyword.get(opts, :stroke, Keyword.get(opts, :fill, :black)),
+      stroke_width: Keyword.get(opts, :stroke_width, 1)
+    )
+  end
+
+  defp draw_shape(
+         document,
+         %Node{node_type: "text", text: text, size: size} = node,
+         _source,
+         _kind,
+         opts,
+         _assets
+       ) do
+    text_opts = [
+      x: 0,
+      y: 0,
+      size: node.font_size || 14,
+      font_family: node.font_family || "Arial",
+      fill: Keyword.get(opts, :fill, Keyword.get(opts, :stroke, :black))
+    ]
+
+    text_opts = if size, do: Keyword.put(text_opts, :width, size.x), else: text_opts
+    Skia.text(document, text || "", text_opts)
+  end
+
+  defp draw_shape(
+         document,
+         %Node{node_type: type, size: %{x: width, y: height}},
+         source,
+         _kind,
+         opts,
+         _assets
+       )
+       when type in @rectangular_types do
+    Skia.rect(
+      document,
+      Keyword.merge(
+        [x: 0, y: 0, width: width, height: height, radius: (source && source.corner_radius) || 0],
+        opts
+      )
+    )
+  end
+
+  defp draw_shape(document, _node, _source, _kind, _opts, _assets), do: document
+
+  defp geometry_paths(_assets, nil, _kind), do: []
+
+  defp geometry_paths(assets, source, kind) do
+    assets.geometries
+    |> Map.get(source.guid, %{})
+    |> Map.get(kind, [])
+  end
+
+  defp geometry_paint_opts(opts, :fill), do: opts
+  defp geometry_paint_opts(opts, :stroke), do: [fill: Keyword.get(opts, :stroke, :black)]
+end
