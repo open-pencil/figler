@@ -6,7 +6,8 @@
   colors, vectors, and matrices into a typed rendering IR. Generate native
   projection record order from the same structural schema and apply rich symbol
   overrides to effective render nodes instead of reusing unmodified source
-  paints and effects for instance clones.
+  paints and effects for instance clones. Split Skia compilation into focused
+  bounds, asset, shape, diagnostics, and compositing/traversal modules.
 - Add an optional Skia rendering pipeline backed by a complete `Figler.Document`
   archive boundary and a native, page/root-focused source projection. Rendering
   retains `canvas.fig`, `images/*`, message blobs, entries, and page metadata
@@ -21,7 +22,9 @@
   blur, alpha/luminance sibling masks, basic strokes/shapes/text,
   PNG/JPEG/WEBP, explicit approximation warnings, and strict mode. Editable
   geometry without imported path blobs, inner shadows, and backdrop blur are
-  rejected explicitly. Add thresholded RGBA and reference-PNG oracle helpers.
+  rejected explicitly. Add thresholded RGBA and reference-PNG oracle helpers,
+  plus manifest-driven same-scene OpenPencil/Figler oracle runs that preserve
+  root/page, scale, background, and comparison thresholds.
 - Index actionable horizontal stack seeds during graph construction and rebuild
   that candidate list with graph indexes, avoiding a full seed-map scan during
   stack layout. Exact-output fixture A/B runs reduced median stack-layout time

@@ -3,6 +3,7 @@ defmodule Figler.RenderTest do
 
   alias Figler.Render
   alias Figler.Render.Bounds
+  alias Figler.Render.Oracle.Runner
   alias Figler.Render.PixelDiff
   alias Figler.Render.Skia, as: SkiaBackend
   alias Figler.Render.SourceNode
@@ -52,6 +53,43 @@ defmodule Figler.RenderTest do
     assert {:ok, <<137, 80, 78, 71, _rest::binary>>, metadata} = Render.render(scene)
     assert metadata.root == "0:1"
     assert metadata.warnings == []
+  end
+
+  @tag :tmp_dir
+  test "runs same-scene visual oracle manifests", %{tmp_dir: tmp_dir} do
+    payload = render_payload(:solid)
+    fixture_path = Path.join(tmp_dir, "fixture.fig")
+    reference_path = Path.join(tmp_dir, "rectangle.png")
+    manifest_path = Path.join(tmp_dir, "render-manifest.json")
+
+    File.write!(fixture_path, payload)
+    assert {:ok, reference_png, _metadata} = Render.render(payload, root: "1:1", format: :png)
+    File.write!(reference_path, reference_png)
+
+    File.write!(
+      manifest_path,
+      Jason.encode!(%{
+        "fig" => "fixture.fig",
+        "cases" => [
+          %{
+            "name" => "solid rectangle",
+            "reference" => "rectangle.png",
+            "root" => "1:1",
+            "scale" => 1.0,
+            "background" => "transparent"
+          }
+        ]
+      })
+    )
+
+    assert {:ok,
+            %{
+              passed?: true,
+              failed_count: 0,
+              cases: [%{passed?: true, metrics: %{changed_pixels: 0}}]
+            } = result} = Runner.run(manifest_path)
+
+    assert is_binary(Jason.encode!(result))
   end
 
   test "batches opacity, clipping, basic shapes, strokes, and text" do

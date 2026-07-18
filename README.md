@@ -179,7 +179,15 @@ shadows, and backdrop blur are reported rather than silently approximated.
 Unsupported or approximate features are listed in `metadata.warnings`; pass
 `strict: true` to reject them instead of using a partial rendering. Visual tests
 can compare decoded OpenPencil reference PNGs with Figler RGBA output through
-`Figler.Render.Oracle.compare_png/3`.
+`Figler.Render.Oracle.compare_png/3`. For repeatable same-scene comparisons,
+create a `render-manifest.json` that records the `.fig` fixture, reference PNG,
+root or page, scale, background, and thresholds, then run:
+
+```bash
+mix figler.render.oracles --manifest /path/to/render-manifest.json
+# or discover manifests recursively without checking large fixtures into git
+FIGLER_RENDER_ORACLE_DIR=/path/to/oracles mix figler.render.oracles
+```
 
 ## Decode Figma messages
 
