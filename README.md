@@ -39,6 +39,12 @@ hard to work with. Figler gives you multiple levels of access:
 {:figler, "~> 0.1"}
 ```
 
+For optional native raster rendering, also add Skia:
+
+```elixir
+{:skia, "~> 0.1.1"}
+```
+
 Figler uses a Rustler native extension for high-performance decoding and scene
 queries. Building from source requires a Rust toolchain.
 
@@ -139,6 +145,24 @@ stats = Scene.Graph.stats(graph)
 Graphs are useful for debugging design systems, comparing fixtures, inspecting
 instances, and building tools that need effective scene structure. Use `root:`
 or `focus:` to limit work to a subtree and its semantic dependencies.
+
+## Render with Skia
+
+Figler can compile an effective graph into one batched Skia document and render
+it through a single native boundary:
+
+```elixir
+{:ok, png, metadata} =
+  fig
+  |> Figler.Render.render(page: 0, scale: 2, format: :png)
+
+File.write!("page.png", png)
+```
+
+The first rendering surface supports affine transforms, opacity, rectangular
+clipping, solid fills and strokes, rectangles, ellipses, lines, and basic text.
+Unsupported visible paints are listed in `metadata.warnings`; pass `strict: true`
+to reject them instead of using a partial rendering.
 
 ## Decode Figma messages
 

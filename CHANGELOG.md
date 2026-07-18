@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add an optional Skia rendering pipeline that joins generated `NodeChange`
+  paint data with the effective Figler graph and emits one batched Skia document.
+  The first vertical slice supports page/root selection, affine transforms,
+  opacity, clipping, solid fills and strokes, basic shapes, text, PNG/JPEG/WEBP,
+  unsupported-feature warnings, and strict-mode rejection.
 - Index actionable horizontal stack seeds during graph construction and rebuild
   that candidate list with graph indexes, avoiding a full seed-map scan during
   stack layout. Exact-output fixture A/B runs reduced median stack-layout time
