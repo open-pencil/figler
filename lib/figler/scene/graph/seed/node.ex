@@ -196,6 +196,13 @@ defmodule Figler.Scene.Graph.Seed.Node do
     seed.node_type == "instance" or seed.native_clone_seed or clone_seed_metadata?(seed)
   end
 
+  @doc false
+  @spec stack_candidate?(t()) :: boolean()
+  def stack_candidate?(%__MODULE__{} = seed) do
+    seed.stack_mode in [:horizontal, "horizontal"] and
+      seed.stack_horizontal_padding not in [nil, 0, 0.0]
+  end
+
   @doc """
   Converts a seed node to an internal graph node with parsed GUIDs.
   """

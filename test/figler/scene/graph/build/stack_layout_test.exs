@@ -34,6 +34,7 @@ defmodule Figler.Scene.Graph.Build.StackLayoutTest do
       ]
       |> resolve(stages: [:stack_layout])
 
+    assert graph.stack_seed_guids == [{1, 1}]
     assert Scene.node(graph, "1:3").transform.m02 == 10.0
     assert Scene.node(graph, "1:4").transform.m02 == 34.0
   end

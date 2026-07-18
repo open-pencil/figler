@@ -64,6 +64,7 @@ defmodule Figler.Scene.Graph.Build do
       clone_index: %{},
       clone_source_index: %{},
       source_instance_guids: source_instance_guids(initial.seed_nodes),
+      stack_seed_guids: Enum.reverse(initial.stack_seed_guids),
       component_prop_refs: initial.component_prop_refs,
       provenance: Provenance.initial(),
       unresolved: [],
@@ -186,6 +187,7 @@ defmodule Figler.Scene.Graph.Build do
       root_entries: [],
       by_type: %{},
       by_name: %{},
+      stack_seed_guids: [],
       component_prop_refs: %{}
     }
   end
@@ -200,6 +202,8 @@ defmodule Figler.Scene.Graph.Build do
         root_entries: [{seed.guid, seed.parent_guid} | acc.root_entries],
         by_type: add_group_guid(acc.by_type, seed.node_type, seed.guid),
         by_name: add_group_guid(acc.by_name, seed.name, seed.guid),
+        stack_seed_guids:
+          add_candidate_guid(acc.stack_seed_guids, seed, &SeedNode.stack_candidate?/1),
         component_prop_refs: ComponentProps.add_seed_refs(seed, acc.component_prop_refs)
     }
   end
@@ -233,6 +237,10 @@ defmodule Figler.Scene.Graph.Build do
       is_nil(parent_guid) or not Map.has_key?(seed_nodes_by_guid, parent_guid)
     end)
     |> Enum.map(&elem(&1, 0))
+  end
+
+  defp add_candidate_guid(guids, seed, predicate) do
+    if predicate.(seed), do: [seed.guid | guids], else: guids
   end
 
   defp add_group_guid(groups, nil, _guid), do: groups

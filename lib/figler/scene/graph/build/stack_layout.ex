@@ -10,14 +10,18 @@ defmodule Figler.Scene.Graph.Build.StackLayout do
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Graph.Patch
+  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
 
   @doc """
   Applies stack layout adjustments to all graph nodes.
   """
   @spec apply(Graph.t()) :: Graph.t()
   def apply(%Graph{} = graph) do
-    Enum.reduce(graph.seed_nodes, graph, fn {parent_guid, parent}, acc ->
-      layout_node(acc, parent_guid, parent)
+    Enum.reduce(graph.stack_seed_guids, graph, fn parent_guid, acc ->
+      case Map.get(acc.seed_nodes, parent_guid) do
+        %SeedNode{} = parent -> layout_node(acc, parent_guid, parent)
+        nil -> acc
+      end
     end)
   end
 

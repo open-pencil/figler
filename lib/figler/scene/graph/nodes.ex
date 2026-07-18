@@ -21,7 +21,9 @@ defmodule Figler.Scene.Graph.Nodes do
         | nodes: Map.put(graph.nodes, guid, node),
           seed_nodes: put_seed(graph.seed_nodes, guid, seed),
           by_type: add_index(graph.by_type, node.node_type, guid),
-          by_name: add_index(graph.by_name, node.name, guid)
+          by_name: add_index(graph.by_name, node.name, guid),
+          stack_seed_guids:
+            put_candidate(graph.stack_seed_guids, guid, seed, &SeedNode.stack_candidate?/1)
       }
     end)
   end
@@ -32,7 +34,9 @@ defmodule Figler.Scene.Graph.Nodes do
     %Graph{
       graph
       | nodes: Map.put(graph.nodes, guid, node),
-        seed_nodes: put_seed(graph.seed_nodes, guid, seed)
+        seed_nodes: put_seed(graph.seed_nodes, guid, seed),
+        stack_seed_guids:
+          put_candidate(graph.stack_seed_guids, guid, seed, &SeedNode.stack_candidate?/1)
     }
   end
 
@@ -132,7 +136,8 @@ defmodule Figler.Scene.Graph.Nodes do
     %Graph{
       graph
       | by_type: group_nodes(graph.nodes, & &1.node_type),
-        by_name: group_nodes(graph.nodes, & &1.name)
+        by_name: group_nodes(graph.nodes, & &1.name),
+        stack_seed_guids: candidate_guids(graph.seed_nodes, &SeedNode.stack_candidate?/1)
     }
   end
 
@@ -172,6 +177,16 @@ defmodule Figler.Scene.Graph.Nodes do
 
   defp put_seed(seed_nodes, _guid, nil), do: seed_nodes
   defp put_seed(seed_nodes, guid, seed), do: Map.put(seed_nodes, guid, seed)
+
+  defp put_candidate(guids, _guid, nil, _predicate), do: guids
+
+  defp put_candidate(guids, guid, seed, predicate) do
+    if predicate.(seed), do: [guid | guids], else: guids
+  end
+
+  defp candidate_guids(seed_nodes, predicate) do
+    for {guid, seed} <- seed_nodes, predicate.(seed), do: guid
+  end
 
   defp add_index(index, nil, _guid), do: index
   defp add_index(index, "", _guid), do: index

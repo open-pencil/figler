@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Index actionable horizontal stack seeds during graph construction and rebuild
+  that candidate list with graph indexes, avoiding a full seed-map scan during
+  stack layout. Exact-output fixture A/B runs reduced median stack-layout time
+  from about 574ms to 402ms.
 - Project native graph-seed metadata from the selected resolver stage plan while
   preserving fixed records, clone retention, resolver output, and profiling
   semantics. On the 79,261-node fixture, initial/population-only seed decoding

@@ -42,6 +42,7 @@ defmodule Figler.Scene.Graph do
     clone_index: %{},
     clone_source_index: %{},
     source_instance_guids: [],
+    stack_seed_guids: [],
     component_prop_refs: %{},
     provenance: %{},
     unresolved: [],
@@ -69,6 +70,7 @@ defmodule Figler.Scene.Graph do
               optional({GUID.figma_guid(), GUID.figma_guid()}) => GUID.graph_guid()
             },
             source_instance_guids: [GUID.figma_guid()],
+            stack_seed_guids: [GUID.graph_guid()],
             component_prop_refs: %{optional(GUID.figma_guid()) => {GUID.graph_guid(), atom()}},
             provenance: %{optional(GUID.graph_guid()) => map()},
             unresolved: [term()],
