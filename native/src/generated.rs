@@ -10977,6 +10977,20 @@ const RENDER_FIELD_GUID: u32 = 1;
 const RENDER_FIELD_NODE_TYPE: u32 = 4;
 const RENDER_FIELD_NAME: u32 = 5;
 const RENDER_FIELD_TEXT_DATA: u32 = 42;
+const RENDER_FIELD_LINE_HEIGHT: u32 = 40;
+const RENDER_FIELD_LETTER_SPACING: u32 = 165;
+const RENDER_FIELD_TEXT_DECORATION: u32 = 35;
+const RENDER_FIELD_TEXT_DECORATION_STYLE: u32 = 416;
+const RENDER_FIELD_TEXT_DECORATION_THICKNESS: u32 = 415;
+const RENDER_FIELD_TEXT_DECORATION_SKIP_INK: u32 = 412;
+const RENDER_FIELD_TEXT_UNDERLINE_OFFSET: u32 = 413;
+const RENDER_FIELD_TEXT_DECORATION_FILL_PAINTS: u32 = 411;
+const RENDER_FIELD_TEXT_CASE: u32 = 34;
+const RENDER_FIELD_TEXT_ALIGN_HORIZONTAL: u32 = 32;
+const RENDER_FIELD_TEXT_ALIGN_VERTICAL: u32 = 33;
+const RENDER_FIELD_TEXT_AUTO_RESIZE: u32 = 46;
+const RENDER_FIELD_TEXT_TRUNCATION: u32 = 280;
+const RENDER_FIELD_MAX_LINES: u32 = 351;
 const RENDER_FIELD_BLEND_MODE: u32 = 9;
 const RENDER_FIELD_MASK: u32 = 16;
 const RENDER_FIELD_MASK_TYPE: u32 = 317;
@@ -11002,6 +11016,20 @@ fn render_projection_node_from_decoder<'a>(
     let mut node_type = nil;
     let mut name = nil;
     let mut text_data = nil;
+    let mut line_height = nil;
+    let mut letter_spacing = nil;
+    let mut text_decoration = nil;
+    let mut text_decoration_style = nil;
+    let mut text_decoration_thickness = nil;
+    let mut text_decoration_skip_ink = nil;
+    let mut text_underline_offset = nil;
+    let mut text_decoration_fill_paints = nil;
+    let mut text_case = nil;
+    let mut text_align_horizontal = nil;
+    let mut text_align_vertical = nil;
+    let mut text_auto_resize = nil;
+    let mut text_truncation = nil;
+    let mut max_lines = nil;
     let mut blend_mode = nil;
     let mut mask = nil;
     let mut mask_type = nil;
@@ -11025,6 +11053,71 @@ fn render_projection_node_from_decoder<'a>(
             RENDER_FIELD_TEXT_DATA => {
                 text_data = decode_sparse_text_data_from_decoder(env, decoder)?;
             }
+            RENDER_FIELD_LINE_HEIGHT => {
+                line_height = decode_sparse_number_from_decoder(env, decoder)?;
+            }
+            RENDER_FIELD_LETTER_SPACING => {
+                letter_spacing = decode_sparse_number_from_decoder(env, decoder)?;
+            }
+            RENDER_FIELD_TEXT_DECORATION => {
+                text_decoration = decode_sparse_text_decoration_from_decoder(
+                    env,
+                    decoder,
+                )?;
+            }
+            RENDER_FIELD_TEXT_DECORATION_STYLE => {
+                text_decoration_style = decode_sparse_text_decoration_style_from_decoder(
+                    env,
+                    decoder,
+                )?;
+            }
+            RENDER_FIELD_TEXT_DECORATION_THICKNESS => {
+                text_decoration_thickness = decode_sparse_number_from_decoder(
+                    env,
+                    decoder,
+                )?;
+            }
+            RENDER_FIELD_TEXT_DECORATION_SKIP_INK => {
+                text_decoration_skip_ink = decoder.read_bool()?.encode(env);
+            }
+            RENDER_FIELD_TEXT_UNDERLINE_OFFSET => {
+                text_underline_offset = decode_sparse_number_from_decoder(env, decoder)?;
+            }
+            RENDER_FIELD_TEXT_DECORATION_FILL_PAINTS => {
+                text_decoration_fill_paints = graph_seed_repeated_terms(
+                    env,
+                    decoder,
+                    decode_sparse_paint_from_decoder,
+                )?;
+            }
+            RENDER_FIELD_TEXT_CASE => {
+                text_case = decode_sparse_text_case_from_decoder(env, decoder)?;
+            }
+            RENDER_FIELD_TEXT_ALIGN_HORIZONTAL => {
+                text_align_horizontal = decode_sparse_text_align_horizontal_from_decoder(
+                    env,
+                    decoder,
+                )?;
+            }
+            RENDER_FIELD_TEXT_ALIGN_VERTICAL => {
+                text_align_vertical = decode_sparse_text_align_vertical_from_decoder(
+                    env,
+                    decoder,
+                )?;
+            }
+            RENDER_FIELD_TEXT_AUTO_RESIZE => {
+                text_auto_resize = decode_sparse_text_auto_resize_from_decoder(
+                    env,
+                    decoder,
+                )?;
+            }
+            RENDER_FIELD_TEXT_TRUNCATION => {
+                text_truncation = decode_sparse_text_truncation_from_decoder(
+                    env,
+                    decoder,
+                )?;
+            }
+            RENDER_FIELD_MAX_LINES => max_lines = decoder.read_var_int()?.encode(env),
             RENDER_FIELD_BLEND_MODE => {
                 blend_mode = decode_sparse_blend_mode_from_decoder(env, decoder)?;
             }
@@ -11082,9 +11175,13 @@ fn render_projection_node_from_decoder<'a>(
         }
     }
     let record = vec![
-        guid, node_type, name, text_data, blend_mode, mask, mask_type, effects,
-        fill_paints, stroke_paints, fill_geometry, stroke_geometry, boolean_operation,
-        corner_radius, stroke_weight, frame_mask_disabled
+        guid, node_type, name, text_data, line_height, letter_spacing, text_decoration,
+        text_decoration_style, text_decoration_thickness, text_decoration_skip_ink,
+        text_underline_offset, text_decoration_fill_paints, text_case,
+        text_align_horizontal, text_align_vertical, text_auto_resize, text_truncation,
+        max_lines, blend_mode, mask, mask_type, effects, fill_paints, stroke_paints,
+        fill_geometry, stroke_geometry, boolean_operation, corner_radius, stroke_weight,
+        frame_mask_disabled
     ];
     Ok(rustler::types::tuple::make_tuple(env, &record))
 }

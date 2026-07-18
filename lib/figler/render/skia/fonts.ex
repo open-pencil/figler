@@ -4,6 +4,9 @@ defmodule Figler.Render.Skia.Fonts do
 
   alias Figler.Render.Font
   alias Figler.Render.Node
+  alias Figler.Render.Skia.Fonts.Diagnostics
+  alias Figler.Render.Skia.Fonts.Resolution
+  alias Figler.Render.Skia.Fonts.Segmentation
   alias Figler.Render.Text
   alias Figler.Render.Text.Run
 
@@ -31,9 +34,17 @@ defmodule Figler.Render.Skia.Fonts do
       :content,
       :font,
       :style_id,
+      :line_height,
+      :letter_spacing,
       :text_decoration,
+      :text_decoration_style,
+      :text_decoration_thickness,
+      :text_decoration_skip_ink,
+      :text_underline_offset,
+      :text_case,
       :resolved,
       fill_paints: [],
+      text_decoration_fill_paints: [],
       fill_override?: false
     ]
 
@@ -45,7 +56,15 @@ defmodule Figler.Render.Skia.Fonts do
             content: String.t(),
             font: Font.t(),
             style_id: non_neg_integer(),
+            line_height: float() | nil,
+            letter_spacing: float() | nil,
             text_decoration: atom() | nil,
+            text_decoration_style: atom() | nil,
+            text_decoration_thickness: Figler.Render.Text.Measurement.t() | nil,
+            text_decoration_skip_ink: boolean() | nil,
+            text_underline_offset: Figler.Render.Text.Measurement.t() | nil,
+            text_decoration_fill_paints: [Figler.Render.Paint.t()],
+            text_case: atom() | nil,
             resolved: Resolved.t() | nil,
             fill_paints: [Figler.Render.Paint.t()],
             fill_override?: boolean()
@@ -83,18 +102,8 @@ defmodule Figler.Render.Skia.Fonts do
           resolve_group(group, supplied, languages, opts, resolved)
         end)
 
-      {:ok, result |> put_spans(entries) |> sort_warnings()}
+      {:ok, result |> put_spans(entries) |> Diagnostics.finalize()}
     end
-  end
-
-  defp sort_warnings(result) do
-    warnings =
-      Map.new(result.warnings, fn {guid, values} ->
-        values = values |> Enum.sort_by(&{&1.run.start, &1.run.index}) |> merge_warnings()
-        {guid, values}
-      end)
-
-    %{result | warnings: warnings}
   end
 
   defp text_entries(nodes, supplied) do
@@ -110,13 +119,15 @@ defmodule Figler.Render.Skia.Fonts do
   defp run_entries(_node, _text, %Run{content: ""}, _supplied), do: []
 
   defp run_entries(node, text, run, supplied) do
-    case prepare_requested_run(run, supplied) do
+    display_run = Segmentation.display_run(run)
+
+    case prepare_requested_run(display_run, supplied) do
       {:resolved, resolved} ->
         [
           %{
             node: node,
             text: text,
-            run: run,
+            run: display_run,
             cluster_index: 0,
             pre_resolved: resolved,
             requested: nil
@@ -129,45 +140,34 @@ defmodule Figler.Render.Skia.Fonts do
   end
 
   defp prepare_requested_run(run, supplied) do
-    codepoints = codepoints(run.content)
+    codepoints = Resolution.codepoints(run.content)
 
-    case requested_supplied_typeface(supplied, run.font, codepoints) do
+    case Resolution.requested_supplied_typeface(supplied, run.font, codepoints) do
       nil -> prepare_system_requested_run(run.font, codepoints)
       typeface -> {:resolved, {typeface, :supplied}}
     end
   end
 
   defp prepare_system_requested_run(font, codepoints) do
-    requested = requested_typeface(font)
+    requested = Resolution.requested_typeface(font)
 
-    case usable_typeface(requested, codepoints) do
+    case Resolution.usable_typeface(requested, codepoints) do
       {:ok, typeface} -> {:resolved, {typeface, :requested}}
       _unresolved -> {:split, requested}
     end
   end
 
   defp grapheme_entries(node, text, run, requested) do
-    {entries, _offset} =
-      run.content
-      |> String.graphemes()
-      |> Enum.with_index()
-      |> Enum.map_reduce(run.start, fn {content, cluster_index}, start ->
-        length = utf16_length(content)
-        entry_run = %{run | start: start, length: length, content: content}
-
-        entry = %{
-          node: node,
-          text: text,
-          run: entry_run,
-          cluster_index: cluster_index,
-          pre_resolved: nil,
-          requested: requested
-        }
-
-        {entry, start + length}
-      end)
-
-    entries
+    Enum.map(Segmentation.grapheme_runs(run), fn {entry_run, cluster_index} ->
+      %{
+        node: node,
+        text: text,
+        run: entry_run,
+        cluster_index: cluster_index,
+        pre_resolved: nil,
+        requested: requested
+      }
+    end)
   end
 
   defp resolution_key(%{text: text, run: run} = entry) do
@@ -180,7 +180,7 @@ defmodule Figler.Render.Skia.Fonts do
       font.postscript,
       font.weight,
       font.slant,
-      codepoints(run.content),
+      Resolution.codepoints(run.content),
       Enum.map(text.fallback_fonts, &{&1.family, &1.weight, &1.slant})
     }
   end
@@ -200,9 +200,9 @@ defmodule Figler.Render.Skia.Fonts do
 
   defp resolve_unprepared_group(entries, representative, supplied, languages, opts, result) do
     font = representative.run.font
-    codepoints = codepoints(representative.run.content)
+    codepoints = Resolution.codepoints(representative.run.content)
 
-    case requested_supplied_typeface(supplied, font, codepoints) do
+    case Resolution.requested_supplied_typeface(supplied, font, codepoints) do
       nil ->
         resolve_system_requested(
           result,
@@ -230,7 +230,7 @@ defmodule Figler.Render.Skia.Fonts do
          languages,
          opts
        ) do
-    case usable_typeface(representative.requested, codepoints) do
+    case Resolution.usable_typeface(representative.requested, codepoints) do
       {:ok, typeface} ->
         put_resolutions(result, entries, typeface, :requested)
 
@@ -250,15 +250,9 @@ defmodule Figler.Render.Skia.Fonts do
         put_group_warning(result, entries, %{
           code: :font_inspection_failed,
           reason: reason,
-          requested: request(font)
+          requested: Resolution.request(font)
         })
     end
-  end
-
-  defp requested_supplied_typeface(supplied, font, codepoints) do
-    Enum.find(supplied, fn typeface ->
-      typeface.family == font.family and covers?(typeface, codepoints) == {:ok, true}
-    end)
   end
 
   defp resolve_fallback(
@@ -275,10 +269,7 @@ defmodule Figler.Render.Skia.Fonts do
     figma_fallbacks = representative.text.fallback_fonts
 
     fallback =
-      matching_supplied_fallback(supplied, figma_fallbacks, codepoints) ||
-        figma_fallback(figma_fallbacks, codepoints) ||
-        supplied_fallback(supplied, codepoints) ||
-        system_fallback(font, codepoints, languages, opts)
+      Resolution.fallback(font, figma_fallbacks, supplied, codepoints, languages, opts)
 
     case fallback do
       {typeface, source} ->
@@ -286,7 +277,7 @@ defmodule Figler.Render.Skia.Fonts do
         |> put_resolutions(entries, typeface, source)
         |> put_group_warning(entries, %{
           code: :font_substituted,
-          requested: request(font),
+          requested: Resolution.request(font),
           resolved: %{family: typeface.family, source: source}
         })
 
@@ -295,109 +286,23 @@ defmodule Figler.Render.Skia.Fonts do
     end
   end
 
-  defp requested_typeface(%Font{family: nil}), do: {:error, :font_family_missing}
-
-  defp requested_typeface(font),
-    do: Skia.Typeface.match_family(font.family, weight: font.weight, slant: font.slant)
-
-  defp usable_typeface({:ok, typeface}, codepoints) do
-    case covers?(typeface, codepoints) do
-      {:ok, true} -> {:ok, typeface}
-      {:ok, false} -> {:missing, typeface}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp usable_typeface({:error, _reason}, _codepoints), do: {:missing, nil}
-
-  defp matching_supplied_fallback(supplied, figma_fallbacks, codepoints) do
-    families = figma_fallbacks |> Enum.map(& &1.family) |> Enum.reject(&is_nil/1) |> MapSet.new()
-    supplied |> Enum.filter(&MapSet.member?(families, &1.family)) |> supplied_fallback(codepoints)
-  end
-
-  defp figma_fallback(fonts, codepoints) do
-    Enum.find_value(fonts, fn font ->
-      with family when is_binary(family) <- font.family,
-           {:ok, typeface} <-
-             Skia.Typeface.match_family(family, weight: font.weight, slant: font.slant),
-           {:ok, true} <- covers?(typeface, codepoints) do
-        {typeface, :figma_fallback}
-      else
-        _unusable -> nil
-      end
-    end)
-  end
-
-  defp supplied_fallback(typefaces, codepoints) do
-    Enum.find_value(typefaces, fn typeface ->
-      if covers?(typeface, codepoints) == {:ok, true}, do: {typeface, :supplied}
-    end)
-  end
-
-  defp system_fallback(font, codepoints, languages, opts) do
-    if Keyword.get(opts, :system_font_fallback, true),
-      do: Enum.find_value(codepoints, &matching_system_typeface(&1, font, codepoints, languages))
-  end
-
-  defp matching_system_typeface(codepoint, font, codepoints, languages) do
-    with {:ok, typeface} <-
-           Skia.Typeface.match_character(codepoint,
-             family: font.family || "",
-             weight: font.weight,
-             slant: font.slant,
-             languages: languages
-           ),
-         {:ok, true} <- covers?(typeface, codepoints) do
-      {typeface, :system}
-    else
-      _unusable -> nil
-    end
-  end
-
   defp unresolved_font(result, entries, font, _codepoints, nil) do
     code = if font.family, do: :font_unavailable, else: :font_family_missing
-    put_group_warning(result, entries, %{code: code, requested: request(font)})
+    put_group_warning(result, entries, %{code: code, requested: Resolution.request(font)})
   end
 
   defp unresolved_font(result, entries, font, codepoints, typeface) do
-    missing = missing_codepoints(typeface, codepoints)
+    missing = Resolution.missing_codepoints(typeface, codepoints)
 
     result
     |> put_resolutions(entries, typeface, :requested)
     |> put_group_warning(entries, %{
       code: :glyphs_missing,
       characters: missing,
-      codepoints: Enum.map(missing, &codepoint_name/1),
-      requested: request(font)
+      codepoints: Enum.map(missing, &Resolution.codepoint_name/1),
+      requested: Resolution.request(font)
     })
   end
-
-  defp covers?(_typeface, []), do: {:ok, true}
-
-  defp covers?(typeface, codepoints) do
-    case glyph_ids(typeface, codepoints) do
-      {:ok, glyph_ids} -> {:ok, Enum.all?(glyph_ids, &(&1 > 0))}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp missing_codepoints(typeface, codepoints) do
-    case glyph_ids(typeface, codepoints) do
-      {:ok, glyph_ids} ->
-        codepoints
-        |> Enum.zip(glyph_ids)
-        |> Enum.flat_map(fn
-          {codepoint, 0} -> [codepoint]
-          {_codepoint, _glyph_id} -> []
-        end)
-
-      {:error, _reason} ->
-        codepoints
-    end
-  end
-
-  defp glyph_ids(typeface, codepoints),
-    do: typeface |> Skia.Font.new(size: 14) |> Skia.Font.glyph_ids(Enum.join(codepoints))
 
   defp put_resolutions(result, entries, typeface, source) do
     fonts =
@@ -417,7 +322,7 @@ defmodule Figler.Render.Skia.Fonts do
   defp put_group_warning(result, entries, warning) do
     warnings =
       entries
-      |> Enum.reject(&(codepoints(&1.run.content) == []))
+      |> Enum.reject(&(Resolution.codepoints(&1.run.content) == []))
       |> Enum.reduce(result.warnings, fn entry, diagnosed ->
         run_warning = Map.put(warning, :run, run_metadata(entry.run))
         Map.update(diagnosed, entry.node.guid, [run_warning], &[run_warning | &1])
@@ -460,7 +365,15 @@ defmodule Figler.Render.Skia.Fonts do
       content: run.content,
       font: run.font,
       style_id: run.style_id,
+      line_height: run.line_height,
+      letter_spacing: run.letter_spacing,
       text_decoration: run.text_decoration,
+      text_decoration_style: run.text_decoration_style,
+      text_decoration_thickness: run.text_decoration_thickness,
+      text_decoration_skip_ink: run.text_decoration_skip_ink,
+      text_underline_offset: run.text_underline_offset,
+      text_decoration_fill_paints: run.text_decoration_fill_paints,
+      text_case: run.text_case,
       resolved: resolved,
       fill_paints: run.fill_paints,
       fill_override?: run.fill_override?
@@ -497,35 +410,6 @@ defmodule Figler.Render.Skia.Fonts do
 
   defp resolved_signature(nil), do: nil
   defp resolved_signature(resolved), do: {resolved.source, resolved.family}
-
-  defp merge_warnings(warnings) do
-    warnings
-    |> Enum.reduce([], fn warning, merged -> merge_warning(warning, merged) end)
-    |> Enum.reverse()
-  end
-
-  defp merge_warning(warning, [previous | rest]) do
-    if mergeable_warning?(previous, warning) do
-      run = %{previous.run | length: previous.run.length + warning.run.length}
-      [%{previous | run: run} | rest]
-    else
-      [warning, previous | rest]
-    end
-  end
-
-  defp merge_warning(warning, []), do: [warning]
-
-  defp mergeable_warning?(left, right) do
-    Map.delete(left, :run) == Map.delete(right, :run) and
-      left.run.index == right.run.index and left.run.start + left.run.length == right.run.start
-  end
-
-  defp utf16_length(content) do
-    Enum.reduce(String.codepoints(content), 0, fn codepoint, length ->
-      <<value::utf8>> = codepoint
-      length + if(value > 0xFFFF, do: 2, else: 1)
-    end)
-  end
 
   defp supplied_typefaces(opts) do
     typefaces = Keyword.get(opts, :fallback_typefaces, [])
@@ -567,33 +451,5 @@ defmodule Figler.Render.Skia.Fonts do
       _invalid ->
         {:error, :invalid_font_languages}
     end
-  end
-
-  defp request(font) do
-    %{
-      family: font.family,
-      style: font.style,
-      postscript: font.postscript,
-      weight: font.weight,
-      slant: font.slant
-    }
-  end
-
-  defp codepoints(text) do
-    text
-    |> String.codepoints()
-    |> Enum.reject(&ignorable_codepoint?/1)
-    |> Enum.uniq()
-  end
-
-  defp ignorable_codepoint?(codepoint) do
-    <<value::utf8>> = codepoint
-
-    String.trim(codepoint) == "" or value <= 0x1F or value in 0x7F..0x9F or
-      value in [0x200C, 0x200D] or value in 0xFE00..0xFE0F or value in 0xE0100..0xE01EF
-  end
-
-  defp codepoint_name(<<value::utf8>>) do
-    "U+" <> (value |> Integer.to_string(16) |> String.pad_leading(4, "0"))
   end
 end

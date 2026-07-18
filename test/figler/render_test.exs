@@ -146,20 +146,58 @@ defmodule Figler.RenderTest do
              {1, 1, 2, "😀", "Noto Color Emoji"}
 
     assert emoji.font.size == 18.0
+
+    assert {
+             emoji.line_height,
+             emoji.letter_spacing,
+             emoji.text_decoration,
+             emoji.text_decoration_style,
+             emoji.text_decoration_skip_ink
+           } == {27.0, 2.0, :underline, :dotted, true}
+
     assert [%Figler.Render.Paint{color: %{g: 1.0}}] = emoji.fill_paints
 
-    assert {last.index, last.start, last.length, last.content, last.font.weight} ==
-             {2, 3, 1, "B", 700}
+    assert {last.index, last.start, last.length, last.content, last.font.weight, last.text_case} ==
+             {2, 3, 1, "B", 700, :lower}
 
     assert [%Figler.Render.Paint{color: %{b: 1.0}}] = last.fill_paints
     assert [%Figler.Render.Font{family: "Noto Color Emoji"}] = text.fallback_fonts
+
+    assert {text.align_horizontal, text.align_vertical, text.auto_resize} ==
+             {:center, :bottom, :height}
+
+    assert {text.truncation, text.max_lines} == {:ending, 2}
     assert text.issues == []
 
     assert {:ok, %{document: document}} =
              SkiaBackend.compile(scene, system_font_fallback: false)
 
     text_command = Enum.find(Skia.commands(document), &(&1.op == :text))
-    assert [{"A", first_opts}, {"😀", emoji_opts}, {"B", last_opts}] = text_command.opts[:spans]
+    assert text_command.opts[:width] == 80.0
+    assert text_command.opts[:height] == 24.0
+    assert text_command.opts[:align] == :center
+    assert text_command.opts[:vertical_align] == :bottom
+    assert text_command.opts[:max_lines] == 2
+    assert text_command.opts[:ellipsis] == "…"
+
+    assert [{"A", first_opts}, {"😀", emoji_opts}, {"b", last_opts}] =
+             text_command.opts[:spans]
+
+    assert {first_opts[:line_height], first_opts[:letter_spacing], first_opts[:decoration]} ==
+             {21.0, 0.25, :underline}
+
+    assert {
+             emoji_opts[:line_height],
+             emoji_opts[:letter_spacing],
+             emoji_opts[:decoration],
+             emoji_opts[:decoration_style],
+             emoji_opts[:decoration_mode],
+             emoji_opts[:decoration_color]
+           } == {27.0, 2.0, :underline, :dotted, :gaps, {:rgba, 255, 255, 0, 255}}
+
+    assert {last_opts[:line_height], last_opts[:letter_spacing], last_opts[:decoration]} ==
+             {21.0, 0.25, :underline}
+
     assert first_opts[:fill] == {:rgba, 255, 0, 0, 255}
     assert emoji_opts[:fill] == {:rgba, 0, 255, 0, 255}
     assert last_opts[:fill] == {:rgba, 0, 0, 255, 255}
@@ -183,6 +221,51 @@ defmodule Figler.RenderTest do
              SkiaBackend.compile(scene, strict: true, system_font_fallback: false)
 
     assert Enum.any?(strict_warnings, &(&1.value.code == :text_style_length_mismatch))
+  end
+
+  test "reports unsupported text case and decoration metrics in strict mode" do
+    assert {:ok, scene} = rich_text_payload() |> Render.prepare()
+
+    node = scene.render_nodes[{1, 1}]
+    [first | rest] = node.text.runs
+
+    first = %{
+      first
+      | text_case: :small_caps,
+        text_decoration_thickness: %Figler.Render.Text.Measurement{
+          value: 2.0,
+          units: :pixels
+        },
+        text_underline_offset: %Figler.Render.Text.Measurement{value: 1.0, units: :pixels}
+    }
+
+    text = %{node.text | runs: [first | rest], max_lines: nil}
+    scene = %{scene | render_nodes: Map.put(scene.render_nodes, node.guid, %{node | text: text})}
+
+    assert {:ok, %{warnings: warnings, document: document}} =
+             SkiaBackend.compile(scene, system_font_fallback: false)
+
+    text_command = Enum.find(Skia.commands(document), &(&1.op == :text))
+    assert text_command.opts[:max_lines] == 1
+    assert text_command.opts[:ellipsis] == "…"
+    assert Enum.any?(warnings, &(&1.value.code == :text_case_unsupported))
+    assert Enum.any?(warnings, &(&1.value.code == :text_decoration_thickness_unsupported))
+    assert Enum.any?(warnings, &(&1.value.code == :text_underline_offset_unsupported))
+
+    assert {:error, {:unsupported_render_features, strict_warnings}} =
+             SkiaBackend.compile(scene,
+               strict: true,
+               system_font_fallback: false
+             )
+
+    assert Enum.any?(strict_warnings, &(&1.value.code == :text_case_unsupported))
+
+    assert Enum.any?(
+             strict_warnings,
+             &(&1.value.code == :text_decoration_thickness_unsupported)
+           )
+
+    assert Enum.any?(strict_warnings, &(&1.value.code == :text_underline_offset_unsupported))
   end
 
   test "reports font substitutions and rejects them in strict mode" do
@@ -231,6 +314,41 @@ defmodule Figler.RenderTest do
     assert {:ok, clone_scene} = Render.prepare(payload, root: GUID.format(clone_guid))
     assert {:ok, %{document: document, warnings: []}} = SkiaBackend.compile(clone_scene)
     assert {:ok, %{data: <<0, 0, 255, 255, _rest::binary>>}} = Skia.to_raw(document)
+  end
+
+  test "applies paragraph typography overrides to effective instance text" do
+    payload = instance_typography_override_payload()
+    assert {:ok, scene} = Render.prepare(payload)
+
+    assert {clone_guid, %{source: :instance_clone, source_guid: {3, 2}}} =
+             Enum.find(scene.graph.provenance, fn {_guid, provenance} ->
+               provenance[:source] == :instance_clone and provenance[:source_guid] == {3, 2}
+             end)
+
+    text = scene.render_nodes[clone_guid].text
+
+    assert {text.align_horizontal, text.align_vertical, text.truncation, text.max_lines} ==
+             {:right, :bottom, :ending, 1}
+
+    assert [run] = text.runs
+
+    assert {
+             run.line_height,
+             run.letter_spacing,
+             run.text_decoration,
+             run.text_decoration_style,
+             run.text_decoration_skip_ink
+           } == {30.0, 2.0, :underline, :wavy, false}
+
+    assert {:ok, clone_scene} = Render.prepare(payload, root: GUID.format(clone_guid))
+
+    assert {:ok, %{document: document}} = SkiaBackend.compile(clone_scene)
+
+    text_command = Enum.find(Skia.commands(document), &(&1.op == :text))
+    assert text_command.opts[:align] == :right
+    assert text_command.opts[:vertical_align] == :bottom
+    assert text_command.opts[:max_lines] == 1
+    assert text_command.opts[:ellipsis] == "…"
   end
 
   test "renders populated instance clones from projected source metadata" do
@@ -668,6 +786,65 @@ defmodule Figler.RenderTest do
     |> encode_nodes()
   end
 
+  defp instance_typography_override_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    component_guid = guid(3, 1)
+    child_guid = guid(3, 2)
+
+    override =
+      struct(Figler.Schema.NodeChange,
+        guid_path: struct(Figler.Schema.GUIDPath, guids: [child_guid]),
+        line_height: struct(Figler.Schema.Number, value: 30.0, units: :pixels),
+        letter_spacing: struct(Figler.Schema.Number, value: 2.0, units: :pixels),
+        text_decoration: :underline,
+        text_decoration_style: :wavy,
+        text_decoration_skip_ink: false,
+        text_align_horizontal: :right,
+        text_align_vertical: :bottom,
+        text_truncation: :ending,
+        max_lines: 1
+      )
+
+    text_data = struct(Figler.Schema.TextData, characters: "Override")
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(component_guid, :symbol, "Label", canvas_guid,
+        size: vector(100, 40),
+        transform: matrix(0, 0),
+        visible: true
+      ),
+      node(child_guid, :text, "Text", component_guid,
+        size: vector(100, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        text_data: text_data,
+        font_name:
+          struct(Figler.Schema.FontName,
+            family: "Arial",
+            style: "Regular",
+            postscript: "Arial-Regular"
+          ),
+        font_size: 14.0,
+        line_height: struct(Figler.Schema.Number, value: 20.0, units: :pixels),
+        fill_paints: [solid_paint(1.0, 1.0, 1.0)]
+      ),
+      node(guid(4, 1), :instance, "Label instance", canvas_guid,
+        size: vector(100, 40),
+        transform: matrix(120, 0),
+        visible: true,
+        symbol_data:
+          struct(Figler.Schema.SymbolData,
+            symbol_id: component_guid,
+            symbol_overrides: [override]
+          )
+      )
+    ]
+    |> encode_nodes()
+  end
+
   defp instance_payload do
     document_guid = guid(0, 0)
     canvas_guid = guid(0, 1)
@@ -712,6 +889,12 @@ defmodule Figler.RenderTest do
             postscript: "NotoColorEmoji"
           ),
         font_size: 18.0,
+        line_height: struct(Figler.Schema.Number, value: 150.0, units: :percent),
+        letter_spacing: struct(Figler.Schema.Number, value: 2.0, units: :pixels),
+        text_decoration: :underline,
+        text_decoration_style: :dotted,
+        text_decoration_skip_ink: true,
+        text_decoration_fill_paints: [solid_paint(1.0, 1.0, 0.0)],
         fill_paints: [solid_paint(0.0, 1.0, 0.0)]
       )
 
@@ -724,6 +907,7 @@ defmodule Figler.RenderTest do
             style: "Bold",
             postscript: "Inter-Bold"
           ),
+        text_case: :lower,
         fill_paints: [solid_paint(0.0, 0.0, 1.0)]
       )
 
@@ -756,6 +940,15 @@ defmodule Figler.RenderTest do
             postscript: "Inter-Regular"
           ),
         font_size: 14.0,
+        line_height: struct(Figler.Schema.Number, value: 1.5, units: :raw),
+        letter_spacing: struct(Figler.Schema.Number, value: 0.25, units: :raw),
+        text_decoration: :underline,
+        text_case: :upper,
+        text_align_horizontal: :center,
+        text_align_vertical: :bottom,
+        text_auto_resize: :height,
+        text_truncation: :ending,
+        max_lines: 2,
         fill_paints: [solid_paint(1.0, 0.0, 0.0)]
       )
     ]

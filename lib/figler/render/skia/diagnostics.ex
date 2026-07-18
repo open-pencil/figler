@@ -6,6 +6,7 @@ defmodule Figler.Render.Skia.Diagnostics do
   alias Figler.Render.Skia.Paint
   alias Figler.Render.Skia.Shape
   alias Figler.Render.Text
+  alias Figler.Render.Text.Case, as: TextCase
   alias Figler.Scene.Graph.GUID
 
   @spec collect(Figler.Render.Scene.t(), [tuple()], map()) :: [map()]
@@ -80,6 +81,7 @@ defmodule Figler.Render.Skia.Diagnostics do
 
   defp text_warnings(%Node{node_type: :text, text: %Text{} = text} = node) do
     issue_warnings = Enum.map(text.issues, &warning(node.guid, :text, &1))
+
     issue_warnings ++ Enum.flat_map(text.runs, &text_run_warnings(node.guid, &1))
   end
 
@@ -89,13 +91,28 @@ defmodule Figler.Render.Skia.Diagnostics do
     range = %{index: run.index, start: run.start, length: run.length}
 
     warnings =
-      if run.text_decoration in [:underline, :strikethrough],
-        do: [%{code: :text_decoration_unsupported, decoration: run.text_decoration, run: range}],
-        else: []
+      if TextCase.supported?(run.text_case),
+        do: [],
+        else: [%{code: :text_case_unsupported, value: run.text_case, run: range}]
 
     warnings =
       if run.fill_override? and Enum.any?(run.fill_paints, &unsupported_text_paint?/1),
         do: [%{code: :text_run_paint_unsupported, run: range} | warnings],
+        else: warnings
+
+    warnings =
+      if Enum.any?(run.text_decoration_fill_paints, &unsupported_text_paint?/1),
+        do: [%{code: :text_decoration_paint_unsupported, run: range} | warnings],
+        else: warnings
+
+    warnings =
+      if run.text_decoration_thickness,
+        do: [%{code: :text_decoration_thickness_unsupported, run: range} | warnings],
+        else: warnings
+
+    warnings =
+      if run.text_underline_offset,
+        do: [%{code: :text_underline_offset_unsupported, run: range} | warnings],
         else: warnings
 
     Enum.map(warnings, &warning(guid, :text, &1))

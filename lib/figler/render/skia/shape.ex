@@ -101,7 +101,7 @@ defmodule Figler.Render.Skia.Shape do
        ) do
     inherited_fill = Keyword.get(opts, :fill, Keyword.get(opts, :stroke, :black))
     text_opts = [x: 0, y: 0, size: text.font.size || 14, fill: inherited_fill]
-    text_opts = if size, do: Keyword.put(text_opts, :width, size.x), else: text_opts
+    text_opts = text_layout_opts(text_opts, text, size)
 
     spans = Map.get(assets.font_spans, node.guid, [])
 
@@ -112,7 +112,9 @@ defmodule Figler.Render.Skia.Shape do
       span = List.first(spans)
 
       text_opts =
-        text_font_opts(text_opts, (span && span.font) || text.font, span && span.resolved)
+        text_opts
+        |> text_font_opts((span && span.font) || text.font, span && span.resolved)
+        |> typography_opts(span, node, assets)
 
       Skia.text(document, text.content, text_opts)
     end
@@ -147,11 +149,76 @@ defmodule Figler.Render.Skia.Shape do
         fill: run_fill(span, node, assets, inherited_fill)
       ]
       |> text_font_opts(span.font, span.resolved)
+      |> typography_opts(span, node, assets)
 
     Skia.TextSpan.new(span.content, span_opts)
   end
 
   defp text_size(%Node{text: text}), do: text.font.size || 14
+
+  defp text_layout_opts(opts, _text, nil), do: opts
+
+  defp text_layout_opts(opts, text, size) do
+    opts
+    |> Keyword.put(:width, size.x)
+    |> Keyword.put(:height, size.y)
+    |> put_option(:align, horizontal_align(text.align_horizontal))
+    |> put_option(:vertical_align, text.align_vertical)
+    |> put_option(:max_lines, max_lines(text, size))
+    |> put_option(:ellipsis, ellipsis(text.truncation))
+  end
+
+  defp horizontal_align(:justified), do: :justify
+  defp horizontal_align(align) when align in [:left, :center, :right], do: align
+  defp horizontal_align(_align), do: nil
+
+  defp max_lines(%{max_lines: value}, _size) when is_integer(value) and value > 0, do: value
+
+  defp max_lines(%{truncation: :ending, runs: [run | _], font: font}, %{y: height}) do
+    line_height = run.line_height || (font.size || 14) * 1.2
+    max(1, floor(height / line_height))
+  end
+
+  defp max_lines(_text, _size), do: nil
+
+  defp ellipsis(:ending), do: "…"
+  defp ellipsis(_truncation), do: nil
+
+  defp typography_opts(opts, nil, _node, _assets), do: opts
+
+  defp typography_opts(opts, span, node, assets) do
+    opts
+    |> put_option(:line_height, span.line_height)
+    |> put_option(:letter_spacing, span.letter_spacing)
+    |> put_option(:decoration, decoration(span.text_decoration))
+    |> put_option(:decoration_style, span.text_decoration_style)
+    |> put_option(:decoration_mode, decoration_mode(span.text_decoration_skip_ink))
+    |> put_option(:decoration_color, decoration_color(span, node, assets))
+  end
+
+  defp decoration(:underline), do: :underline
+  defp decoration(:strikethrough), do: :line_through
+  defp decoration(_decoration), do: nil
+
+  defp decoration_mode(true), do: :gaps
+  defp decoration_mode(false), do: :through
+  defp decoration_mode(nil), do: nil
+
+  defp decoration_color(span, node, assets) do
+    case Enum.find(
+           span.text_decoration_fill_paints,
+           &(&1.visible != false and &1.type == :solid)
+         ) do
+      nil -> nil
+      paint -> paint |> Paint.resolve(node.size, assets.images) |> resolved_paint()
+    end
+  end
+
+  defp resolved_paint({:ok, resolved}), do: resolved.paint
+  defp resolved_paint({:error, _reason}), do: nil
+
+  defp put_option(opts, _key, nil), do: opts
+  defp put_option(opts, key, value), do: Keyword.put(opts, key, value)
 
   defp run_fill(%{fill_override?: false}, _node, _assets, inherited), do: inherited
 

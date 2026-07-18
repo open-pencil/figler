@@ -26,20 +26,20 @@ defmodule Figler.Render.Node do
   ]
 
   @source_fields [
-    :text_data,
-    :blend_mode,
-    :mask,
-    :mask_type,
-    :effects,
-    :fill_paints,
-    :stroke_paints,
-    :fill_geometry,
-    :stroke_geometry,
-    :boolean_operation,
-    :corner_radius,
-    :stroke_weight,
-    :frame_mask_disabled
-  ]
+                   :text_data,
+                   :blend_mode,
+                   :mask,
+                   :mask_type,
+                   :effects,
+                   :fill_paints,
+                   :stroke_paints,
+                   :fill_geometry,
+                   :stroke_geometry,
+                   :boolean_operation,
+                   :corner_radius,
+                   :stroke_weight,
+                   :frame_mask_disabled
+                 ] ++ Text.source_fields()
 
   @enforce_keys [:guid, :source_guid, :node_type]
   defstruct [
@@ -95,6 +95,8 @@ defmodule Figler.Render.Node do
   def from_effective(%SceneNode{} = graph_node, source_guid, source) do
     node_type = normalize_node_type(graph_node.node_type)
     {text_source, source_attrs} = source |> source_attrs(graph_node) |> Map.pop(:text_data)
+    {text_attrs, source_attrs} = Map.split(source_attrs, Text.source_fields())
+    text_node = graph_node |> Map.from_struct() |> Map.merge(text_attrs)
 
     attrs =
       graph_node
@@ -106,7 +108,7 @@ defmodule Figler.Render.Node do
         node_type: node_type,
         text:
           Text.from_effective(
-            graph_node,
+            text_node,
             node_type,
             text_source,
             Map.get(source_attrs, :fill_paints, [])

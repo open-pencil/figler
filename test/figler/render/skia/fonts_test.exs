@@ -117,6 +117,55 @@ defmodule Figler.Render.Skia.FontsTest do
            ]
   end
 
+  test "applies supported text case while preserving UTF-16 source ranges" do
+    assert {:ok, typeface} = Skia.Typeface.match_character("S")
+    font = %Font{family: typeface.family}
+
+    run = %Run{
+      index: 0,
+      start: 0,
+      length: 1,
+      content: "ß",
+      font: font,
+      text_case: :upper
+    }
+
+    node = %Node{
+      guid: {1, 1},
+      source_guid: {1, 1},
+      node_type: :text,
+      text: %Text{content: "ß", font: font, runs: [run]}
+    }
+
+    assert {:ok, result} = Fonts.resolve([node], system_font_fallback: false)
+    assert [%{content: "SS", start: 0, length: 1}] = result.spans[{1, 1}]
+  end
+
+  test "applies title case without changing UTF-16 source ranges" do
+    assert {:ok, typeface} = Skia.Typeface.match_character("S")
+    font = %Font{family: typeface.family}
+    content = "ßeta test"
+
+    run = %Run{
+      index: 0,
+      start: 0,
+      length: utf16_length(content),
+      content: content,
+      font: font,
+      text_case: :title
+    }
+
+    node = %Node{
+      guid: {1, 1},
+      source_guid: {1, 1},
+      node_type: :text,
+      text: %Text{content: content, font: font, runs: [run]}
+    }
+
+    assert {:ok, result} = Fonts.resolve([node], system_font_fallback: false)
+    assert [%{content: "SSeta Test", start: 0, length: 9}] = result.spans[{1, 1}]
+  end
+
   test "rejects unreadable fallback font paths" do
     assert {:error, {:fallback_font_load_failed, "/missing/font.ttf", :enoent}} =
              Fonts.resolve([], fallback_font_paths: ["/missing/font.ttf"])

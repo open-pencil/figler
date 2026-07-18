@@ -10,6 +10,7 @@ defmodule Figler.Render.SourceNode do
   alias Figler.Render.GeometryRef
   alias Figler.Render.Paint
   alias Figler.Render.Projection
+  alias Figler.Render.Text.Measurement
   alias Figler.Render.Text.Source, as: TextSource
   alias Figler.Scene.Graph.GUID
 
@@ -62,11 +63,21 @@ defmodule Figler.Render.SourceNode do
 
   defp normalize_field(:text_data, value), do: TextSource.from_sparse(value)
 
+  defp normalize_field(field, value)
+       when field in [
+              :line_height,
+              :letter_spacing,
+              :text_decoration_thickness,
+              :text_underline_offset
+            ],
+       do: Measurement.from_sparse(value)
+
   defp normalize_field(:effects, values),
     do: Enum.map(values || [], &Effect.from_sparse/1)
 
-  defp normalize_field(field, values) when field in [:fill_paints, :stroke_paints],
-    do: Enum.map(values || [], &Paint.from_sparse/1)
+  defp normalize_field(field, values)
+       when field in [:fill_paints, :stroke_paints, :text_decoration_fill_paints],
+       do: Enum.map(values || [], &Paint.from_sparse/1)
 
   defp normalize_field(field, values) when field in [:fill_geometry, :stroke_geometry],
     do: Enum.map(values || [], &GeometryRef.from_sparse/1)
