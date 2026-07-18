@@ -16,8 +16,11 @@ defmodule Figler.Render.SourceNode do
     :corner_radius,
     :stroke_weight,
     :frame_mask_disabled,
+    :boolean_operation,
     fill_paints: [],
-    stroke_paints: []
+    stroke_paints: [],
+    fill_geometry: [],
+    stroke_geometry: []
   ]
 
   @type t :: %__MODULE__{
@@ -26,6 +29,9 @@ defmodule Figler.Render.SourceNode do
           name: String.t() | nil,
           fill_paints: [map()],
           stroke_paints: [map()],
+          fill_geometry: [map()],
+          stroke_geometry: [map()],
+          boolean_operation: atom() | nil,
           corner_radius: float() | nil,
           stroke_weight: float() | nil,
           frame_mask_disabled: boolean() | nil
@@ -33,8 +39,8 @@ defmodule Figler.Render.SourceNode do
 
   @doc false
   def from_native(
-        {guid, node_type, name, fill_paints, stroke_paints, corner_radius, stroke_weight,
-         frame_mask_disabled}
+        {guid, node_type, name, fill_paints, stroke_paints, fill_geometry, stroke_geometry,
+         boolean_operation, corner_radius, stroke_weight, frame_mask_disabled}
       ) do
     %__MODULE__{
       guid: guid,
@@ -42,6 +48,9 @@ defmodule Figler.Render.SourceNode do
       name: name,
       fill_paints: fill_paints,
       stroke_paints: stroke_paints,
+      fill_geometry: fill_geometry,
+      stroke_geometry: stroke_geometry,
+      boolean_operation: boolean_operation,
       corner_radius: corner_radius,
       stroke_weight: stroke_weight,
       frame_mask_disabled: frame_mask_disabled

@@ -10,6 +10,7 @@ defmodule Figler.Render.Skia do
 
   alias Figler.Render.Affine
   alias Figler.Render.Bounds
+  alias Figler.Render.Geometry
   alias Figler.Render.Scene, as: RenderScene
   alias Figler.Render.Skia.Paint
   alias Figler.Scene.Graph.GUID
@@ -33,13 +34,13 @@ defmodule Figler.Render.Skia do
 
   defp compile_root(scene, root_guid, bounds, opts) do
     child_guids = render_guids(scene, root_guid)
-    assets = load_image_assets(scene)
+    assets = load_render_assets(scene)
     warnings = collect_warnings(scene, child_guids, assets)
 
     if Keyword.get(opts, :strict, false) and warnings != [] do
       {:error, {:unsupported_render_features, warnings}}
     else
-      document = build_document(scene, child_guids, bounds, assets.images, opts)
+      document = build_document(scene, child_guids, bounds, assets, opts)
 
       {:ok,
        %{
@@ -51,7 +52,7 @@ defmodule Figler.Render.Skia do
     end
   end
 
-  defp build_document(scene, child_guids, bounds, images, opts) do
+  defp build_document(scene, child_guids, bounds, assets, opts) do
     scale = opts |> Keyword.get(:scale, 1.0) |> :erlang.float()
     width = max(1, ceil((bounds.max_x - bounds.min_x) * scale))
     height = max(1, ceil((bounds.max_y - bounds.min_y) * scale))
@@ -60,13 +61,13 @@ defmodule Figler.Render.Skia do
     |> Skia.canvas(height)
     |> Skia.clear(Keyword.get(opts, :background, :transparent))
     |> Skia.group([scale: {scale, scale}], fn scaled ->
-      render_scaled(scaled, scene, child_guids, bounds, images)
+      render_scaled(scaled, scene, child_guids, bounds, assets)
     end)
   end
 
-  defp render_scaled(document, scene, child_guids, bounds, images) do
+  defp render_scaled(document, scene, child_guids, bounds, assets) do
     Skia.group(document, [translate: {-bounds.min_x, -bounds.min_y}], fn translated ->
-      render_nodes(translated, scene, child_guids, images)
+      render_nodes(translated, scene, child_guids, assets)
     end)
   end
 
@@ -89,6 +90,10 @@ defmodule Figler.Render.Skia do
 
   defp node_bounds(scene, guid, parent_matrix, bounds) do
     case Map.get(scene.graph.nodes, guid) do
+      %Node{visible: visible, node_type: "boolean_operation"} = node when visible != false ->
+        matrix = Affine.multiply(parent_matrix, matrix(node.transform))
+        include_rect(bounds, matrix, node.size)
+
       %Node{visible: visible} = node when visible != false ->
         matrix = Affine.multiply(parent_matrix, matrix(node.transform))
         bounds = include_rect(bounds, matrix, node.size)
@@ -143,17 +148,17 @@ defmodule Figler.Render.Skia do
     }
   end
 
-  defp render_nodes(document, scene, guids, images) do
-    Enum.reduce(guids, document, &render_node(scene, images, &1, &2))
+  defp render_nodes(document, scene, guids, assets) do
+    Enum.reduce(guids, document, &render_node(scene, assets, &1, &2))
   end
 
-  defp render_node(scene, images, guid, document) do
+  defp render_node(scene, assets, guid, document) do
     case Map.get(scene.graph.nodes, guid) do
       %Node{visible: visible} = node when visible != false ->
         source = source_node(scene, guid)
 
         Skia.group(document, [concat: matrix(node.transform)], fn transformed ->
-          render_transformed(transformed, scene, guid, node, source, images)
+          render_transformed(transformed, scene, guid, node, source, assets)
         end)
 
       _missing_or_hidden ->
@@ -161,24 +166,34 @@ defmodule Figler.Render.Skia do
     end
   end
 
-  defp render_transformed(document, scene, guid, %Node{opacity: opacity} = node, source, images)
+  defp render_transformed(document, scene, guid, %Node{opacity: opacity} = node, source, assets)
        when is_number(opacity) and opacity < 1 do
     Skia.layer(document, [opacity: opacity], fn layer ->
-      render_node_content(layer, scene, guid, node, source, images)
+      render_node_content(layer, scene, guid, node, source, assets)
     end)
   end
 
-  defp render_transformed(document, scene, guid, node, source, images) do
-    render_node_content(document, scene, guid, node, source, images)
+  defp render_transformed(document, scene, guid, node, source, assets) do
+    render_node_content(document, scene, guid, node, source, assets)
   end
 
-  defp render_node_content(document, scene, guid, node, source, images) do
+  defp render_node_content(document, scene, guid, node, source, assets) do
     document
-    |> draw_node(node, source, images)
-    |> render_children(scene, node, source, guid, images)
+    |> draw_node(node, source, assets)
+    |> render_children(scene, node, source, guid, assets)
   end
 
-  defp render_children(document, scene, node, source, guid, images) do
+  defp render_children(
+         document,
+         _scene,
+         %Node{node_type: "boolean_operation"},
+         _source,
+         _guid,
+         _assets
+       ),
+       do: document
+
+  defp render_children(document, scene, node, source, guid, assets) do
     children = Map.get(scene.graph.children, guid, [])
 
     if children == [] do
@@ -186,7 +201,7 @@ defmodule Figler.Render.Skia do
     else
       document
       |> maybe_clip(node, source)
-      |> render_nodes(scene, children, images)
+      |> render_nodes(scene, children, assets)
     end
   end
 
@@ -207,49 +222,82 @@ defmodule Figler.Render.Skia do
 
   defp maybe_clip(document, _node, _source), do: document
 
-  defp draw_node(document, node, source, images) do
+  defp draw_node(document, node, source, assets) do
     paints = if source, do: source.fill_paints || [], else: []
-    document = Enum.reduce(paints, document, &draw_fill(&2, node, source, &1, images))
+    document = Enum.reduce(paints, document, &draw_fill(&2, node, source, &1, assets))
     strokes = if source, do: source.stroke_paints || [], else: []
     weight = if source, do: source.stroke_weight || 1, else: 1
-    Enum.reduce(strokes, document, &draw_stroke(&2, node, source, &1, weight, images))
+    Enum.reduce(strokes, document, &draw_stroke(&2, node, source, &1, weight, assets))
   end
 
-  defp draw_fill(document, node, source, paint, images) do
-    case Paint.resolve(paint, node.size, images) do
-      {:ok, resolved} -> draw_resolved(document, node, source, [fill: resolved.paint], resolved)
-      {:error, _reason} -> document
-    end
-  end
-
-  defp draw_stroke(document, node, source, paint, weight, images) do
-    case Paint.resolve(paint, node.size, images) do
+  defp draw_fill(document, node, source, paint, assets) do
+    case Paint.resolve(paint, node.size, assets.images) do
       {:ok, resolved} ->
-        draw_resolved(
-          document,
-          node,
-          source,
-          [stroke: resolved.paint, stroke_width: weight],
-          resolved
-        )
+        draw_resolved(document, node, source, :fill, [fill: resolved.paint], resolved, assets)
 
       {:error, _reason} ->
         document
     end
   end
 
-  defp draw_resolved(document, node, source, opts, %{opacity: opacity})
-       when is_number(opacity) and opacity < 1 do
-    Skia.layer(document, [opacity: opacity], &draw_shape(&1, node, source, opts))
+  defp draw_stroke(
+         document,
+         %Node{node_type: node_type},
+         _source,
+         %{type: paint_type},
+         _weight,
+         _assets
+       )
+       when node_type not in ["vector", "boolean_operation"] and paint_type != :solid,
+       do: document
+
+  defp draw_stroke(document, node, source, paint, weight, assets) do
+    case Paint.resolve(paint, node.size, assets.images) do
+      {:ok, resolved} ->
+        opts = [stroke: resolved.paint, stroke_width: weight]
+        draw_resolved(document, node, source, :stroke, opts, resolved, assets)
+
+      {:error, _reason} ->
+        document
+    end
   end
 
-  defp draw_resolved(document, node, source, opts, _resolved),
-    do: draw_shape(document, node, source, opts)
+  defp draw_resolved(document, node, source, kind, opts, %{opacity: opacity}, assets)
+       when is_number(opacity) and opacity < 1 do
+    Skia.layer(document, [opacity: opacity], &draw_shape(&1, node, source, kind, opts, assets))
+  end
 
-  defp draw_shape(document, %Node{node_type: "ellipse", size: size}, _source, opts),
-    do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
+  defp draw_resolved(document, node, source, kind, opts, _resolved, assets),
+    do: draw_shape(document, node, source, kind, opts, assets)
 
-  defp draw_shape(document, %Node{node_type: "line", size: size}, _source, opts) do
+  defp draw_shape(
+         document,
+         %Node{node_type: type},
+         source,
+         kind,
+         opts,
+         assets
+       )
+       when type in ["vector", "boolean_operation"] do
+    paths = geometry_paths(assets, source, kind)
+    path_opts = geometry_paint_opts(opts, kind)
+
+    Enum.reduce(paths, document, fn geometry, rendered ->
+      Skia.path(rendered, geometry.path, Keyword.put(path_opts, :fill_rule, geometry.fill_rule))
+    end)
+  end
+
+  defp draw_shape(
+         document,
+         %Node{node_type: "ellipse", size: size},
+         _source,
+         _kind,
+         opts,
+         _assets
+       ),
+       do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
+
+  defp draw_shape(document, %Node{node_type: "line", size: size}, _source, _kind, opts, _assets) do
     Skia.line(document,
       from: {0, 0},
       to: {size.x, size.y},
@@ -262,7 +310,9 @@ defmodule Figler.Render.Skia do
          document,
          %Node{node_type: "text", text: text, size: size} = node,
          _source,
-         opts
+         _kind,
+         opts,
+         _assets
        ) do
     text_opts = [
       x: 0,
@@ -276,7 +326,7 @@ defmodule Figler.Render.Skia do
     Skia.text(document, text || "", text_opts)
   end
 
-  defp draw_shape(document, %Node{size: %{x: width, y: height}}, source, opts) do
+  defp draw_shape(document, %Node{size: %{x: width, y: height}}, source, _kind, opts, _assets) do
     Skia.rect(
       document,
       Keyword.merge(
@@ -286,7 +336,27 @@ defmodule Figler.Render.Skia do
     )
   end
 
-  defp draw_shape(document, _node, _source, _opts), do: document
+  defp draw_shape(document, _node, _source, _kind, _opts, _assets), do: document
+
+  defp geometry_paths(_assets, nil, _kind), do: []
+
+  defp geometry_paths(assets, source, kind) do
+    assets.geometries
+    |> Map.get(source.guid, %{})
+    |> Map.get(kind, [])
+  end
+
+  defp geometry_paint_opts(opts, :fill), do: opts
+
+  defp geometry_paint_opts(opts, :stroke) do
+    [fill: Keyword.get(opts, :stroke, :black)]
+  end
+
+  defp load_render_assets(scene) do
+    scene
+    |> load_image_assets()
+    |> load_geometry_assets(scene)
+  end
 
   defp load_image_assets(scene) do
     scene.source_nodes
@@ -294,7 +364,10 @@ defmodule Figler.Render.Skia do
     |> Enum.flat_map(&source_image_keys/1)
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
-    |> Enum.reduce(%{images: %{}, errors: %{}}, &load_image_asset(scene, &1, &2))
+    |> Enum.reduce(
+      %{images: %{}, errors: %{}, geometries: %{}, geometry_errors: %{}},
+      &load_image_asset(scene, &1, &2)
+    )
   end
 
   defp source_image_keys(source) do
@@ -319,6 +392,28 @@ defmodule Figler.Render.Skia do
       Enum.find_value(document.images, fn {path, data} ->
         if path |> Path.basename() |> Path.rootname() |> String.downcase() == hash, do: data
       end)
+  end
+
+  defp load_geometry_assets(assets, scene) do
+    Enum.reduce(scene.source_nodes, assets, fn {_guid, source}, loaded ->
+      loaded
+      |> load_geometry_kind(source, :fill, source.fill_geometry || [], scene.document.blobs)
+      |> load_geometry_kind(source, :stroke, source.stroke_geometry || [], scene.document.blobs)
+    end)
+  end
+
+  defp load_geometry_kind(assets, _source, _kind, [], _blobs), do: assets
+
+  defp load_geometry_kind(assets, source, kind, references, blobs) do
+    case Geometry.paths(references, blobs) do
+      {:ok, paths} -> put_geometry_result(assets, :geometries, source.guid, kind, paths)
+      {:error, reason} -> put_geometry_result(assets, :geometry_errors, source.guid, kind, reason)
+    end
+  end
+
+  defp put_geometry_result(assets, collection, guid, kind, value) do
+    source_values = assets |> Map.fetch!(collection) |> Map.get(guid, %{}) |> Map.put(kind, value)
+    put_in(assets, [collection, guid], source_values)
   end
 
   defp collect_warnings(scene, guids, assets) do
@@ -347,20 +442,31 @@ defmodule Figler.Render.Skia do
 
   defp prepend_source_warnings(warnings, source, node, guid, assets) do
     source_warnings =
-      paint_warnings(guid, :fill, source.fill_paints || [], node.size, assets) ++
-        paint_warnings(guid, :stroke, source.stroke_paints || [], node.size, assets)
+      paint_warnings(guid, :fill, source.fill_paints || [], node, assets) ++
+        paint_warnings(guid, :stroke, source.stroke_paints || [], node, assets) ++
+        geometry_warnings(guid, node, source, assets)
 
     Enum.reduce(source_warnings, warnings, &[&1 | &2])
   end
 
-  defp paint_warnings(guid, kind, paints, size, assets) do
-    Enum.flat_map(paints, &paint_warning(&1, guid, kind, size, assets))
+  defp paint_warnings(guid, kind, paints, node, assets) do
+    Enum.flat_map(paints, &paint_warning(&1, guid, kind, node, assets))
   end
 
-  defp paint_warning(%{visible: false}, _guid, _kind, _size, _assets), do: []
+  defp paint_warning(%{visible: false}, _guid, _kind, _node, _assets), do: []
 
-  defp paint_warning(paint, guid, kind, size, assets) do
-    case Paint.resolve(paint, size, assets.images) do
+  defp paint_warning(
+         %{type: paint_type},
+         guid,
+         :stroke,
+         %Node{node_type: node_type},
+         _assets
+       )
+       when node_type not in ["vector", "boolean_operation"] and paint_type != :solid,
+       do: [warning(guid, :stroke, {paint_type, :non_solid_stroke_unsupported})]
+
+  defp paint_warning(paint, guid, kind, node, assets) do
+    case Paint.resolve(paint, node.size, assets.images) do
       {:ok, resolved} ->
         Enum.map(resolved.warnings, &warning(guid, kind, &1))
 
@@ -372,6 +478,37 @@ defmodule Figler.Render.Skia do
         [warning(guid, kind, {Map.get(paint, :type), reason})]
     end
   end
+
+  defp geometry_warnings(guid, %Node{node_type: type}, source, assets)
+       when type in ["vector", "boolean_operation"] do
+    []
+    |> geometry_warning(guid, source, assets, :fill, source.fill_paints || [])
+    |> geometry_warning(guid, source, assets, :stroke, source.stroke_paints || [])
+  end
+
+  defp geometry_warnings(_guid, _node, _source, _assets), do: []
+
+  defp geometry_warning(warnings, guid, source, assets, kind, paints) do
+    if Enum.any?(paints, &(Map.get(&1, :visible) != false)) do
+      case get_in(assets, [:geometry_errors, source.guid, kind]) do
+        nil -> missing_geometry_warning(warnings, guid, source, kind)
+        reason -> [warning(guid, kind, {:invalid_geometry, reason}) | warnings]
+      end
+    else
+      warnings
+    end
+  end
+
+  defp missing_geometry_warning(warnings, guid, source, kind) do
+    if geometry_references(source, kind) == [] do
+      [warning(guid, kind, :geometry_missing) | warnings]
+    else
+      warnings
+    end
+  end
+
+  defp geometry_references(source, :fill), do: source.fill_geometry || []
+  defp geometry_references(source, :stroke), do: source.stroke_geometry || []
 
   defp warning(guid, kind, value),
     do: %{guid: GUID.format(guid), feature: kind, value: value}

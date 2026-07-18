@@ -16,6 +16,9 @@ defmodule Figler.Codegen.Native.RenderProjection do
     stroke_weight: "strokeWeight",
     fill_paints: "fillPaints",
     stroke_paints: "strokePaints",
+    fill_geometry: "fillGeometry",
+    stroke_geometry: "strokeGeometry",
+    boolean_operation: "booleanOperation",
     frame_mask_disabled: "frameMaskDisabled"
   ]
 

@@ -10980,6 +10980,9 @@ const RENDER_FIELD_CORNER_RADIUS: u32 = 20;
 const RENDER_FIELD_STROKE_WEIGHT: u32 = 26;
 const RENDER_FIELD_FILL_PAINTS: u32 = 38;
 const RENDER_FIELD_STROKE_PAINTS: u32 = 39;
+const RENDER_FIELD_FILL_GEOMETRY: u32 = 51;
+const RENDER_FIELD_STROKE_GEOMETRY: u32 = 52;
+const RENDER_FIELD_BOOLEAN_OPERATION: u32 = 36;
 const RENDER_FIELD_FRAME_MASK_DISABLED: u32 = 115;
 const DOCUMENT_FIELD_NODE_CHANGES: u32 = 4;
 const DOCUMENT_FIELD_BLOBS: u32 = 6;
@@ -10995,6 +10998,9 @@ fn render_projection_node_from_decoder<'a>(
     let mut name = nil;
     let mut fill_paints = empty;
     let mut stroke_paints = empty;
+    let mut fill_geometry = empty;
+    let mut stroke_geometry = empty;
+    let mut boolean_operation = nil;
     let mut corner_radius = nil;
     let mut stroke_weight = nil;
     let mut frame_mask_disabled = nil;
@@ -11020,6 +11026,26 @@ fn render_projection_node_from_decoder<'a>(
                     decode_sparse_paint_from_decoder,
                 )?;
             }
+            RENDER_FIELD_FILL_GEOMETRY => {
+                fill_geometry = graph_seed_repeated_terms(
+                    env,
+                    decoder,
+                    decode_sparse_path_from_decoder,
+                )?;
+            }
+            RENDER_FIELD_STROKE_GEOMETRY => {
+                stroke_geometry = graph_seed_repeated_terms(
+                    env,
+                    decoder,
+                    decode_sparse_path_from_decoder,
+                )?;
+            }
+            RENDER_FIELD_BOOLEAN_OPERATION => {
+                boolean_operation = decode_sparse_boolean_operation_from_decoder(
+                    env,
+                    decoder,
+                )?;
+            }
             RENDER_FIELD_CORNER_RADIUS => corner_radius = decoder.read_var_float(env)?,
             RENDER_FIELD_STROKE_WEIGHT => stroke_weight = decoder.read_var_float(env)?,
             RENDER_FIELD_FRAME_MASK_DISABLED => {
@@ -11034,6 +11060,9 @@ fn render_projection_node_from_decoder<'a>(
         name,
         fill_paints,
         stroke_paints,
+        fill_geometry,
+        stroke_geometry,
+        boolean_operation,
         corner_radius,
         stroke_weight,
         frame_mask_disabled,

@@ -147,6 +147,35 @@ defmodule Figler.RenderTest do
     assert {:ok, %{data: <<255, 255, 0, 255, _rest::binary>>}} = Skia.to_raw(document)
   end
 
+  test "renders imported vector and boolean fill geometry from message blobs" do
+    assert {:ok, scene} = geometry_payload() |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene)
+
+    commands = Skia.commands(document)
+    paths = Enum.filter(commands, &(&1.op == :path))
+    assert [_, _, _] = paths
+    assert Enum.all?(paths, &(Keyword.get(&1.opts, :fill_rule) == :even_odd))
+    refute Enum.any?(commands, &(&1.op == :rect))
+
+    assert %SourceNode{fill_geometry: [%{commands_blob: 0}]} = scene.source_nodes[{1, 1}]
+
+    assert %SourceNode{boolean_operation: :subtract, fill_geometry: [%{commands_blob: 0}]} =
+             scene.source_nodes[{1, 2}]
+
+    assert {:ok, %{data: data}} = Skia.to_raw(document)
+    assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
+  end
+
+  test "reports missing vector geometry and supports strict mode" do
+    assert {:ok, scene} = missing_geometry_payload() |> Render.prepare()
+
+    assert {:ok, %{warnings: [%{feature: :fill, value: :geometry_missing}]}} =
+             SkiaBackend.compile(scene)
+
+    assert {:error, {:unsupported_render_features, [_warning]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
   test "reports missing image assets and supports strict mode" do
     image_paint =
       struct(Figler.Schema.Paint,
@@ -177,6 +206,64 @@ defmodule Figler.RenderTest do
 
     assert {:error, {:unsupported_render_features, [_warning]}} =
              SkiaBackend.compile(scene, strict: true)
+  end
+
+  defp missing_geometry_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :vector, "Missing path", canvas_guid,
+        size: vector(40, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp geometry_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    geometry = struct(Figler.Schema.Path, winding_rule: :odd, commands_blob: 0)
+    fill = solid_paint(0.8, 0.1, 0.5)
+
+    nodes = [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :vector, "Triangle", canvas_guid,
+        size: vector(40, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [fill],
+        stroke_paints: [fill],
+        fill_geometry: [geometry],
+        stroke_geometry: [geometry]
+      ),
+      node(guid(1, 2), :boolean_operation, "Boolean", canvas_guid,
+        size: vector(40, 40),
+        transform: matrix(50, 0),
+        visible: true,
+        boolean_operation: :subtract,
+        fill_paints: [fill],
+        fill_geometry: [geometry]
+      ),
+      node(guid(1, 3), :rectangle, "Boolean source", guid(1, 2),
+        size: vector(20, 20),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [fill]
+      )
+    ]
+
+    blob =
+      <<1, f32(0.0)::binary, f32(40.0)::binary, 2, f32(20.0)::binary, f32(0.0)::binary, 2,
+        f32(40.0)::binary, f32(40.0)::binary, 0>>
+
+    encode_nodes(nodes, [struct(Figler.Schema.Blob, bytes: blob)])
   end
 
   defp instance_payload do
@@ -364,6 +451,8 @@ defmodule Figler.RenderTest do
     |> struct(type: :node_changes, session_id: 0, node_changes: nodes, blobs: blobs)
     |> KiwiCodec.encode()
   end
+
+  defp f32(value), do: <<value::little-float-size(32)>>
 
   defp guid(session_id, local_id),
     do: struct(Figler.Schema.GUID, session_id: session_id, local_id: local_id)
