@@ -2,6 +2,10 @@ use RustQ.Config
 
 alias RustQ.Rustler.Nif
 
+unless Code.ensure_loaded?(Figler.Render.Projection) do
+  Code.require_file("lib/figler/render/projection.ex")
+end
+
 unless Code.ensure_loaded?(Figler.Scene.Projection) do
   Code.require_file("lib/figler/scene/projection.ex")
 end

@@ -34,8 +34,10 @@ defmodule Figler.RenderTest do
     assert result.warnings == []
     assert map_size(scene.source_nodes) == 3
 
-    assert %SourceNode{node_type: "rectangle", fill_paints: [%{type: :solid}]} =
-             scene.source_nodes[{1, 1}]
+    assert %SourceNode{
+             node_type: "rectangle",
+             fill_paints: [%Figler.Render.Paint{type: :solid, color: %Figler.Render.Color{}}]
+           } = scene.source_nodes[{1, 1}]
 
     bounds = result.bounds
     assert {:ok, root_scene} = Render.prepare(payload, root: "1:1")
@@ -65,6 +67,26 @@ defmodule Figler.RenderTest do
     assert :line in operations
     assert :text in operations
     assert {:ok, %{width: 120, height: 80}} = Skia.to_raw(result.document)
+  end
+
+  test "applies rich paint overrides to effective instance render nodes" do
+    payload = instance_paint_override_payload()
+    assert {:ok, scene} = Render.prepare(payload)
+
+    assert {clone_guid, %{source: :instance_clone, source_guid: {1, 2}}} =
+             Enum.find(scene.graph.provenance, fn {_guid, provenance} ->
+               provenance[:source] == :instance_clone and provenance[:source_guid] == {1, 2}
+             end)
+
+    assert %SourceNode{fill_paints: [%Figler.Render.Paint{color: color}]} =
+             scene.render_nodes[clone_guid]
+
+    assert color.b == 1.0
+    assert color.r == 0.0
+
+    assert {:ok, clone_scene} = Render.prepare(payload, root: GUID.format(clone_guid))
+    assert {:ok, %{document: document, warnings: []}} = SkiaBackend.compile(clone_scene)
+    assert {:ok, %{data: <<0, 0, 255, 255, _rest::binary>>}} = Skia.to_raw(document)
   end
 
   test "renders populated instance clones from projected source metadata" do
@@ -184,6 +206,22 @@ defmodule Figler.RenderTest do
     assert {:ok, %{width: 66, height: 61}} = Skia.to_raw(document)
   end
 
+  test "rejects unsupported shapes instead of silently drawing rectangles" do
+    assert {:ok, scene} = unsupported_shape_payload() |> Render.prepare()
+
+    assert {:ok,
+            %{
+              warnings: [%{feature: :shape, value: {:shape_unsupported, "star"}}],
+              document: document
+            }} =
+             SkiaBackend.compile(scene)
+
+    refute Enum.any?(Skia.commands(document), &(&1.op == :rect))
+
+    assert {:error, {:unsupported_render_features, [_warning]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
   test "reports unsupported effects and supports strict mode" do
     assert {:ok, scene} = unsupported_effect_payload() |> Render.prepare()
 
@@ -267,6 +305,23 @@ defmodule Figler.RenderTest do
 
     assert {:error, {:unsupported_render_features, [_warning]}} =
              SkiaBackend.compile(scene, strict: true)
+  end
+
+  defp unsupported_shape_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :star, "Star", canvas_guid,
+        size: vector(20, 20),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      )
+    ]
+    |> encode_nodes()
   end
 
   defp unsupported_effect_payload do
@@ -400,6 +455,46 @@ defmodule Figler.RenderTest do
         f32(40.0)::binary, f32(40.0)::binary, 0>>
 
     encode_nodes(nodes, [struct(Figler.Schema.Blob, bytes: blob)])
+  end
+
+  defp instance_paint_override_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    component_guid = guid(1, 1)
+    child_guid = guid(1, 2)
+
+    override =
+      struct(Figler.Schema.NodeChange,
+        guid_path: struct(Figler.Schema.GUIDPath, guids: [child_guid]),
+        fill_paints: [solid_paint(0.0, 0.0, 1.0)]
+      )
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(component_guid, :symbol, "Card", canvas_guid,
+        size: vector(40, 20),
+        transform: matrix(0, 0),
+        visible: true
+      ),
+      node(child_guid, :rectangle, "Background", component_guid,
+        size: vector(40, 20),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      ),
+      node(guid(2, 1), :instance, "Card instance", canvas_guid,
+        size: vector(40, 20),
+        transform: matrix(60, 0),
+        visible: true,
+        symbol_data:
+          struct(Figler.Schema.SymbolData,
+            symbol_id: component_guid,
+            symbol_overrides: [override]
+          )
+      )
+    ]
+    |> encode_nodes()
   end
 
   defp instance_payload do

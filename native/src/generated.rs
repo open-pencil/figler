@@ -10980,13 +10980,13 @@ const RENDER_FIELD_BLEND_MODE: u32 = 9;
 const RENDER_FIELD_MASK: u32 = 16;
 const RENDER_FIELD_MASK_TYPE: u32 = 317;
 const RENDER_FIELD_EFFECTS: u32 = 43;
-const RENDER_FIELD_CORNER_RADIUS: u32 = 20;
-const RENDER_FIELD_STROKE_WEIGHT: u32 = 26;
 const RENDER_FIELD_FILL_PAINTS: u32 = 38;
 const RENDER_FIELD_STROKE_PAINTS: u32 = 39;
 const RENDER_FIELD_FILL_GEOMETRY: u32 = 51;
 const RENDER_FIELD_STROKE_GEOMETRY: u32 = 52;
 const RENDER_FIELD_BOOLEAN_OPERATION: u32 = 36;
+const RENDER_FIELD_CORNER_RADIUS: u32 = 20;
+const RENDER_FIELD_STROKE_WEIGHT: u32 = 26;
 const RENDER_FIELD_FRAME_MASK_DISABLED: u32 = 115;
 const DOCUMENT_FIELD_NODE_CHANGES: u32 = 4;
 const DOCUMENT_FIELD_BLOBS: u32 = 6;
@@ -11076,22 +11076,10 @@ fn render_projection_node_from_decoder<'a>(
             field => skip_fig_node_change_field(decoder, field)?,
         }
     }
-    let record = [
-        guid,
-        node_type,
-        name,
-        blend_mode,
-        mask,
-        mask_type,
-        effects,
-        fill_paints,
-        stroke_paints,
-        fill_geometry,
-        stroke_geometry,
-        boolean_operation,
-        corner_radius,
-        stroke_weight,
-        frame_mask_disabled,
+    let record = vec![
+        guid, node_type, name, blend_mode, mask, mask_type, effects, fill_paints,
+        stroke_paints, fill_geometry, stroke_geometry, boolean_operation, corner_radius,
+        stroke_weight, frame_mask_disabled
     ];
     Ok(rustler::types::tuple::make_tuple(env, &record))
 }

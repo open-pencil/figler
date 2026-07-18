@@ -31,6 +31,8 @@ defmodule Figler.Codegen.Native do
       |> render_splices()
       |> Keyword.pop!(:graph_seed_record)
 
+    {render_projection_record, splices} = Keyword.pop!(splices, :render_projection_record)
+
     RustQ.render!(
       """
       __rq_include!("templates/scene_types.rs");
@@ -44,7 +46,10 @@ defmodule Figler.Codegen.Native do
       """,
       "native/src/generated.scene.rs",
       include_dir: "native/src",
-      bind: [graph_seed_record: {:expr, Rust.render(graph_seed_record)}],
+      bind: [
+        graph_seed_record: {:expr, Rust.render(graph_seed_record)},
+        render_projection_record: {:expr, Rust.render(render_projection_record)}
+      ],
       splice: splices
     )
   end

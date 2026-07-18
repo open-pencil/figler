@@ -6,6 +6,7 @@ defmodule Figler.Scene.Graph.Seed.Extraction.SymbolOverrides do
   property assignments, and variable consumption attached to an instance.
   """
 
+  alias Figler.Render.Projection, as: RenderProjection
   alias Figler.Scene.Graph.Seed.Extraction.ComponentProps
   alias Figler.Scene.Graph.Seed.Value
 
@@ -37,6 +38,15 @@ defmodule Figler.Scene.Graph.Seed.Extraction.SymbolOverrides do
     )
     |> put_present(:size, Value.vector(get(override, :size)))
     |> put_present(:transform, Value.matrix(get(override, :transform)))
+    |> put_render_fields(override)
+  end
+
+  defp put_render_fields(fields, override) do
+    RenderProjection.override_field_names()
+    |> Kernel.--([:name])
+    |> Enum.reduce(fields, fn field, projected ->
+      put_present(projected, field, get(override, field))
+    end)
   end
 
   defp multiplayer_entries(nil), do: []

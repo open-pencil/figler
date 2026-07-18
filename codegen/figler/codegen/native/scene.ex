@@ -14,6 +14,7 @@ defmodule Figler.Codegen.Native.Scene do
   alias Figler.Codegen.Native.Scene.Record
   alias Figler.Codegen.Native.Scene.SkipFieldHelpers
   alias Figler.Native.Entrypoints
+  alias Figler.Render.Projection, as: RenderSourceProjection
   alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Projection
   alias KiwiCodec.RustlerGenerator.Skip
@@ -54,6 +55,8 @@ defmodule Figler.Codegen.Native.Scene do
       graph_seed_record: Record.seed_record_expr(),
       graph_seed_stage_flags: graph_seed_stage_flags(),
       render_projection_field_constants: RenderProjection.field_constants(definition_map),
+      render_projection_record:
+        RenderSourceProjection.field_names() |> Enum.map(&A.var/1) |> A.vec(),
       scene_decode_locals: scene_decode_locals(),
       scene_decode_arms: scene_decode_arms(definition_map),
       scene_query_atom_statics: scene_query_atom_statics(),

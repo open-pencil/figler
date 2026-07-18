@@ -6,26 +6,16 @@ defmodule Figler.Render.SourceNode do
   out of backend compilers.
   """
 
+  alias Figler.Render.Effect
+  alias Figler.Render.GeometryRef
+  alias Figler.Render.Paint
+  alias Figler.Render.Projection
   alias Figler.Scene.Graph.GUID
 
+  @field_names Projection.field_names()
+
   @enforce_keys [:guid]
-  defstruct [
-    :guid,
-    :node_type,
-    :name,
-    :blend_mode,
-    :mask,
-    :mask_type,
-    :corner_radius,
-    :stroke_weight,
-    :frame_mask_disabled,
-    :boolean_operation,
-    effects: [],
-    fill_paints: [],
-    stroke_paints: [],
-    fill_geometry: [],
-    stroke_geometry: []
-  ]
+  defstruct Projection.struct_fields()
 
   @type t :: %__MODULE__{
           guid: GUID.figma_guid(),
@@ -34,11 +24,11 @@ defmodule Figler.Render.SourceNode do
           blend_mode: atom() | nil,
           mask: boolean() | nil,
           mask_type: atom() | nil,
-          effects: [map()],
-          fill_paints: [map()],
-          stroke_paints: [map()],
-          fill_geometry: [map()],
-          stroke_geometry: [map()],
+          effects: [Figler.Render.Effect.t()],
+          fill_paints: [Figler.Render.Paint.t()],
+          stroke_paints: [Figler.Render.Paint.t()],
+          fill_geometry: [Figler.Render.GeometryRef.t()],
+          stroke_geometry: [Figler.Render.GeometryRef.t()],
           boolean_operation: atom() | nil,
           corner_radius: float() | nil,
           stroke_weight: float() | nil,
@@ -46,27 +36,36 @@ defmodule Figler.Render.SourceNode do
         }
 
   @doc false
-  def from_native(
-        {guid, node_type, name, blend_mode, mask, mask_type, effects, fill_paints, stroke_paints,
-         fill_geometry, stroke_geometry, boolean_operation, corner_radius, stroke_weight,
-         frame_mask_disabled}
-      ) do
-    %__MODULE__{
-      guid: guid,
-      node_type: node_type,
-      name: name,
-      blend_mode: blend_mode,
-      mask: mask,
-      mask_type: mask_type,
-      effects: effects,
-      fill_paints: fill_paints,
-      stroke_paints: stroke_paints,
-      fill_geometry: fill_geometry,
-      stroke_geometry: stroke_geometry,
-      boolean_operation: boolean_operation,
-      corner_radius: corner_radius,
-      stroke_weight: stroke_weight,
-      frame_mask_disabled: frame_mask_disabled
-    }
+  def from_native(record) when is_tuple(record) and tuple_size(record) == length(@field_names) do
+    attrs = @field_names |> Enum.zip(Tuple.to_list(record)) |> Map.new() |> normalize_attrs()
+    struct!(__MODULE__, attrs)
   end
+
+  @doc false
+  def apply_overrides(%__MODULE__{} = source, effective_node) when is_map(effective_node) do
+    Projection.override_field_names()
+    |> Enum.reduce(source, fn field, effective ->
+      case Map.fetch(effective_node, field) do
+        {:ok, value} -> Map.put(effective, field, normalize_field(field, value))
+        :error -> effective
+      end
+    end)
+  end
+
+  defp normalize_attrs(attrs) do
+    Enum.reduce(@field_names, attrs, fn field, normalized ->
+      Map.update!(normalized, field, &normalize_field(field, &1))
+    end)
+  end
+
+  defp normalize_field(:effects, values),
+    do: Enum.map(values || [], &Effect.from_sparse/1)
+
+  defp normalize_field(field, values) when field in [:fill_paints, :stroke_paints],
+    do: Enum.map(values || [], &Paint.from_sparse/1)
+
+  defp normalize_field(field, values) when field in [:fill_geometry, :stroke_geometry],
+    do: Enum.map(values || [], &GeometryRef.from_sparse/1)
+
+  defp normalize_field(_field, value), do: value
 end

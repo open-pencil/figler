@@ -163,9 +163,9 @@ image = document.images["deadbeef..."]
 File.write!("page.png", png)
 ```
 
-Rendering projects only the selected root's source paint and shape metadata,
-resolves hierarchy and instances through the effective graph, and compiles one
-batched Skia document for a single native rendering boundary.
+Rendering projects only the selected root's paint and shape metadata,
+normalizes it into typed rendering values, applies effective instance overrides,
+and compiles one batched Skia document for a single native rendering boundary.
 
 The rendering surface supports affine transforms, opacity, rectangular
 clipping, solid and positioned linear/radial/angular gradient paints, archive

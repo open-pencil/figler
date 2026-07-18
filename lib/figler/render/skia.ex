@@ -20,6 +20,9 @@ defmodule Figler.Render.Skia do
 
   @identity {1.0, 0.0, 0.0, 0.0, 1.0, 0.0}
   @container_types ["canvas", "component", "frame", "instance", "symbol"]
+  @rectangular_types ["frame", "instance", "rectangle", "rounded_rectangle", "section", "symbol"]
+  @supported_shape_types @rectangular_types ++
+                           ["boolean_operation", "ellipse", "line", "text", "vector"]
 
   @type bounds :: Bounds.t()
 
@@ -472,7 +475,15 @@ defmodule Figler.Render.Skia do
     Skia.text(document, text || "", text_opts)
   end
 
-  defp draw_shape(document, %Node{size: %{x: width, y: height}}, source, _kind, opts, _assets) do
+  defp draw_shape(
+         document,
+         %Node{node_type: type, size: %{x: width, y: height}},
+         source,
+         _kind,
+         opts,
+         _assets
+       )
+       when type in @rectangular_types do
     Skia.rect(
       document,
       Keyword.merge(
@@ -591,7 +602,8 @@ defmodule Figler.Render.Skia do
       paint_warnings(guid, :fill, source.fill_paints || [], node, assets) ++
         paint_warnings(guid, :stroke, source.stroke_paints || [], node, assets) ++
         geometry_warnings(guid, node, source, assets) ++
-        effect_warnings(guid, node, source) ++ mask_warnings(guid, source)
+        effect_warnings(guid, node, source) ++
+        mask_warnings(guid, source) ++ shape_warnings(guid, node, source)
 
     Enum.reduce(source_warnings, warnings, &[&1 | &2])
   end
@@ -624,6 +636,23 @@ defmodule Figler.Render.Skia do
       {:error, reason} ->
         [warning(guid, kind, {Map.get(paint, :type), reason})]
     end
+  end
+
+  defp shape_warnings(guid, %Node{node_type: type}, source)
+       when type not in @supported_shape_types do
+    if visible_paints?(source) do
+      [warning(guid, :shape, {:shape_unsupported, type})]
+    else
+      []
+    end
+  end
+
+  defp shape_warnings(_guid, _node, _source), do: []
+
+  defp visible_paints?(source) do
+    Enum.any?((source.fill_paints || []) ++ (source.stroke_paints || []), fn paint ->
+      Map.get(paint, :visible) != false
+    end)
   end
 
   defp mask_warnings(guid, %{mask: true, mask_type: :outline}),
@@ -676,14 +705,7 @@ defmodule Figler.Render.Skia do
   defp warning(guid, kind, value),
     do: %{guid: GUID.format(guid), feature: kind, value: value}
 
-  defp source_node(scene, guid) do
-    source_guid =
-      scene.graph.provenance
-      |> Map.get(guid, %{})
-      |> Map.get(:source_guid, guid)
-
-    Map.get(scene.source_nodes, source_guid)
-  end
+  defp source_node(scene, guid), do: Map.get(scene.render_nodes, guid)
 
   defp matrix(nil), do: @identity
 

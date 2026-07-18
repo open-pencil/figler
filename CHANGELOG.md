@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Normalize projected paints, effects, image references, geometry references,
+  colors, vectors, and matrices into a typed rendering IR. Generate native
+  projection record order from the same structural schema and apply rich symbol
+  overrides to effective render nodes instead of reusing unmodified source
+  paints and effects for instance clones.
 - Add an optional Skia rendering pipeline backed by a complete `Figler.Document`
   archive boundary and a native, page/root-focused source projection. Rendering
   retains `canvas.fig`, `images/*`, message blobs, entries, and page metadata

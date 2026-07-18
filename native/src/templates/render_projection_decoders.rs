@@ -84,23 +84,7 @@ fn render_projection_node_from_decoder<'a>(
         }
     }
 
-    let record = [
-        guid,
-        node_type,
-        name,
-        blend_mode,
-        mask,
-        mask_type,
-        effects,
-        fill_paints,
-        stroke_paints,
-        fill_geometry,
-        stroke_geometry,
-        boolean_operation,
-        corner_radius,
-        stroke_weight,
-        frame_mask_disabled,
-    ];
+    let record = __rq_render_projection_record!();
 
     Ok(rustler::types::tuple::make_tuple(env, &record))
 }

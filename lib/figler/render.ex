@@ -41,10 +41,10 @@ defmodule Figler.Render do
   @doc """
   Renders a `.fig` input with the Skia backend.
 
-  Phase-one rendering supports effective hierarchy, affine transforms, opacity,
-  rectangular clipping, solid fills and strokes, rectangles, ellipses, lines,
-  and basic text. Unsupported visible paints are returned as warnings, or as an
-  error with `strict: true`.
+  Rendering uses effective normalized metadata for hierarchy, instance
+  overrides, paints, geometry, effects, masks, and compositing. Unsupported or
+  approximate features are returned as warnings, or as an error with
+  `strict: true`.
   """
   @spec render(binary() | Document.t() | RenderScene.t(), keyword()) ::
           {:ok, binary() | map(), map()} | {:error, term()}
@@ -74,15 +74,35 @@ defmodule Figler.Render do
           {source.guid, source}
         end)
 
+      render_nodes = effective_render_nodes(graph, source_nodes)
+
       {:ok,
        %RenderScene{
          document: document,
          payload: document.payload,
          graph: graph,
          root: root,
-         source_nodes: source_nodes
+         source_nodes: source_nodes,
+         render_nodes: render_nodes
        }}
     end
+  end
+
+  defp effective_render_nodes(graph, source_nodes) do
+    Map.new(graph.nodes, fn {guid, node} ->
+      source_guid =
+        graph.provenance
+        |> Map.get(guid, %{})
+        |> Map.get(:source_guid, guid)
+
+      effective =
+        case Map.get(source_nodes, source_guid) do
+          %SourceNode{} = source -> SourceNode.apply_overrides(source, node)
+          nil -> nil
+        end
+
+      {guid, effective}
+    end)
   end
 
   defp projection_root(graph, root) do
