@@ -1,9 +1,13 @@
 defmodule Figler.Render.Skia.Effects.Resolved do
   @moduledoc false
 
-  defstruct layer_opts: [], warnings: []
+  defstruct group_opts: [], shape_opts: [], warnings: []
 
-  @type t :: %__MODULE__{layer_opts: keyword(), warnings: [term()]}
+  @type t :: %__MODULE__{
+          group_opts: keyword(),
+          shape_opts: keyword(),
+          warnings: [term()]
+        }
 end
 
 defmodule Figler.Render.Skia.Effects do
@@ -33,7 +37,7 @@ defmodule Figler.Render.Skia.Effects do
   }
 
   @spec resolve(map() | nil, number() | nil) :: Resolved.t()
-  def resolve(nil, opacity), do: %Resolved{layer_opts: opacity_opts(opacity)}
+  def resolve(nil, opacity), do: %Resolved{group_opts: opacity_opts(opacity)}
 
   def resolve(source, opacity) do
     {filter, effect_warnings} =
@@ -44,13 +48,18 @@ defmodule Figler.Render.Skia.Effects do
 
     {blend_mode, blend_warnings} = blend_mode(source.blend_mode)
 
-    opts =
+    group_opts =
       opacity
       |> opacity_opts()
       |> maybe_put(:blend_mode, blend_mode)
-      |> maybe_put(:image_filter, filter)
 
-    %Resolved{layer_opts: opts, warnings: Enum.reverse(effect_warnings, blend_warnings)}
+    shape_opts = maybe_put([], :image_filter, filter)
+
+    %Resolved{
+      group_opts: group_opts,
+      shape_opts: shape_opts,
+      warnings: Enum.reverse(effect_warnings, blend_warnings)
+    }
   end
 
   defp resolve_effect(%{type: :drop_shadow} = effect, {input, warnings}) do

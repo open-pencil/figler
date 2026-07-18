@@ -232,15 +232,22 @@ defmodule Figler.RenderTest do
 
     assert bounds == %Bounds{min_x: 12.0, min_y: 12.0, max_x: 78.0, max_y: 73.0}
 
-    assert Enum.any?(Skia.commands(document), fn command ->
-             command.op == :save_layer and
-               Keyword.get(command.opts, :blend_mode) == :multiply and
+    commands = Skia.commands(document)
+
+    assert Enum.any?(commands, fn command ->
+             command.op == :save_layer and Keyword.get(command.opts, :blend_mode) == :multiply and
+               is_nil(Keyword.get(command.opts, :image_filter))
+           end)
+
+    assert Enum.any?(commands, fn command ->
+             command.op == :save_layer and is_nil(Keyword.get(command.opts, :blend_mode)) and
                match?(
                  {:drop_shadow_filter, _, _, _, _, _, _},
                  Keyword.get(command.opts, :image_filter)
                )
            end)
 
+    assert Enum.count(commands, &(&1.op == :rect)) == 2
     assert {:ok, %{width: 66, height: 61}} = Skia.to_raw(document)
   end
 
@@ -398,13 +405,19 @@ defmodule Figler.RenderTest do
     [
       node(document_guid, :document, "Document"),
       node(canvas_guid, :canvas, "Page 1", document_guid),
-      node(guid(1, 1), :rectangle, "Shadow card", canvas_guid,
+      node(guid(1, 1), :frame, "Shadow card", canvas_guid,
         size: vector(40, 40),
         transform: matrix(20, 20),
         visible: true,
         blend_mode: :multiply,
         fill_paints: [solid_paint(1.0, 0.0, 0.0)],
         effects: [shadow]
+      ),
+      node(guid(1, 2), :rectangle, "Unaffected child", guid(1, 1),
+        size: vector(10, 10),
+        transform: matrix(5, 5),
+        visible: true,
+        fill_paints: [solid_paint(0.0, 1.0, 0.0)]
       )
     ]
     |> encode_nodes()

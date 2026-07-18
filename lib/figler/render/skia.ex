@@ -92,21 +92,30 @@ defmodule Figler.Render.Skia do
   end
 
   defp render_transformed(document, scene, guid, node, source, assets) do
-    case Effects.resolve(source, node.opacity) do
-      %{layer_opts: []} ->
-        render_node_content(document, scene, guid, node, source, assets)
+    resolved = Effects.resolve(source, node.opacity)
 
-      %{layer_opts: layer_opts} ->
-        Skia.layer(document, layer_opts, fn layer ->
-          render_node_content(layer, scene, guid, node, source, assets)
-        end)
+    if resolved.group_opts == [] do
+      render_node_content(document, scene, guid, node, source, assets, resolved.shape_opts)
+    else
+      Skia.layer(document, resolved.group_opts, fn layer ->
+        render_node_content(layer, scene, guid, node, source, assets, resolved.shape_opts)
+      end)
     end
   end
 
-  defp render_node_content(document, scene, guid, node, source, assets) do
+  defp render_node_content(document, scene, guid, node, source, assets, shape_opts) do
     document
-    |> Shape.draw_node(node, source, assets)
+    |> render_shape(node, source, assets, shape_opts)
     |> render_children(scene, node, source, guid, assets)
+  end
+
+  defp render_shape(document, node, source, assets, []),
+    do: Shape.draw_node(document, node, source, assets)
+
+  defp render_shape(document, node, source, assets, shape_opts) do
+    Skia.layer(document, shape_opts, fn layer ->
+      Shape.draw_node(layer, node, source, assets)
+    end)
   end
 
   defp render_children(

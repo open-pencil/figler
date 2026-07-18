@@ -7,7 +7,9 @@
   projection record order from the same structural schema and apply rich symbol
   overrides to effective render nodes instead of reusing unmodified source
   paints and effects for instance clones. Split Skia compilation into focused
-  bounds, asset, shape, diagnostics, and compositing/traversal modules.
+  bounds, asset, shape, diagnostics, and compositing/traversal modules. Separate
+  shape-local effects from node opacity/blend isolation so frame shadows and
+  filters no longer include child content.
 - Add an optional Skia rendering pipeline backed by a complete `Figler.Document`
   archive boundary and a native, page/root-focused source projection. Rendering
   retains `canvas.fig`, `images/*`, message blobs, entries, and page metadata

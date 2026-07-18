@@ -20,13 +20,12 @@ defmodule Figler.Render.Skia.EffectsTest do
     }
 
     resolved = Effects.resolve(source, 0.75)
-    assert resolved.layer_opts[:opacity] == 0.75
-    assert resolved.layer_opts[:blend_mode] == :screen
+    assert resolved.group_opts == [blend_mode: :screen, opacity: 0.75]
 
     assert %Skia.ImageFilter.Compose{
              outer: %Skia.ImageFilter.Blur{sigma_x: 3.0, sigma_y: 3.0},
              inner: %Skia.ImageFilter.DropShadow{dx: 3.0, dy: 4.0, sigma_x: 4.0}
-           } = resolved.layer_opts[:image_filter]
+           } = resolved.shape_opts[:image_filter]
 
     assert resolved.warnings == []
   end
