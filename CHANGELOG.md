@@ -4,8 +4,9 @@
 
 - Add typed UTF-16-indexed rich-text runs projected from Figma
   `characterStyleIDs`, `styleOverrideTable`, and fallback-font metadata. Resolve
-  fonts and solid fills per run, emit batched `Skia.TextSpan` values, preserve
-  Unicode scalar boundaries, and report malformed ranges, missing overrides,
+  fonts and solid fills per run, split same-style runs at grapheme-level font
+  coverage boundaries, emit batched `Skia.TextSpan` values, preserve Unicode
+  scalar boundaries, and report malformed ranges, missing overrides,
   substitutions, and unsupported run styles with exact source ranges. Add a
   mixed Latin/CJK/style same-scene OpenPencil oracle.
 - Normalize projected paints, effects, image references, geometry references,

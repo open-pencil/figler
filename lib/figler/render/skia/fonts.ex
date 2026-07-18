@@ -19,7 +19,40 @@ defmodule Figler.Render.Skia.Fonts do
           }
   end
 
-  @type font_key :: {tuple(), non_neg_integer()}
+  defmodule Span do
+    @moduledoc false
+
+    @enforce_keys [:index, :source_index, :start, :length, :content, :font]
+    defstruct [
+      :index,
+      :source_index,
+      :start,
+      :length,
+      :content,
+      :font,
+      :style_id,
+      :text_decoration,
+      :resolved,
+      fill_paints: [],
+      fill_override?: false
+    ]
+
+    @type t :: %__MODULE__{
+            index: non_neg_integer(),
+            source_index: non_neg_integer(),
+            start: non_neg_integer(),
+            length: non_neg_integer(),
+            content: String.t(),
+            font: Font.t(),
+            style_id: non_neg_integer(),
+            text_decoration: atom() | nil,
+            resolved: Resolved.t() | nil,
+            fill_paints: [Figler.Render.Paint.t()],
+            fill_override?: boolean()
+          }
+  end
+
+  @type font_key :: {tuple(), non_neg_integer(), non_neg_integer()}
   @type warning_value :: %{
           required(:code) =>
             :font_family_missing
@@ -33,6 +66,7 @@ defmodule Figler.Render.Skia.Fonts do
 
   @type result :: %{
           fonts: %{optional(font_key()) => Resolved.t()},
+          spans: %{optional(tuple()) => [Span.t()]},
           warnings: %{optional(tuple()) => [warning_value()]}
         }
 
@@ -40,42 +74,107 @@ defmodule Figler.Render.Skia.Fonts do
   def resolve(nodes, opts) do
     with {:ok, supplied} <- supplied_typefaces(opts),
          {:ok, languages} <- languages(opts) do
-      groups = nodes |> text_entries() |> Enum.group_by(&resolution_key/1)
+      entries = text_entries(nodes, supplied)
+      groups = Enum.group_by(entries, &resolution_key/1)
 
       result =
-        Enum.reduce(groups, %{fonts: %{}, warnings: %{}}, fn {_key, group}, resolved ->
+        Enum.reduce(groups, %{fonts: %{}, spans: %{}, warnings: %{}}, fn {_key, group},
+                                                                         resolved ->
           resolve_group(group, supplied, languages, opts, resolved)
         end)
 
-      {:ok, sort_warnings(result)}
+      {:ok, result |> put_spans(entries) |> sort_warnings()}
     end
   end
 
   defp sort_warnings(result) do
     warnings =
       Map.new(result.warnings, fn {guid, values} ->
-        {guid, Enum.sort_by(values, & &1.run.index)}
+        values = values |> Enum.sort_by(&{&1.run.start, &1.run.index}) |> merge_warnings()
+        {guid, values}
       end)
 
     %{result | warnings: warnings}
   end
 
-  defp text_entries(nodes) do
+  defp text_entries(nodes, supplied) do
     Enum.flat_map(nodes, fn
       %Node{node_type: :text, text: %Text{} = text} = node ->
-        text.runs
-        |> Enum.reject(&(&1.content == ""))
-        |> Enum.map(&%{node: node, text: text, run: &1})
+        Enum.flat_map(text.runs, &run_entries(node, text, &1, supplied))
 
       _node ->
         []
     end)
   end
 
-  defp resolution_key(%{text: text, run: run}) do
+  defp run_entries(_node, _text, %Run{content: ""}, _supplied), do: []
+
+  defp run_entries(node, text, run, supplied) do
+    case prepare_requested_run(run, supplied) do
+      {:resolved, resolved} ->
+        [
+          %{
+            node: node,
+            text: text,
+            run: run,
+            cluster_index: 0,
+            pre_resolved: resolved,
+            requested: nil
+          }
+        ]
+
+      {:split, requested} ->
+        grapheme_entries(node, text, run, requested)
+    end
+  end
+
+  defp prepare_requested_run(run, supplied) do
+    codepoints = codepoints(run.content)
+
+    case requested_supplied_typeface(supplied, run.font, codepoints) do
+      nil -> prepare_system_requested_run(run.font, codepoints)
+      typeface -> {:resolved, {typeface, :supplied}}
+    end
+  end
+
+  defp prepare_system_requested_run(font, codepoints) do
+    requested = requested_typeface(font)
+
+    case usable_typeface(requested, codepoints) do
+      {:ok, typeface} -> {:resolved, {typeface, :requested}}
+      _unresolved -> {:split, requested}
+    end
+  end
+
+  defp grapheme_entries(node, text, run, requested) do
+    {entries, _offset} =
+      run.content
+      |> String.graphemes()
+      |> Enum.with_index()
+      |> Enum.map_reduce(run.start, fn {content, cluster_index}, start ->
+        length = utf16_length(content)
+        entry_run = %{run | start: start, length: length, content: content}
+
+        entry = %{
+          node: node,
+          text: text,
+          run: entry_run,
+          cluster_index: cluster_index,
+          pre_resolved: nil,
+          requested: requested
+        }
+
+        {entry, start + length}
+      end)
+
+    entries
+  end
+
+  defp resolution_key(%{text: text, run: run} = entry) do
     font = run.font
 
     {
+      pre_resolved_signature(entry.pre_resolved),
       font.family,
       font.style,
       font.postscript,
@@ -86,7 +185,20 @@ defmodule Figler.Render.Skia.Fonts do
     }
   end
 
+  defp pre_resolved_signature(nil), do: nil
+  defp pre_resolved_signature({typeface, source}), do: {typeface.family, source}
+
   defp resolve_group([representative | _] = entries, supplied, languages, opts, result) do
+    case representative.pre_resolved do
+      {typeface, source} ->
+        put_resolutions(result, entries, typeface, source)
+
+      nil ->
+        resolve_unprepared_group(entries, representative, supplied, languages, opts, result)
+    end
+  end
+
+  defp resolve_unprepared_group(entries, representative, supplied, languages, opts, result) do
     font = representative.run.font
     codepoints = codepoints(representative.run.content)
 
@@ -118,7 +230,7 @@ defmodule Figler.Render.Skia.Fonts do
          languages,
          opts
        ) do
-    case font |> requested_typeface() |> usable_typeface(codepoints) do
+    case usable_typeface(representative.requested, codepoints) do
       {:ok, typeface} ->
         put_resolutions(result, entries, typeface, :requested)
 
@@ -304,7 +416,9 @@ defmodule Figler.Render.Skia.Fonts do
 
   defp put_group_warning(result, entries, warning) do
     warnings =
-      Enum.reduce(entries, result.warnings, fn entry, diagnosed ->
+      entries
+      |> Enum.reject(&(codepoints(&1.run.content) == []))
+      |> Enum.reduce(result.warnings, fn entry, diagnosed ->
         run_warning = Map.put(warning, :run, run_metadata(entry.run))
         Map.update(diagnosed, entry.node.guid, [run_warning], &[run_warning | &1])
       end)
@@ -312,10 +426,106 @@ defmodule Figler.Render.Skia.Fonts do
     %{result | warnings: warnings}
   end
 
-  defp font_key(entry), do: {entry.node.guid, entry.run.index}
+  defp font_key(entry), do: {entry.node.guid, entry.run.index, entry.cluster_index}
 
   defp run_metadata(%Run{} = run),
     do: %{index: run.index, start: run.start, length: run.length}
+
+  defp put_spans(result, entries) do
+    spans =
+      entries
+      |> Enum.group_by(& &1.node.guid)
+      |> Map.new(fn {guid, node_entries} ->
+        spans =
+          node_entries
+          |> Enum.map(&entry_span(&1, Map.get(result.fonts, font_key(&1))))
+          |> merge_spans()
+          |> Enum.with_index()
+          |> Enum.map(fn {span, index} -> %{span | index: index} end)
+
+        {guid, spans}
+      end)
+
+    %{result | spans: spans}
+  end
+
+  defp entry_span(entry, resolved) do
+    run = entry.run
+
+    %Span{
+      index: 0,
+      source_index: run.index,
+      start: run.start,
+      length: run.length,
+      content: run.content,
+      font: run.font,
+      style_id: run.style_id,
+      text_decoration: run.text_decoration,
+      resolved: resolved,
+      fill_paints: run.fill_paints,
+      fill_override?: run.fill_override?
+    }
+  end
+
+  defp merge_spans(spans) do
+    spans
+    |> Enum.reduce([], fn span, merged -> merge_span(span, merged) end)
+    |> Enum.reverse()
+  end
+
+  defp merge_span(span, [previous | rest]) do
+    if mergeable_span?(previous, span) do
+      merged = %{
+        previous
+        | length: previous.length + span.length,
+          content: previous.content <> span.content
+      }
+
+      [merged | rest]
+    else
+      [span, previous | rest]
+    end
+  end
+
+  defp merge_span(span, []), do: [span]
+
+  defp mergeable_span?(left, right) do
+    left.source_index == right.source_index and
+      left.start + left.length == right.start and
+      resolved_signature(left.resolved) == resolved_signature(right.resolved)
+  end
+
+  defp resolved_signature(nil), do: nil
+  defp resolved_signature(resolved), do: {resolved.source, resolved.family}
+
+  defp merge_warnings(warnings) do
+    warnings
+    |> Enum.reduce([], fn warning, merged -> merge_warning(warning, merged) end)
+    |> Enum.reverse()
+  end
+
+  defp merge_warning(warning, [previous | rest]) do
+    if mergeable_warning?(previous, warning) do
+      run = %{previous.run | length: previous.run.length + warning.run.length}
+      [%{previous | run: run} | rest]
+    else
+      [warning, previous | rest]
+    end
+  end
+
+  defp merge_warning(warning, []), do: [warning]
+
+  defp mergeable_warning?(left, right) do
+    Map.delete(left, :run) == Map.delete(right, :run) and
+      left.run.index == right.run.index and left.run.start + left.run.length == right.run.start
+  end
+
+  defp utf16_length(content) do
+    Enum.reduce(String.codepoints(content), 0, fn codepoint, length ->
+      <<value::utf8>> = codepoint
+      length + if(value > 0xFFFF, do: 2, else: 1)
+    end)
+  end
 
   defp supplied_typefaces(opts) do
     typefaces = Keyword.get(opts, :fallback_typefaces, [])

@@ -158,7 +158,6 @@ defmodule Figler.Render.Text do
 
   defp same_style?(left, right) do
     left.font == right.font and left.fill_paints == right.fill_paints and
-      left.fill_override? == right.fill_override? and
       left.text_decoration == right.text_decoration
   end
 

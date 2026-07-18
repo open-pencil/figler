@@ -11,6 +11,7 @@ defmodule Figler.Render.Skia.Assets do
             geometries: %{},
             geometry_errors: %{},
             fonts: %{},
+            font_spans: %{},
             font_warnings: %{}
 
   @type t :: %__MODULE__{
@@ -19,6 +20,7 @@ defmodule Figler.Render.Skia.Assets do
           geometries: map(),
           geometry_errors: map(),
           fonts: %{optional(tuple()) => Figler.Render.Skia.Fonts.Resolved.t()},
+          font_spans: %{optional(tuple()) => [Figler.Render.Skia.Fonts.Span.t()]},
           font_warnings: %{optional(tuple()) => [map()]}
         }
 
@@ -32,7 +34,13 @@ defmodule Figler.Render.Skia.Assets do
         |> load_image_assets(nodes)
         |> load_geometry_assets(nodes, scene.document.blobs)
 
-      {:ok, %{assets | fonts: font_assets.fonts, font_warnings: font_assets.warnings}}
+      {:ok,
+       %{
+         assets
+         | fonts: font_assets.fonts,
+           font_spans: font_assets.spans,
+           font_warnings: font_assets.warnings
+       }}
     end
   end
 

@@ -103,17 +103,17 @@ defmodule Figler.Render.Skia.Shape do
     text_opts = [x: 0, y: 0, size: text.font.size || 14, fill: inherited_fill]
     text_opts = if size, do: Keyword.put(text_opts, :width, size.x), else: text_opts
 
-    if rich_text?(text) do
-      spans = Enum.map(text.runs, &text_span(&1, node, assets, inherited_fill))
+    spans = Map.get(assets.font_spans, node.guid, [])
+
+    if rich_text?(spans) do
+      skia_spans = Enum.map(spans, &text_span(&1, node, assets, inherited_fill))
+      Skia.text(document, "", Keyword.put(text_opts, :spans, skia_spans))
+    else
+      span = List.first(spans)
 
       text_opts =
-        text_opts |> Keyword.put(:spans, spans) |> register_span_font(node, text, assets)
+        text_font_opts(text_opts, (span && span.font) || text.font, span && span.resolved)
 
-      Skia.text(document, "", text_opts)
-    else
-      run = List.first(text.runs)
-      resolved = run && Map.get(assets.fonts, {node.guid, run.index})
-      text_opts = text_font_opts(text_opts, (run && run.font) || text.font, resolved)
       Skia.text(document, text.content, text_opts)
     end
   end
@@ -137,17 +137,18 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_shape(document, _node, _kind, _opts, _assets), do: document
 
-  defp rich_text?(%{runs: [_, _ | _]}), do: true
-  defp rich_text?(text), do: Enum.any?(text.runs, &(&1.style_id != 0))
+  defp rich_text?([_, _ | _]), do: true
+  defp rich_text?(spans), do: Enum.any?(spans, &(&1.style_id != 0))
 
-  defp text_span(run, node, assets, inherited_fill) do
-    resolved = Map.get(assets.fonts, {node.guid, run.index})
-
+  defp text_span(span, node, assets, inherited_fill) do
     span_opts =
-      [size: run.font.size || text_size(node), fill: run_fill(run, node, assets, inherited_fill)]
-      |> text_font_opts(run.font, resolved)
+      [
+        size: span.font.size || text_size(node),
+        fill: run_fill(span, node, assets, inherited_fill)
+      ]
+      |> text_font_opts(span.font, span.resolved)
 
-    Skia.TextSpan.new(run.content, span_opts)
+    Skia.TextSpan.new(span.content, span_opts)
   end
 
   defp text_size(%Node{text: text}), do: text.font.size || 14
@@ -166,24 +167,6 @@ defmodule Figler.Render.Skia.Shape do
         end
     end
   end
-
-  defp register_span_font(opts, node, text, assets) do
-    # Skia's paragraph provider registers the top-level loaded font. Prefer the
-    # supplied span serving non-ASCII glyphs; explicit span typefaces retain the
-    # remaining run styles.
-    registration =
-      text.runs
-      |> Enum.map(&{&1, Map.get(assets.fonts, {node.guid, &1.index})})
-      |> Enum.filter(fn {_run, resolved} -> resolved && resolved.source == :supplied end)
-      |> Enum.max_by(fn {run, _resolved} -> non_ascii_count(run.content) end, fn -> nil end)
-
-    case registration do
-      {_run, resolved} -> Keyword.put(opts, :font, resolved.font)
-      nil -> opts
-    end
-  end
-
-  defp non_ascii_count(content), do: Enum.count(String.to_charlist(content), &(&1 > 0x7F))
 
   defp text_font_opts(opts, font, nil),
     do: Keyword.put(opts, :font_family, font.family || "Arial")

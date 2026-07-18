@@ -180,9 +180,9 @@ shadows, and backdrop blur are reported rather than silently approximated.
 
 Unsupported or approximate features are listed in `metadata.warnings`; this
 includes unavailable requested font families, missing glyph coverage, malformed
-style ranges, and font substitutions. Figler resolves each style run against
-its requested font and Figma fallback-font metadata, then asks Skia for
-installed character-aware fallbacks. Callers can provide deterministic
+style ranges, and font substitutions. Figler resolves each grapheme cluster
+against its style run's requested font and Figma fallback-font metadata, then
+asks Skia for installed character-aware fallbacks. Callers can provide deterministic
 fallbacks with `fallback_font_paths: [...]` or already-loaded
 `fallback_typefaces: [...]`, and can pass BCP-47 hints with
 `font_languages: [...]`. Pass `strict: true` to reject substitutions instead of
