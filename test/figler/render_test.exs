@@ -131,7 +131,7 @@ defmodule Figler.RenderTest do
     assert {:ok, %{width: 120, height: 80}} = Skia.to_raw(result.document)
   end
 
-  test "reports unresolved fonts and rejects them in strict mode" do
+  test "reports font substitutions and rejects them in strict mode" do
     assert {:ok, scene} = phase_one_payload() |> Render.prepare()
 
     scene =
@@ -140,15 +140,19 @@ defmodule Figler.RenderTest do
         "__Figler Missing Font__"
       )
 
-    assert {:ok, %{warnings: warnings}} = SkiaBackend.compile(scene)
+    assert {:ok, %{warnings: warnings, document: document}} = SkiaBackend.compile(scene)
 
-    assert [%{feature: :font, value: %{code: :font_unavailable}}] =
+    text_command = Enum.find(Skia.commands(document), &(&1.op == :text))
+    assert %Skia.Font{} = text_command.opts[:font]
+    refute Keyword.has_key?(text_command.opts, :font_family)
+
+    assert [%{feature: :font, value: %{code: :font_substituted}}] =
              Enum.filter(warnings, &(&1.feature == :font))
 
     assert {:error, {:unsupported_render_features, strict_warnings}} =
              SkiaBackend.compile(scene, strict: true)
 
-    assert Enum.any?(strict_warnings, &match?(%{value: %{code: :font_unavailable}}, &1))
+    assert Enum.any?(strict_warnings, &match?(%{value: %{code: :font_substituted}}, &1))
   end
 
   test "applies rich paint overrides to effective instance render nodes" do

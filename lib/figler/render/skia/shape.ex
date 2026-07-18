@@ -94,19 +94,19 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_shape(
          document,
-         %Node{node_type: :text, text: text, size: size},
+         %Node{node_type: :text, text: text, size: size} = node,
          _kind,
          opts,
-         _assets
+         assets
        ) do
     text_opts = [
       x: 0,
       y: 0,
       size: text.font.size || 14,
-      font_family: text.font.family || "Arial",
       fill: Keyword.get(opts, :fill, Keyword.get(opts, :stroke, :black))
     ]
 
+    text_opts = text_font_opts(text_opts, text, Map.get(assets.fonts, node.guid))
     text_opts = if size, do: Keyword.put(text_opts, :width, size.x), else: text_opts
     Skia.text(document, text.content, text_opts)
   end
@@ -129,6 +129,12 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   defp draw_shape(document, _node, _kind, _opts, _assets), do: document
+
+  defp text_font_opts(opts, text, nil),
+    do: Keyword.put(opts, :font_family, text.font.family || "Arial")
+
+  defp text_font_opts(opts, _text, resolved),
+    do: Keyword.put(opts, :font, resolved.font)
 
   defp geometry_paths(assets, node, kind) do
     assets.geometries

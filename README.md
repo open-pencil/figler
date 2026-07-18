@@ -178,13 +178,17 @@ explicit approximations. Editable vector networks, unflattened booleans, inner
 shadows, and backdrop blur are reported rather than silently approximated.
 
 Unsupported or approximate features are listed in `metadata.warnings`; this
-includes unavailable requested font families and missing glyph coverage. Pass
-`strict: true` to reject them instead of silently accepting fallback glyphs or
-a partial rendering. Visual tests can compare decoded OpenPencil reference PNGs with Figler RGBA output through
+includes unavailable requested font families, missing glyph coverage, and font
+substitutions. Figler asks Skia for installed character-aware fallbacks by
+default. Callers can provide deterministic fallbacks with
+`fallback_font_paths: [...]` or already-loaded `fallback_typefaces: [...]`, and
+can pass BCP-47 hints with `font_languages: [...]`. Pass `strict: true` to reject
+substitutions instead of silently accepting fallback glyphs or a partial
+rendering. Visual tests can compare decoded OpenPencil reference PNGs with Figler RGBA output through
 `Figler.Render.Oracle.compare_png/3`. For repeatable same-scene comparisons,
 create a `render-manifest.json` that records the `.fig` fixture, reference PNG,
-root or page, scale, background, thresholds, and optional
-`expected_warning_codes`, then run:
+root or page, scale, background, thresholds, optional fallback font paths and
+language tags, and optional `expected_warning_codes`, then run:
 
 ```bash
 mix figler.render.oracles --manifest /path/to/render-manifest.json

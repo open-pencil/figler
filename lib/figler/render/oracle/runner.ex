@@ -15,7 +15,9 @@ defmodule Figler.Render.Oracle.Runner do
             "root": "1:23",
             "scale": 2.0,
             "background": "transparent",
-            "expected_warning_codes": [],
+            "fallback_fonts": ["../fonts/NotoSansSC-Regular.otf"],
+            "font_languages": ["zh-Hans"],
+            "expected_warning_codes": ["font_substituted"],
             "thresholds": {
               "channel": 2,
               "changed_ratio": 0.001,
@@ -104,7 +106,7 @@ defmodule Figler.Render.Oracle.Runner do
 
     with {:ok, reference_path} <- reference_path(entry, base_dir),
          {:ok, reference_png} <- File.read(reference_path),
-         {:ok, render_opts} <- render_options(entry),
+         {:ok, render_opts} <- render_options(entry, base_dir),
          {:ok, threshold_opts} <- threshold_options(entry),
          {:ok, expected_warning_codes} <- expected_warning_codes(entry),
          {:ok, actual, metadata} <- Render.render(document, render_opts),
@@ -199,13 +201,54 @@ defmodule Figler.Render.Oracle.Runner do
     if File.regular?(path), do: {:ok, path}, else: {:error, {error, path}}
   end
 
-  defp render_options(entry) do
+  defp render_options(entry, base_dir) do
     with :ok <- valid_selection(entry),
-         {:ok, scale} <- positive_number(Map.get(entry, "scale", 1.0), :scale) do
+         {:ok, scale} <- positive_number(Map.get(entry, "scale", 1.0), :scale),
+         {:ok, fallback_font_paths} <- fallback_font_paths(entry, base_dir),
+         {:ok, font_languages} <- font_languages(entry) do
       opts = [format: :raw, scale: scale]
       opts = put_option(opts, :root, Map.get(entry, "root"))
       opts = put_option(opts, :page, Map.get(entry, "page"))
-      {:ok, put_option(opts, :background, background(Map.get(entry, "background")))}
+      opts = put_option(opts, :background, background(Map.get(entry, "background")))
+      opts = put_option(opts, :fallback_font_paths, fallback_font_paths)
+      {:ok, put_option(opts, :font_languages, font_languages)}
+    end
+  end
+
+  defp fallback_font_paths(entry, base_dir) do
+    case Map.get(entry, "fallback_fonts", []) do
+      paths when is_list(paths) ->
+        paths
+        |> Enum.reduce_while({:ok, []}, &collect_fallback_font(&1, &2, base_dir))
+        |> then(fn
+          {:ok, resolved} -> {:ok, Enum.reverse(resolved)}
+          error -> error
+        end)
+
+      _invalid ->
+        {:error, :invalid_fallback_fonts}
+    end
+  end
+
+  defp collect_fallback_font(path, {:ok, resolved}, base_dir) when is_binary(path) do
+    case existing_file(Path.expand(path, base_dir), :fallback_font_not_found) do
+      {:ok, absolute} -> {:cont, {:ok, [absolute | resolved]}}
+      {:error, reason} -> {:halt, {:error, reason}}
+    end
+  end
+
+  defp collect_fallback_font(_invalid, _resolved, _base_dir),
+    do: {:halt, {:error, :invalid_fallback_fonts}}
+
+  defp font_languages(entry) do
+    case Map.get(entry, "font_languages", []) do
+      languages when is_list(languages) ->
+        if Enum.all?(languages, &is_binary/1),
+          do: {:ok, languages},
+          else: {:error, :invalid_font_languages}
+
+      _invalid ->
+        {:error, :invalid_font_languages}
     end
   end
 

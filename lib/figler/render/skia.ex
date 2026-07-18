@@ -36,21 +36,23 @@ defmodule Figler.Render.Skia do
 
   defp compile_root(scene, root_guid, bounds, opts) do
     child_guids = BoundsCompiler.render_guids(scene, root_guid)
-    assets = Assets.load(scene, child_guids)
-    warnings = Diagnostics.collect(scene, child_guids, assets)
 
-    if Keyword.get(opts, :strict, false) and warnings != [] do
-      {:error, {:unsupported_render_features, warnings}}
-    else
-      document = build_document(scene, child_guids, bounds, assets, opts)
+    with {:ok, assets} <- Assets.load(scene, child_guids, opts) do
+      warnings = Diagnostics.collect(scene, child_guids, assets)
 
-      {:ok,
-       %{
-         document: document,
-         root: GUID.format(root_guid),
-         bounds: bounds,
-         warnings: warnings
-       }}
+      if Keyword.get(opts, :strict, false) and warnings != [] do
+        {:error, {:unsupported_render_features, warnings}}
+      else
+        document = build_document(scene, child_guids, bounds, assets, opts)
+
+        {:ok,
+         %{
+           document: document,
+           root: GUID.format(root_guid),
+           bounds: bounds,
+           warnings: warnings
+         }}
+      end
     end
   end
 

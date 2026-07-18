@@ -44,8 +44,10 @@ defmodule Figler.Render do
 
   Rendering uses effective normalized metadata for hierarchy, instance
   overrides, paints, geometry, effects, masks, text, fonts, and compositing.
-  Unsupported or approximate features—including unavailable fonts and missing
-  glyph coverage—are returned as warnings, or as an error with `strict: true`.
+  Unsupported or approximate features—including unavailable fonts, missing
+  glyph coverage, and substitutions—are returned as warnings, or as an error
+  with `strict: true`. Deterministic caller-provided fallback fonts can be passed
+  with `:fallback_font_paths` or `:fallback_typefaces`.
   """
   @spec render(binary() | Document.t() | RenderScene.t(), keyword()) ::
           {:ok, binary() | map(), map()} | {:error, term()}
