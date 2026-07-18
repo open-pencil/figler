@@ -1,0 +1,37 @@
+defmodule Figler.Render.Skia.FontsTest do
+  use ExUnit.Case, async: true
+
+  alias Figler.Render.Font
+  alias Figler.Render.Node
+  alias Figler.Render.Skia.Fonts
+  alias Figler.Render.Text
+
+  test "reports unavailable requested families" do
+    node = text_node("__Figler Missing Font__", "Hello")
+    guid = node.guid
+
+    assert %{^guid => [warning]} = Fonts.diagnose([node])
+    assert warning.code == :font_unavailable
+    assert warning.requested.family == "__Figler Missing Font__"
+  end
+
+  test "reports exact missing glyph codepoints for an available family" do
+    assert {:ok, [family | _families]} = Skia.Typeface.families()
+    node = text_node(family, <<0x10FFFF::utf8>>)
+    guid = node.guid
+
+    assert %{^guid => [warning]} = Fonts.diagnose([node])
+    assert warning.code == :glyphs_missing
+    assert warning.characters == [<<0x10FFFF::utf8>>]
+    assert warning.codepoints == ["U+10FFFF"]
+  end
+
+  defp text_node(family, content) do
+    %Node{
+      guid: {1, 1},
+      source_guid: {1, 1},
+      node_type: :text,
+      text: %Text{content: content, font: %Font{family: family}}
+    }
+  end
+end

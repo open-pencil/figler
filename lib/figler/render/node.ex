@@ -8,6 +8,7 @@ defmodule Figler.Render.Node do
   """
 
   alias Figler.Render.SourceNode
+  alias Figler.Render.Text
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Node, as: SceneNode
   alias Figler.Schema.NodeType
@@ -21,12 +22,7 @@ defmodule Figler.Render.Node do
     :size,
     :transform,
     :visible,
-    :opacity,
-    :text,
-    :font_family,
-    :font_style,
-    :font_postscript,
-    :font_size
+    :opacity
   ]
 
   @source_fields [
@@ -55,10 +51,6 @@ defmodule Figler.Render.Node do
     :visible,
     :opacity,
     :text,
-    :font_family,
-    :font_style,
-    :font_postscript,
-    :font_size,
     :blend_mode,
     :mask,
     :mask_type,
@@ -82,11 +74,7 @@ defmodule Figler.Render.Node do
           transform: map() | nil,
           visible: boolean() | nil,
           opacity: float() | nil,
-          text: String.t() | nil,
-          font_family: String.t() | nil,
-          font_style: String.t() | nil,
-          font_postscript: String.t() | nil,
-          font_size: float() | nil,
+          text: Text.t() | nil,
           blend_mode: atom() | nil,
           mask: boolean() | nil,
           mask_type: atom() | nil,
@@ -104,6 +92,7 @@ defmodule Figler.Render.Node do
   @doc false
   @spec from_effective(SceneNode.t(), GUID.figma_guid(), SourceNode.t() | nil) :: t()
   def from_effective(%SceneNode{} = graph_node, source_guid, source) do
+    node_type = normalize_node_type(graph_node.node_type)
     source_attrs = source_attrs(source, graph_node)
 
     attrs =
@@ -113,7 +102,8 @@ defmodule Figler.Render.Node do
       |> Map.merge(%{
         guid: graph_node.guid,
         source_guid: source_guid,
-        node_type: normalize_node_type(graph_node.node_type)
+        node_type: node_type,
+        text: Text.from_effective(graph_node, node_type)
       })
 
     struct!(__MODULE__, attrs)

@@ -15,6 +15,7 @@ defmodule Figler.Render.Oracle.Runner do
             "root": "1:23",
             "scale": 2.0,
             "background": "transparent",
+            "expected_warning_codes": [],
             "thresholds": {
               "channel": 2,
               "changed_ratio": 0.001,
@@ -105,13 +106,17 @@ defmodule Figler.Render.Oracle.Runner do
          {:ok, reference_png} <- File.read(reference_path),
          {:ok, render_opts} <- render_options(entry),
          {:ok, threshold_opts} <- threshold_options(entry),
+         {:ok, expected_warning_codes} <- expected_warning_codes(entry),
          {:ok, actual, metadata} <- Render.render(document, render_opts),
          {:ok, metrics} <- Oracle.compare_png(reference_png, actual, threshold_opts) do
+      warning_check = warning_check(expected_warning_codes, metadata.warnings)
+
       %{
         name: name,
         reference: reference_path,
-        passed?: metrics.passed?,
+        passed?: metrics.passed? and warning_check.passed?,
         metrics: metrics,
+        warning_check: warning_check,
         render: %{
           root: metadata.root,
           bounds: Map.from_struct(metadata.bounds),
@@ -128,9 +133,62 @@ defmodule Figler.Render.Oracle.Runner do
     %{
       guid: warning.guid,
       feature: Atom.to_string(warning.feature),
-      value: inspect(warning.value)
+      value: json_value(warning.value)
     }
   end
+
+  defp expected_warning_codes(entry) do
+    case Map.fetch(entry, "expected_warning_codes") do
+      :error -> {:ok, nil}
+      {:ok, codes} when is_list(codes) -> validate_warning_codes(codes)
+      {:ok, _invalid} -> {:error, :invalid_expected_warning_codes}
+    end
+  end
+
+  defp validate_warning_codes(codes) do
+    if Enum.all?(codes, &is_binary/1),
+      do: {:ok, Enum.sort(Enum.uniq(codes))},
+      else: {:error, :invalid_expected_warning_codes}
+  end
+
+  defp warning_check(nil, warnings) do
+    %{checked?: false, passed?: true, expected: nil, actual: warning_codes(warnings)}
+  end
+
+  defp warning_check(expected, warnings) do
+    actual = warning_codes(warnings)
+    %{checked?: true, passed?: actual == expected, expected: expected, actual: actual}
+  end
+
+  defp warning_codes(warnings) do
+    warnings
+    |> Enum.map(&warning_code/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  defp warning_code(%{value: %{code: code}}) when is_atom(code), do: Atom.to_string(code)
+
+  defp warning_code(%{feature: feature, value: value}),
+    do: "#{feature}:#{inspect(value)}"
+
+  defp warning_code(_warning), do: nil
+
+  defp json_value(nil), do: nil
+  defp json_value(value) when is_boolean(value), do: value
+  defp json_value(value) when is_atom(value), do: Atom.to_string(value)
+
+  defp json_value(value) when is_tuple(value),
+    do: value |> Tuple.to_list() |> Enum.map(&json_value/1)
+
+  defp json_value(value) when is_list(value), do: Enum.map(value, &json_value/1)
+
+  defp json_value(value) when is_map(value) do
+    Map.new(value, fn {key, nested} -> {to_string(key), json_value(nested)} end)
+  end
+
+  defp json_value(value), do: value
 
   defp reference_path(%{"reference" => relative}, base_dir) when is_binary(relative),
     do: existing_file(Path.expand(relative, base_dir), :reference_png_not_found)

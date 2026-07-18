@@ -94,7 +94,7 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_shape(
          document,
-         %Node{node_type: :text, text: text, size: size} = node,
+         %Node{node_type: :text, text: text, size: size},
          _kind,
          opts,
          _assets
@@ -102,13 +102,13 @@ defmodule Figler.Render.Skia.Shape do
     text_opts = [
       x: 0,
       y: 0,
-      size: node.font_size || 14,
-      font_family: node.font_family || "Arial",
+      size: text.font.size || 14,
+      font_family: text.font.family || "Arial",
       fill: Keyword.get(opts, :fill, Keyword.get(opts, :stroke, :black))
     ]
 
     text_opts = if size, do: Keyword.put(text_opts, :width, size.x), else: text_opts
-    Skia.text(document, text || "", text_opts)
+    Skia.text(document, text.content, text_opts)
   end
 
   defp draw_shape(

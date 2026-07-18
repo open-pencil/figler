@@ -34,6 +34,7 @@ defmodule Figler.Render.Skia.Diagnostics do
       paint_warnings(node.guid, :fill, node.fill_paints || [], node, assets) ++
         paint_warnings(node.guid, :stroke, node.stroke_paints || [], node, assets) ++
         geometry_warnings(node, assets) ++
+        font_warnings(node, assets) ++
         effect_warnings(node) ++ mask_warnings(node) ++ shape_warnings(node)
 
     Enum.reduce(node_warnings, warnings, &[&1 | &2])
@@ -67,6 +68,12 @@ defmodule Figler.Render.Skia.Diagnostics do
       {:error, reason} ->
         [warning(guid, kind, {Map.get(paint, :type), reason})]
     end
+  end
+
+  defp font_warnings(node, assets) do
+    assets.font_warnings
+    |> Map.get(node.guid, [])
+    |> Enum.map(&warning(node.guid, :font, &1))
   end
 
   defp shape_warnings(%Node{node_type: type} = node) do

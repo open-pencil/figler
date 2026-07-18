@@ -86,7 +86,8 @@ defmodule Figler.RenderTest do
             "reference" => "rectangle.png",
             "root" => "1:1",
             "scale" => 1.0,
-            "background" => "transparent"
+            "background" => "transparent",
+            "expected_warning_codes" => []
           }
         ]
       })
@@ -97,7 +98,13 @@ defmodule Figler.RenderTest do
               passed?: true,
               failed_count: 0,
               oracle: %{"renderer" => "test", "source_root" => "fixture-root"},
-              cases: [%{passed?: true, metrics: %{changed_pixels: 0}}]
+              cases: [
+                %{
+                  passed?: true,
+                  metrics: %{changed_pixels: 0},
+                  warning_check: %{checked?: true, passed?: true, expected: [], actual: []}
+                }
+              ]
             } = result} = Runner.run(manifest_path)
 
     assert is_binary(Jason.encode!(result))
@@ -105,6 +112,12 @@ defmodule Figler.RenderTest do
 
   test "batches opacity, clipping, basic shapes, strokes, and text" do
     assert {:ok, scene} = phase_one_payload() |> Render.prepare()
+    assert %Figler.Render.Text{content: "Hello", font: font} = scene.render_nodes[{1, 4}].text
+    assert font.family == "Arial"
+    assert font.style == "Regular"
+    assert font.postscript == "Arial-Regular"
+    assert font.weight == 400
+    assert font.slant == :upright
     assert {:ok, result} = SkiaBackend.compile(scene)
 
     operations = result.document |> Skia.commands() |> Enum.map(& &1.op)
@@ -116,6 +129,26 @@ defmodule Figler.RenderTest do
     assert :line in operations
     assert :text in operations
     assert {:ok, %{width: 120, height: 80}} = Skia.to_raw(result.document)
+  end
+
+  test "reports unresolved fonts and rejects them in strict mode" do
+    assert {:ok, scene} = phase_one_payload() |> Render.prepare()
+
+    scene =
+      put_in(
+        scene.render_nodes[{1, 4}].text.font.family,
+        "__Figler Missing Font__"
+      )
+
+    assert {:ok, %{warnings: warnings}} = SkiaBackend.compile(scene)
+
+    assert [%{feature: :font, value: %{code: :font_unavailable}}] =
+             Enum.filter(warnings, &(&1.feature == :font))
+
+    assert {:error, {:unsupported_render_features, strict_warnings}} =
+             SkiaBackend.compile(scene, strict: true)
+
+    assert Enum.any?(strict_warnings, &match?(%{value: %{code: :font_unavailable}}, &1))
   end
 
   test "applies rich paint overrides to effective instance render nodes" do

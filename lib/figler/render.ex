@@ -43,9 +43,9 @@ defmodule Figler.Render do
   Renders a `.fig` input with the Skia backend.
 
   Rendering uses effective normalized metadata for hierarchy, instance
-  overrides, paints, geometry, effects, masks, and compositing. Unsupported or
-  approximate features are returned as warnings, or as an error with
-  `strict: true`.
+  overrides, paints, geometry, effects, masks, text, fonts, and compositing.
+  Unsupported or approximate features—including unavailable fonts and missing
+  glyph coverage—are returned as warnings, or as an error with `strict: true`.
   """
   @spec render(binary() | Document.t() | RenderScene.t(), keyword()) ::
           {:ok, binary() | map(), map()} | {:error, term()}

@@ -36,7 +36,7 @@ defmodule Figler.Render.Skia do
 
   defp compile_root(scene, root_guid, bounds, opts) do
     child_guids = BoundsCompiler.render_guids(scene, root_guid)
-    assets = Assets.load(scene)
+    assets = Assets.load(scene, child_guids)
     warnings = Diagnostics.collect(scene, child_guids, assets)
 
     if Keyword.get(opts, :strict, false) and warnings != [] do

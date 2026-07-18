@@ -164,8 +164,9 @@ File.write!("page.png", png)
 ```
 
 Rendering projects only the selected root's paint and shape metadata,
-normalizes it into typed rendering values, applies effective instance overrides,
-and compiles one batched Skia document for a single native rendering boundary.
+normalizes it into typed rendering values (including text and font requests),
+applies effective instance overrides, and compiles one batched Skia document
+for a single native rendering boundary.
 
 The rendering surface supports affine transforms, opacity, rectangular
 clipping, solid and positioned linear/radial/angular gradient paints, archive
@@ -176,12 +177,14 @@ and alpha/luminance sibling masks. Diamond gradients and outline masks are
 explicit approximations. Editable vector networks, unflattened booleans, inner
 shadows, and backdrop blur are reported rather than silently approximated.
 
-Unsupported or approximate features are listed in `metadata.warnings`; pass
-`strict: true` to reject them instead of using a partial rendering. Visual tests
-can compare decoded OpenPencil reference PNGs with Figler RGBA output through
+Unsupported or approximate features are listed in `metadata.warnings`; this
+includes unavailable requested font families and missing glyph coverage. Pass
+`strict: true` to reject them instead of silently accepting fallback glyphs or
+a partial rendering. Visual tests can compare decoded OpenPencil reference PNGs with Figler RGBA output through
 `Figler.Render.Oracle.compare_png/3`. For repeatable same-scene comparisons,
 create a `render-manifest.json` that records the `.fig` fixture, reference PNG,
-root or page, scale, background, and thresholds, then run:
+root or page, scale, background, thresholds, and optional
+`expected_warning_codes`, then run:
 
 ```bash
 mix figler.render.oracles --manifest /path/to/render-manifest.json
