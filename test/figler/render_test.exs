@@ -241,6 +241,7 @@ defmodule Figler.RenderTest do
 
     assert Enum.any?(commands, fn command ->
              command.op == :save_layer and is_nil(Keyword.get(command.opts, :blend_mode)) and
+               command.opts[:bounds] == {-8.0, -8.0, 66.0, 61.0} and
                match?(
                  {:drop_shadow_filter, _, _, _, _, _, _},
                  Keyword.get(command.opts, :image_filter)
@@ -289,7 +290,12 @@ defmodule Figler.RenderTest do
     assert right_alpha == 0
 
     commands = Skia.commands(document)
-    assert Enum.any?(commands, &(&1.op == :save_layer and &1.opts[:blend_mode] == :dst_in))
+
+    assert Enum.any?(commands, fn command ->
+             command.op == :save_layer and command.opts[:blend_mode] == :dst_in and
+               command.opts[:bounds] == {0.0, 0.0, 40.0, 40.0}
+           end)
+
     assert Enum.count(commands, &(&1.op == :rect)) == 2
   end
 
@@ -308,6 +314,14 @@ defmodule Figler.RenderTest do
     assert {:ok, %{document: document}} = SkiaBackend.compile(scene)
     assert {:ok, %{data: <<_r, _g, _b, alpha, _rest::binary>>}} = Skia.to_raw(document)
     assert alpha == 0
+  end
+
+  test "weights luminance masks by their original alpha" do
+    mask = solid_paint(1.0, 1.0, 1.0, 0.5)
+    assert {:ok, scene} = mask_payload(:luminance, mask) |> Render.prepare()
+    assert {:ok, %{document: document}} = SkiaBackend.compile(scene)
+    assert {:ok, %{data: <<_r, _g, _b, alpha, _rest::binary>>}} = Skia.to_raw(document)
+    assert alpha in 127..128
   end
 
   test "reports missing vector geometry and supports strict mode" do
@@ -708,12 +722,12 @@ defmodule Figler.RenderTest do
     |> struct([guid: guid, type: type, name: name, parent_index: parent_index] ++ attrs)
   end
 
-  defp solid_paint(r, g, b) do
+  defp solid_paint(r, g, b, alpha \\ 1.0) do
     struct(Figler.Schema.Paint,
       type: :solid,
       visible: true,
       opacity: 1.0,
-      color: struct(Figler.Schema.Color, r: r, g: g, b: b, a: 1.0)
+      color: struct(Figler.Schema.Color, r: r, g: g, b: b, a: alpha)
     )
   end
 

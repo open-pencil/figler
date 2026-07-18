@@ -93,14 +93,21 @@ defmodule Figler.Render.Skia do
 
   defp render_transformed(document, scene, guid, node, source, assets) do
     resolved = Effects.resolve(source, node.opacity)
+    shape_opts = bound_shape_opts(resolved.shape_opts, node, source)
 
     if resolved.group_opts == [] do
-      render_node_content(document, scene, guid, node, source, assets, resolved.shape_opts)
+      render_node_content(document, scene, guid, node, source, assets, shape_opts)
     else
       Skia.layer(document, resolved.group_opts, fn layer ->
-        render_node_content(layer, scene, guid, node, source, assets, resolved.shape_opts)
+        render_node_content(layer, scene, guid, node, source, assets, shape_opts)
       end)
     end
+  end
+
+  defp bound_shape_opts([], _node, _source), do: []
+
+  defp bound_shape_opts(opts, node, source) do
+    Keyword.merge(opts, BoundsCompiler.shape(node, source) |> BoundsCompiler.layer_option())
   end
 
   defp render_node_content(document, scene, guid, node, source, assets, shape_opts) do
@@ -168,10 +175,16 @@ defmodule Figler.Render.Skia do
   end
 
   defp render_mask_group(document, scene, masks, masked, assets) do
-    Skia.layer(document, [], fn content_layer ->
-      content_layer = render_nodes(content_layer, scene, masked, assets)
+    layer_opts =
+      scene
+      |> BoundsCompiler.for_guids(masks ++ masked)
+      |> BoundsCompiler.layer_option()
 
-      Skia.layer(content_layer, [blend_mode: :dst_in], fn mask_layer ->
+    Skia.layer(document, layer_opts, fn content_layer ->
+      content_layer = render_nodes(content_layer, scene, masked, assets)
+      mask_opts = Keyword.put(layer_opts, :blend_mode, :dst_in)
+
+      Skia.layer(content_layer, mask_opts, fn mask_layer ->
         render_mask_nodes(mask_layer, scene, masks, assets)
       end)
     end)
@@ -210,30 +223,8 @@ defmodule Figler.Render.Skia do
   defp mask_node?(scene, guid), do: match?(%{mask: true}, source_node(scene, guid))
 
   defp luminance_filter do
-    matrix = [
-      1.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      0.0,
-      1.0,
-      0.0,
-      0.0,
-      0.2126,
-      0.7152,
-      0.0722,
-      0.0,
-      0.0
-    ]
-
-    matrix |> Skia.ColorFilter.matrix() |> Skia.ImageFilter.color_filter()
+    Skia.ColorFilter.luma()
+    |> Skia.ImageFilter.color_filter()
   end
 
   defp maybe_clip(document, %Node{node_type: type, size: %{x: width, y: height}}, source)

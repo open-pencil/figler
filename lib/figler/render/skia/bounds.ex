@@ -8,12 +8,32 @@ defmodule Figler.Render.Skia.Bounds do
   @spec content(Figler.Render.Scene.t(), tuple()) ::
           {:ok, Bounds.t()} | {:error, :empty_render_root}
   def content(scene, root_guid) do
-    bounds =
-      scene
-      |> render_guids(root_guid)
-      |> Enum.reduce(nil, &node_bounds(scene, &1, Affine.identity(), &2))
+    case for_guids(scene, render_guids(scene, root_guid)) do
+      %Bounds{} = bounds -> {:ok, bounds}
+      nil -> {:error, :empty_render_root}
+    end
+  end
 
-    if bounds, do: {:ok, bounds}, else: {:error, :empty_render_root}
+  @spec for_guids(Figler.Render.Scene.t(), [tuple()]) :: Bounds.t() | nil
+  def for_guids(scene, guids) do
+    Enum.reduce(guids, nil, &node_bounds(scene, &1, Affine.identity(), &2))
+  end
+
+  @spec shape(Node.t(), Figler.Render.SourceNode.t() | nil) :: Bounds.t() | nil
+  def shape(node, source) do
+    nil
+    |> include_rect(Affine.identity(), node.size)
+    |> include_effect_bounds(Affine.identity(), node.size, source)
+  end
+
+  @spec layer_option(Bounds.t() | nil) :: keyword()
+  def layer_option(nil), do: []
+
+  def layer_option(%Bounds{} = bounds) do
+    [
+      bounds:
+        {bounds.min_x, bounds.min_y, bounds.max_x - bounds.min_x, bounds.max_y - bounds.min_y}
+    ]
   end
 
   @spec render_guids(Figler.Render.Scene.t(), tuple()) :: [tuple()]

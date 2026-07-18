@@ -9,7 +9,10 @@
   paints and effects for instance clones. Split Skia compilation into focused
   bounds, asset, shape, diagnostics, and compositing/traversal modules. Separate
   shape-local effects from node opacity/blend isolation so frame shadows and
-  filters no longer include child content.
+  filters no longer include child content. Bound shape-effect and sibling-mask
+  layers to computed local content bounds. Upgrade to Skia 0.3.2 and use its
+  native luma filter so luminance masks multiply luminance by their original
+  alpha.
 - Add an optional Skia rendering pipeline backed by a complete `Figler.Document`
   archive boundary and a native, page/root-focused source projection. Rendering
   retains `canvas.fig`, `images/*`, message blobs, entries, and page metadata

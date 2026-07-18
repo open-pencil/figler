@@ -165,7 +165,7 @@ defmodule Figler.MixProject do
       json_codec_dep(),
       {:ezstd, "~> 1.2"},
       {:rustler, "~> 0.38"},
-      {:skia, "~> 0.1.1", optional: true},
+      {:skia, "~> 0.3.2", optional: true},
       {:reach, "~> 2.6", runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
