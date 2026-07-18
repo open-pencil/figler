@@ -170,10 +170,11 @@ batched Skia document for a single native rendering boundary.
 The rendering surface supports affine transforms, opacity, rectangular
 clipping, solid and positioned linear/radial/angular gradient paints, archive
 and message-blob image fills (`FILL`, `FIT`, transformed `STRETCH`, and `TILE`),
-basic strokes, rectangles, ellipses, lines, text, imported vector paths, and
-flattened boolean geometry. Diamond gradients are rendered as an explicit
-radial approximation. Editable vector networks or booleans without imported
-geometry are reported rather than approximated.
+basic strokes, rectangles, ellipses, lines, text, imported vector paths,
+flattened boolean geometry, node blend layers, drop shadows, foreground blur,
+and alpha/luminance sibling masks. Diamond gradients and outline masks are
+explicit approximations. Editable vector networks, unflattened booleans, inner
+shadows, and backdrop blur are reported rather than silently approximated.
 
 Unsupported or approximate features are listed in `metadata.warnings`; pass
 `strict: true` to reject them instead of using a partial rendering. Visual tests

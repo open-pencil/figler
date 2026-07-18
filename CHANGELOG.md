@@ -12,10 +12,11 @@
   decoding. The renderer supports affine transforms, opacity, clipping, solid
   and positioned linear/radial/angular gradients, archive and message-blob
   image fills across Figma scale modes, imported vector fill/stroke paths,
-  flattened boolean geometry, basic strokes/shapes/text, PNG/JPEG/WEBP,
-  explicit approximation warnings, and strict mode. Editable geometry without
-  imported path blobs is rejected explicitly. Add thresholded RGBA and
-  reference-PNG oracle comparison helpers.
+  flattened boolean geometry, blend layers, basic drop shadows and foreground
+  blur, alpha/luminance sibling masks, basic strokes/shapes/text,
+  PNG/JPEG/WEBP, explicit approximation warnings, and strict mode. Editable
+  geometry without imported path blobs, inner shadows, and backdrop blur are
+  rejected explicitly. Add thresholded RGBA and reference-PNG oracle helpers.
 - Index actionable horizontal stack seeds during graph construction and rebuild
   that candidate list with graph indexes, avoiding a full seed-map scan during
   stack layout. Exact-output fixture A/B runs reduced median stack-layout time

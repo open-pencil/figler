@@ -12,6 +12,7 @@ defmodule Figler.Render.Skia.Paint do
   @compile {:no_warn_undefined, [Skia.Image, Skia.Shader]}
 
   alias Figler.Render.Affine
+  alias Figler.Render.Skia.Color
   alias Figler.Render.Skia.Paint.Resolved
 
   @identity {1.0, 0.0, 0.0, 0.0, 1.0, 0.0}
@@ -41,7 +42,8 @@ defmodule Figler.Render.Skia.Paint do
   def resolve(%{visible: false}, _size, _images), do: {:error, :hidden}
 
   def resolve(%{type: :solid} = paint, _size, _images) do
-    {:ok, %Resolved{paint: color(paint.color, paint.opacity), warnings: common_warnings(paint)}}
+    {:ok,
+     %Resolved{paint: Color.rgba(paint.color, paint.opacity), warnings: common_warnings(paint)}}
   end
 
   def resolve(%{type: :gradient_linear} = paint, size, _images),
@@ -106,7 +108,7 @@ defmodule Figler.Render.Skia.Paint do
 
         {:ok,
          Enum.map(stops, fn stop ->
-           Skia.Shader.stop(color(stop.color, opacity), stop.position)
+           Skia.Shader.stop(Color.rgba(stop.color, opacity), stop.position)
          end)}
     end
   end
@@ -220,15 +222,4 @@ defmodule Figler.Render.Skia.Paint do
         a / determinant, (d * c - a * f) / determinant}}
     end
   end
-
-  defp color(value, opacity) do
-    value = value || %{}
-    alpha = (opacity || 1.0) * (Map.get(value, :a) || 1.0)
-
-    {:rgba, channel(Map.get(value, :r)), channel(Map.get(value, :g)), channel(Map.get(value, :b)),
-     channel(alpha)}
-  end
-
-  defp channel(nil), do: 0
-  defp channel(value), do: value |> Kernel.*(255) |> round() |> max(0) |> min(255)
 end

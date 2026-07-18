@@ -1,5 +1,6 @@
 defmodule Figler.Render.Skia do
-  @compile {:no_warn_undefined, [Skia, Skia.Document, Skia.Image]}
+  @compile {:no_warn_undefined,
+            [Skia, Skia.ColorFilter, Skia.Document, Skia.Image, Skia.ImageFilter]}
 
   @moduledoc """
   Compiles a `Figler.Render.Scene` into one batched `%Skia.Document{}`.
@@ -12,6 +13,7 @@ defmodule Figler.Render.Skia do
   alias Figler.Render.Bounds
   alias Figler.Render.Geometry
   alias Figler.Render.Scene, as: RenderScene
+  alias Figler.Render.Skia.Effects
   alias Figler.Render.Skia.Paint
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Node
@@ -67,7 +69,7 @@ defmodule Figler.Render.Skia do
 
   defp render_scaled(document, scene, child_guids, bounds, assets) do
     Skia.group(document, [translate: {-bounds.min_x, -bounds.min_y}], fn translated ->
-      render_nodes(translated, scene, child_guids, assets)
+      render_child_sequence(translated, scene, child_guids, assets)
     end)
   end
 
@@ -92,11 +94,18 @@ defmodule Figler.Render.Skia do
     case Map.get(scene.graph.nodes, guid) do
       %Node{visible: visible, node_type: "boolean_operation"} = node when visible != false ->
         matrix = Affine.multiply(parent_matrix, matrix(node.transform))
-        include_rect(bounds, matrix, node.size)
+
+        bounds
+        |> include_rect(matrix, node.size)
+        |> include_effect_bounds(matrix, node.size, source_node(scene, guid))
 
       %Node{visible: visible} = node when visible != false ->
         matrix = Affine.multiply(parent_matrix, matrix(node.transform))
-        bounds = include_rect(bounds, matrix, node.size)
+
+        bounds =
+          bounds
+          |> include_rect(matrix, node.size)
+          |> include_effect_bounds(matrix, node.size, source_node(scene, guid))
 
         scene.graph.children
         |> Map.get(guid, [])
@@ -111,11 +120,17 @@ defmodule Figler.Render.Skia do
 
   defp include_rect(bounds, matrix, %{x: width, y: height})
        when is_number(width) and is_number(height) do
+    include_local_rect(bounds, matrix, {0.0, 0.0, width, height})
+  end
+
+  defp include_rect(bounds, _matrix, _size), do: bounds
+
+  defp include_local_rect(bounds, matrix, {x, y, width, height}) do
     points = [
-      point(matrix, 0, 0),
-      point(matrix, width, 0),
-      point(matrix, 0, height),
-      point(matrix, width, height)
+      point(matrix, x, y),
+      point(matrix, x + width, y),
+      point(matrix, x, y + height),
+      point(matrix, x + width, y + height)
     ]
 
     [first | rest] = points
@@ -133,7 +148,41 @@ defmodule Figler.Render.Skia do
     union(bounds, point_bounds)
   end
 
-  defp include_rect(bounds, _matrix, _size), do: bounds
+  defp include_effect_bounds(bounds, _matrix, _size, nil), do: bounds
+  defp include_effect_bounds(bounds, _matrix, nil, _source), do: bounds
+
+  defp include_effect_bounds(bounds, matrix, %{x: width, y: height}, source) do
+    source.effects
+    |> Kernel.||([])
+    |> Enum.reject(&(Map.get(&1, :visible) == false))
+    |> Enum.reduce(bounds, fn effect, expanded ->
+      include_effect_bound(expanded, matrix, width, height, effect)
+    end)
+  end
+
+  defp include_effect_bound(bounds, matrix, width, height, %{type: :drop_shadow} = effect) do
+    offset = Map.get(effect, :offset) || %{}
+    x = Map.get(offset, :x) || 0.0
+    y = Map.get(offset, :y) || 0.0
+    padding = max((Map.get(effect, :radius) || 0.0) * 2, abs(Map.get(effect, :spread) || 0.0))
+    left = min(0.0, x) - padding
+    top = min(0.0, y) - padding
+    right = max(width, width + x) + padding
+    bottom = max(height, height + y) + padding
+    include_local_rect(bounds, matrix, {left, top, right - left, bottom - top})
+  end
+
+  defp include_effect_bound(bounds, matrix, width, height, %{type: :foreground_blur} = effect) do
+    padding = (Map.get(effect, :radius) || 0.0) * 2
+
+    include_local_rect(
+      bounds,
+      matrix,
+      {-padding, -padding, width + padding * 2, height + padding * 2}
+    )
+  end
+
+  defp include_effect_bound(bounds, _matrix, _width, _height, _effect), do: bounds
 
   defp point_bounds({x, y}), do: %Bounds{min_x: x, min_y: y, max_x: x, max_y: y}
 
@@ -166,15 +215,16 @@ defmodule Figler.Render.Skia do
     end
   end
 
-  defp render_transformed(document, scene, guid, %Node{opacity: opacity} = node, source, assets)
-       when is_number(opacity) and opacity < 1 do
-    Skia.layer(document, [opacity: opacity], fn layer ->
-      render_node_content(layer, scene, guid, node, source, assets)
-    end)
-  end
-
   defp render_transformed(document, scene, guid, node, source, assets) do
-    render_node_content(document, scene, guid, node, source, assets)
+    case Effects.resolve(source, node.opacity) do
+      %{layer_opts: []} ->
+        render_node_content(document, scene, guid, node, source, assets)
+
+      %{layer_opts: layer_opts} ->
+        Skia.layer(document, layer_opts, fn layer ->
+          render_node_content(layer, scene, guid, node, source, assets)
+        end)
+    end
   end
 
   defp render_node_content(document, scene, guid, node, source, assets) do
@@ -201,8 +251,104 @@ defmodule Figler.Render.Skia do
     else
       document
       |> maybe_clip(node, source)
-      |> render_nodes(scene, children, assets)
+      |> render_child_sequence(scene, children, assets)
     end
+  end
+
+  defp render_child_sequence(document, _scene, [], _assets), do: document
+
+  defp render_child_sequence(document, scene, [guid | rest], assets) do
+    case source_node(scene, guid) do
+      %{mask: true} ->
+        render_mask_sequence(document, scene, [guid | rest], assets)
+
+      _source ->
+        document = render_node(scene, assets, guid, document)
+        render_child_sequence(document, scene, rest, assets)
+    end
+  end
+
+  defp render_mask_sequence(document, scene, children, assets) do
+    {masks, after_masks} = Enum.split_while(children, &mask_node?(scene, &1))
+    {masked, rest} = Enum.split_while(after_masks, &(not mask_node?(scene, &1)))
+
+    document =
+      if masked == [] do
+        document
+      else
+        render_mask_group(document, scene, masks, masked, assets)
+      end
+
+    render_child_sequence(document, scene, rest, assets)
+  end
+
+  defp render_mask_group(document, scene, masks, masked, assets) do
+    Skia.layer(document, [], fn content_layer ->
+      content_layer = render_nodes(content_layer, scene, masked, assets)
+
+      Skia.layer(content_layer, [blend_mode: :dst_in], fn mask_layer ->
+        render_mask_nodes(mask_layer, scene, masks, assets)
+      end)
+    end)
+  end
+
+  defp render_mask_nodes(document, scene, masks, assets) do
+    Enum.reduce(masks, document, &render_mask(scene, assets, &1, &2))
+  end
+
+  defp render_mask(scene, assets, guid, document) do
+    case source_node(scene, guid) do
+      %{mask_type: :luminance} ->
+        Skia.layer(document, [image_filter: luminance_filter()], fn layer ->
+          render_mask_node(layer, scene, guid, assets)
+        end)
+
+      _source ->
+        render_mask_node(document, scene, guid, assets)
+    end
+  end
+
+  defp render_mask_node(document, scene, guid, assets) do
+    case Map.get(scene.graph.nodes, guid) do
+      %Node{visible: visible} = node when visible != false ->
+        source = source_node(scene, guid)
+
+        Skia.group(document, [concat: matrix(node.transform)], fn transformed ->
+          draw_node(transformed, node, source, assets)
+        end)
+
+      _missing_or_hidden ->
+        document
+    end
+  end
+
+  defp mask_node?(scene, guid), do: match?(%{mask: true}, source_node(scene, guid))
+
+  defp luminance_filter do
+    matrix = [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.2126,
+      0.7152,
+      0.0722,
+      0.0,
+      0.0
+    ]
+
+    matrix |> Skia.ColorFilter.matrix() |> Skia.ImageFilter.color_filter()
   end
 
   defp maybe_clip(document, %Node{node_type: type, size: %{x: width, y: height}}, source)
@@ -444,7 +590,8 @@ defmodule Figler.Render.Skia do
     source_warnings =
       paint_warnings(guid, :fill, source.fill_paints || [], node, assets) ++
         paint_warnings(guid, :stroke, source.stroke_paints || [], node, assets) ++
-        geometry_warnings(guid, node, source, assets)
+        geometry_warnings(guid, node, source, assets) ++
+        effect_warnings(guid, node, source) ++ mask_warnings(guid, source)
 
     Enum.reduce(source_warnings, warnings, &[&1 | &2])
   end
@@ -477,6 +624,22 @@ defmodule Figler.Render.Skia do
       {:error, reason} ->
         [warning(guid, kind, {Map.get(paint, :type), reason})]
     end
+  end
+
+  defp mask_warnings(guid, %{mask: true, mask_type: :outline}),
+    do: [warning(guid, :mask, :outline_mask_approximated)]
+
+  defp mask_warnings(guid, %{mask: true, mask_type: type})
+       when type not in [nil, :alpha, :luminance],
+       do: [warning(guid, :mask, {:mask_type_unsupported, type})]
+
+  defp mask_warnings(_guid, _source), do: []
+
+  defp effect_warnings(guid, node, source) do
+    source
+    |> Effects.resolve(node.opacity)
+    |> Map.fetch!(:warnings)
+    |> Enum.map(&warning(guid, :effect, &1))
   end
 
   defp geometry_warnings(guid, %Node{node_type: type}, source, assets)

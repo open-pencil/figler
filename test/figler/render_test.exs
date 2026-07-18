@@ -166,6 +166,67 @@ defmodule Figler.RenderTest do
     assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
   end
 
+  test "applies node blend modes and drop-shadow image filters" do
+    assert {:ok, scene} = effects_payload() |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document, bounds: bounds}} = SkiaBackend.compile(scene)
+
+    assert bounds == %Bounds{min_x: 12.0, min_y: 12.0, max_x: 78.0, max_y: 73.0}
+
+    assert Enum.any?(Skia.commands(document), fn command ->
+             command.op == :save_layer and
+               Keyword.get(command.opts, :blend_mode) == :multiply and
+               match?(
+                 {:drop_shadow_filter, _, _, _, _, _, _},
+                 Keyword.get(command.opts, :image_filter)
+               )
+           end)
+
+    assert {:ok, %{width: 66, height: 61}} = Skia.to_raw(document)
+  end
+
+  test "reports unsupported effects and supports strict mode" do
+    assert {:ok, scene} = unsupported_effect_payload() |> Render.prepare()
+
+    assert {:ok, %{warnings: [%{feature: :effect, value: {:effect_unsupported, :inner_shadow}}]}} =
+             SkiaBackend.compile(scene)
+
+    assert {:error, {:unsupported_render_features, [_warning]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
+  test "composites alpha mask siblings without drawing masks independently" do
+    assert {:ok, scene} = mask_payload(:alpha, solid_paint(1.0, 1.0, 1.0)) |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene)
+
+    assert {:ok, %{width: 40, height: 40, data: data}} = Skia.to_raw(document)
+
+    <<_::binary-size(4 * 5), _r, _g, _b, left_alpha, _rest::binary>> = data
+    <<_r, _g, _b, right_alpha>> = binary_part(data, 4 * 30, 4)
+    assert left_alpha == 255
+    assert right_alpha == 0
+
+    commands = Skia.commands(document)
+    assert Enum.any?(commands, &(&1.op == :save_layer and &1.opts[:blend_mode] == :dst_in))
+    assert Enum.count(commands, &(&1.op == :rect)) == 2
+  end
+
+  test "reports outline-mask approximation in strict mode" do
+    assert {:ok, scene} = mask_payload(:outline, solid_paint(1.0, 1.0, 1.0)) |> Render.prepare()
+
+    assert {:ok, %{warnings: [%{feature: :mask, value: :outline_mask_approximated}]}} =
+             SkiaBackend.compile(scene)
+
+    assert {:error, {:unsupported_render_features, [_warning]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
+  test "uses luminance for luminance masks" do
+    assert {:ok, scene} = mask_payload(:luminance, solid_paint(0.0, 0.0, 0.0)) |> Render.prepare()
+    assert {:ok, %{document: document}} = SkiaBackend.compile(scene)
+    assert {:ok, %{data: <<_r, _g, _b, alpha, _rest::binary>>}} = Skia.to_raw(document)
+    assert alpha == 0
+  end
+
   test "reports missing vector geometry and supports strict mode" do
     assert {:ok, scene} = missing_geometry_payload() |> Render.prepare()
 
@@ -206,6 +267,81 @@ defmodule Figler.RenderTest do
 
     assert {:error, {:unsupported_render_features, [_warning]}} =
              SkiaBackend.compile(scene, strict: true)
+  end
+
+  defp unsupported_effect_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    effect = struct(Figler.Schema.Effect, type: :inner_shadow, visible: true)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :rectangle, "Inner shadow", canvas_guid,
+        size: vector(20, 20),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)],
+        effects: [effect]
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp effects_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    shadow =
+      struct(Figler.Schema.Effect,
+        type: :drop_shadow,
+        visible: true,
+        radius: 4.0,
+        offset: vector(10, 5),
+        color: struct(Figler.Schema.Color, r: 0.0, g: 0.0, b: 0.0, a: 0.8),
+        blend_mode: :normal
+      )
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :rectangle, "Shadow card", canvas_guid,
+        size: vector(40, 40),
+        transform: matrix(20, 20),
+        visible: true,
+        blend_mode: :multiply,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)],
+        effects: [shadow]
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp mask_payload(mask_type, mask_paint) do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :rectangle, "Mask", canvas_guid,
+        parent_position: "a",
+        size: vector(20, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        mask: true,
+        mask_type: mask_type,
+        fill_paints: [mask_paint]
+      ),
+      node(guid(1, 2), :rectangle, "Masked content", canvas_guid,
+        parent_position: "b",
+        size: vector(40, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      )
+    ]
+    |> encode_nodes()
   end
 
   defp missing_geometry_payload do
@@ -415,9 +551,11 @@ defmodule Figler.RenderTest do
   end
 
   defp node(guid, type, name, parent_guid \\ nil, attrs \\ []) do
+    {position, attrs} = Keyword.pop(attrs, :parent_position, "!")
+
     parent_index =
       if parent_guid,
-        do: struct(Figler.Schema.ParentIndex, guid: parent_guid, position: "!"),
+        do: struct(Figler.Schema.ParentIndex, guid: parent_guid, position: position),
         else: nil
 
     Figler.Schema.NodeChange

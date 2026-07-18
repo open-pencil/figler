@@ -13,10 +13,14 @@ defmodule Figler.Render.SourceNode do
     :guid,
     :node_type,
     :name,
+    :blend_mode,
+    :mask,
+    :mask_type,
     :corner_radius,
     :stroke_weight,
     :frame_mask_disabled,
     :boolean_operation,
+    effects: [],
     fill_paints: [],
     stroke_paints: [],
     fill_geometry: [],
@@ -27,6 +31,10 @@ defmodule Figler.Render.SourceNode do
           guid: GUID.figma_guid(),
           node_type: String.t() | nil,
           name: String.t() | nil,
+          blend_mode: atom() | nil,
+          mask: boolean() | nil,
+          mask_type: atom() | nil,
+          effects: [map()],
           fill_paints: [map()],
           stroke_paints: [map()],
           fill_geometry: [map()],
@@ -39,13 +47,18 @@ defmodule Figler.Render.SourceNode do
 
   @doc false
   def from_native(
-        {guid, node_type, name, fill_paints, stroke_paints, fill_geometry, stroke_geometry,
-         boolean_operation, corner_radius, stroke_weight, frame_mask_disabled}
+        {guid, node_type, name, blend_mode, mask, mask_type, effects, fill_paints, stroke_paints,
+         fill_geometry, stroke_geometry, boolean_operation, corner_radius, stroke_weight,
+         frame_mask_disabled}
       ) do
     %__MODULE__{
       guid: guid,
       node_type: node_type,
       name: name,
+      blend_mode: blend_mode,
+      mask: mask,
+      mask_type: mask_type,
+      effects: effects,
       fill_paints: fill_paints,
       stroke_paints: stroke_paints,
       fill_geometry: fill_geometry,

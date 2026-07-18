@@ -9,6 +9,10 @@ fn render_projection_node_from_decoder<'a>(
     let mut guid = nil;
     let mut node_type = nil;
     let mut name = nil;
+    let mut blend_mode = nil;
+    let mut mask = nil;
+    let mut mask_type = nil;
+    let mut effects = empty;
     let mut fill_paints = empty;
     let mut stroke_paints = empty;
     let mut fill_geometry = empty;
@@ -26,6 +30,20 @@ fn render_projection_node_from_decoder<'a>(
                 node_type = scene_node_type_name(decoder.read_var_uint()?).encode(env)
             }
             RENDER_FIELD_NAME => name = decoder.read_string(env)?,
+            RENDER_FIELD_BLEND_MODE => {
+                blend_mode = decode_sparse_blend_mode_from_decoder(env, decoder)?
+            }
+            RENDER_FIELD_MASK => mask = decoder.read_bool()?.encode(env),
+            RENDER_FIELD_MASK_TYPE => {
+                mask_type = decode_sparse_mask_type_from_decoder(env, decoder)?
+            }
+            RENDER_FIELD_EFFECTS => {
+                effects = graph_seed_repeated_terms(
+                    env,
+                    decoder,
+                    decode_sparse_effect_from_decoder,
+                )?
+            }
             RENDER_FIELD_FILL_PAINTS => {
                 fill_paints = graph_seed_repeated_terms(
                     env,
@@ -70,6 +88,10 @@ fn render_projection_node_from_decoder<'a>(
         guid,
         node_type,
         name,
+        blend_mode,
+        mask,
+        mask_type,
+        effects,
         fill_paints,
         stroke_paints,
         fill_geometry,
