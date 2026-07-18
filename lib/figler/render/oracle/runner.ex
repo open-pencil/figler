@@ -7,6 +7,7 @@ defmodule Figler.Render.Oracle.Runner do
 
       {
         "fig": "fixture.fig",
+        "oracle": {"renderer": "open-pencil", "source_root": "1:23"},
         "cases": [
           {
             "name": "button",
@@ -25,7 +26,8 @@ defmodule Figler.Render.Oracle.Runner do
       }
 
   Paths are resolved relative to the manifest. Large fixtures and references
-  can remain outside the repository.
+  can remain outside the repository. Optional `oracle` metadata is copied into
+  reports so source-renderer IDs can be recorded when importers remap nodes.
   """
 
   alias Figler.Document
@@ -35,6 +37,7 @@ defmodule Figler.Render.Oracle.Runner do
   @type result :: %{
           manifest: String.t(),
           fixture: String.t(),
+          oracle: map(),
           case_count: non_neg_integer(),
           failed_count: non_neg_integer(),
           passed?: boolean(),
@@ -59,6 +62,7 @@ defmodule Figler.Render.Oracle.Runner do
        %{
          manifest: manifest_path,
          fixture: fixture,
+         oracle: Map.get(manifest, "oracle", %{}),
          case_count: length(results),
          failed_count: failed_count,
          passed?: failed_count == 0,

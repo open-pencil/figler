@@ -70,6 +70,7 @@ defmodule Figler.RenderTest do
       manifest_path,
       Jason.encode!(%{
         "fig" => "fixture.fig",
+        "oracle" => %{"renderer" => "test", "source_root" => "fixture-root"},
         "cases" => [
           %{
             "name" => "solid rectangle",
@@ -86,6 +87,7 @@ defmodule Figler.RenderTest do
             %{
               passed?: true,
               failed_count: 0,
+              oracle: %{"renderer" => "test", "source_root" => "fixture-root"},
               cases: [%{passed?: true, metrics: %{changed_pixels: 0}}]
             } = result} = Runner.run(manifest_path)
 
