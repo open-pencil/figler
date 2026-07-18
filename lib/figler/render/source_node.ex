@@ -10,6 +10,7 @@ defmodule Figler.Render.SourceNode do
   alias Figler.Render.GeometryRef
   alias Figler.Render.Paint
   alias Figler.Render.Projection
+  alias Figler.Render.Text.Source, as: TextSource
   alias Figler.Scene.Graph.GUID
 
   @field_names Projection.field_names()
@@ -21,6 +22,7 @@ defmodule Figler.Render.SourceNode do
           guid: GUID.figma_guid(),
           node_type: String.t() | nil,
           name: String.t() | nil,
+          text_data: map() | nil,
           blend_mode: atom() | nil,
           mask: boolean() | nil,
           mask_type: atom() | nil,
@@ -57,6 +59,8 @@ defmodule Figler.Render.SourceNode do
       Map.update!(normalized, field, &normalize_field(field, &1))
     end)
   end
+
+  defp normalize_field(:text_data, value), do: TextSource.from_sparse(value)
 
   defp normalize_field(:effects, values),
     do: Enum.map(values || [], &Effect.from_sparse/1)

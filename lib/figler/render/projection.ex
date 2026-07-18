@@ -10,6 +10,7 @@ defmodule Figler.Render.Projection do
     %{name: :guid, source_name: "guid"},
     %{name: :node_type, source_name: "type", override?: false},
     %{name: :name, source_name: "name"},
+    %{name: :text_data, source_name: "textData", override?: false},
     %{name: :blend_mode, source_name: "blendMode"},
     %{name: :mask, source_name: "mask"},
     %{name: :mask_type, source_name: "maskType"},

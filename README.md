@@ -171,20 +171,23 @@ for a single native rendering boundary.
 The rendering surface supports affine transforms, opacity, rectangular
 clipping, solid and positioned linear/radial/angular gradient paints, archive
 and message-blob image fills (`FILL`, `FIT`, transformed `STRETCH`, and `TILE`),
-basic strokes, rectangles, ellipses, lines, text, imported vector paths,
-flattened boolean geometry, node blend layers, drop shadows, foreground blur,
+basic strokes, rectangles, ellipses, lines, UTF-16-indexed rich-text style
+runs with per-run fonts and solid fills, imported vector paths, flattened
+boolean geometry, node blend layers, drop shadows, foreground blur,
 and alpha/luminance sibling masks. Diamond gradients and outline masks are
 explicit approximations. Editable vector networks, unflattened booleans, inner
 shadows, and backdrop blur are reported rather than silently approximated.
 
 Unsupported or approximate features are listed in `metadata.warnings`; this
-includes unavailable requested font families, missing glyph coverage, and font
-substitutions. Figler asks Skia for installed character-aware fallbacks by
-default. Callers can provide deterministic fallbacks with
-`fallback_font_paths: [...]` or already-loaded `fallback_typefaces: [...]`, and
-can pass BCP-47 hints with `font_languages: [...]`. Pass `strict: true` to reject
-substitutions instead of silently accepting fallback glyphs or a partial
-rendering. Visual tests can compare decoded OpenPencil reference PNGs with Figler RGBA output through
+includes unavailable requested font families, missing glyph coverage, malformed
+style ranges, and font substitutions. Figler resolves each style run against
+its requested font and Figma fallback-font metadata, then asks Skia for
+installed character-aware fallbacks. Callers can provide deterministic
+fallbacks with `fallback_font_paths: [...]` or already-loaded
+`fallback_typefaces: [...]`, and can pass BCP-47 hints with
+`font_languages: [...]`. Pass `strict: true` to reject substitutions instead of
+silently accepting fallback glyphs or a partial rendering. Visual tests can
+compare decoded OpenPencil reference PNGs with Figler RGBA output through
 `Figler.Render.Oracle.compare_png/3`. For repeatable same-scene comparisons,
 create a `render-manifest.json` that records the `.fig` fixture, reference PNG,
 root or page, scale, background, thresholds, optional fallback font paths and

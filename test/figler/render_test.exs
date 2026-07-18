@@ -133,6 +133,58 @@ defmodule Figler.RenderTest do
     assert {:ok, %{width: 120, height: 80}} = Skia.to_raw(result.document)
   end
 
+  test "normalizes UTF-16-indexed rich text style runs" do
+    assert {:ok, scene} = rich_text_payload() |> Render.prepare()
+    text = scene.render_nodes[{1, 1}].text
+
+    assert [%Figler.Render.Text.Run{} = first, emoji, last] = text.runs
+
+    assert {first.index, first.start, first.length, first.content, first.font.family} ==
+             {0, 0, 1, "A", "Inter"}
+
+    assert {emoji.index, emoji.start, emoji.length, emoji.content, emoji.font.family} ==
+             {1, 1, 2, "😀", "Noto Color Emoji"}
+
+    assert emoji.font.size == 18.0
+    assert [%Figler.Render.Paint{color: %{g: 1.0}}] = emoji.fill_paints
+
+    assert {last.index, last.start, last.length, last.content, last.font.weight} ==
+             {2, 3, 1, "B", 700}
+
+    assert [%Figler.Render.Paint{color: %{b: 1.0}}] = last.fill_paints
+    assert [%Figler.Render.Font{family: "Noto Color Emoji"}] = text.fallback_fonts
+    assert text.issues == []
+
+    assert {:ok, %{document: document}} =
+             SkiaBackend.compile(scene, system_font_fallback: false)
+
+    text_command = Enum.find(Skia.commands(document), &(&1.op == :text))
+    assert [{"A", first_opts}, {"😀", emoji_opts}, {"B", last_opts}] = text_command.opts[:spans]
+    assert first_opts[:fill] == {:rgba, 255, 0, 0, 255}
+    assert emoji_opts[:fill] == {:rgba, 0, 255, 0, 255}
+    assert last_opts[:fill] == {:rgba, 0, 0, 255, 255}
+  end
+
+  test "reports malformed UTF-16 rich-text ranges and rejects them in strict mode" do
+    assert {:ok, scene} = rich_text_payload([0, 1]) |> Render.prepare()
+    text = scene.render_nodes[{1, 1}].text
+
+    assert text.issues == [
+             %{code: :text_style_length_mismatch, expected: 4, actual: 2}
+           ]
+
+    assert {:ok, %{warnings: warnings}} =
+             SkiaBackend.compile(scene, system_font_fallback: false)
+
+    warning = Enum.find(warnings, &(&1.feature == :text))
+    assert warning.value.code == :text_style_length_mismatch
+
+    assert {:error, {:unsupported_render_features, strict_warnings}} =
+             SkiaBackend.compile(scene, strict: true, system_font_fallback: false)
+
+    assert Enum.any?(strict_warnings, &(&1.value.code == :text_style_length_mismatch))
+  end
+
   test "reports font substitutions and rejects them in strict mode" do
     assert {:ok, scene} = phase_one_payload() |> Render.prepare()
 
@@ -641,6 +693,70 @@ defmodule Figler.RenderTest do
         transform: matrix(60, 0),
         visible: true,
         symbol_data: struct(Figler.Schema.SymbolData, symbol_id: component_guid)
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp rich_text_payload(style_ids \\ [0, 1, 1, 2]) do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    emoji_style =
+      struct(Figler.Schema.NodeChange,
+        style_id: 1,
+        font_name:
+          struct(Figler.Schema.FontName,
+            family: "Noto Color Emoji",
+            style: "Regular",
+            postscript: "NotoColorEmoji"
+          ),
+        font_size: 18.0,
+        fill_paints: [solid_paint(0.0, 1.0, 0.0)]
+      )
+
+    bold_style =
+      struct(Figler.Schema.NodeChange,
+        style_id: 2,
+        font_name:
+          struct(Figler.Schema.FontName,
+            family: "Inter",
+            style: "Bold",
+            postscript: "Inter-Bold"
+          ),
+        fill_paints: [solid_paint(0.0, 0.0, 1.0)]
+      )
+
+    text_data =
+      struct(Figler.Schema.TextData,
+        characters: "A😀B",
+        character_style_i_ds: style_ids,
+        style_override_table: [emoji_style, bold_style],
+        fallback_fonts: [
+          struct(Figler.Schema.FontName,
+            family: "Noto Color Emoji",
+            style: "Regular",
+            postscript: "NotoColorEmoji"
+          )
+        ]
+      )
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :text, "Rich text", canvas_guid,
+        size: vector(80, 24),
+        transform: matrix(0, 0),
+        visible: true,
+        text_data: text_data,
+        font_name:
+          struct(Figler.Schema.FontName,
+            family: "Inter",
+            style: "Regular",
+            postscript: "Inter-Regular"
+          ),
+        font_size: 14.0,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
       )
     ]
     |> encode_nodes()

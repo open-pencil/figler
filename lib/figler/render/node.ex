@@ -26,6 +26,7 @@ defmodule Figler.Render.Node do
   ]
 
   @source_fields [
+    :text_data,
     :blend_mode,
     :mask,
     :mask_type,
@@ -93,7 +94,7 @@ defmodule Figler.Render.Node do
   @spec from_effective(SceneNode.t(), GUID.figma_guid(), SourceNode.t() | nil) :: t()
   def from_effective(%SceneNode{} = graph_node, source_guid, source) do
     node_type = normalize_node_type(graph_node.node_type)
-    source_attrs = source_attrs(source, graph_node)
+    {text_source, source_attrs} = source |> source_attrs(graph_node) |> Map.pop(:text_data)
 
     attrs =
       graph_node
@@ -103,7 +104,13 @@ defmodule Figler.Render.Node do
         guid: graph_node.guid,
         source_guid: source_guid,
         node_type: node_type,
-        text: Text.from_effective(graph_node, node_type)
+        text:
+          Text.from_effective(
+            graph_node,
+            node_type,
+            text_source,
+            Map.get(source_attrs, :fill_paints, [])
+          )
       })
 
     struct!(__MODULE__, attrs)

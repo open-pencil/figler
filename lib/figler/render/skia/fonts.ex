@@ -5,6 +5,7 @@ defmodule Figler.Render.Skia.Fonts do
   alias Figler.Render.Font
   alias Figler.Render.Node
   alias Figler.Render.Text
+  alias Figler.Render.Text.Run
 
   defmodule Resolved do
     @moduledoc false
@@ -14,10 +15,11 @@ defmodule Figler.Render.Skia.Fonts do
     @type t :: %__MODULE__{
             font: Skia.Font.t(),
             family: String.t() | nil,
-            source: :requested | :supplied | :system
+            source: :requested | :supplied | :figma_fallback | :system
           }
   end
 
+  @type font_key :: {tuple(), non_neg_integer()}
   @type warning_value :: %{
           required(:code) =>
             :font_family_missing
@@ -25,11 +27,12 @@ defmodule Figler.Render.Skia.Fonts do
             | :font_inspection_failed
             | :font_substituted
             | :glyphs_missing,
+          required(:run) => map(),
           optional(atom()) => term()
         }
 
   @type result :: %{
-          fonts: %{optional(tuple()) => Resolved.t()},
+          fonts: %{optional(font_key()) => Resolved.t()},
           warnings: %{optional(tuple()) => [warning_value()]}
         }
 
@@ -37,40 +40,93 @@ defmodule Figler.Render.Skia.Fonts do
   def resolve(nodes, opts) do
     with {:ok, supplied} <- supplied_typefaces(opts),
          {:ok, languages} <- languages(opts) do
-      text_nodes = Enum.filter(nodes, &text_node?/1)
-      groups = Enum.group_by(text_nodes, &resolution_key/1)
+      groups = nodes |> text_entries() |> Enum.group_by(&resolution_key/1)
 
       result =
         Enum.reduce(groups, %{fonts: %{}, warnings: %{}}, fn {_key, group}, resolved ->
           resolve_group(group, supplied, languages, opts, resolved)
         end)
 
-      {:ok, result}
+      {:ok, sort_warnings(result)}
     end
   end
 
-  defp text_node?(%Node{node_type: :text, text: %Text{content: content}}),
-    do: content != ""
+  defp sort_warnings(result) do
+    warnings =
+      Map.new(result.warnings, fn {guid, values} ->
+        {guid, Enum.sort_by(values, & &1.run.index)}
+      end)
 
-  defp text_node?(_node), do: false
+    %{result | warnings: warnings}
+  end
 
-  defp resolution_key(%Node{text: %Text{font: font, content: content}}),
-    do: {font.family, font.style, font.postscript, font.weight, font.slant, codepoints(content)}
+  defp text_entries(nodes) do
+    Enum.flat_map(nodes, fn
+      %Node{node_type: :text, text: %Text{} = text} = node ->
+        text.runs
+        |> Enum.reject(&(&1.content == ""))
+        |> Enum.map(&%{node: node, text: text, run: &1})
 
-  defp resolve_group([representative | _] = nodes, supplied, languages, opts, result) do
-    font = representative.text.font
-    codepoints = codepoints(representative.text.content)
-    requested = requested_typeface(font)
+      _node ->
+        []
+    end)
+  end
 
-    case usable_typeface(requested, codepoints) do
+  defp resolution_key(%{text: text, run: run}) do
+    font = run.font
+
+    {
+      font.family,
+      font.style,
+      font.postscript,
+      font.weight,
+      font.slant,
+      codepoints(run.content),
+      Enum.map(text.fallback_fonts, &{&1.family, &1.weight, &1.slant})
+    }
+  end
+
+  defp resolve_group([representative | _] = entries, supplied, languages, opts, result) do
+    font = representative.run.font
+    codepoints = codepoints(representative.run.content)
+
+    case requested_supplied_typeface(supplied, font, codepoints) do
+      nil ->
+        resolve_system_requested(
+          result,
+          entries,
+          representative,
+          font,
+          codepoints,
+          supplied,
+          languages,
+          opts
+        )
+
+      typeface ->
+        put_resolutions(result, entries, typeface, :supplied)
+    end
+  end
+
+  defp resolve_system_requested(
+         result,
+         entries,
+         representative,
+         font,
+         codepoints,
+         supplied,
+         languages,
+         opts
+       ) do
+    case font |> requested_typeface() |> usable_typeface(codepoints) do
       {:ok, typeface} ->
-        put_resolutions(result, nodes, typeface, :requested)
+        put_resolutions(result, entries, typeface, :requested)
 
       {:missing, requested_typeface} ->
         resolve_fallback(
           result,
-          nodes,
-          font,
+          entries,
+          representative,
           codepoints,
           requested_typeface,
           supplied,
@@ -79,7 +135,7 @@ defmodule Figler.Render.Skia.Fonts do
         )
 
       {:error, reason} ->
-        put_group_warning(result, nodes, %{
+        put_group_warning(result, entries, %{
           code: :font_inspection_failed,
           reason: reason,
           requested: request(font)
@@ -87,23 +143,43 @@ defmodule Figler.Render.Skia.Fonts do
     end
   end
 
-  defp resolve_fallback(result, nodes, font, codepoints, requested, supplied, languages, opts) do
+  defp requested_supplied_typeface(supplied, font, codepoints) do
+    Enum.find(supplied, fn typeface ->
+      typeface.family == font.family and covers?(typeface, codepoints) == {:ok, true}
+    end)
+  end
+
+  defp resolve_fallback(
+         result,
+         entries,
+         representative,
+         codepoints,
+         requested,
+         supplied,
+         languages,
+         opts
+       ) do
+    font = representative.run.font
+    figma_fallbacks = representative.text.fallback_fonts
+
     fallback =
-      supplied_fallback(supplied, codepoints) ||
+      matching_supplied_fallback(supplied, figma_fallbacks, codepoints) ||
+        figma_fallback(figma_fallbacks, codepoints) ||
+        supplied_fallback(supplied, codepoints) ||
         system_fallback(font, codepoints, languages, opts)
 
     case fallback do
       {typeface, source} ->
         result
-        |> put_resolutions(nodes, typeface, source)
-        |> put_group_warning(nodes, %{
+        |> put_resolutions(entries, typeface, source)
+        |> put_group_warning(entries, %{
           code: :font_substituted,
           requested: request(font),
           resolved: %{family: typeface.family, source: source}
         })
 
       nil ->
-        unresolved_font(result, nodes, font, codepoints, requested)
+        unresolved_font(result, entries, font, codepoints, requested)
     end
   end
 
@@ -121,6 +197,24 @@ defmodule Figler.Render.Skia.Fonts do
   end
 
   defp usable_typeface({:error, _reason}, _codepoints), do: {:missing, nil}
+
+  defp matching_supplied_fallback(supplied, figma_fallbacks, codepoints) do
+    families = figma_fallbacks |> Enum.map(& &1.family) |> Enum.reject(&is_nil/1) |> MapSet.new()
+    supplied |> Enum.filter(&MapSet.member?(families, &1.family)) |> supplied_fallback(codepoints)
+  end
+
+  defp figma_fallback(fonts, codepoints) do
+    Enum.find_value(fonts, fn font ->
+      with family when is_binary(family) <- font.family,
+           {:ok, typeface} <-
+             Skia.Typeface.match_family(family, weight: font.weight, slant: font.slant),
+           {:ok, true} <- covers?(typeface, codepoints) do
+        {typeface, :figma_fallback}
+      else
+        _unusable -> nil
+      end
+    end)
+  end
 
   defp supplied_fallback(typefaces, codepoints) do
     Enum.find_value(typefaces, fn typeface ->
@@ -148,17 +242,17 @@ defmodule Figler.Render.Skia.Fonts do
     end
   end
 
-  defp unresolved_font(result, nodes, font, _codepoints, nil) do
+  defp unresolved_font(result, entries, font, _codepoints, nil) do
     code = if font.family, do: :font_unavailable, else: :font_family_missing
-    put_group_warning(result, nodes, %{code: code, requested: request(font)})
+    put_group_warning(result, entries, %{code: code, requested: request(font)})
   end
 
-  defp unresolved_font(result, nodes, font, codepoints, typeface) do
+  defp unresolved_font(result, entries, font, codepoints, typeface) do
     missing = missing_codepoints(typeface, codepoints)
 
     result
-    |> put_resolutions(nodes, typeface, :requested)
-    |> put_group_warning(nodes, %{
+    |> put_resolutions(entries, typeface, :requested)
+    |> put_group_warning(entries, %{
       code: :glyphs_missing,
       characters: missing,
       codepoints: Enum.map(missing, &codepoint_name/1),
@@ -193,12 +287,12 @@ defmodule Figler.Render.Skia.Fonts do
   defp glyph_ids(typeface, codepoints),
     do: typeface |> Skia.Font.new(size: 14) |> Skia.Font.glyph_ids(Enum.join(codepoints))
 
-  defp put_resolutions(result, nodes, typeface, source) do
+  defp put_resolutions(result, entries, typeface, source) do
     fonts =
-      Enum.reduce(nodes, result.fonts, fn node, resolved ->
-        font = Skia.Font.new(typeface, size: node.text.font.size || 14)
+      Enum.reduce(entries, result.fonts, fn entry, resolved ->
+        font = Skia.Font.new(typeface, size: entry.run.font.size || 14)
 
-        Map.put(resolved, node.guid, %Resolved{
+        Map.put(resolved, font_key(entry), %Resolved{
           font: font,
           family: typeface.family,
           source: source
@@ -208,14 +302,20 @@ defmodule Figler.Render.Skia.Fonts do
     %{result | fonts: fonts}
   end
 
-  defp put_group_warning(result, nodes, warning) do
+  defp put_group_warning(result, entries, warning) do
     warnings =
-      Enum.reduce(nodes, result.warnings, fn node, diagnosed ->
-        Map.update(diagnosed, node.guid, [warning], &[warning | &1])
+      Enum.reduce(entries, result.warnings, fn entry, diagnosed ->
+        run_warning = Map.put(warning, :run, run_metadata(entry.run))
+        Map.update(diagnosed, entry.node.guid, [run_warning], &[run_warning | &1])
       end)
 
     %{result | warnings: warnings}
   end
+
+  defp font_key(entry), do: {entry.node.guid, entry.run.index}
+
+  defp run_metadata(%Run{} = run),
+    do: %{index: run.index, start: run.start, length: run.length}
 
   defp supplied_typefaces(opts) do
     typefaces = Keyword.get(opts, :fallback_typefaces, [])

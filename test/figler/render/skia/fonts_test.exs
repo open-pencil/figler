@@ -5,6 +5,7 @@ defmodule Figler.Render.Skia.FontsTest do
   alias Figler.Render.Node
   alias Figler.Render.Skia.Fonts
   alias Figler.Render.Text
+  alias Figler.Render.Text.Run
 
   test "reports unavailable requested families when no fallback covers the text" do
     node = text_node("__Figler Missing Font__", <<0x10FFFF::utf8>>)
@@ -14,7 +15,8 @@ defmodule Figler.Render.Skia.FontsTest do
     assert %{^guid => [warning]} = result.warnings
     assert warning.code == :font_unavailable
     assert warning.requested.family == "__Figler Missing Font__"
-    refute Map.has_key?(result.fonts, guid)
+    assert warning.run == %{index: 0, start: 0, length: 1}
+    refute Map.has_key?(result.fonts, {guid, 0})
   end
 
   test "uses Skia's installed character fallback and reports the substitution" do
@@ -25,7 +27,7 @@ defmodule Figler.Render.Skia.FontsTest do
     assert %{^guid => [warning]} = result.warnings
     assert warning.code == :font_substituted
     assert warning.resolved.source == :system
-    assert %{^guid => resolved} = result.fonts
+    assert %{{^guid, 0} => resolved} = result.fonts
     assert resolved.source == :system
     assert is_binary(resolved.family)
   end
@@ -45,7 +47,7 @@ defmodule Figler.Render.Skia.FontsTest do
     assert %{^guid => [%{code: :font_substituted, resolved: %{source: :supplied}}]} =
              result.warnings
 
-    assert %{^guid => %{source: :supplied}} = result.fonts
+    assert %{{^guid, 0} => %{source: :supplied}} = result.fonts
   end
 
   test "reports exact missing glyph codepoints for an available family" do
@@ -60,17 +62,45 @@ defmodule Figler.Render.Skia.FontsTest do
     assert warning.codepoints == ["U+10FFFF"]
   end
 
+  test "diagnoses missing codepoints at the exact rich-text run range" do
+    assert {:ok, typeface} = Skia.Typeface.match_character("A")
+    font = %Font{family: typeface.family}
+
+    first = %Run{index: 0, start: 0, length: 1, content: "A", font: font}
+
+    missing =
+      %Run{index: 1, start: 1, length: 2, content: <<0x10FFFF::utf8>>, font: font}
+
+    node = %Node{
+      guid: {1, 1},
+      source_guid: {1, 1},
+      node_type: :text,
+      text: %Text{content: first.content <> missing.content, font: font, runs: [first, missing]}
+    }
+
+    assert {:ok, result} = Fonts.resolve([node], system_font_fallback: false)
+    assert %{{{1, 1}, 0} => _first, {{1, 1}, 1} => _missing} = result.fonts
+
+    assert %{{1, 1} => [warning]} = result.warnings
+    assert warning.code == :glyphs_missing
+    assert warning.run == %{index: 1, start: 1, length: 2}
+    assert warning.codepoints == ["U+10FFFF"]
+  end
+
   test "rejects unreadable fallback font paths" do
     assert {:error, {:fallback_font_load_failed, "/missing/font.ttf", :enoent}} =
              Fonts.resolve([], fallback_font_paths: ["/missing/font.ttf"])
   end
 
   defp text_node(family, content) do
+    font = %Font{family: family}
+    run = %Run{index: 0, start: 0, length: String.length(content), content: content, font: font}
+
     %Node{
       guid: {1, 1},
       source_guid: {1, 1},
       node_type: :text,
-      text: %Text{content: content, font: %Font{family: family}}
+      text: %Text{content: content, font: font, runs: [run]}
     }
   end
 end

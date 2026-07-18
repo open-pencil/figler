@@ -9,6 +9,7 @@ fn render_projection_node_from_decoder<'a>(
     let mut guid = nil;
     let mut node_type = nil;
     let mut name = nil;
+    let mut text_data = nil;
     let mut blend_mode = nil;
     let mut mask = nil;
     let mut mask_type = nil;
@@ -30,6 +31,9 @@ fn render_projection_node_from_decoder<'a>(
                 node_type = scene_node_type_name(decoder.read_var_uint()?).encode(env)
             }
             RENDER_FIELD_NAME => name = decoder.read_string(env)?,
+            RENDER_FIELD_TEXT_DATA => {
+                text_data = decode_sparse_text_data_from_decoder(env, decoder)?
+            }
             RENDER_FIELD_BLEND_MODE => {
                 blend_mode = decode_sparse_blend_mode_from_decoder(env, decoder)?
             }
