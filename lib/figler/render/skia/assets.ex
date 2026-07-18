@@ -22,16 +22,16 @@ defmodule Figler.Render.Skia.Assets do
   end
 
   defp load_image_assets(scene) do
-    scene.source_nodes
+    scene.render_nodes
     |> Map.values()
-    |> Enum.flat_map(&source_image_keys/1)
+    |> Enum.flat_map(&node_image_keys/1)
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
     |> Enum.reduce(%__MODULE__{}, &load_image_asset(scene, &1, &2))
   end
 
-  defp source_image_keys(source) do
-    [source.fill_paints || [], source.stroke_paints || []]
+  defp node_image_keys(node) do
+    [node.fill_paints || [], node.stroke_paints || []]
     |> Enum.flat_map(&Enum.map(&1, fn paint -> Paint.image_key(paint) end))
   end
 
@@ -58,19 +58,19 @@ defmodule Figler.Render.Skia.Assets do
   end
 
   defp load_geometry_assets(assets, scene) do
-    Enum.reduce(scene.source_nodes, assets, fn {_guid, source}, loaded ->
+    Enum.reduce(scene.render_nodes, assets, fn {_guid, node}, loaded ->
       loaded
-      |> load_geometry_kind(source, :fill, source.fill_geometry || [], scene.document.blobs)
-      |> load_geometry_kind(source, :stroke, source.stroke_geometry || [], scene.document.blobs)
+      |> load_geometry_kind(node, :fill, node.fill_geometry || [], scene.document.blobs)
+      |> load_geometry_kind(node, :stroke, node.stroke_geometry || [], scene.document.blobs)
     end)
   end
 
-  defp load_geometry_kind(assets, _source, _kind, [], _blobs), do: assets
+  defp load_geometry_kind(assets, _node, _kind, [], _blobs), do: assets
 
-  defp load_geometry_kind(assets, source, kind, references, blobs) do
+  defp load_geometry_kind(assets, node, kind, references, blobs) do
     case Geometry.paths(references, blobs) do
-      {:ok, paths} -> put_geometry_result(assets, :geometries, source.guid, kind, paths)
-      {:error, reason} -> put_geometry_result(assets, :geometry_errors, source.guid, kind, reason)
+      {:ok, paths} -> put_geometry_result(assets, :geometries, node.guid, kind, paths)
+      {:error, reason} -> put_geometry_result(assets, :geometry_errors, node.guid, kind, reason)
     end
   end
 

@@ -36,17 +36,17 @@ defmodule Figler.Render.Skia.Effects do
     luminosity: :luminosity
   }
 
-  @spec resolve(map() | nil, number() | nil) :: Resolved.t()
+  @spec resolve(Figler.Render.Node.t() | nil, number() | nil) :: Resolved.t()
   def resolve(nil, opacity), do: %Resolved{group_opts: opacity_opts(opacity)}
 
-  def resolve(source, opacity) do
+  def resolve(node, opacity) do
     {filter, effect_warnings} =
-      source.effects
+      node.effects
       |> Kernel.||([])
       |> Enum.reject(&(Map.get(&1, :visible) == false))
       |> Enum.reduce({nil, []}, &resolve_effect/2)
 
-    {blend_mode, blend_warnings} = blend_mode(source.blend_mode)
+    {blend_mode, blend_warnings} = blend_mode(node.blend_mode)
 
     group_opts =
       opacity

@@ -11,6 +11,7 @@ defmodule Figler.Render do
 
   alias Figler.Document
   alias Figler.Native.CodecNifs
+  alias Figler.Render.Node, as: RenderNode
   alias Figler.Render.Scene, as: RenderScene
   alias Figler.Render.Selection
   alias Figler.Render.Skia, as: SkiaBackend
@@ -82,6 +83,7 @@ defmodule Figler.Render do
          payload: document.payload,
          graph: graph,
          root: root,
+         children: graph.children,
          source_nodes: source_nodes,
          render_nodes: render_nodes
        }}
@@ -95,13 +97,8 @@ defmodule Figler.Render do
         |> Map.get(guid, %{})
         |> Map.get(:source_guid, guid)
 
-      effective =
-        case Map.get(source_nodes, source_guid) do
-          %SourceNode{} = source -> SourceNode.apply_overrides(source, node)
-          nil -> nil
-        end
-
-      {guid, effective}
+      source = Map.get(source_nodes, source_guid)
+      {guid, RenderNode.from_effective(node, source_guid, source)}
     end)
   end
 

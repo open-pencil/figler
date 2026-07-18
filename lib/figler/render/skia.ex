@@ -10,6 +10,7 @@ defmodule Figler.Render.Skia do
 
   alias Figler.Render.Affine
   alias Figler.Render.Bounds
+  alias Figler.Render.Node
   alias Figler.Render.Scene, as: RenderScene
   alias Figler.Render.Skia.Assets
   alias Figler.Render.Skia.Bounds, as: BoundsCompiler
@@ -17,7 +18,6 @@ defmodule Figler.Render.Skia do
   alias Figler.Render.Skia.Effects
   alias Figler.Render.Skia.Shape
   alias Figler.Scene.Graph.GUID
-  alias Figler.Scene.Node
 
   @container_types ["canvas", "component", "frame", "instance", "symbol"]
 
@@ -78,12 +78,10 @@ defmodule Figler.Render.Skia do
   end
 
   defp render_node(scene, assets, guid, document) do
-    case Map.get(scene.graph.nodes, guid) do
+    case Map.get(scene.render_nodes, guid) do
       %Node{visible: visible} = node when visible != false ->
-        source = source_node(scene, guid)
-
         Skia.group(document, [concat: Affine.from_value(node.transform)], fn transformed ->
-          render_transformed(transformed, scene, guid, node, source, assets)
+          render_transformed(transformed, scene, node, assets)
         end)
 
       _missing_or_hidden ->
@@ -91,58 +89,51 @@ defmodule Figler.Render.Skia do
     end
   end
 
-  defp render_transformed(document, scene, guid, node, source, assets) do
-    resolved = Effects.resolve(source, node.opacity)
-    shape_opts = bound_shape_opts(resolved.shape_opts, node, source)
+  defp render_transformed(document, scene, node, assets) do
+    resolved = Effects.resolve(node, node.opacity)
+    shape_opts = bound_shape_opts(resolved.shape_opts, node)
 
     if resolved.group_opts == [] do
-      render_node_content(document, scene, guid, node, source, assets, shape_opts)
+      render_node_content(document, scene, node, assets, shape_opts)
     else
       Skia.layer(document, resolved.group_opts, fn layer ->
-        render_node_content(layer, scene, guid, node, source, assets, shape_opts)
+        render_node_content(layer, scene, node, assets, shape_opts)
       end)
     end
   end
 
-  defp bound_shape_opts([], _node, _source), do: []
+  defp bound_shape_opts([], _node), do: []
 
-  defp bound_shape_opts(opts, node, source) do
-    Keyword.merge(opts, BoundsCompiler.shape(node, source) |> BoundsCompiler.layer_option())
+  defp bound_shape_opts(opts, node) do
+    Keyword.merge(opts, BoundsCompiler.shape(node) |> BoundsCompiler.layer_option())
   end
 
-  defp render_node_content(document, scene, guid, node, source, assets, shape_opts) do
+  defp render_node_content(document, scene, node, assets, shape_opts) do
     document
-    |> render_shape(node, source, assets, shape_opts)
-    |> render_children(scene, node, source, guid, assets)
+    |> render_shape(node, assets, shape_opts)
+    |> render_children(scene, node, assets)
   end
 
-  defp render_shape(document, node, source, assets, []),
-    do: Shape.draw_node(document, node, source, assets)
+  defp render_shape(document, node, assets, []),
+    do: Shape.draw_node(document, node, assets)
 
-  defp render_shape(document, node, source, assets, shape_opts) do
+  defp render_shape(document, node, assets, shape_opts) do
     Skia.layer(document, shape_opts, fn layer ->
-      Shape.draw_node(layer, node, source, assets)
+      Shape.draw_node(layer, node, assets)
     end)
   end
 
-  defp render_children(
-         document,
-         _scene,
-         %Node{node_type: "boolean_operation"},
-         _source,
-         _guid,
-         _assets
-       ),
-       do: document
+  defp render_children(document, _scene, %Node{node_type: "boolean_operation"}, _assets),
+    do: document
 
-  defp render_children(document, scene, node, source, guid, assets) do
-    children = Map.get(scene.graph.children, guid, [])
+  defp render_children(document, scene, node, assets) do
+    children = Map.get(scene.children, node.guid, [])
 
     if children == [] do
       document
     else
       document
-      |> maybe_clip(node, source)
+      |> maybe_clip(node)
       |> render_child_sequence(scene, children, assets)
     end
   end
@@ -150,11 +141,11 @@ defmodule Figler.Render.Skia do
   defp render_child_sequence(document, _scene, [], _assets), do: document
 
   defp render_child_sequence(document, scene, [guid | rest], assets) do
-    case source_node(scene, guid) do
-      %{mask: true} ->
+    case Map.get(scene.render_nodes, guid) do
+      %Node{mask: true} ->
         render_mask_sequence(document, scene, [guid | rest], assets)
 
-      _source ->
+      _node ->
         document = render_node(scene, assets, guid, document)
         render_child_sequence(document, scene, rest, assets)
     end
@@ -195,24 +186,22 @@ defmodule Figler.Render.Skia do
   end
 
   defp render_mask(scene, assets, guid, document) do
-    case source_node(scene, guid) do
-      %{mask_type: :luminance} ->
+    case Map.get(scene.render_nodes, guid) do
+      %Node{mask_type: :luminance} ->
         Skia.layer(document, [image_filter: luminance_filter()], fn layer ->
           render_mask_node(layer, scene, guid, assets)
         end)
 
-      _source ->
+      _node ->
         render_mask_node(document, scene, guid, assets)
     end
   end
 
   defp render_mask_node(document, scene, guid, assets) do
-    case Map.get(scene.graph.nodes, guid) do
+    case Map.get(scene.render_nodes, guid) do
       %Node{visible: visible} = node when visible != false ->
-        source = source_node(scene, guid)
-
         Skia.group(document, [concat: Affine.from_value(node.transform)], fn transformed ->
-          Shape.draw_node(transformed, node, source, assets)
+          Shape.draw_node(transformed, node, assets)
         end)
 
       _missing_or_hidden ->
@@ -220,28 +209,27 @@ defmodule Figler.Render.Skia do
     end
   end
 
-  defp mask_node?(scene, guid), do: match?(%{mask: true}, source_node(scene, guid))
+  defp mask_node?(scene, guid), do: match?(%Node{mask: true}, Map.get(scene.render_nodes, guid))
 
   defp luminance_filter do
     Skia.ColorFilter.luma()
     |> Skia.ImageFilter.color_filter()
   end
 
-  defp maybe_clip(document, %Node{node_type: type, size: %{x: width, y: height}}, source)
+  defp maybe_clip(document, %Node{node_type: type, size: %{x: width, y: height}} = node)
        when type in @container_types do
-    if source && source.frame_mask_disabled == false do
+    if node.frame_mask_disabled == false do
       Skia.clip_rect(document,
         x: 0,
         y: 0,
         width: width,
         height: height,
-        radius: source.corner_radius || 0
+        radius: node.corner_radius || 0
       )
     else
       document
     end
   end
 
-  defp maybe_clip(document, _node, _source), do: document
-  defp source_node(scene, guid), do: Map.get(scene.render_nodes, guid)
+  defp maybe_clip(document, _node), do: document
 end

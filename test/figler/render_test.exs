@@ -3,6 +3,7 @@ defmodule Figler.RenderTest do
 
   alias Figler.Render
   alias Figler.Render.Bounds
+  alias Figler.Render.Node, as: RenderNode
   alias Figler.Render.Oracle.Runner
   alias Figler.Render.PixelDiff
   alias Figler.Render.Skia, as: SkiaBackend
@@ -30,6 +31,13 @@ defmodule Figler.RenderTest do
 
     assert {:ok, scene} = Render.prepare(payload)
     assert {:ok, result} = SkiaBackend.compile(scene)
+
+    assert {:ok, backend_only_result} =
+             scene
+             |> Map.merge(%{graph: nil, source_nodes: %{}})
+             |> SkiaBackend.compile()
+
+    assert Skia.commands(backend_only_result.document) == Skia.commands(result.document)
     assert result.root == "0:1"
     assert result.bounds == %Bounds{min_x: 10.0, min_y: 20.0, max_x: 110.0, max_y: 70.0}
     assert result.warnings == []
@@ -118,8 +126,11 @@ defmodule Figler.RenderTest do
                provenance[:source] == :instance_clone and provenance[:source_guid] == {1, 2}
              end)
 
-    assert %SourceNode{fill_paints: [%Figler.Render.Paint{color: color}]} =
-             scene.render_nodes[clone_guid]
+    assert %RenderNode{
+             guid: ^clone_guid,
+             source_guid: {1, 2},
+             fill_paints: [%Figler.Render.Paint{color: color}]
+           } = scene.render_nodes[clone_guid]
 
     assert color.b == 1.0
     assert color.r == 0.0

@@ -2,8 +2,8 @@ defmodule Figler.Render.Skia.Shape do
   @moduledoc false
   @compile {:no_warn_undefined, [Skia]}
 
+  alias Figler.Render.Node
   alias Figler.Render.Skia.Paint
-  alias Figler.Scene.Node
 
   @rectangular_types ["frame", "instance", "rectangle", "rounded_rectangle", "section", "symbol"]
   @supported_types @rectangular_types ++
@@ -12,27 +12,24 @@ defmodule Figler.Render.Skia.Shape do
   @spec supported_type?(String.t()) :: boolean()
   def supported_type?(type), do: type in @supported_types
 
-  @spec visible_paints?(Figler.Render.SourceNode.t()) :: boolean()
-  def visible_paints?(source) do
-    Enum.any?([source.fill_paints || [], source.stroke_paints || []], fn paints ->
+  @spec visible_paints?(Node.t()) :: boolean()
+  def visible_paints?(node) do
+    Enum.any?([node.fill_paints || [], node.stroke_paints || []], fn paints ->
       Enum.any?(paints, &(Map.get(&1, :visible) != false))
     end)
   end
 
-  @spec draw_node(Skia.Document.t(), Node.t(), Figler.Render.SourceNode.t() | nil, map()) ::
-          Skia.Document.t()
-  def draw_node(document, node, source, assets) do
-    paints = if source, do: source.fill_paints || [], else: []
-    document = Enum.reduce(paints, document, &draw_fill(&2, node, source, &1, assets))
-    strokes = if source, do: source.stroke_paints || [], else: []
-    weight = if source, do: source.stroke_weight || 1, else: 1
-    Enum.reduce(strokes, document, &draw_stroke(&2, node, source, &1, weight, assets))
+  @spec draw_node(Skia.Document.t(), Node.t(), map()) :: Skia.Document.t()
+  def draw_node(document, node, assets) do
+    document = Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
+    weight = node.stroke_weight || 1
+    Enum.reduce(node.stroke_paints || [], document, &draw_stroke(&2, node, &1, weight, assets))
   end
 
-  defp draw_fill(document, node, source, paint, assets) do
+  defp draw_fill(document, node, paint, assets) do
     case Paint.resolve(paint, node.size, assets.images) do
       {:ok, resolved} ->
-        draw_resolved(document, node, source, :fill, [fill: resolved.paint], resolved, assets)
+        draw_resolved(document, node, :fill, [fill: resolved.paint], resolved, assets)
 
       {:error, _reason} ->
         document
@@ -42,7 +39,6 @@ defmodule Figler.Render.Skia.Shape do
   defp draw_stroke(
          document,
          %Node{node_type: node_type},
-         _source,
          %{type: paint_type},
          _weight,
          _assets
@@ -50,28 +46,28 @@ defmodule Figler.Render.Skia.Shape do
        when node_type not in ["vector", "boolean_operation"] and paint_type != :solid,
        do: document
 
-  defp draw_stroke(document, node, source, paint, weight, assets) do
+  defp draw_stroke(document, node, paint, weight, assets) do
     case Paint.resolve(paint, node.size, assets.images) do
       {:ok, resolved} ->
         opts = [stroke: resolved.paint, stroke_width: weight]
-        draw_resolved(document, node, source, :stroke, opts, resolved, assets)
+        draw_resolved(document, node, :stroke, opts, resolved, assets)
 
       {:error, _reason} ->
         document
     end
   end
 
-  defp draw_resolved(document, node, source, kind, opts, %{opacity: opacity}, assets)
+  defp draw_resolved(document, node, kind, opts, %{opacity: opacity}, assets)
        when is_number(opacity) and opacity < 1 do
-    Skia.layer(document, [opacity: opacity], &draw_shape(&1, node, source, kind, opts, assets))
+    Skia.layer(document, [opacity: opacity], &draw_shape(&1, node, kind, opts, assets))
   end
 
-  defp draw_resolved(document, node, source, kind, opts, _resolved, assets),
-    do: draw_shape(document, node, source, kind, opts, assets)
+  defp draw_resolved(document, node, kind, opts, _resolved, assets),
+    do: draw_shape(document, node, kind, opts, assets)
 
-  defp draw_shape(document, %Node{node_type: type}, source, kind, opts, assets)
+  defp draw_shape(document, %Node{node_type: type} = node, kind, opts, assets)
        when type in ["vector", "boolean_operation"] do
-    paths = geometry_paths(assets, source, kind)
+    paths = geometry_paths(assets, node, kind)
     path_opts = geometry_paint_opts(opts, kind)
 
     Enum.reduce(paths, document, fn geometry, rendered ->
@@ -82,14 +78,13 @@ defmodule Figler.Render.Skia.Shape do
   defp draw_shape(
          document,
          %Node{node_type: "ellipse", size: size},
-         _source,
          _kind,
          opts,
          _assets
        ),
        do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
 
-  defp draw_shape(document, %Node{node_type: "line", size: size}, _source, _kind, opts, _assets) do
+  defp draw_shape(document, %Node{node_type: "line", size: size}, _kind, opts, _assets) do
     Skia.line(document,
       from: {0, 0},
       to: {size.x, size.y},
@@ -101,7 +96,6 @@ defmodule Figler.Render.Skia.Shape do
   defp draw_shape(
          document,
          %Node{node_type: "text", text: text, size: size} = node,
-         _source,
          _kind,
          opts,
          _assets
@@ -120,8 +114,7 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_shape(
          document,
-         %Node{node_type: type, size: %{x: width, y: height}},
-         source,
+         %Node{node_type: type, size: %{x: width, y: height}} = node,
          _kind,
          opts,
          _assets
@@ -130,19 +123,17 @@ defmodule Figler.Render.Skia.Shape do
     Skia.rect(
       document,
       Keyword.merge(
-        [x: 0, y: 0, width: width, height: height, radius: (source && source.corner_radius) || 0],
+        [x: 0, y: 0, width: width, height: height, radius: node.corner_radius || 0],
         opts
       )
     )
   end
 
-  defp draw_shape(document, _node, _source, _kind, _opts, _assets), do: document
+  defp draw_shape(document, _node, _kind, _opts, _assets), do: document
 
-  defp geometry_paths(_assets, nil, _kind), do: []
-
-  defp geometry_paths(assets, source, kind) do
+  defp geometry_paths(assets, node, kind) do
     assets.geometries
-    |> Map.get(source.guid, %{})
+    |> Map.get(node.guid, %{})
     |> Map.get(kind, [])
   end
 

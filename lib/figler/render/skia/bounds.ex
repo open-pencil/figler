@@ -3,7 +3,7 @@ defmodule Figler.Render.Skia.Bounds do
 
   alias Figler.Render.Affine
   alias Figler.Render.Bounds
-  alias Figler.Scene.Node
+  alias Figler.Render.Node
 
   @spec content(Figler.Render.Scene.t(), tuple()) ::
           {:ok, Bounds.t()} | {:error, :empty_render_root}
@@ -19,11 +19,11 @@ defmodule Figler.Render.Skia.Bounds do
     Enum.reduce(guids, nil, &node_bounds(scene, &1, Affine.identity(), &2))
   end
 
-  @spec shape(Node.t(), Figler.Render.SourceNode.t() | nil) :: Bounds.t() | nil
-  def shape(node, source) do
+  @spec shape(Node.t()) :: Bounds.t() | nil
+  def shape(node) do
     nil
     |> include_rect(Affine.identity(), node.size)
-    |> include_effect_bounds(Affine.identity(), node.size, source)
+    |> include_effect_bounds(Affine.identity(), node.size, node)
   end
 
   @spec layer_option(Bounds.t() | nil) :: keyword()
@@ -38,21 +38,21 @@ defmodule Figler.Render.Skia.Bounds do
 
   @spec render_guids(Figler.Render.Scene.t(), tuple()) :: [tuple()]
   def render_guids(scene, root_guid) do
-    case Map.get(scene.graph.nodes, root_guid) do
-      %Node{node_type: "canvas"} -> Map.get(scene.graph.children, root_guid, [])
+    case Map.get(scene.render_nodes, root_guid) do
+      %Node{node_type: "canvas"} -> Map.get(scene.children, root_guid, [])
       %Node{} -> [root_guid]
       nil -> []
     end
   end
 
   defp node_bounds(scene, guid, parent_matrix, bounds) do
-    case Map.get(scene.graph.nodes, guid) do
+    case Map.get(scene.render_nodes, guid) do
       %Node{visible: visible, node_type: "boolean_operation"} = node when visible != false ->
         matrix = Affine.multiply(parent_matrix, Affine.from_value(node.transform))
 
         bounds
         |> include_rect(matrix, node.size)
-        |> include_effect_bounds(matrix, node.size, source_node(scene, guid))
+        |> include_effect_bounds(matrix, node.size, node)
 
       %Node{visible: visible} = node when visible != false ->
         matrix = Affine.multiply(parent_matrix, Affine.from_value(node.transform))
@@ -60,9 +60,9 @@ defmodule Figler.Render.Skia.Bounds do
         bounds =
           bounds
           |> include_rect(matrix, node.size)
-          |> include_effect_bounds(matrix, node.size, source_node(scene, guid))
+          |> include_effect_bounds(matrix, node.size, node)
 
-        scene.graph.children
+        scene.children
         |> Map.get(guid, [])
         |> Enum.reduce(bounds, &node_bounds(scene, &1, matrix, &2))
 
@@ -103,11 +103,10 @@ defmodule Figler.Render.Skia.Bounds do
     union(bounds, point_bounds)
   end
 
-  defp include_effect_bounds(bounds, _matrix, _size, nil), do: bounds
-  defp include_effect_bounds(bounds, _matrix, nil, _source), do: bounds
+  defp include_effect_bounds(bounds, _matrix, nil, _node), do: bounds
 
-  defp include_effect_bounds(bounds, matrix, %{x: width, y: height}, source) do
-    source.effects
+  defp include_effect_bounds(bounds, matrix, %{x: width, y: height}, node) do
+    node.effects
     |> Kernel.||([])
     |> Enum.reject(&(Map.get(&1, :visible) == false))
     |> Enum.reduce(bounds, fn effect, expanded ->
@@ -150,6 +149,4 @@ defmodule Figler.Render.Skia.Bounds do
       max_y: max(left.max_y, right.max_y)
     }
   end
-
-  defp source_node(scene, guid), do: Map.get(scene.render_nodes, guid)
 end
