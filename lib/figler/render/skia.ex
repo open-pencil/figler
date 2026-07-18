@@ -1,5 +1,5 @@
 defmodule Figler.Render.Skia do
-  @compile {:no_warn_undefined, [Skia, Skia.Document]}
+  @compile {:no_warn_undefined, [Skia, Skia.Document, Skia.Image]}
 
   @moduledoc """
   Compiles a `Figler.Render.Scene` into one batched `%Skia.Document{}`.
@@ -8,8 +8,10 @@ defmodule Figler.Render.Skia do
   raster encoding remain in Skia.
   """
 
+  alias Figler.Render.Affine
   alias Figler.Render.Bounds
   alias Figler.Render.Scene, as: RenderScene
+  alias Figler.Render.Skia.Paint
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Node
 
@@ -31,12 +33,13 @@ defmodule Figler.Render.Skia do
 
   defp compile_root(scene, root_guid, bounds, opts) do
     child_guids = render_guids(scene, root_guid)
-    warnings = collect_warnings(scene, child_guids)
+    assets = load_image_assets(scene)
+    warnings = collect_warnings(scene, child_guids, assets)
 
     if Keyword.get(opts, :strict, false) and warnings != [] do
       {:error, {:unsupported_render_features, warnings}}
     else
-      document = build_document(scene, child_guids, bounds, opts)
+      document = build_document(scene, child_guids, bounds, assets.images, opts)
 
       {:ok,
        %{
@@ -48,7 +51,7 @@ defmodule Figler.Render.Skia do
     end
   end
 
-  defp build_document(scene, child_guids, bounds, opts) do
+  defp build_document(scene, child_guids, bounds, images, opts) do
     scale = opts |> Keyword.get(:scale, 1.0) |> :erlang.float()
     width = max(1, ceil((bounds.max_x - bounds.min_x) * scale))
     height = max(1, ceil((bounds.max_y - bounds.min_y) * scale))
@@ -57,13 +60,13 @@ defmodule Figler.Render.Skia do
     |> Skia.canvas(height)
     |> Skia.clear(Keyword.get(opts, :background, :transparent))
     |> Skia.group([scale: {scale, scale}], fn scaled ->
-      render_scaled(scaled, scene, child_guids, bounds)
+      render_scaled(scaled, scene, child_guids, bounds, images)
     end)
   end
 
-  defp render_scaled(document, scene, child_guids, bounds) do
+  defp render_scaled(document, scene, child_guids, bounds, images) do
     Skia.group(document, [translate: {-bounds.min_x, -bounds.min_y}], fn translated ->
-      render_nodes(translated, scene, child_guids)
+      render_nodes(translated, scene, child_guids, images)
     end)
   end
 
@@ -87,7 +90,7 @@ defmodule Figler.Render.Skia do
   defp node_bounds(scene, guid, parent_matrix, bounds) do
     case Map.get(scene.graph.nodes, guid) do
       %Node{visible: visible} = node when visible != false ->
-        matrix = multiply(parent_matrix, matrix(node.transform))
+        matrix = Affine.multiply(parent_matrix, matrix(node.transform))
         bounds = include_rect(bounds, matrix, node.size)
 
         scene.graph.children
@@ -140,17 +143,17 @@ defmodule Figler.Render.Skia do
     }
   end
 
-  defp render_nodes(document, scene, guids) do
-    Enum.reduce(guids, document, &render_node(scene, &1, &2))
+  defp render_nodes(document, scene, guids, images) do
+    Enum.reduce(guids, document, &render_node(scene, images, &1, &2))
   end
 
-  defp render_node(scene, guid, document) do
+  defp render_node(scene, images, guid, document) do
     case Map.get(scene.graph.nodes, guid) do
       %Node{visible: visible} = node when visible != false ->
         source = source_node(scene, guid)
 
         Skia.group(document, [concat: matrix(node.transform)], fn transformed ->
-          render_transformed(transformed, scene, guid, node, source)
+          render_transformed(transformed, scene, guid, node, source, images)
         end)
 
       _missing_or_hidden ->
@@ -158,24 +161,24 @@ defmodule Figler.Render.Skia do
     end
   end
 
-  defp render_transformed(document, scene, guid, %Node{opacity: opacity} = node, source)
+  defp render_transformed(document, scene, guid, %Node{opacity: opacity} = node, source, images)
        when is_number(opacity) and opacity < 1 do
     Skia.layer(document, [opacity: opacity], fn layer ->
-      render_node_content(layer, scene, guid, node, source)
+      render_node_content(layer, scene, guid, node, source, images)
     end)
   end
 
-  defp render_transformed(document, scene, guid, node, source) do
-    render_node_content(document, scene, guid, node, source)
+  defp render_transformed(document, scene, guid, node, source, images) do
+    render_node_content(document, scene, guid, node, source, images)
   end
 
-  defp render_node_content(document, scene, guid, node, source) do
+  defp render_node_content(document, scene, guid, node, source, images) do
     document
-    |> draw_node(node, source)
-    |> render_children(scene, node, source, guid)
+    |> draw_node(node, source, images)
+    |> render_children(scene, node, source, guid, images)
   end
 
-  defp render_children(document, scene, node, source, guid) do
+  defp render_children(document, scene, node, source, guid, images) do
     children = Map.get(scene.graph.children, guid, [])
 
     if children == [] do
@@ -183,7 +186,7 @@ defmodule Figler.Render.Skia do
     else
       document
       |> maybe_clip(node, source)
-      |> render_nodes(scene, children)
+      |> render_nodes(scene, children, images)
     end
   end
 
@@ -204,27 +207,44 @@ defmodule Figler.Render.Skia do
 
   defp maybe_clip(document, _node, _source), do: document
 
-  defp draw_node(document, node, source) do
+  defp draw_node(document, node, source, images) do
     paints = if source, do: source.fill_paints || [], else: []
-    document = Enum.reduce(paints, document, &draw_fill(&2, node, source, &1))
+    document = Enum.reduce(paints, document, &draw_fill(&2, node, source, &1, images))
     strokes = if source, do: source.stroke_paints || [], else: []
     weight = if source, do: source.stroke_weight || 1, else: 1
-    Enum.reduce(strokes, document, &draw_stroke(&2, node, source, &1, weight))
+    Enum.reduce(strokes, document, &draw_stroke(&2, node, source, &1, weight, images))
   end
 
-  defp draw_fill(document, _node, _source, %{visible: false}), do: document
+  defp draw_fill(document, node, source, paint, images) do
+    case Paint.resolve(paint, node.size, images) do
+      {:ok, resolved} -> draw_resolved(document, node, source, [fill: resolved.paint], resolved)
+      {:error, _reason} -> document
+    end
+  end
 
-  defp draw_fill(document, node, source, %{type: :solid} = paint),
-    do: draw_shape(document, node, source, fill: color(paint))
+  defp draw_stroke(document, node, source, paint, weight, images) do
+    case Paint.resolve(paint, node.size, images) do
+      {:ok, resolved} ->
+        draw_resolved(
+          document,
+          node,
+          source,
+          [stroke: resolved.paint, stroke_width: weight],
+          resolved
+        )
 
-  defp draw_fill(document, _node, _source, _paint), do: document
+      {:error, _reason} ->
+        document
+    end
+  end
 
-  defp draw_stroke(document, _node, _source, %{visible: false}, _weight), do: document
+  defp draw_resolved(document, node, source, opts, %{opacity: opacity})
+       when is_number(opacity) and opacity < 1 do
+    Skia.layer(document, [opacity: opacity], &draw_shape(&1, node, source, opts))
+  end
 
-  defp draw_stroke(document, node, source, %{type: :solid} = paint, weight),
-    do: draw_shape(document, node, source, stroke: color(paint), stroke_width: weight)
-
-  defp draw_stroke(document, _node, _source, _paint, _weight), do: document
+  defp draw_resolved(document, node, source, opts, _resolved),
+    do: draw_shape(document, node, source, opts)
 
   defp draw_shape(document, %Node{node_type: "ellipse", size: size}, _source, opts),
     do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
@@ -268,45 +288,93 @@ defmodule Figler.Render.Skia do
 
   defp draw_shape(document, _node, _source, _opts), do: document
 
-  defp collect_warnings(scene, guids) do
+  defp load_image_assets(scene) do
+    scene.source_nodes
+    |> Map.values()
+    |> Enum.flat_map(&source_image_keys/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.reduce(%{images: %{}, errors: %{}}, &load_image_asset(scene, &1, &2))
+  end
+
+  defp source_image_keys(source) do
+    [source.fill_paints || [], source.stroke_paints || []]
+    |> Enum.flat_map(&Enum.map(&1, fn paint -> Paint.image_key(paint) end))
+  end
+
+  defp load_image_asset(scene, key, assets) do
+    with data when is_binary(data) <- find_image_asset(scene.document, key),
+         {:ok, image} <- Skia.Image.decode(data) do
+      put_in(assets, [:images, key], image)
+    else
+      nil -> put_in(assets, [:errors, key], :missing_image_asset)
+      {:error, reason} -> put_in(assets, [:errors, key], {:invalid_image_asset, reason})
+    end
+  end
+
+  defp find_image_asset(document, {:blob, index}), do: Enum.at(document.blobs, index)
+
+  defp find_image_asset(document, hash) do
+    Map.get(document.images, hash) ||
+      Enum.find_value(document.images, fn {path, data} ->
+        if path |> Path.basename() |> Path.rootname() |> String.downcase() == hash, do: data
+      end)
+  end
+
+  defp collect_warnings(scene, guids, assets) do
     guids
-    |> Enum.reduce([], &node_warnings(scene, &1, &2))
+    |> Enum.reduce([], &node_warnings(scene, assets, &1, &2))
     |> Enum.reverse()
     |> Enum.uniq()
   end
 
-  defp node_warnings(scene, guid, warnings) do
+  defp node_warnings(scene, assets, guid, warnings) do
     case Map.get(scene.graph.nodes, guid) do
-      %Node{visible: visible} when visible != false ->
+      %Node{visible: visible} = node when visible != false ->
         source = source_node(scene, guid)
-        warnings = prepend_source_warnings(warnings, source, guid)
+        warnings = prepend_source_warnings(warnings, source, node, guid, assets)
 
         scene.graph.children
         |> Map.get(guid, [])
-        |> Enum.reduce(warnings, &node_warnings(scene, &1, &2))
+        |> Enum.reduce(warnings, &node_warnings(scene, assets, &1, &2))
 
       _missing_or_hidden ->
         warnings
     end
   end
 
-  defp prepend_source_warnings(warnings, nil, _guid), do: warnings
+  defp prepend_source_warnings(warnings, nil, _node, _guid, _assets), do: warnings
 
-  defp prepend_source_warnings(warnings, source, guid) do
+  defp prepend_source_warnings(warnings, source, node, guid, assets) do
     source_warnings =
-      unsupported_paints(guid, :fill, source.fill_paints || []) ++
-        unsupported_paints(guid, :stroke, source.stroke_paints || [])
+      paint_warnings(guid, :fill, source.fill_paints || [], node.size, assets) ++
+        paint_warnings(guid, :stroke, source.stroke_paints || [], node.size, assets)
 
     Enum.reduce(source_warnings, warnings, &[&1 | &2])
   end
 
-  defp unsupported_paints(guid, kind, paints) do
-    Enum.flat_map(paints, fn
-      %{visible: false} -> []
-      %{type: :solid} -> []
-      paint -> [%{guid: GUID.format(guid), feature: kind, value: paint.type}]
-    end)
+  defp paint_warnings(guid, kind, paints, size, assets) do
+    Enum.flat_map(paints, &paint_warning(&1, guid, kind, size, assets))
   end
+
+  defp paint_warning(%{visible: false}, _guid, _kind, _size, _assets), do: []
+
+  defp paint_warning(paint, guid, kind, size, assets) do
+    case Paint.resolve(paint, size, assets.images) do
+      {:ok, resolved} ->
+        Enum.map(resolved.warnings, &warning(guid, kind, &1))
+
+      {:error, :missing_image_asset} ->
+        reason = Map.get(assets.errors, Paint.image_key(paint), :missing_image_asset)
+        [warning(guid, kind, reason)]
+
+      {:error, reason} ->
+        [warning(guid, kind, {Map.get(paint, :type), reason})]
+    end
+  end
+
+  defp warning(guid, kind, value),
+    do: %{guid: GUID.format(guid), feature: kind, value: value}
 
   defp source_node(scene, guid) do
     source_guid =
@@ -317,27 +385,11 @@ defmodule Figler.Render.Skia do
     Map.get(scene.source_nodes, source_guid)
   end
 
-  defp color(paint) do
-    value = paint.color || %{}
-    opacity = (paint.opacity || 1.0) * (Map.get(value, :a) || 1.0)
-
-    {:rgba, channel(Map.get(value, :r)), channel(Map.get(value, :g)), channel(Map.get(value, :b)),
-     channel(opacity)}
-  end
-
-  defp channel(nil), do: 0
-  defp channel(value), do: value |> Kernel.*(255) |> round() |> max(0) |> min(255)
-
   defp matrix(nil), do: @identity
 
   defp matrix(value) do
     {value.m00 || 1.0, value.m01 || 0.0, value.m02 || 0.0, value.m10 || 0.0, value.m11 || 1.0,
      value.m12 || 0.0}
-  end
-
-  defp multiply({a, b, c, d, e, f}, {g, h, i, j, k, l}) do
-    {a * g + b * j, a * h + b * k, a * i + b * l + c, d * g + e * j, d * h + e * k,
-     d * i + e * l + f}
   end
 
   defp point({a, b, c, d, e, f}, x, y), do: {a * x + b * y + c, d * x + e * y + f}

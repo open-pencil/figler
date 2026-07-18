@@ -9,9 +9,11 @@
   data with the effective graph and emits one batched Skia document. On a
   generated 5,002-node sparse document, focused source projection measured
   3.7ms and about 1.0MB process-memory growth versus 15.2ms and 7.6MB for dense
-  decoding. The first vertical slice supports affine transforms, opacity,
-  clipping, solid fills and strokes, basic shapes, text, PNG/JPEG/WEBP,
-  warnings, and strict mode.
+  decoding. The renderer supports affine transforms, opacity, clipping, solid
+  and positioned linear/radial/angular gradients, archive and message-blob
+  image fills across Figma scale modes, basic strokes/shapes/text,
+  PNG/JPEG/WEBP, explicit approximation warnings, and strict mode. Add
+  thresholded RGBA and reference-PNG oracle comparison helpers.
 - Index actionable horizontal stack seeds during graph construction and rebuild
   that candidate list with graph indexes, avoiding a full seed-map scan during
   stack layout. Exact-output fixture A/B runs reduced median stack-layout time

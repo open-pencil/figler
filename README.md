@@ -167,11 +167,16 @@ Rendering projects only the selected root's source paint and shape metadata,
 resolves hierarchy and instances through the effective graph, and compiles one
 batched Skia document for a single native rendering boundary.
 
-The first rendering surface supports affine transforms, opacity, rectangular
-clipping, solid fills and strokes, rectangles, ellipses, lines, and basic text.
-Unsupported visible paints are listed in `metadata.warnings`; pass `strict: true`
-to reject them instead of using a partial rendering. Rendering tests can compare
-decoded OpenPencil and Figler RGBA buffers with `Figler.Render.PixelDiff`.
+The rendering surface supports affine transforms, opacity, rectangular
+clipping, solid and positioned linear/radial/angular gradient paints, archive
+and message-blob image fills (`FILL`, `FIT`, transformed `STRETCH`, and `TILE`),
+basic strokes, rectangles, ellipses, lines, and text. Diamond gradients are
+rendered as an explicit radial approximation.
+
+Unsupported or approximate features are listed in `metadata.warnings`; pass
+`strict: true` to reject them instead of using a partial rendering. Visual tests
+can compare decoded OpenPencil reference PNGs with Figler RGBA output through
+`Figler.Render.Oracle.compare_png/3`.
 
 ## Decode Figma messages
 

@@ -7,6 +7,7 @@ defmodule Figler.RenderTest do
   alias Figler.Render.Skia, as: SkiaBackend
   alias Figler.Render.SourceNode
   alias Figler.Scene.Graph.GUID
+  alias KiwiCodec.Schema.Binary, as: SchemaBinary
 
   import Figler.Test.SceneFixture, only: [fig_zip: 1]
 
@@ -85,11 +86,94 @@ defmodule Figler.RenderTest do
     assert clone_root == GUID.format(clone_guid)
   end
 
+  test "renders positioned linear gradients" do
+    gradient =
+      struct(Figler.Schema.Paint,
+        type: :gradient_linear,
+        visible: true,
+        opacity: 1.0,
+        transform: matrix(0, 0),
+        stops: [gradient_stop(1.0, 0.0, 0.0, 0.0), gradient_stop(0.0, 0.0, 1.0, 1.0)]
+      )
+
+    assert {:ok, scene} = paint_payload(gradient) |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene)
+    assert {:ok, %{data: data, width: 100}} = Skia.to_raw(document)
+
+    <<left_r, _left_g, left_b, 255, _rest::binary>> = data
+    <<right_r, _right_g, right_b, 255>> = binary_part(data, 99 * 4, 4)
+    assert left_b > left_r
+    assert right_r > right_b
+  end
+
+  test "loads archive images into reusable image shaders" do
+    hash = <<0xCA, 0xFE>>
+
+    image_paint =
+      struct(Figler.Schema.Paint,
+        type: :image,
+        visible: true,
+        opacity: 1.0,
+        image: struct(Figler.Schema.Image, hash: hash),
+        image_scale_mode: :fill
+      )
+
+    {:ok, image_png} = Skia.canvas(1, 1) |> Skia.clear({:rgba, 0, 255, 0, 255}) |> Skia.to_png()
+    archive = fig_archive(paint_payload(image_paint), [{~c"images/cafe", image_png}])
+
+    assert {:ok, scene} = Render.prepare(archive)
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene)
+    assert {:ok, raw} = Skia.to_raw(document)
+
+    expected = %{width: 100, height: 50, data: :binary.copy(<<0, 255, 0, 255>>, 5_000)}
+    assert {:ok, %{passed?: true}} = PixelDiff.compare(expected, raw)
+  end
+
+  test "resolves image fills from message blobs" do
+    {:ok, image_png} = Skia.canvas(1, 1) |> Skia.clear({:rgba, 255, 255, 0, 255}) |> Skia.to_png()
+
+    image_paint =
+      struct(Figler.Schema.Paint,
+        type: :image,
+        visible: true,
+        image: struct(Figler.Schema.Image, data_blob: 0),
+        image_scale_mode: :fill
+      )
+
+    blob = struct(Figler.Schema.Blob, bytes: image_png)
+    assert {:ok, scene} = paint_payload(image_paint, [blob]) |> Render.prepare()
+    assert scene.document.blobs == [image_png]
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene)
+    assert {:ok, %{data: <<255, 255, 0, 255, _rest::binary>>}} = Skia.to_raw(document)
+  end
+
+  test "reports missing image assets and supports strict mode" do
+    image_paint =
+      struct(Figler.Schema.Paint,
+        type: :image,
+        visible: true,
+        image: struct(Figler.Schema.Image, hash: <<0xDE, 0xAD>>),
+        image_scale_mode: :fill
+      )
+
+    assert {:ok, scene} = paint_payload(image_paint) |> Render.prepare()
+
+    assert {:ok, %{warnings: [%{feature: :fill, value: :missing_image_asset}]}} =
+             SkiaBackend.compile(scene)
+
+    assert {:error, {:unsupported_render_features, [_warning]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
   test "reports unsupported visible paints and supports strict mode" do
     assert {:ok, scene} = render_payload(:gradient_linear) |> Render.prepare()
 
-    assert {:ok, %{warnings: [%{feature: :fill, value: :gradient_linear}]}} =
-             SkiaBackend.compile(scene)
+    assert {:ok,
+            %{
+              warnings: [
+                %{feature: :fill, value: {:gradient_linear, :missing_gradient_transform}}
+              ]
+            }} = SkiaBackend.compile(scene)
 
     assert {:error, {:unsupported_render_features, [_warning]}} =
              SkiaBackend.compile(scene, strict: true)
@@ -176,9 +260,6 @@ defmodule Figler.RenderTest do
   end
 
   defp render_payload(paint_type) do
-    document_guid = guid(0, 0)
-    canvas_guid = guid(0, 1)
-
     paint =
       struct(Figler.Schema.Paint,
         type: paint_type,
@@ -186,6 +267,13 @@ defmodule Figler.RenderTest do
         opacity: 1.0,
         color: struct(Figler.Schema.Color, r: 1.0, g: 0.0, b: 0.0, a: 1.0)
       )
+
+    paint_payload(paint)
+  end
+
+  defp paint_payload(paint, blobs \\ []) do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
 
     nodes = [
       struct(Figler.Schema.NodeChange,
@@ -219,9 +307,24 @@ defmodule Figler.RenderTest do
       )
     ]
 
-    Figler.Schema.Message
-    |> struct(type: :node_changes, session_id: 0, node_changes: nodes)
-    |> KiwiCodec.encode()
+    encode_nodes(nodes, blobs)
+  end
+
+  defp gradient_stop(r, g, b, position) do
+    struct(Figler.Schema.ColorStop,
+      color: struct(Figler.Schema.Color, r: r, g: g, b: b, a: 1.0),
+      position: position
+    )
+  end
+
+  defp fig_archive(payload, entries) do
+    schema = Figler.schema() |> SchemaBinary.encode() |> Figler.Container.deflate()
+    canvas = Figler.Container.build([schema, Figler.Container.deflate(payload)])
+
+    {:ok, {_name, archive}} =
+      :zip.create(~c"render.fig", [{~c"canvas.fig", canvas} | entries], [:memory])
+
+    archive
   end
 
   defp node(guid, type, name, parent_guid \\ nil, attrs \\ []) do
@@ -256,9 +359,9 @@ defmodule Figler.RenderTest do
     )
   end
 
-  defp encode_nodes(nodes) do
+  defp encode_nodes(nodes, blobs \\ []) do
     Figler.Schema.Message
-    |> struct(type: :node_changes, session_id: 0, node_changes: nodes)
+    |> struct(type: :node_changes, session_id: 0, node_changes: nodes, blobs: blobs)
     |> KiwiCodec.encode()
   end
 
