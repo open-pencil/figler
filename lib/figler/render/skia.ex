@@ -19,7 +19,7 @@ defmodule Figler.Render.Skia do
   alias Figler.Render.Skia.Shape
   alias Figler.Scene.Graph.GUID
 
-  @container_types ["canvas", "component", "frame", "instance", "symbol"]
+  @container_types [:canvas, :frame, :instance, :symbol]
 
   @type bounds :: Bounds.t()
 
@@ -123,7 +123,7 @@ defmodule Figler.Render.Skia do
     end)
   end
 
-  defp render_children(document, _scene, %Node{node_type: "boolean_operation"}, _assets),
+  defp render_children(document, _scene, %Node{node_type: :boolean_operation}, _assets),
     do: document
 
   defp render_children(document, scene, node, assets) do

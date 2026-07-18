@@ -42,6 +42,7 @@ defmodule Figler.RenderTest do
     assert result.bounds == %Bounds{min_x: 10.0, min_y: 20.0, max_x: 110.0, max_y: 70.0}
     assert result.warnings == []
     assert map_size(scene.source_nodes) == 3
+    assert %RenderNode{node_type: :rectangle} = scene.render_nodes[{1, 1}]
 
     assert %SourceNode{
              node_type: "rectangle",
@@ -129,6 +130,7 @@ defmodule Figler.RenderTest do
     assert %RenderNode{
              guid: ^clone_guid,
              source_guid: {1, 2},
+             node_type: :rectangle,
              fill_paints: [%Figler.Render.Paint{color: color}]
            } = scene.render_nodes[clone_guid]
 
@@ -270,7 +272,7 @@ defmodule Figler.RenderTest do
 
     assert {:ok,
             %{
-              warnings: [%{feature: :shape, value: {:shape_unsupported, "star"}}],
+              warnings: [%{feature: :shape, value: {:shape_unsupported, :star}}],
               document: document
             }} =
              SkiaBackend.compile(scene)

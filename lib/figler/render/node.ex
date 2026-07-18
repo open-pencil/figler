@@ -10,6 +10,10 @@ defmodule Figler.Render.Node do
   alias Figler.Render.SourceNode
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Node, as: SceneNode
+  alias Figler.Schema.NodeType
+
+  @node_types NodeType.__kiwi_metadata__().enum_by_name |> Map.keys() |> MapSet.new()
+  @node_types_by_name Map.new(@node_types, &{Atom.to_string(&1), &1})
 
   @graph_fields [
     :node_type,
@@ -72,7 +76,7 @@ defmodule Figler.Render.Node do
   @type t :: %__MODULE__{
           guid: GUID.graph_guid(),
           source_guid: GUID.figma_guid(),
-          node_type: String.t(),
+          node_type: NodeType.t() | :unknown,
           name: String.t() | nil,
           size: map() | nil,
           transform: map() | nil,
@@ -109,11 +113,20 @@ defmodule Figler.Render.Node do
       |> Map.merge(%{
         guid: graph_node.guid,
         source_guid: source_guid,
-        node_type: graph_node.node_type
+        node_type: normalize_node_type(graph_node.node_type)
       })
 
     struct!(__MODULE__, attrs)
   end
+
+  defp normalize_node_type(type) when is_atom(type) do
+    if MapSet.member?(@node_types, type), do: type, else: :unknown
+  end
+
+  defp normalize_node_type(type) when is_binary(type),
+    do: Map.get(@node_types_by_name, type, :unknown)
+
+  defp normalize_node_type(_type), do: :unknown
 
   defp source_attrs(nil, _graph_node), do: %{}
 

@@ -5,9 +5,8 @@ defmodule Figler.Render.Skia.Shape do
   alias Figler.Render.Node
   alias Figler.Render.Skia.Paint
 
-  @rectangular_types ["frame", "instance", "rectangle", "rounded_rectangle", "section", "symbol"]
-  @supported_types @rectangular_types ++
-                     ["boolean_operation", "ellipse", "line", "text", "vector"]
+  @rectangular_types [:frame, :instance, :rectangle, :rounded_rectangle, :section, :symbol]
+  @supported_types @rectangular_types ++ [:boolean_operation, :ellipse, :line, :text, :vector]
 
   @spec supported_type?(String.t()) :: boolean()
   def supported_type?(type), do: type in @supported_types
@@ -43,7 +42,7 @@ defmodule Figler.Render.Skia.Shape do
          _weight,
          _assets
        )
-       when node_type not in ["vector", "boolean_operation"] and paint_type != :solid,
+       when node_type not in [:vector, :boolean_operation] and paint_type != :solid,
        do: document
 
   defp draw_stroke(document, node, paint, weight, assets) do
@@ -66,7 +65,7 @@ defmodule Figler.Render.Skia.Shape do
     do: draw_shape(document, node, kind, opts, assets)
 
   defp draw_shape(document, %Node{node_type: type} = node, kind, opts, assets)
-       when type in ["vector", "boolean_operation"] do
+       when type in [:vector, :boolean_operation] do
     paths = geometry_paths(assets, node, kind)
     path_opts = geometry_paint_opts(opts, kind)
 
@@ -77,14 +76,14 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_shape(
          document,
-         %Node{node_type: "ellipse", size: size},
+         %Node{node_type: :ellipse, size: size},
          _kind,
          opts,
          _assets
        ),
        do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
 
-  defp draw_shape(document, %Node{node_type: "line", size: size}, _kind, opts, _assets) do
+  defp draw_shape(document, %Node{node_type: :line, size: size}, _kind, opts, _assets) do
     Skia.line(document,
       from: {0, 0},
       to: {size.x, size.y},
@@ -95,7 +94,7 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_shape(
          document,
-         %Node{node_type: "text", text: text, size: size} = node,
+         %Node{node_type: :text, text: text, size: size} = node,
          _kind,
          opts,
          _assets

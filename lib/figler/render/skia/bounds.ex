@@ -39,7 +39,7 @@ defmodule Figler.Render.Skia.Bounds do
   @spec render_guids(Figler.Render.Scene.t(), tuple()) :: [tuple()]
   def render_guids(scene, root_guid) do
     case Map.get(scene.render_nodes, root_guid) do
-      %Node{node_type: "canvas"} -> Map.get(scene.children, root_guid, [])
+      %Node{node_type: :canvas} -> Map.get(scene.children, root_guid, [])
       %Node{} -> [root_guid]
       nil -> []
     end
@@ -47,7 +47,7 @@ defmodule Figler.Render.Skia.Bounds do
 
   defp node_bounds(scene, guid, parent_matrix, bounds) do
     case Map.get(scene.render_nodes, guid) do
-      %Node{visible: visible, node_type: "boolean_operation"} = node when visible != false ->
+      %Node{visible: visible, node_type: :boolean_operation} = node when visible != false ->
         matrix = Affine.multiply(parent_matrix, Affine.from_value(node.transform))
 
         bounds

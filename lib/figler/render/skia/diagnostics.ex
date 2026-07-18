@@ -52,7 +52,7 @@ defmodule Figler.Render.Skia.Diagnostics do
          %Node{node_type: node_type},
          _assets
        )
-       when node_type not in ["vector", "boolean_operation"] and paint_type != :solid,
+       when node_type not in [:vector, :boolean_operation] and paint_type != :solid,
        do: [warning(guid, :stroke, {paint_type, :non_solid_stroke_unsupported})]
 
   defp paint_warning(paint, guid, kind, node, assets) do
@@ -94,7 +94,7 @@ defmodule Figler.Render.Skia.Diagnostics do
   end
 
   defp geometry_warnings(%Node{node_type: type} = node, assets)
-       when type in ["vector", "boolean_operation"] do
+       when type in [:vector, :boolean_operation] do
     []
     |> geometry_warning(node, assets, :fill, node.fill_paints || [])
     |> geometry_warning(node, assets, :stroke, node.stroke_paints || [])
