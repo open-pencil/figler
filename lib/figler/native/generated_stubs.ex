@@ -14,6 +14,14 @@ defmodule Figler.Native.GeneratedStubs do
         :erlang.nif_error(:nif_not_loaded)
       end
 
+      def decode_document_metadata(_bytes) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def decode_render_source_nodes(_bytes, _focus) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
       def decode_scene_summary(_bytes) do
         :erlang.nif_error(:nif_not_loaded)
       end

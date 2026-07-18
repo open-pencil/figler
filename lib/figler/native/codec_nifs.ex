@@ -10,7 +10,7 @@ defmodule Figler.Native.CodecNifs do
   alias Figler.Native.Module
   alias Figler.Scene.Graph.Seed.Projection
 
-  @delegates [:decode_sparse_message]
+  @delegates [:decode_sparse_message, :decode_document_metadata]
 
   for name <- @delegates do
     defdelegate unquote(name)(binary), to: Module
@@ -25,4 +25,5 @@ defmodule Figler.Native.CodecNifs do
   end
 
   defdelegate decode_graph_focused_sparse_message(binary, focus), to: Module
+  defdelegate decode_render_source_nodes(binary, focus), to: Module
 end

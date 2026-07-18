@@ -26,6 +26,10 @@ unless Code.ensure_loaded?(Figler.Codegen.Native.SupportFunction) do
   Code.require_file("codegen/figler/codegen/native/support_function.ex")
 end
 
+unless Code.ensure_loaded?(Figler.Codegen.Native.RenderProjection) do
+  Code.require_file("codegen/figler/codegen/native/render_projection.ex")
+end
+
 unless Code.ensure_loaded?(Figler.Codegen.Native.Focus.Decode) do
   Code.require_file("codegen/figler/codegen/native/focus/decode.ex")
 end

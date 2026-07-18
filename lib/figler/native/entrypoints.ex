@@ -9,6 +9,8 @@ defmodule Figler.Native.Entrypoints do
     :decode_sparse_message,
     :decode_graph_seed_records,
     :decode_graph_focused_sparse_message,
+    :decode_document_metadata,
+    :decode_render_source_nodes,
     :decode_scene_summary,
     :build_scene_index,
     :build_scene_index_with_summary,

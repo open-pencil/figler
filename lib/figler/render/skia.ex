@@ -23,9 +23,8 @@ defmodule Figler.Render.Skia do
           {:ok,
            %{document: Skia.Document.t(), root: String.t(), bounds: bounds(), warnings: [map()]}}
           | {:error, term()}
-  def compile(%RenderScene{} = scene, opts \\ []) do
-    with {:ok, root_guid} <- select_root(scene, opts),
-         {:ok, bounds} <- content_bounds(scene, root_guid) do
+  def compile(%RenderScene{root: root_guid} = scene, opts \\ []) do
+    with {:ok, bounds} <- content_bounds(scene, root_guid) do
       compile_root(scene, root_guid, bounds, opts)
     end
   end
@@ -65,56 +64,6 @@ defmodule Figler.Render.Skia do
   defp render_scaled(document, scene, child_guids, bounds) do
     Skia.group(document, [translate: {-bounds.min_x, -bounds.min_y}], fn translated ->
       render_nodes(translated, scene, child_guids)
-    end)
-  end
-
-  defp select_root(scene, opts) do
-    case Keyword.get(opts, :root, Keyword.get(opts, :page)) do
-      nil -> canvas_at(scene, 0)
-      index when is_integer(index) -> canvas_at(scene, index)
-      value -> select_named_root(scene, value)
-    end
-  end
-
-  defp canvas_at(scene, index) do
-    scene
-    |> canvas_guids()
-    |> Enum.at(index)
-    |> case do
-      nil -> {:error, :render_root_not_found}
-      guid -> {:ok, guid}
-    end
-  end
-
-  defp select_named_root(scene, value) do
-    parsed = GUID.parse(value)
-
-    cond do
-      parsed && Map.has_key?(scene.graph.nodes, parsed) ->
-        {:ok, parsed}
-
-      is_binary(value) ->
-        scene
-        |> canvas_guids()
-        |> Enum.find(&(Map.get(scene.graph.nodes, &1).name == value))
-        |> case do
-          nil -> {:error, :render_root_not_found}
-          guid -> {:ok, guid}
-        end
-
-      true ->
-        {:error, :render_root_not_found}
-    end
-  end
-
-  defp canvas_guids(scene) do
-    Enum.flat_map(scene.message.node_changes, fn node ->
-      guid = GUID.from_schema(node.guid)
-
-      case Map.get(scene.graph.nodes, guid) do
-        %Node{node_type: "canvas"} -> [guid]
-        _node -> []
-      end
     end)
   end
 

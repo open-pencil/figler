@@ -148,21 +148,30 @@ or `focus:` to limit work to a subtree and its semantic dependencies.
 
 ## Render with Skia
 
-Figler can compile an effective graph into one batched Skia document and render
-it through a single native boundary:
+Open a complete document when rendering needs archive assets as well as scene
+data. The document retains `canvas.fig`, `images/*`, message blobs, archive
+entries, and page metadata without densely decoding every `NodeChange`:
 
 ```elixir
+document = Figler.Document.open!(fig)
+image = document.images["deadbeef..."]
+
 {:ok, png, metadata} =
-  fig
+  document
   |> Figler.Render.render(page: 0, scale: 2, format: :png)
 
 File.write!("page.png", png)
 ```
 
+Rendering projects only the selected root's source paint and shape metadata,
+resolves hierarchy and instances through the effective graph, and compiles one
+batched Skia document for a single native rendering boundary.
+
 The first rendering surface supports affine transforms, opacity, rectangular
 clipping, solid fills and strokes, rectangles, ellipses, lines, and basic text.
 Unsupported visible paints are listed in `metadata.warnings`; pass `strict: true`
-to reject them instead of using a partial rendering.
+to reject them instead of using a partial rendering. Rendering tests can compare
+decoded OpenPencil and Figler RGBA buffers with `Figler.Render.PixelDiff`.
 
 ## Decode Figma messages
 

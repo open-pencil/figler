@@ -4,18 +4,19 @@ defmodule Figler.Render.Scene do
   effective Figler graph.
 
   The effective graph owns hierarchy and instance semantics. `source_nodes`
-  retains the richer generated `NodeChange` values used by rendering backends.
+  retains only root-focused paint and shape metadata used by rendering backends.
   """
 
   alias Figler.Scene.Graph
 
-  @enforce_keys [:payload, :message, :graph, :source_nodes]
-  defstruct [:payload, :message, :graph, :source_nodes]
+  @enforce_keys [:document, :payload, :graph, :root, :source_nodes]
+  defstruct [:document, :payload, :graph, :root, :source_nodes]
 
   @type t :: %__MODULE__{
+          document: Figler.Document.t(),
           payload: binary(),
-          message: Figler.Schema.Message.t(),
           graph: Graph.t(),
-          source_nodes: %{optional(Graph.GUID.figma_guid()) => Figler.Schema.NodeChange.t()}
+          root: Graph.GUID.figma_guid(),
+          source_nodes: %{optional(Graph.GUID.figma_guid()) => Figler.Render.SourceNode.t()}
         }
 end

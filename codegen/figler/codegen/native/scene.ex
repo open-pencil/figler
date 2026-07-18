@@ -7,6 +7,7 @@ defmodule Figler.Codegen.Native.Scene do
   """
 
   alias Figler.Codegen.Native.AtomCache
+  alias Figler.Codegen.Native.RenderProjection
   alias Figler.Codegen.Native.SupportFunction
   alias Figler.Codegen.Native.Scene.Decode
   alias Figler.Codegen.Native.Scene.FieldSkip
@@ -52,6 +53,7 @@ defmodule Figler.Codegen.Native.Scene do
       scene_record_build_fields: Record.record_build_fields(),
       graph_seed_record: Record.seed_record_expr(),
       graph_seed_stage_flags: graph_seed_stage_flags(),
+      render_projection_field_constants: RenderProjection.field_constants(definition_map),
       scene_decode_locals: scene_decode_locals(),
       scene_decode_arms: scene_decode_arms(definition_map),
       scene_query_atom_statics: scene_query_atom_statics(),

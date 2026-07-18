@@ -33,10 +33,9 @@ defmodule Figler.Test.SceneFixture do
     }
   end
 
-  def fig_zip do
-    {:ok, {_name, zip}} =
-      :zip.create(~c"fixture.fig", [{~c"canvas.fig", canvas_container()}], [:memory])
-
+  def fig_zip(extra_entries \\ []) do
+    entries = [{~c"canvas.fig", canvas_container()} | extra_entries]
+    {:ok, {_name, zip}} = :zip.create(~c"fixture.fig", entries, [:memory])
     zip
   end
 

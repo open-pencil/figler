@@ -2,11 +2,16 @@
 
 ## Unreleased
 
-- Add an optional Skia rendering pipeline that joins generated `NodeChange`
-  paint data with the effective Figler graph and emits one batched Skia document.
-  The first vertical slice supports page/root selection, affine transforms,
-  opacity, clipping, solid fills and strokes, basic shapes, text, PNG/JPEG/WEBP,
-  unsupported-feature warnings, and strict-mode rejection.
+- Add an optional Skia rendering pipeline backed by a complete `Figler.Document`
+  archive boundary and a native, page/root-focused source projection. Rendering
+  retains `canvas.fig`, `images/*`, message blobs, entries, and page metadata
+  without densely decoding every `NodeChange`, then joins projected paint/shape
+  data with the effective graph and emits one batched Skia document. On a
+  generated 5,002-node sparse document, focused source projection measured
+  3.7ms and about 1.0MB process-memory growth versus 15.2ms and 7.6MB for dense
+  decoding. The first vertical slice supports affine transforms, opacity,
+  clipping, solid fills and strokes, basic shapes, text, PNG/JPEG/WEBP,
+  warnings, and strict mode.
 - Index actionable horizontal stack seeds during graph construction and rebuild
   that candidate list with graph indexes, avoiding a full seed-map scan during
   stack layout. Exact-output fixture A/B runs reduced median stack-layout time

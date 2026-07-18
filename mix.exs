@@ -225,6 +225,7 @@ defmodule Figler.MixProject do
       "Scene graph internals": [
         ~r/^Figler\.Scene\.Graph\.(Build|Component|Diff|GUID|Nodes|Patch|Provenance|Seed|Symbol)(\.|$)/
       ],
+      Documents: [Figler.Document, Figler.Document.Page],
       "Scene projection": [~r/^Figler\.Scene(\.|$)/],
       Rendering: [~r/^Figler\.Render(\.|$)/],
       "Native bridge": [~r/^Figler\.Native(\.|$)/],

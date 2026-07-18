@@ -37,6 +37,33 @@ pub fn decode_graph_focused_sparse_message_impl<'a>(
     Ok(value)
 }
 
+pub fn decode_document_metadata_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let mut decoder = Decoder::new(bytes.as_slice());
+    let value = document_metadata_from_decoder(env, &mut decoder)?;
+    decoder.finish()?;
+    Ok(value)
+}
+
+pub fn decode_render_source_nodes_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    focus: Vec<String>,
+) -> NifResult<Term<'a>> {
+    let mut index_decoder = Decoder::new(bytes.as_slice());
+    let metas = graph_focus_index_message(&mut index_decoder)?;
+    index_decoder.finish()?;
+
+    if focus.is_empty() {
+        return render_projection_nodes_from_slices(env, bytes.as_slice(), &metas, None);
+    }
+
+    let wanted = graph_focus_wanted(&metas, &focus);
+    render_projection_nodes_from_slices(env, bytes.as_slice(), &metas, Some(&wanted))
+}
+
 pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
     env.register::<scene_xpath_runtime::SceneIndexResource>().is_ok()
 }
