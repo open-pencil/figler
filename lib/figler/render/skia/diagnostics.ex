@@ -38,6 +38,7 @@ defmodule Figler.Render.Skia.Diagnostics do
       paint_warnings(node.guid, :fill, node.fill_paints || [], node, assets) ++
         paint_warnings(node.guid, :stroke, node.stroke_paints || [], node, assets) ++
         stroke_warnings(node) ++
+        boolean_warnings(node) ++
         geometry_warnings(node, assets) ++
         font_warnings(node, assets) ++
         text_warnings(node) ++
@@ -223,14 +224,39 @@ defmodule Figler.Render.Skia.Diagnostics do
     |> Enum.map(&warning(node.guid, :effect, &1))
   end
 
-  defp geometry_warnings(%Node{node_type: type} = node, assets)
-       when type in [:vector, :boolean_operation] do
+  defp boolean_warnings(%Node{node_type: :boolean_operation} = node) do
+    if flattened_boolean_geometry?(node) do
+      []
+    else
+      [
+        warning(node.guid, :shape, %{
+          code: :live_boolean_geometry_unresolved,
+          operation: node.boolean_operation
+        })
+      ]
+    end
+  end
+
+  defp boolean_warnings(_node), do: []
+
+  defp geometry_warnings(%Node{node_type: :boolean_operation} = node, assets) do
+    if flattened_boolean_geometry?(node), do: geometry_warnings_for_node(node, assets), else: []
+  end
+
+  defp geometry_warnings(%Node{node_type: :vector} = node, assets),
+    do: geometry_warnings_for_node(node, assets)
+
+  defp geometry_warnings(_node, _assets), do: []
+
+  defp geometry_warnings_for_node(node, assets) do
     []
     |> geometry_warning(node, assets, :fill, node.fill_paints || [])
     |> geometry_warning(node, assets, :stroke, node.stroke_paints || [])
   end
 
-  defp geometry_warnings(_node, _assets), do: []
+  defp flattened_boolean_geometry?(node) do
+    not is_nil(node.vector_network) or node.fill_geometry != [] or node.stroke_geometry != []
+  end
 
   defp geometry_warning(warnings, node, assets, kind, paints) do
     if Enum.any?(paints, &(Map.get(&1, :visible) != false)) do

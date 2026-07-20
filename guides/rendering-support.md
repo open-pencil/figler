@@ -57,7 +57,7 @@ mode returns `{:error, {:unsupported_render_features, warnings}}` instead.
 | Even-odd and winding fill rules | Supported |
 | Regular polygon and star nodes | Supported |
 | Arc/partial-ellipse and ellipse-ring geometry | Supported |
-| Unresolved live boolean geometry | Diagnostic-only |
+| Unresolved live boolean geometry | Explicit warning; rejected in strict mode |
 | Figma smooth corners | Circular-radius approximation with warning; rejected in strict mode |
 
 Figler does not fall back to drawing an unsupported shape as a rectangle.

@@ -50,6 +50,8 @@
 - Invalid vector networks, geometry, paint transforms, image settings, text
   ranges, and stroke values now produce explicit diagnostics instead of silent
   fallback output.
+- Live boolean operations without flattened or imported geometry are rejected
+  explicitly instead of disappearing silently.
 - Instance clones retain effective paint, effect, vector, text, and layout
   overrides during rendering.
 

@@ -520,6 +520,32 @@ defmodule Figler.RenderTest do
     assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
   end
 
+  test "rejects unresolved live boolean operations while accepting flattened geometry" do
+    assert {:ok, scene} = unresolved_boolean_payload() |> Render.prepare()
+
+    assert {:ok,
+            %{
+              warnings: [
+                %Warning{
+                  code: :live_boolean_geometry_unresolved,
+                  severity: :unsupported,
+                  context: %{operation: :subtract}
+                }
+              ],
+              document: document
+            }} = SkiaBackend.compile(scene)
+
+    refute Enum.any?(Skia.commands(document), &(&1.op in [:path, :rect]))
+
+    assert {:error,
+            {:unsupported_render_features,
+             [%Warning{code: :live_boolean_geometry_unresolved, severity: :unsupported}]}} =
+             SkiaBackend.compile(scene, strict: true)
+
+    assert {:ok, flattened_scene} = geometry_payload() |> Render.prepare()
+    assert {:ok, %{warnings: []}} = SkiaBackend.compile(flattened_scene)
+  end
+
   test "renders typed polygons, stars, and partial ellipse arcs as paths" do
     assert {:ok, scene} = primitive_shape_payload() |> Render.prepare()
 
@@ -1293,6 +1319,37 @@ defmodule Figler.RenderTest do
         stroke_weight: 4.0,
         stroke_align: alignment,
         stroke_join: :round
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp unresolved_boolean_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    boolean_guid = guid(1, 1)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(boolean_guid, :boolean_operation, "Live subtract", canvas_guid,
+        size: vector(40, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        boolean_operation: :subtract,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      ),
+      node(guid(1, 2), :rectangle, "Left", boolean_guid,
+        size: vector(30, 30),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      ),
+      node(guid(1, 3), :ellipse, "Right", boolean_guid,
+        size: vector(30, 30),
+        transform: matrix(10, 10),
+        visible: true,
+        fill_paints: [solid_paint(0.0, 0.0, 1.0)]
       )
     ]
     |> encode_nodes()
