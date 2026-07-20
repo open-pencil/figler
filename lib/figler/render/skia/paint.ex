@@ -4,18 +4,26 @@ defmodule Figler.Render.Skia.Paint.Resolved do
   @enforce_keys [:paint]
   defstruct [:paint, opacity: 1.0, warnings: []]
 
-  @type t :: %__MODULE__{paint: term(), opacity: float(), warnings: [atom()]}
+  @type t :: %__MODULE__{paint: term(), opacity: float(), warnings: [term()]}
 end
 
 defmodule Figler.Render.Skia.Paint do
   @moduledoc false
-  @compile {:no_warn_undefined, [Skia.Image, Skia.Shader]}
+  @compile {:no_warn_undefined, [Skia.Image, Skia.RuntimeEffect, Skia.Shader]}
 
   alias Figler.Render.Affine
   alias Figler.Render.Skia.Color
   alias Figler.Render.Skia.Paint.Resolved
 
-  @identity {1.0, 0.0, 0.0, 0.0, 1.0, 0.0}
+  @diamond_effect_key {__MODULE__, :diamond_effect}
+  @diamond_sksl """
+  uniform shader gradient;
+
+  half4 main(float2 point) {
+    float distance = 2.0 * max(abs(point.x - 0.5), abs(point.y - 0.5));
+    return gradient.eval(float2(distance, 0.0));
+  }
+  """
 
   @type resolved :: Resolved.t()
 
@@ -53,7 +61,7 @@ defmodule Figler.Render.Skia.Paint do
     do: radial_gradient(paint, size, [])
 
   def resolve(%{type: :gradient_diamond} = paint, size, _images),
-    do: radial_gradient(paint, size, [:gradient_diamond_approximated])
+    do: diamond_gradient(paint, size)
 
   def resolve(%{type: :gradient_angular} = paint, size, _images),
     do: angular_gradient(paint, size)
@@ -86,6 +94,43 @@ defmodule Figler.Render.Skia.Paint do
   end
 
   defp radial_gradient(_paint, _size, _warnings), do: {:error, :missing_geometry}
+
+  defp diamond_gradient(paint, %{x: width, y: height}) do
+    with {:ok, transform} <- paint_matrix(paint),
+         {:ok, stops} <- gradient_stops(paint),
+         {:ok, effect} <- diamond_effect() do
+      local_matrix = Affine.multiply({width, 0.0, 0.0, 0.0, height, 0.0}, transform)
+      gradient = Skia.Shader.linear_gradient({0.0, 0.0}, {1.0, 0.0}, stops)
+
+      shader =
+        Skia.RuntimeEffect.shader(effect,
+          children: %{gradient: gradient},
+          matrix: local_matrix
+        )
+
+      {:ok, %Resolved{paint: shader, warnings: common_warnings(paint)}}
+    end
+  end
+
+  defp diamond_gradient(_paint, _size), do: {:error, :missing_geometry}
+
+  defp diamond_effect do
+    case :persistent_term.get(@diamond_effect_key, :missing) do
+      :missing -> compile_diamond_effect()
+      effect -> {:ok, effect}
+    end
+  end
+
+  defp compile_diamond_effect do
+    case Skia.RuntimeEffect.compile(@diamond_sksl) do
+      {:ok, effect} ->
+        :persistent_term.put(@diamond_effect_key, effect)
+        {:ok, effect}
+
+      {:error, _reason} ->
+        {:error, :diamond_shader_compile_failed}
+    end
+  end
 
   defp angular_gradient(paint, %{x: width, y: height}) do
     with {:ok, transform} <- paint_matrix(paint),
@@ -136,32 +181,59 @@ defmodule Figler.Render.Skia.Paint do
     end
   end
 
-  defp image_matrix(paint, %{x: width, y: height}, image) do
+  defp image_matrix(paint, %{x: width, y: height}, image)
+       when width > 0 and height > 0 and image.width > 0 and image.height > 0 do
     mode = Map.get(paint, :image_scale_mode) || :fill
 
-    case {mode, Map.get(paint, :transform)} do
-      {:tile, nil} ->
-        {:ok, @identity, :repeat}
-
-      {:tile, transform} ->
-        transformed_image_matrix(transform, width, height, image, :repeat)
-
-      {:stretch, transform} when is_map(transform) ->
-        transformed_image_matrix(transform, width, height, image, :clamp)
-
-      _other ->
-        fitted_image_matrix(mode, width, height, image)
+    with {:ok, matrix, tile} <- image_mode_matrix(paint, mode, width, height, image),
+         {:ok, matrix} <- rotate_image_matrix(matrix, Map.get(paint, :rotation), width, height) do
+      {:ok, matrix, tile}
     end
   end
 
-  defp image_matrix(_paint, _size, _image), do: {:error, :missing_geometry}
+  defp image_matrix(_paint, _size, _image), do: {:error, :invalid_image_geometry}
 
-  defp transformed_image_matrix(transform, width, height, image, tile) do
+  defp image_mode_matrix(paint, :tile, width, height, image) do
+    case Map.get(paint, :transform) do
+      nil ->
+        tile_image_matrix(Map.get(paint, :scale), image)
+
+      transform ->
+        with {:ok, scale} <- image_scale(Map.get(paint, :scale)) do
+          transformed_image_matrix(transform, width, height, image, :repeat, scale)
+        end
+    end
+  end
+
+  defp image_mode_matrix(paint, :stretch, width, height, image) do
+    case Map.get(paint, :transform) do
+      nil -> {:ok, {width / image.width, 0.0, 0.0, 0.0, height / image.height, 0.0}, :clamp}
+      transform -> transformed_image_matrix(transform, width, height, image, :clamp)
+    end
+  end
+
+  defp image_mode_matrix(_paint, mode, width, height, image) when mode in [:fill, :fit],
+    do: fitted_image_matrix(mode, width, height, image)
+
+  defp image_mode_matrix(_paint, mode, _width, _height, _image),
+    do: {:error, {:unsupported_image_scale_mode, mode}}
+
+  defp tile_image_matrix(scale, _image) do
+    with {:ok, scale} <- image_scale(scale) do
+      {:ok, {scale, 0.0, 0.0, 0.0, scale, 0.0}, :repeat}
+    end
+  end
+
+  defp image_scale(nil), do: {:ok, 1.0}
+  defp image_scale(scale) when is_number(scale) and scale > 0, do: {:ok, scale / 1}
+  defp image_scale(_scale), do: {:error, :invalid_image_scale}
+
+  defp transformed_image_matrix(transform, width, height, image, tile, scale \\ 1.0) do
     with {:ok, inverse} <- transform |> matrix() |> invert() do
       local_matrix =
         {width, 0.0, 0.0, 0.0, height, 0.0}
         |> Affine.multiply(inverse)
-        |> Affine.multiply({1.0 / image.width, 0.0, 0.0, 0.0, 1.0 / image.height, 0.0})
+        |> Affine.multiply({scale / image.width, 0.0, 0.0, 0.0, scale / image.height, 0.0})
 
       {:ok, local_matrix, tile}
     end
@@ -184,6 +256,26 @@ defmodule Figler.Render.Skia.Paint do
 
     {:ok, matrix, :clamp}
   end
+
+  defp rotate_image_matrix(matrix, rotation, _width, _height) when rotation in [nil, 0, 0.0],
+    do: {:ok, matrix}
+
+  defp rotate_image_matrix(matrix, rotation, width, height) when is_number(rotation) do
+    radians = rotation * :math.pi() / 180.0
+    cosine = :math.cos(radians)
+    sine = :math.sin(radians)
+    center_x = width / 2
+    center_y = height / 2
+
+    rotation_matrix =
+      {cosine, -sine, center_x - cosine * center_x + sine * center_y, sine, cosine,
+       center_y - sine * center_x - cosine * center_y}
+
+    {:ok, Affine.multiply(rotation_matrix, matrix)}
+  end
+
+  defp rotate_image_matrix(_matrix, _rotation, _width, _height),
+    do: {:error, :invalid_image_rotation}
 
   defp common_warnings(paint) do
     case Map.get(paint, :blend_mode) do

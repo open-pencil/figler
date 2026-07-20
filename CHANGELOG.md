@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Render transformed radial and angular gradients on ordinary and editable
+  vector geometry, and replace the radial diamond-gradient approximation with a
+  true cached SkSL diamond shader. Improve image paint matrices for fit/fill,
+  direct stretch, transformed crop/tile, tile scale, and rotation; reject
+  singular or malformed paint transforms explicitly; and add same-scene
+  OpenPencil gradient, vector-gradient, and image-matrix oracles.
 - Render effects in explicit bounded phases: backdrop blur behind the shape,
   drop shadows and layer blur on shape content, and inner shadows above shape
   paints but below children. Add spread-aware drop shadows, shape-masked

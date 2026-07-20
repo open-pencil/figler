@@ -460,6 +460,9 @@ defmodule Figler.RenderTest do
     assert [_, _, _] = paths
     assert Enum.all?(paths, &(Keyword.get(&1.opts, :fill_rule) == :even_odd))
 
+    fill_command = Enum.find(paths, &Keyword.has_key?(&1.opts, :fill))
+    assert match?({:radial_gradient, _, _, _, :clamp, _}, fill_command.opts[:fill])
+
     stroke_command = Enum.find(paths, &Keyword.has_key?(&1.opts, :stroke))
     assert stroke_command.opts[:stroke_cap] == :round
     assert stroke_command.opts[:stroke_join] == :bevel
@@ -697,6 +700,28 @@ defmodule Figler.RenderTest do
              SkiaBackend.compile(scene, strict: true)
   end
 
+  test "reports malformed image matrices and supports strict mode" do
+    {:ok, image_png} = Skia.canvas(1, 1) |> Skia.clear(:white) |> Skia.to_png()
+
+    image_paint =
+      struct(Figler.Schema.Paint,
+        type: :image,
+        visible: true,
+        image: struct(Figler.Schema.Image, data_blob: 0),
+        image_scale_mode: :tile,
+        scale: 0.0
+      )
+
+    blob = struct(Figler.Schema.Blob, bytes: image_png)
+    assert {:ok, scene} = paint_payload(image_paint, [blob]) |> Render.prepare()
+
+    assert {:ok, %{warnings: [%{feature: :fill, value: {:image, :invalid_image_scale}}]}} =
+             SkiaBackend.compile(scene)
+
+    assert {:error, {:unsupported_render_features, [_warning]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
   test "reports unsupported visible paints and supports strict mode" do
     assert {:ok, scene} = render_payload(:gradient_linear) |> Render.prepare()
 
@@ -868,7 +893,17 @@ defmodule Figler.RenderTest do
     document_guid = guid(0, 0)
     canvas_guid = guid(0, 1)
     geometry = struct(Figler.Schema.Path, winding_rule: :odd, commands_blob: 0)
-    fill = solid_paint(0.8, 0.1, 0.5)
+
+    fill =
+      struct(Figler.Schema.Paint,
+        type: :gradient_radial,
+        visible: true,
+        opacity: 1.0,
+        transform: matrix(0, 0),
+        stops: [gradient_stop(0.8, 0.1, 0.5, 0.0), gradient_stop(0.1, 0.3, 0.9, 1.0)]
+      )
+
+    stroke = solid_paint(0.9, 0.9, 1.0)
 
     nodes = [
       node(document_guid, :document, "Document"),
@@ -878,7 +913,7 @@ defmodule Figler.RenderTest do
         transform: matrix(0, 0),
         visible: true,
         fill_paints: [fill],
-        stroke_paints: [fill],
+        stroke_paints: [stroke],
         stroke_weight: 3.0,
         stroke_align: :center,
         stroke_cap: :round,
