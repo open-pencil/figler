@@ -96,10 +96,10 @@ defmodule Figler.Render.Skia do
     shape_opts = bound_shape_opts(resolved.shape_opts, node)
 
     if resolved.group_opts == [] do
-      render_node_content(document, scene, node, assets, shape_opts)
+      render_node_content(document, scene, node, assets, shape_opts, resolved)
     else
       Skia.layer(document, resolved.group_opts, fn layer ->
-        render_node_content(layer, scene, node, assets, shape_opts)
+        render_node_content(layer, scene, node, assets, shape_opts, resolved)
       end)
     end
   end
@@ -110,9 +110,11 @@ defmodule Figler.Render.Skia do
     Keyword.merge(opts, BoundsCompiler.shape(node) |> BoundsCompiler.layer_option())
   end
 
-  defp render_node_content(document, scene, node, assets, shape_opts) do
+  defp render_node_content(document, scene, node, assets, shape_opts, resolved) do
     document
+    |> Effects.render_background_blurs(node, assets, resolved)
     |> render_shape(node, assets, shape_opts)
+    |> Effects.render_inner_shadows(node, assets, resolved)
     |> render_children(scene, node, assets)
   end
 

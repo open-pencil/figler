@@ -7,7 +7,8 @@ defmodule Figler.Render.Skia.Shape do
   alias Figler.Render.Stroke
 
   @rectangular_types [:frame, :instance, :rectangle, :rounded_rectangle, :section, :symbol]
-  @supported_types @rectangular_types ++ [:boolean_operation, :ellipse, :line, :text, :vector]
+  @effect_shape_types @rectangular_types ++ [:boolean_operation, :ellipse, :vector]
+  @supported_types @effect_shape_types ++ [:line, :text]
 
   @spec supported_type?(Figler.Schema.NodeType.t() | :unknown) :: boolean()
   def supported_type?(type), do: type in @supported_types
@@ -25,6 +26,78 @@ defmodule Figler.Render.Skia.Shape do
     stroke = node.stroke || %Stroke{}
     Enum.reduce(node.stroke_paints || [], document, &draw_stroke(&2, node, &1, stroke, assets))
   end
+
+  @doc false
+  @spec effect_shape_supported?(Node.t() | map()) :: boolean()
+  def effect_shape_supported?(%{node_type: type}), do: type in @effect_shape_types
+
+  @doc false
+  @spec draw_silhouette(Skia.Document.t(), Node.t(), map(), keyword(), keyword()) ::
+          Skia.Document.t()
+  def draw_silhouette(document, node, assets, opts, effect_opts \\ [])
+
+  def draw_silhouette(
+        document,
+        %Node{node_type: type, size: %{x: width, y: height}} = node,
+        _assets,
+        opts,
+        effect_opts
+      )
+      when type in @rectangular_types do
+    inset = Keyword.get(effect_opts, :inset, 0.0)
+    radius = max((node.corner_radius || 0.0) - inset, 0.0)
+
+    Skia.rect(document,
+      x: inset,
+      y: inset,
+      width: max(width - inset * 2, 0.0),
+      height: max(height - inset * 2, 0.0),
+      radius: radius,
+      fill: Keyword.get(opts, :fill, :white),
+      blend_mode: Keyword.get(opts, :blend_mode, :src_over)
+    )
+  end
+
+  def draw_silhouette(
+        document,
+        %Node{node_type: :ellipse, size: %{x: width, y: height}},
+        _assets,
+        opts,
+        effect_opts
+      ) do
+    inset = Keyword.get(effect_opts, :inset, 0.0)
+
+    Skia.oval(document,
+      x: inset,
+      y: inset,
+      width: max(width - inset * 2, 0.0),
+      height: max(height - inset * 2, 0.0),
+      fill: Keyword.get(opts, :fill, :white),
+      blend_mode: Keyword.get(opts, :blend_mode, :src_over)
+    )
+  end
+
+  def draw_silhouette(
+        document,
+        %Node{node_type: type} = node,
+        assets,
+        opts,
+        _effect_opts
+      )
+      when type in [:vector, :boolean_operation] do
+    assets
+    |> geometry_paths(node, :fill)
+    |> Enum.reduce(document, fn geometry, rendered ->
+      path_opts =
+        opts
+        |> Keyword.put_new(:fill, :white)
+        |> Keyword.put(:fill_rule, geometry.fill_rule)
+
+      Skia.path(rendered, geometry.path, path_opts)
+    end)
+  end
+
+  def draw_silhouette(document, _node, _assets, _opts, _effect_opts), do: document
 
   defp draw_fill(document, node, paint, assets) do
     case Paint.resolve(paint, node.size, assets.images) do

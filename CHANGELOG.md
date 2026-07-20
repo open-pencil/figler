@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Render effects in explicit bounded phases: backdrop blur behind the shape,
+  drop shadows and layer blur on shape content, and inner shadows above shape
+  paints but below children. Add spread-aware drop shadows, shape-masked
+  background blur through Skia 0.3.7 backdrop-filtered layers, strict malformed
+  and unsupported-effect diagnostics, and same-scene OpenPencil oracles for
+  inner shadow, layer blur, and background blur.
+- Add typed vector stroke metadata for caps, joins, miter limits, dash patterns,
+  alignment, and cap sizing. Render Skia caps, joins, miters, and path effects;
+  diagnose approximated alignments and unsupported cap variants; and validate a
+  curved dashed editable vector against OpenPencil.
 - Add typed UTF-16-indexed rich-text runs projected from Figma
   `characterStyleIDs`, `styleOverrideTable`, and fallback-font metadata. Resolve
   fonts and solid fills per run, split same-style runs at grapheme-level font
@@ -30,11 +40,10 @@
   decoding. The renderer supports affine transforms, opacity, clipping, solid
   and positioned linear/radial/angular gradients, archive and message-blob
   image fills across Figma scale modes, imported vector fill/stroke paths,
-  flattened boolean geometry, blend layers, basic drop shadows and foreground
-  blur, alpha/luminance sibling masks, basic strokes/shapes/text,
-  PNG/JPEG/WEBP, explicit approximation warnings, and strict mode. Editable
-  geometry without imported path blobs, inner shadows, and backdrop blur are
-  rejected explicitly. Add thresholded RGBA and reference-PNG oracle helpers,
+  flattened boolean geometry, blend layers, drop shadows and foreground blur,
+  alpha/luminance sibling masks, basic strokes/shapes/text, PNG/JPEG/WEBP,
+  explicit approximation warnings, and strict mode. Unsupported shape/effect
+  combinations are rejected explicitly. Add thresholded RGBA and reference-PNG oracle helpers,
   plus manifest-driven same-scene OpenPencil/Figler oracle runs that preserve
   root/page, scale, background, and comparison thresholds.
 - Index actionable horizontal stack seeds during graph construction and rebuild

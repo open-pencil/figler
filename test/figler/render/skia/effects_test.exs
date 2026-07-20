@@ -30,12 +30,16 @@ defmodule Figler.Render.Skia.EffectsTest do
     assert resolved.warnings == []
   end
 
-  test "reports effects that cannot be represented faithfully" do
+  test "separates front and backdrop effects and reports lossy policy" do
+    inner_shadow = %{type: :inner_shadow, visible: true}
+    background_blur = %{type: :background_blur, visible: true}
+
     source = %{
+      node_type: :rectangle,
       blend_mode: :linear_burn,
       effects: [
-        %{type: :inner_shadow, visible: true},
-        %{type: :background_blur, visible: true},
+        inner_shadow,
+        background_blur,
         %{
           type: :drop_shadow,
           visible: true,
@@ -46,12 +50,72 @@ defmodule Figler.Render.Skia.EffectsTest do
       ]
     }
 
+    resolved = Effects.resolve(source, 1.0)
+    assert resolved.inner_shadows == [inner_shadow]
+    assert resolved.background_blurs == [background_blur]
+    assert {:blend_mode_unsupported, :linear_burn} in resolved.warnings
+    assert :drop_shadow_cutout_unsupported in resolved.warnings
+    assert {:effect_blend_mode_unsupported, :overlay} in resolved.warnings
+    refute :drop_shadow_spread_unsupported in resolved.warnings
+  end
+
+  test "models drop-shadow spread with morphology without altering the source" do
+    source = %{
+      node_type: :rectangle,
+      blend_mode: :normal,
+      effects: [
+        %{
+          type: :drop_shadow,
+          visible: true,
+          radius: 4.0,
+          spread: 3.0,
+          offset: %{x: 1.0, y: 2.0},
+          color: %{r: 0.0, g: 0.0, b: 0.0, a: 0.5}
+        }
+      ]
+    }
+
+    resolved = Effects.resolve(source, 1.0)
+
+    assert %Skia.ImageFilter.Merge{
+             filters: [
+               nil,
+               %Skia.ImageFilter.DropShadow{
+                 shadow_only: true,
+                 input: %Skia.ImageFilter.Morphology{op: :dilate, radius_x: 3.0}
+               }
+             ]
+           } = resolved.shape_opts[:image_filter]
+
+    assert resolved.warnings == []
+  end
+
+  test "diagnoses invalid radii and vector inner-shadow spread" do
+    source = %{
+      node_type: :vector,
+      blend_mode: :normal,
+      effects: [
+        %{type: :inner_shadow, visible: true, radius: -1.0, spread: 2.0}
+      ]
+    }
+
     warnings = Effects.resolve(source, 1.0).warnings
-    assert {:blend_mode_unsupported, :linear_burn} in warnings
-    assert {:effect_unsupported, :inner_shadow} in warnings
-    assert {:effect_unsupported, :background_blur} in warnings
-    assert :drop_shadow_spread_unsupported in warnings
-    assert :drop_shadow_cutout_unsupported in warnings
-    assert {:effect_blend_mode_unsupported, :overlay} in warnings
+    assert {:effect_radius_invalid, :inner_shadow, -1.0} in warnings
+    assert {:inner_shadow_spread_unsupported, 2.0} in warnings
+  end
+
+  test "rejects effects that require an unsupported shape mask" do
+    source = %{
+      node_type: :text,
+      blend_mode: :normal,
+      effects: [
+        %{type: :inner_shadow, visible: true},
+        %{type: :background_blur, visible: true}
+      ]
+    }
+
+    warnings = Effects.resolve(source, 1.0).warnings
+    assert {:effect_shape_unsupported, :inner_shadow, :text} in warnings
+    assert {:effect_shape_unsupported, :background_blur, :text} in warnings
   end
 end

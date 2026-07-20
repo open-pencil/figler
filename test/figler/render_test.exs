@@ -571,14 +571,38 @@ defmodule Figler.RenderTest do
              SkiaBackend.compile(scene, strict: true)
   end
 
-  test "reports unsupported effects and supports strict mode" do
-    assert {:ok, scene} = unsupported_effect_payload() |> Render.prepare()
+  test "renders bounded inner shadows above shape paints" do
+    assert {:ok, scene} = inner_shadow_payload() |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene, strict: true)
+    assert {:ok, %{width: 20, height: 20, data: data}} = Skia.to_raw(document)
 
-    assert {:ok, %{warnings: [%{feature: :effect, value: {:effect_unsupported, :inner_shadow}}]}} =
-             SkiaBackend.compile(scene)
+    <<edge_red, _edge_green, _edge_blue, 255>> = binary_part(data, 0, 4)
+    <<center_red, _center_green, _center_blue, 255>> = binary_part(data, 4 * (10 * 20 + 10), 4)
+    assert edge_red < center_red
 
-    assert {:error, {:unsupported_render_features, [_warning]}} =
-             SkiaBackend.compile(scene, strict: true)
+    commands = Skia.commands(document)
+
+    assert Enum.any?(commands, fn command ->
+             command.op == :save_layer and command.opts[:blend_mode] == :dst_in
+           end)
+
+    assert Enum.any?(commands, fn command ->
+             command.op == :rect and command.opts[:blend_mode] == :clear
+           end)
+  end
+
+  test "renders bounded background blur through the shape mask" do
+    assert {:ok, scene} = background_blur_payload() |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene, strict: true)
+    assert {:ok, %{width: 20, height: 5, data: data}} = Skia.to_raw(document)
+
+    <<edge, edge, edge, 255>> = binary_part(data, 4 * (2 * 20 + 9), 4)
+    assert edge in 1..254
+
+    assert Enum.any?(Skia.commands(document), fn command ->
+             command.op == :save_layer and command.opts[:bounds] == {0.0, 0.0, 20.0, 5.0} and
+               match?({:blur_filter, 3.0, 3.0, :decal}, command.opts[:backdrop_filter])
+           end)
   end
 
   test "composites alpha mask siblings without drawing masks independently" do
@@ -704,10 +728,18 @@ defmodule Figler.RenderTest do
     |> encode_nodes()
   end
 
-  defp unsupported_effect_payload do
+  defp inner_shadow_payload do
     document_guid = guid(0, 0)
     canvas_guid = guid(0, 1)
-    effect = struct(Figler.Schema.Effect, type: :inner_shadow, visible: true)
+
+    effect =
+      struct(Figler.Schema.Effect,
+        type: :inner_shadow,
+        visible: true,
+        radius: 4.0,
+        offset: vector(3, 3),
+        color: struct(Figler.Schema.Color, r: 0.0, g: 0.0, b: 0.0, a: 0.7)
+      )
 
     [
       node(document_guid, :document, "Document"),
@@ -718,6 +750,36 @@ defmodule Figler.RenderTest do
         visible: true,
         fill_paints: [solid_paint(1.0, 0.0, 0.0)],
         effects: [effect]
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp background_blur_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    blur = struct(Figler.Schema.Effect, type: :background_blur, visible: true, radius: 6.0)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :rectangle, "Black", canvas_guid,
+        size: vector(10, 5),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(0.0, 0.0, 0.0)]
+      ),
+      node(guid(1, 2), :rectangle, "White", canvas_guid,
+        size: vector(10, 5),
+        transform: matrix(10, 0),
+        visible: true,
+        fill_paints: [solid_paint(1.0, 1.0, 1.0)]
+      ),
+      node(guid(1, 3), :rectangle, "Backdrop", canvas_guid,
+        size: vector(20, 5),
+        transform: matrix(0, 0),
+        visible: true,
+        effects: [blur]
       )
     ]
     |> encode_nodes()
