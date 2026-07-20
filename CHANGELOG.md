@@ -2,136 +2,50 @@
 
 ## Unreleased
 
-- Shape the Hex package around production consumers: exclude Figler's RustQ
-  generators and development Mix tasks, compile KiwiCodec's Rustler generator
-  only for Figler development/tests, and keep RustQ, Reach, ExDNA, and VibeKit
-  out of production dependency resolution and runtime loading. Add unpacked
-  query-only and Skia-enabled package consumer gates, and upgrade to KiwiCodec
-  0.3.1.
-- Keep the published beta API reference focused on user-facing document, scene,
-  graph, rendering-neutral value, and oracle modules by filtering native NIF,
-  projection, query-helper, and Skia backend implementation modules from
-  HexDocs while preserving their module documentation in source.
-- Render true inside and outside stroke alignment with bounded shape masks and
-  stroke-aware scene bounds. Extend effect silhouettes to typed text and
-  compound editable vectors, apply morphology-backed inner-shadow spread to
-  vector regions and glyphs, and add same-scene OpenPencil coverage for aligned
-  dashed vector strokes, vector inner shadows, and glyph-masked blur/shadows.
-- Render transformed radial and angular gradients on ordinary and editable
-  vector geometry, and replace the radial diamond-gradient approximation with a
-  true cached SkSL diamond shader. Improve image paint matrices for fit/fill,
-  direct stretch, transformed crop/tile, tile scale, and rotation; reject
-  singular or malformed paint transforms explicitly; and add same-scene
-  OpenPencil gradient, vector-gradient, and image-matrix oracles.
-- Render effects in explicit bounded phases: backdrop blur behind the shape,
-  drop shadows and layer blur on shape content, and inner shadows above shape
-  paints but below children. Add spread-aware drop shadows, shape-masked
-  background blur through Skia 0.3.7 backdrop-filtered layers, strict malformed
-  and unsupported-effect diagnostics, and same-scene OpenPencil oracles for
-  inner shadow, layer blur, and background blur.
-- Add typed vector stroke metadata for caps, joins, miter limits, dash patterns,
-  alignment, and cap sizing. Render Skia caps, joins, miters, and path effects;
-  diagnose approximated alignments and unsupported cap variants; and validate a
-  curved dashed editable vector against OpenPencil.
-- Add typed UTF-16-indexed rich-text runs projected from Figma
-  `characterStyleIDs`, `styleOverrideTable`, and fallback-font metadata. Resolve
-  fonts and solid fills per run, split same-style runs at grapheme-level font
-  coverage boundaries, emit batched `Skia.TextSpan` values, preserve Unicode
-  scalar boundaries, and report malformed ranges, missing overrides,
-  substitutions, and unsupported run styles with exact source ranges. Add a
-  mixed Latin/CJK/style same-scene OpenPencil oracle.
-- Normalize projected paints, effects, image references, geometry references,
-  colors, vectors, and matrices into a typed rendering IR. Generate native
-  projection record order from the same structural schema and apply rich symbol
-  overrides to effective render nodes instead of reusing unmodified source
-  paints and effects for instance clones. Split Skia compilation into focused
-  bounds, asset, shape, diagnostics, and compositing/traversal modules. Separate
-  shape-local effects from node opacity/blend isolation so frame shadows and
-  filters no longer include child content. Bound shape-effect and sibling-mask
-  layers to computed local content bounds. Upgrade to Skia 0.3.2 and use its
-  native luma filter so luminance masks multiply luminance by their original
-  alpha.
-- Add an optional Skia rendering pipeline backed by a complete `Figler.Document`
-  archive boundary and a native, page/root-focused source projection. Rendering
-  retains `canvas.fig`, `images/*`, message blobs, entries, and page metadata
-  without densely decoding every `NodeChange`, then joins projected paint/shape
-  data with the effective graph and emits one batched Skia document. On a
-  generated 5,002-node sparse document, focused source projection measured
-  3.7ms and about 1.0MB process-memory growth versus 15.2ms and 7.6MB for dense
-  decoding. The renderer supports affine transforms, opacity, clipping, solid
-  and positioned linear/radial/angular gradients, archive and message-blob
-  image fills across Figma scale modes, imported vector fill/stroke paths,
-  flattened boolean geometry, blend layers, drop shadows and foreground blur,
-  alpha/luminance sibling masks, basic strokes/shapes/text, PNG/JPEG/WEBP,
-  explicit approximation warnings, and strict mode. Unsupported shape/effect
-  combinations are rejected explicitly. Add thresholded RGBA and reference-PNG oracle helpers,
-  plus manifest-driven same-scene OpenPencil/Figler oracle runs that preserve
-  root/page, scale, background, and comparison thresholds.
-- Index actionable horizontal stack seeds during graph construction and rebuild
-  that candidate list with graph indexes, avoiding a full seed-map scan during
-  stack layout. Exact-output fixture A/B runs reduced median stack-layout time
-  from about 574ms to 402ms.
-- Project native graph-seed metadata from the selected resolver stage plan while
-  preserving fixed records, clone retention, resolver output, and profiling
-  semantics. On the 79,261-node fixture, initial/population-only seed decoding
-  fell from about 1.37s and 562 MB to 0.30s and 157 MB; through component props
-  fell to about 0.67s and 325 MB.
-- Traverse component-property instances in stable graph order so full and
-  stage-projected seed records produce identical resolver output.
-- Ignore component-property assignments from instance nodes removed by earlier
-  graph mutations instead of letting stale clone seeds fall back to and mutate
-  source definitions. The 79,261-node fixture skipped 2,001 stale instances and
-  reduced median component-props time from 1.09s to 1.00s.
-- Avoid redundant component-property removal work by fast-pathing already-empty
-  child clears and collecting removal subtrees in one pass. On the 79,261-node
-  fixture, exact-output A/B runs reduced median component-props time by about 7%.
-- Profile each resolver stage with its remaining stage plan intact, so deferred
-  index work and the returned graph match normal full-pipeline execution.
-- Represent extended clone GUID paths with structurally shared tails instead of
-  copying the full source path on every append; the 200,140-append external
-  profile reduced GUID append time by about 30% while preserving public IDs.
-- Defer clone type/name index maintenance when a later component-props stage will
-  rebuild those indexes; a 79,261-node full-stage A/B improved median resolver
-  time from 8.46s to 7.95s with identical node/provenance output hashes.
-- Materialize initial graph indexes directly from native seed records instead of
-  allocating a second complete seed list; a 79,261-node external fixture dropped
-  from 8.27s to 5.98s in same-process A/B construction while preserving graph
-  nodes, children, provenance, and unresolved output exactly.
-- Use released KiwiCodec 0.3.0 instead of a sibling path dependency so clean
-  checkouts and GitHub CI can generate and validate native code.
-- Scan seed metadata directly during stack layout and skip variable/style stage
-  work for seeds with no relevant metadata, avoiding broad node-key allocation
-  and unnecessary per-node resolver calls.
-- Build the native exact-name index lazily so scene indexes that only navigate,
-  query by type, or evaluate XPath do not duplicate every node name.
-- Resolve XPath `id()` lookups through the native GUID hash index instead of
-  reparsing the requested ID while scanning every scene node.
-- Return fixed graph-seed records as tuples instead of cons-cell lists, reducing
-  the record-container footprint by roughly 42% on a 2,000-node synthetic scene.
-- Cache the versioned parsed Figma schema and its prepared interpreter indexes,
-  accelerating repeated runtime-schema encode/decode calls across processes.
-- Recognize raw Kiwi payloads and `fig-kiwi` containers structurally instead of
-  raising and rescuing decode errors during every raw-payload operation.
-- Repair the message benchmark after dense native decoder removal and run it
-  with Benchee across static, interpreted, sparse, seed, index, and graph paths.
-- Report fixture benchmark p50/p95 timings from configurable warmups and samples,
-  label process-memory deltas as BEAM-only, and preserve sub-millisecond graph
-  profile precision.
-- Drop generated dense native schema decoders; public dense decode remains
-  available through `KiwiCodec.decode/2`.
-- Use descriptor-backed sparse message decoders and RustQ-authored sparse
-  runtime helpers for primitive values, field dispatch, and sparse message
-  scanning.
-- Regenerate sparse descriptor declarations and descriptor macros from RustQ
-  `@type` / `defrustmacro` support.
-- Share sparse and skip message descriptor field inventories, use RustQ-authored
-  sparse enum, sparse struct, and descriptor skip scanning, and generate skip
-  descriptor function/enum/field declarations from RustQ type metadata in native
-  Rust.
-- Author scene skip-field dispatch with RustQ `defrust` / `defrustmacro`
-  helpers instead of a raw Rust template macro.
-- Reduce checked-in generated native source to about 555 KB / 13,481 lines while
-  preserving public sparse decode and graph seed performance paths.
+### Added
+
+- Optional headless raster rendering through Skia, with PNG, JPEG, WEBP, and
+  raw RGBA output.
+- Rendering support for the documented beta subset, including common shapes,
+  editable vectors, fills, transformed gradients, image paints, strokes,
+  rich text, effects, clipping, and sibling masks.
+- `%Figler.Render.Warning{}` diagnostics with stable codes and structured
+  context. Non-strict renders return warnings in metadata; `strict: true`
+  rejects renders that would require unsupported, approximate, substituted,
+  malformed, or missing behavior.
+- Caller-controlled font fallback, grapheme-safe fallback selection, and
+  UTF-16-compatible rich-text style ranges.
+- Visual-oracle helpers for comparing Figler output with reference PNGs and
+  running repeatable manifest-based render checks.
+- Preservation of complete `.fig` archives, including Kiwi payloads, archive
+  entries, message blobs, and `images/*` assets.
+
+### Changed
+
+- Render options now have a documented validation contract. Unknown,
+  conflicting, or malformed options return structured
+  `{:invalid_render_options, errors}` results.
+- Effective scene graphs now apply instance overrides, component-property
+  assignments, swaps, variables, and layout metadata before rendering.
+- Large-file scene indexing and effective-graph construction use less memory
+  and complete substantially faster.
+- The Hex package no longer brings development-time code generators or quality
+  tools into production dependency resolution.
+- The published API reference now focuses on supported document, scene, graph,
+  rendering, and oracle modules.
+
+### Fixed
+
+- Shape effects no longer accidentally include child content.
+- Effect, mask, and aligned-stroke layers use geometry-aware bounds instead of
+  unbounded compositing surfaces.
+- Text styling and fallback no longer split Unicode scalars or grapheme
+  clusters.
+- Invalid vector networks, geometry, paint transforms, image settings, text
+  ranges, and stroke values now produce explicit diagnostics instead of silent
+  fallback output.
+- Instance clones retain effective paint, effect, vector, text, and layout
+  overrides during rendering.
 
 ## 0.1.0 - 2026-06-26
 

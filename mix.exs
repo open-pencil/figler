@@ -199,6 +199,7 @@ defmodule Figler.MixProject do
             "native/src",
             "priv/schema",
             "guides/rendering-support.md",
+            "guides/render-warnings.md",
             "mix.exs",
             "README.md",
             "CHANGELOG.md",
@@ -216,7 +217,12 @@ defmodule Figler.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CHANGELOG.md", "guides/rendering-support.md"],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "guides/rendering-support.md",
+        "guides/render-warnings.md"
+      ],
       filter_modules: &public_doc_module?/2,
       groups_for_modules: docs_groups_for_modules(),
       source_ref: "v#{@version}",

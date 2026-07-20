@@ -79,15 +79,15 @@ normal semantic-versioning rules.
 - [x] Audit public modules and hide codegen, projection internals, and backend
       implementation modules that are not part of the contract.
 - [ ] Stabilize the document/query/graph entrypoints and their error tuples.
-- [ ] Stabilize render selection options: page, root, scale, background, output
+- [x] Stabilize render selection options: page, root, scale, background, output
       format, fonts, and strict mode.
-- [ ] Define a documented warning taxonomy with stable codes and contextual
+- [x] Define a documented warning taxonomy with stable codes and contextual
       fields.
-- [ ] Ensure every approximation exposed by the renderer is represented by a
+- [x] Ensure every approximation exposed by the renderer is represented by a
       structured warning.
 - [x] Verify optional-Skia behavior: query and graph APIs compile and run without
       Skia installed; rendering fails with a clear capability error.
-- [ ] Document the supported Elixir, OTP, Rust, and platform matrix.
+- [x] Document the supported Elixir, OTP, Rust, and platform matrix.
 
 ## Milestone B2: close common rendering gaps
 
@@ -170,7 +170,7 @@ not like the development repository.
 Figler from the published docs.
 
 - [ ] Add a short query tutorial and a short headless-render tutorial.
-- [ ] Publish the rendering support matrix and warning-code reference.
+- [x] Publish the rendering support matrix and warning-code reference.
 - [ ] Document font resolution order, caller-supplied fonts, and strict
       substitution behavior.
 - [ ] Document performance guidance for full files versus focused roots.

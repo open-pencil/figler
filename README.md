@@ -48,6 +48,21 @@ For optional native raster rendering, also add Skia:
 Figler uses a Rustler native extension for high-performance decoding and scene
 queries. Building from source requires a Rust toolchain.
 
+### Beta compatibility
+
+| Layer | Supported beta baseline |
+| --- | --- |
+| Elixir / OTP | Elixir 1.19 on OTP 27; Elixir 1.20 on OTP 29 |
+| Rust | Stable Rust 1.97 |
+| Figler native | Source-built and CI-tested on x86-64 Linux |
+| Skia rendering | Optional Skia 0.3.7; its published native target matrix applies |
+
+Other Unix-like source builds are best effort during beta. Windows is not yet a
+validated beta target. Source builds require Cargo/Rust, a C/C++ toolchain,
+CMake, and Make because the dependency graph builds both the Figler NIF and
+zstd. Skia may require additional platform libraries when forced to build from
+source rather than using one of its precompiled artifacts.
+
 ## Quick start: query a Figma file
 
 Most scene APIs accept a Figma `.fig` file directly. Lower-level APIs can also
@@ -182,9 +197,10 @@ paints and effects; and some live boolean or image-filter semantics remain
 explicitly diagnostic. Outline masks remain approximate. See the
 [rendering support matrix](guides/rendering-support.md) for the beta contract.
 
-Unsupported or approximate features are listed in `metadata.warnings`; this
-includes unavailable requested font families, missing glyph coverage, malformed
-style ranges, and font substitutions. Figler resolves each grapheme cluster
+Unsupported or approximate features are listed in `metadata.warnings`; the
+[warning-code reference](guides/render-warnings.md) documents the stable warning
+shape, severity classes, and current codes. This includes unavailable requested
+font families, missing glyph coverage, malformed style ranges, and font substitutions. Figler resolves each grapheme cluster
 against its style run's requested font and Figma fallback-font metadata, then
 asks Skia for installed character-aware fallbacks. Callers can provide deterministic
 fallbacks with `fallback_font_paths: [...]` or already-loaded

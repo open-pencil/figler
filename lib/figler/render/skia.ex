@@ -17,6 +17,7 @@ defmodule Figler.Render.Skia do
   alias Figler.Render.Skia.Diagnostics
   alias Figler.Render.Skia.Effects
   alias Figler.Render.Skia.Shape
+  alias Figler.Render.Warning
   alias Figler.Scene.Graph.GUID
 
   @container_types [:canvas, :frame, :instance, :symbol]
@@ -26,7 +27,12 @@ defmodule Figler.Render.Skia do
   @doc "Compiles an effective scene into a Skia command document."
   @spec compile(RenderScene.t(), keyword()) ::
           {:ok,
-           %{document: Skia.Document.t(), root: String.t(), bounds: bounds(), warnings: [map()]}}
+           %{
+             document: Skia.Document.t(),
+             root: String.t(),
+             bounds: bounds(),
+             warnings: [Warning.t()]
+           }}
           | {:error, term()}
   def compile(%RenderScene{root: root_guid} = scene, opts \\ []) do
     with {:ok, bounds} <- BoundsCompiler.content(scene, root_guid) do

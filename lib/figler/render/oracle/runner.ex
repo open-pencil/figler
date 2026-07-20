@@ -143,8 +143,11 @@ defmodule Figler.Render.Oracle.Runner do
 
   defp warning_result(warning) do
     %{
-      guid: warning.guid,
+      code: Atom.to_string(warning.code),
       feature: Atom.to_string(warning.feature),
+      guid: warning.guid,
+      severity: Atom.to_string(warning.severity),
+      context: json_value(warning.context),
       value: json_value(warning.value)
     }
   end
@@ -180,11 +183,7 @@ defmodule Figler.Render.Oracle.Runner do
     |> Enum.sort()
   end
 
-  defp warning_code(%{value: %{code: code}}) when is_atom(code), do: Atom.to_string(code)
-
-  defp warning_code(%{feature: feature, value: value}),
-    do: "#{feature}:#{inspect(value)}"
-
+  defp warning_code(%{code: code}) when is_atom(code), do: Atom.to_string(code)
   defp warning_code(_warning), do: nil
 
   defp json_value(nil), do: nil

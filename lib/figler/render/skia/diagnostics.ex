@@ -8,9 +8,10 @@ defmodule Figler.Render.Skia.Diagnostics do
   alias Figler.Render.Stroke
   alias Figler.Render.Text
   alias Figler.Render.Text.Case, as: TextCase
+  alias Figler.Render.Warning
   alias Figler.Scene.Graph.GUID
 
-  @spec collect(Figler.Render.Scene.t(), [tuple()], map()) :: [map()]
+  @spec collect(Figler.Render.Scene.t(), [tuple()], map()) :: [Warning.t()]
   def collect(scene, guids, assets) do
     guids
     |> Enum.reduce([], &node_warnings(scene, assets, &1, &2))
@@ -59,7 +60,9 @@ defmodule Figler.Render.Skia.Diagnostics do
          _assets
        )
        when node_type not in [:vector, :boolean_operation] and paint_type != :solid,
-       do: [warning(guid, :stroke, {paint_type, :non_solid_stroke_unsupported})]
+       do: [
+         warning(guid, :stroke, %{code: :non_solid_stroke_unsupported, paint_type: paint_type})
+       ]
 
   defp paint_warning(paint, guid, kind, node, assets) do
     case Paint.resolve(paint, node.size, assets.images) do
@@ -68,12 +71,26 @@ defmodule Figler.Render.Skia.Diagnostics do
 
       {:error, :missing_image_asset} ->
         reason = Map.get(assets.errors, Paint.image_key(paint), :missing_image_asset)
-        [warning(guid, kind, reason)]
+        [warning(guid, kind, paint_error(paint, reason))]
 
       {:error, reason} ->
-        [warning(guid, kind, {Map.get(paint, :type), reason})]
+        [warning(guid, kind, paint_error(paint, reason))]
     end
   end
+
+  defp paint_error(paint, reason) when is_atom(reason),
+    do: %{code: reason, paint_type: Map.get(paint, :type)}
+
+  defp paint_error(paint, reason) when is_tuple(reason) and tuple_size(reason) > 0 do
+    %{
+      code: elem(reason, 0),
+      details: reason |> Tuple.to_list() |> tl(),
+      paint_type: Map.get(paint, :type)
+    }
+  end
+
+  defp paint_error(paint, reason),
+    do: %{code: :paint_invalid, paint_type: Map.get(paint, :type), reason: reason}
 
   defp stroke_warnings(%Node{stroke_paints: paints} = node) do
     if Enum.any?(paints || [], &(Map.get(&1, :visible) != false)) do
@@ -230,5 +247,5 @@ defmodule Figler.Render.Skia.Diagnostics do
   defp geometry_references(node, :stroke), do: node.stroke_geometry || []
 
   defp warning(guid, kind, value),
-    do: %{guid: GUID.format(guid), feature: kind, value: value}
+    do: Warning.new(GUID.format(guid), kind, value)
 end

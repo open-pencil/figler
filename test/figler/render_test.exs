@@ -8,6 +8,7 @@ defmodule Figler.RenderTest do
   alias Figler.Render.PixelDiff
   alias Figler.Render.Skia, as: SkiaBackend
   alias Figler.Render.SourceNode
+  alias Figler.Render.Warning
   alias Figler.Scene.Graph.GUID
   alias KiwiCodec.Schema.Binary, as: SchemaBinary
 
@@ -24,6 +25,10 @@ defmodule Figler.RenderTest do
     assert {:ok, %{root: {0, 1}}} = Render.prepare(scene.document, page: "Page 1")
     assert {:error, :render_root_not_found} = Render.prepare(scene.document, page: 1)
     assert {:error, :render_root_not_found} = Render.render(scene, page: 1)
+
+    assert {:error,
+            {:invalid_render_options, [%{option: :unknown, code: :unknown_option, value: true}]}} =
+             Render.prepare(scene.document, unknown: true)
   end
 
   test "compiles and renders a solid rectangle through one Skia document" do
@@ -621,7 +626,9 @@ defmodule Figler.RenderTest do
 
     refute Enum.any?(Skia.commands(document), &(&1.op == :rect))
 
-    assert {:error, {:unsupported_render_features, [_warning]}} =
+    assert {:error,
+            {:unsupported_render_features,
+             [%Warning{code: :shape_unsupported, severity: :unsupported}]}} =
              SkiaBackend.compile(scene, strict: true)
   end
 
@@ -764,8 +771,16 @@ defmodule Figler.RenderTest do
 
     assert {:ok, scene} = paint_payload(image_paint) |> Render.prepare()
 
-    assert {:ok, %{warnings: [%{feature: :fill, value: :missing_image_asset}]}} =
-             SkiaBackend.compile(scene)
+    assert {:ok,
+            %{
+              warnings: [
+                %{
+                  code: :missing_image_asset,
+                  feature: :fill,
+                  context: %{paint_type: :image}
+                }
+              ]
+            }} = SkiaBackend.compile(scene)
 
     assert {:error, {:unsupported_render_features, [_warning]}} =
              SkiaBackend.compile(scene, strict: true)
@@ -786,8 +801,16 @@ defmodule Figler.RenderTest do
     blob = struct(Figler.Schema.Blob, bytes: image_png)
     assert {:ok, scene} = paint_payload(image_paint, [blob]) |> Render.prepare()
 
-    assert {:ok, %{warnings: [%{feature: :fill, value: {:image, :invalid_image_scale}}]}} =
-             SkiaBackend.compile(scene)
+    assert {:ok,
+            %{
+              warnings: [
+                %{
+                  code: :invalid_image_scale,
+                  feature: :fill,
+                  context: %{paint_type: :image}
+                }
+              ]
+            }} = SkiaBackend.compile(scene)
 
     assert {:error, {:unsupported_render_features, [_warning]}} =
              SkiaBackend.compile(scene, strict: true)
@@ -799,7 +822,11 @@ defmodule Figler.RenderTest do
     assert {:ok,
             %{
               warnings: [
-                %{feature: :fill, value: {:gradient_linear, :missing_gradient_transform}}
+                %{
+                  code: :missing_gradient_transform,
+                  feature: :fill,
+                  context: %{paint_type: :gradient_linear}
+                }
               ]
             }} = SkiaBackend.compile(scene)
 

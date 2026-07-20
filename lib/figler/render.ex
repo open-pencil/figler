@@ -12,6 +12,7 @@ defmodule Figler.Render do
   alias Figler.Document
   alias Figler.Native.CodecNifs
   alias Figler.Render.Node, as: RenderNode
+  alias Figler.Render.Options
   alias Figler.Render.Scene, as: RenderScene
   alias Figler.Render.Selection
   alias Figler.Render.Skia, as: SkiaBackend
@@ -29,14 +30,15 @@ defmodule Figler.Render do
   def prepare(input, opts \\ [])
 
   def prepare(input, opts) when is_binary(input) and is_list(opts) do
-    with {:ok, document} <- Document.open(input) do
+    with :ok <- Options.validate(opts),
+         {:ok, document} <- Document.open(input) do
       prepare_document(document, opts)
     end
   end
 
-  @spec prepare(Document.t(), keyword()) :: {:ok, RenderScene.t()}
+  @spec prepare(Document.t(), keyword()) :: {:ok, RenderScene.t()} | {:error, term()}
   def prepare(%Document{} = document, opts) when is_list(opts) do
-    prepare_document(document, opts)
+    with :ok <- Options.validate(opts), do: prepare_document(document, opts)
   end
 
   @doc """
@@ -48,6 +50,10 @@ defmodule Figler.Render do
   glyph coverage, and substitutions—are returned as warnings, or as an error
   with `strict: true`. Deterministic caller-provided fallback fonts can be passed
   with `:fallback_font_paths` or `:fallback_typefaces`.
+
+  Public options are documented by `Figler.Render.Options`. Unknown or malformed
+  options return `{:error, {:invalid_render_options, errors}}`. Rendering without
+  the optional Skia dependency returns `{:error, :skia_not_available}`.
   """
   @spec render(binary() | Document.t() | RenderScene.t(), keyword()) ::
           {:ok, binary() | map(), map()} | {:error, term()}
@@ -59,9 +65,11 @@ defmodule Figler.Render do
   end
 
   def render(%RenderScene{} = scene, opts) when is_list(opts) do
-    if Code.ensure_loaded?(Skia),
-      do: render_prepared(scene, opts),
-      else: {:error, :skia_not_available}
+    with :ok <- Options.validate(opts) do
+      if Code.ensure_loaded?(Skia),
+        do: render_prepared(scene, opts),
+        else: {:error, :skia_not_available}
+    end
   end
 
   defp prepare_document(document, opts) do
