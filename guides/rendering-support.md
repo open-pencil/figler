@@ -92,8 +92,8 @@ for that feature.
 | Width, miter limit, joins, and butt/round/square caps | Supported |
 | Dash patterns | Supported, oracle-covered |
 | Center alignment | Supported |
-| Inside/outside alignment on closed supported shapes | Supported, oracle-covered |
-| Open-line inside/outside alignment | Approximate as centered |
+| Inside/outside alignment on closed, compound, and transformed paths | Supported, oracle-covered |
+| Open-path inside/outside alignment | Centered approximation with warning; rejected in strict mode |
 | Gradient/image strokes on vectors and boolean paths | Supported |
 | Non-solid strokes on ordinary primitive shapes | Diagnostic-only |
 | Decorative arrow, ERD, highlight, and washi caps | Diagnostic-only |

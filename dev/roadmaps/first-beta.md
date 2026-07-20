@@ -101,7 +101,7 @@ design-system selections without rectangle fallbacks.
 - [x] Audit clipping for every supported container and transformed path type.
 - [x] Audit live boolean geometry versus flattened/imported geometry and reject
       unresolved cases explicitly.
-- [ ] Verify stroke alignment, dashes, joins, and bounds on open, closed,
+- [x] Verify stroke alignment, dashes, joins, and bounds on open, closed,
       compound, and transformed paths.
 - [ ] Verify effect order and bounds on nested frames, instances, masks, and text.
 

@@ -25,8 +25,26 @@ defmodule Figler.Render.GeometryTest do
     references = [%{commands_blob: 0, winding_rule: :odd}]
     blob = <<1, f32(0.0)::binary, f32(0.0)::binary, 0>>
 
-    assert {:ok, [%{path: path, fill_rule: :even_odd}]} = Geometry.paths(references, [blob])
+    assert {:ok, [%{path: path, fill_rule: :even_odd, closed?: true}]} =
+             Geometry.paths(references, [blob])
+
     assert Skia.Path.segments(path) == [{:move_to, 0.0, 0.0}, :close]
+  end
+
+  test "classifies open and compound closed geometry structurally" do
+    open = <<1, f32(0.0)::binary, f32(0.0)::binary, 2, f32(10.0)::binary, f32(10.0)::binary>>
+
+    compound =
+      <<1, f32(0.0)::binary, f32(0.0)::binary, 2, f32(10.0)::binary, f32(0.0)::binary, 0, 1,
+        f32(20.0)::binary, f32(20.0)::binary, 2, f32(30.0)::binary, f32(20.0)::binary, 0>>
+
+    references = [
+      %{commands_blob: 0, winding_rule: :nonzero},
+      %{commands_blob: 1, winding_rule: :odd}
+    ]
+
+    assert {:ok, [%{closed?: false}, %{closed?: true}]} =
+             Geometry.paths(references, [open, compound])
   end
 
   test "rejects malformed and unsupported commands" do

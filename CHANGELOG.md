@@ -45,6 +45,9 @@
   unbounded compositing surfaces.
 - Clipped containers now use independent corner paths, preserve transformed
   descendant clipping, and exclude clipped overflow from output bounds.
+- Closed compound path strokes retain alignment, dash, join, cap, miter, and
+  transformed-bound semantics; open-path alignment reports its centered
+  approximation explicitly.
 - Text styling and fallback no longer split Unicode scalars or grapheme
   clusters.
 - Invalid vector networks, geometry, paint transforms, image settings, text

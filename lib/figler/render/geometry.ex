@@ -1,10 +1,14 @@
 defmodule Figler.Render.Geometry.Path do
   @moduledoc "A decoded Figma geometry path and its winding rule."
 
-  @enforce_keys [:path, :fill_rule]
-  defstruct [:path, :fill_rule]
+  @enforce_keys [:path, :fill_rule, :closed?]
+  defstruct [:path, :fill_rule, :closed?]
 
-  @type t :: %__MODULE__{path: Skia.Path.t(), fill_rule: :winding | :even_odd}
+  @type t :: %__MODULE__{
+          path: Skia.Path.t(),
+          fill_rule: :winding | :even_odd,
+          closed?: boolean()
+        }
 end
 
 defmodule Figler.Render.Geometry do
@@ -37,7 +41,8 @@ defmodule Figler.Render.Geometry do
       {:ok,
        %GeometryPath{
          path: path,
-         fill_rule: fill_rule(Map.get(reference, :winding_rule))
+         fill_rule: fill_rule(Map.get(reference, :winding_rule)),
+         closed?: closed_path?(path)
        }}
     else
       nil -> {:error, :missing_geometry_blob}
@@ -82,6 +87,19 @@ defmodule Figler.Render.Geometry do
 
   defp decode_commands(<<command, _rest::binary>>, _path),
     do: {:error, {:unsupported_geometry_command, command}}
+
+  defp closed_path?(path) do
+    path
+    |> Skia.Path.segments()
+    |> Enum.reduce_while(nil, fn
+      {:move_to, _x, _y}, nil -> {:cont, :open}
+      {:move_to, _x, _y}, :closed -> {:cont, :open}
+      {:move_to, _x, _y}, :open -> {:halt, :invalid}
+      :close, :open -> {:cont, :closed}
+      _segment, state -> {:cont, state}
+    end)
+    |> Kernel.==(:closed)
+  end
 
   defp reverse_paths({:ok, paths}), do: {:ok, Enum.reverse(paths)}
   defp reverse_paths(error), do: error

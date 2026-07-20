@@ -520,6 +520,57 @@ defmodule Figler.RenderTest do
     assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
   end
 
+  test "preserves aligned dashed strokes on transformed compound closed paths" do
+    assert {:ok, scene} = audited_path_stroke_payload(:closed) |> Render.prepare()
+
+    assert {:ok, %{warnings: [], bounds: bounds, document: document}} =
+             SkiaBackend.compile(scene)
+
+    assert bounds == %Bounds{min_x: 36.0, min_y: 16.0, max_x: 104.0, max_y: 124.0}
+
+    stroke_command =
+      document
+      |> Skia.commands()
+      |> Enum.find(fn command ->
+        command.op == :path and Keyword.get(command.opts, :stroke_width) == 8.0
+      end)
+
+    assert stroke_command.opts[:stroke_join] == :miter
+    assert stroke_command.opts[:stroke_miter] == 4.0
+    assert stroke_command.opts[:stroke_cap] == :square
+    assert stroke_command.opts[:path_effect] == {:dash_path_effect, [6.0, 3.0], 0.0}
+    assert Enum.count(Skia.Path.segments(hd(stroke_command.args)), &(&1 == :close)) == 2
+  end
+
+  test "approximates inside and outside alignment on open paths explicitly" do
+    assert {:ok, scene} = audited_path_stroke_payload(:open) |> Render.prepare()
+
+    assert {:ok,
+            %{
+              warnings: [
+                %Warning{
+                  code: :stroke_align_approximated,
+                  severity: :approximation,
+                  context: %{details: [:inside]}
+                }
+              ],
+              document: document
+            }} = SkiaBackend.compile(scene)
+
+    assert Enum.any?(Skia.commands(document), fn command ->
+             command.op == :path and Keyword.get(command.opts, :stroke_width) == 4.0
+           end)
+
+    refute Enum.any?(Skia.commands(document), fn command ->
+             command.op == :path and Keyword.get(command.opts, :stroke_width) == 8.0
+           end)
+
+    assert {:error,
+            {:unsupported_render_features,
+             [%Warning{code: :stroke_align_approximated, severity: :approximation}]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
   test "rejects unresolved live boolean operations while accepting flattened geometry" do
     assert {:ok, scene} = unresolved_boolean_payload() |> Render.prepare()
 
@@ -1322,6 +1373,64 @@ defmodule Figler.RenderTest do
       )
     ]
     |> encode_nodes()
+  end
+
+  defp audited_path_stroke_payload(kind) do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    geometry = struct(Figler.Schema.Path, winding_rule: :odd, commands_blob: 0)
+
+    transform =
+      struct(Figler.Schema.Matrix,
+        m00: 0.0,
+        m01: -1.0,
+        m02: 100.0,
+        m10: 1.0,
+        m11: 0.0,
+        m12: 20.0
+      )
+
+    {blob, fill_geometry, fill_paints} =
+      case kind do
+        :closed ->
+          {compound_closed_geometry_blob(), [geometry], [solid_paint(0.2, 0.4, 0.8)]}
+
+        :open ->
+          {open_geometry_blob(), [], []}
+      end
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :vector, "Audited path stroke", canvas_guid,
+        size: vector(100, 60),
+        transform: transform,
+        visible: true,
+        fill_paints: fill_paints,
+        stroke_paints: [solid_paint(1.0, 0.5, 0.1)],
+        stroke_weight: 4.0,
+        stroke_align: if(kind == :closed, do: :outside, else: :inside),
+        stroke_cap: :square,
+        stroke_join: :miter,
+        miter_limit: 4.0,
+        dash_pattern: [6.0, 3.0],
+        fill_geometry: fill_geometry,
+        stroke_geometry: [geometry]
+      )
+    ]
+    |> encode_nodes([struct(Figler.Schema.Blob, bytes: blob)])
+  end
+
+  defp open_geometry_blob do
+    <<1, f32(0.0)::binary, f32(30.0)::binary, 2, f32(50.0)::binary, f32(0.0)::binary, 2,
+      f32(100.0)::binary, f32(30.0)::binary>>
+  end
+
+  defp compound_closed_geometry_blob do
+    <<1, f32(0.0)::binary, f32(0.0)::binary, 2, f32(100.0)::binary, f32(0.0)::binary, 2,
+      f32(100.0)::binary, f32(60.0)::binary, 2, f32(0.0)::binary, f32(60.0)::binary, 0, 1,
+      f32(30.0)::binary, f32(20.0)::binary, 2, f32(70.0)::binary, f32(20.0)::binary, 2,
+      f32(70.0)::binary, f32(40.0)::binary, 2, f32(30.0)::binary, f32(40.0)::binary, 0>>
   end
 
   defp unresolved_boolean_payload do

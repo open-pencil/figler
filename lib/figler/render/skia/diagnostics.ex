@@ -37,7 +37,7 @@ defmodule Figler.Render.Skia.Diagnostics do
     node_warnings =
       paint_warnings(node.guid, :fill, node.fill_paints || [], node, assets) ++
         paint_warnings(node.guid, :stroke, node.stroke_paints || [], node, assets) ++
-        stroke_warnings(node) ++
+        stroke_warnings(node, assets) ++
         boolean_warnings(node) ++
         geometry_warnings(node, assets) ++
         font_warnings(node, assets) ++
@@ -94,22 +94,23 @@ defmodule Figler.Render.Skia.Diagnostics do
   defp paint_error(paint, reason),
     do: %{code: :paint_invalid, paint_type: Map.get(paint, :type), reason: reason}
 
-  defp stroke_warnings(%Node{stroke_paints: paints} = node) do
+  defp stroke_warnings(%Node{stroke_paints: paints} = node, assets) do
     if Enum.any?(paints || [], &(Map.get(&1, :visible) != false)) do
       node
-      |> stroke_warning_values()
+      |> stroke_warning_values(assets)
       |> Enum.map(&warning(node.guid, :stroke, &1))
     else
       []
     end
   end
 
-  defp stroke_warning_values(%Node{stroke: nil}), do: []
+  defp stroke_warning_values(%Node{stroke: nil}, _assets), do: []
 
-  defp stroke_warning_values(%Node{stroke: stroke} = node) do
+  defp stroke_warning_values(%Node{stroke: stroke} = node, assets) do
     unsupported_alignment? =
       stroke.align not in [nil, :center] and
-        (stroke.align not in [:inside, :outside] or not Shape.stroke_alignment_supported?(node))
+        (stroke.align not in [:inside, :outside] or
+           not Shape.stroke_alignment_supported?(node, assets))
 
     []
     |> add_stroke_warning(

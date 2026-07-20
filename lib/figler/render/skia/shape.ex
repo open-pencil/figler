@@ -45,7 +45,18 @@ defmodule Figler.Render.Skia.Shape do
 
   @doc false
   @spec stroke_alignment_supported?(Node.t() | map()) :: boolean()
+  def stroke_alignment_supported?(%{node_type: type}) when type in [:vector, :boolean_operation],
+    do: false
+
   def stroke_alignment_supported?(%{node_type: type}), do: type in @stroke_alignment_types
+
+  @doc false
+  @spec stroke_alignment_supported?(Node.t(), map()) :: boolean()
+  def stroke_alignment_supported?(%Node{node_type: type} = node, assets)
+      when type in [:vector, :boolean_operation],
+      do: alignment_silhouette_paths(assets, node) != []
+
+  def stroke_alignment_supported?(node, _assets), do: stroke_alignment_supported?(node)
 
   @doc false
   @spec effect_shape_supported?(Node.t() | map()) :: boolean()
@@ -267,7 +278,7 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_resolved_stroke(document, node, opts, resolved, assets, stroke)
        when stroke.align in [:inside, :outside] do
-    if stroke_alignment_supported?(node) do
+    if stroke_alignment_supported?(node, assets) do
       draw_aligned_stroke(document, node, opts, resolved, assets, stroke)
     else
       draw_resolved(document, node, :stroke, opts, resolved, assets)
@@ -292,7 +303,7 @@ defmodule Figler.Render.Skia.Shape do
     isolated = draw_resolved(isolated, node, :stroke, opts, resolved, assets)
 
     Skia.layer(isolated, [bounds: bounds, blend_mode: mask_blend], fn mask ->
-      draw_silhouette(mask, node, assets, fill: :white)
+      draw_alignment_silhouette(mask, node, assets)
     end)
   end
 
@@ -700,6 +711,28 @@ defmodule Figler.Render.Skia.Shape do
 
   defp text_font_opts(opts, _font, resolved),
     do: Keyword.put(opts, :font, resolved.font)
+
+  defp draw_alignment_silhouette(document, %Node{node_type: type} = node, assets)
+       when type in [:vector, :boolean_operation] do
+    Enum.reduce(alignment_silhouette_paths(assets, node), document, fn geometry, rendered ->
+      Skia.path(rendered, geometry.path, fill: :white, fill_rule: geometry.fill_rule)
+    end)
+  end
+
+  defp draw_alignment_silhouette(document, node, assets),
+    do: draw_silhouette(document, node, assets, fill: :white)
+
+  defp alignment_silhouette_paths(assets, node) do
+    fill_paths = geometry_paths(assets, node, :fill)
+    stroke_paths = geometry_paths(assets, node, :stroke)
+    closed_strokes? = stroke_paths != [] and Enum.all?(stroke_paths, & &1.closed?)
+
+    cond do
+      closed_strokes? and fill_paths != [] and Enum.all?(fill_paths, & &1.closed?) -> fill_paths
+      closed_strokes? -> stroke_paths
+      true -> []
+    end
+  end
 
   defp geometry_paths(assets, %{vector_network: reference} = node, kind)
        when not is_nil(reference) do

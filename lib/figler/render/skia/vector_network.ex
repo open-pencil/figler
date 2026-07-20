@@ -9,7 +9,7 @@ defmodule Figler.Render.Skia.VectorNetwork do
           {:ok, %{fill: [GeometryPath.t()], stroke: [GeometryPath.t()]}} | {:error, term()}
   def paths(%VectorNetwork{regions: []} = network) do
     with {:ok, path} <- open_path(network) do
-      geometry = %GeometryPath{path: path, fill_rule: :winding}
+      geometry = %GeometryPath{path: path, fill_rule: :winding, closed?: false}
       {:ok, %{fill: [geometry], stroke: [geometry]}}
     end
   end
@@ -45,8 +45,11 @@ defmodule Figler.Render.Skia.VectorNetwork do
       end
     end)
     |> case do
-      {:ok, path} -> {:ok, %GeometryPath{path: path, fill_rule: region.winding_rule}}
-      error -> error
+      {:ok, path} ->
+        {:ok, %GeometryPath{path: path, fill_rule: region.winding_rule, closed?: true}}
+
+      error ->
+        error
     end
   end
 
