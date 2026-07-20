@@ -25,6 +25,8 @@
 - Render options now have a documented validation contract. Unknown,
   conflicting, or malformed options return structured
   `{:invalid_render_options, errors}` results.
+- Malformed documents, scene selectors, GUIDs, and graph options now use a
+  consistent `%Figler.Error{}` contract with machine-readable codes and context.
 - Effective scene graphs now apply instance overrides, component-property
   assignments, swaps, variables, and layout metadata before rendering.
 - Large-file scene indexing and effective-graph construction use less memory

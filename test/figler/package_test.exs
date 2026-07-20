@@ -10,6 +10,7 @@ defmodule Figler.PackageTest do
     assert "priv/schema" in files
     assert "guides/rendering-support.md" in files
     assert "guides/render-warnings.md" in files
+    assert "guides/errors-and-options.md" in files
 
     refute Enum.any?(files, &String.starts_with?(&1, "codegen/"))
     refute Enum.any?(files, &String.starts_with?(&1, "lib/mix/"))

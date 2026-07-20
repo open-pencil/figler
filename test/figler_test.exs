@@ -1,6 +1,8 @@
 defmodule FiglerTest do
   use ExUnit.Case, async: true
 
+  alias Figler.Error
+
   test "parses vendored Figma schema" do
     schema = Figler.schema()
 
@@ -20,6 +22,19 @@ defmodule FiglerTest do
 
     assert message |> Figler.encode_message_runtime() |> Figler.decode_message_runtime() ==
              message
+  end
+
+  test "normalizes malformed message decoding failures" do
+    for {operation, fun} <- [
+          decode_message: fn -> Figler.decode_message(<<1, 2, 3>>) end,
+          decode_sparse_message: fn -> Figler.decode_sparse_message(<<1, 2, 3>>) end,
+          decode_message_runtime: fn -> Figler.decode_message_runtime(<<1, 2, 3>>) end
+        ] do
+      error = assert_raise Error, fun
+      assert error.code == :invalid_document
+      assert error.operation == operation
+      assert is_binary(error.context.reason)
+    end
   end
 
   test "parses fig-kiwi containers" do

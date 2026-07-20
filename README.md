@@ -118,6 +118,9 @@ all_text =
 Scene queries return `%Figler.Scene.Node{}` structs. Projected fields include
 GUID, type, name, parent GUID, position, size, transform, visibility, lock
 state, text, font metadata, style GUIDs, component keys, and paint counts.
+Malformed archives, payloads, selectors, GUIDs, and options use the documented
+[`Figler.Error` contract](guides/errors-and-options.md); a valid lookup with no
+match still returns `nil` or `[]`.
 
 ## XPath-style selectors
 

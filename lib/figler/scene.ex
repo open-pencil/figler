@@ -7,14 +7,20 @@ defmodule Figler.Scene do
 
   The scene is scanned natively and projected into lightweight structs instead
   of materializing the full generated schema tree.
+
+  Successful calls return their documented value directly. Malformed inputs,
+  selectors, GUIDs, and options raise `Figler.Error`; valid lookups with no match
+  return `nil` or `[]`. See the errors-and-options guide for the stable contract.
   """
 
+  alias Figler.Error
   alias Figler.Native.SceneNifs, as: NativeScene
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Index
   alias Figler.Scene.Input
   alias Figler.Scene.Node
+  alias Figler.Scene.Options
   alias Figler.Scene.Query
   alias Figler.Scene.Summary
   alias Figler.Scene.Tree
@@ -58,7 +64,10 @@ defmodule Figler.Scene do
   def graph(scene, opts \\ []) when is_list(opts), do: Graph.build(scene, opts)
 
   @doc """
-  Queries a binary scene, reusable scene index, or effective graph with XPath.
+  Queries a binary scene, reusable scene index, or graph source projection with
+  XPath. For an effective graph, XPath runs against its reusable raw index;
+  helper APIs such as `by_type/3`, `named/2`, and `find/2` inspect effective
+  graph nodes, including resolved clones.
 
   Options:
 
@@ -74,6 +83,7 @@ defmodule Figler.Scene do
   def query(scene, xpath, opts \\ [])
 
   def query(binary, xpath, opts) when is_binary(binary) and is_binary(xpath) and is_list(opts) do
+    Options.validate_query!(opts)
     fields = Query.query_fields(opts)
     payload = payload!(binary)
 
@@ -85,6 +95,7 @@ defmodule Figler.Scene do
   end
 
   def query(scene, xpath, opts) when is_binary(xpath) and is_list(opts) do
+    Options.validate_query!(opts)
     fields = Query.query_fields(opts)
     resource = Input.resource(scene)
 
@@ -106,9 +117,11 @@ defmodule Figler.Scene do
   """
   @spec node(binary() | Index.t() | Graph.t() | reference(), String.t()) :: scene_node() | nil
   def node(%Graph{} = graph, guid) when is_binary(guid),
-    do: graph.nodes |> Map.get(GUID.parse!(guid)) |> Query.public_node()
+    do: graph.nodes |> Map.get(parse_guid!(:node, guid)) |> Query.public_node()
 
   def node(scene, guid) when is_binary(guid) do
+    validate_guid!(:node, guid)
+
     scene
     |> Input.resource()
     |> NativeScene.index_node(guid)
@@ -140,6 +153,8 @@ defmodule Figler.Scene do
   end
 
   def parent(scene, guid) when is_binary(guid) do
+    validate_guid!(:parent, guid)
+
     scene
     |> Input.resource()
     |> NativeScene.index_parent(guid)
@@ -151,10 +166,12 @@ defmodule Figler.Scene do
   """
   @spec children(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
   def children(%Graph{} = graph, parent_guid) when is_binary(parent_guid) do
-    Query.nodes_by_guids(graph, Map.get(graph.children, GUID.parse!(parent_guid), []))
+    Query.nodes_by_guids(graph, Map.get(graph.children, parse_guid!(:children, parent_guid), []))
   end
 
   def children(scene, parent_guid) when is_binary(parent_guid) do
+    validate_guid!(:children, parent_guid)
+
     scene
     |> Input.resource()
     |> NativeScene.index_children(parent_guid)
@@ -179,6 +196,8 @@ defmodule Figler.Scene do
   end
 
   def siblings(scene, guid) when is_binary(guid) do
+    validate_guid!(:siblings, guid)
+
     scene
     |> Input.resource()
     |> NativeScene.index_siblings(guid)
@@ -193,6 +212,8 @@ defmodule Figler.Scene do
     do: Tree.graph_ancestors(graph, guid)
 
   def ancestors(scene, guid) when is_binary(guid) do
+    validate_guid!(:ancestors, guid)
+
     scene
     |> Input.resource()
     |> NativeScene.index_ancestors(guid)
@@ -207,6 +228,8 @@ defmodule Figler.Scene do
     do: Tree.graph_descendants(graph, guid)
 
   def descendants(scene, guid) when is_binary(guid) do
+    validate_guid!(:descendants, guid)
+
     scene
     |> Input.resource()
     |> NativeScene.index_descendants(guid)
@@ -223,9 +246,13 @@ defmodule Figler.Scene do
         ) :: [scene_node()]
   def by_type(scene_or_nodes, type, opts \\ [])
 
-  def by_type(nodes, type, _opts) when is_list(nodes), do: Query.by_type(nodes, type)
+  def by_type(nodes, type, opts) when is_list(nodes) do
+    Options.validate_query!(opts)
+    Query.by_type(nodes, type)
+  end
 
   def by_type(%Graph{} = graph, type, opts) when is_atom(type) or is_binary(type) do
+    Options.validate_query!(opts)
     node_type = type |> to_string() |> Macro.underscore()
 
     graph
@@ -234,6 +261,7 @@ defmodule Figler.Scene do
   end
 
   def by_type(scene, type, opts) when is_atom(type) or is_binary(type) do
+    Options.validate_query!(opts)
     fields = Query.query_fields(opts)
     resource = Input.resource(scene)
     node_type = type |> to_string() |> Macro.underscore()
@@ -273,10 +301,14 @@ defmodule Figler.Scene do
         ) :: [scene_node()]
   def name_contains(scene_or_nodes, needle, opts \\ [])
 
-  def name_contains(nodes, needle, _opts) when is_list(nodes),
-    do: Query.name_contains(nodes, needle)
+  def name_contains(nodes, needle, opts) when is_list(nodes) do
+    Options.validate_query!(opts)
+    Query.name_contains(nodes, needle)
+  end
 
   def name_contains(%Graph{} = graph, needle, opts) when is_binary(needle) do
+    Options.validate_query!(opts)
+
     graph.nodes
     |> Map.values()
     |> Query.name_contains(needle)
@@ -284,6 +316,7 @@ defmodule Figler.Scene do
   end
 
   def name_contains(scene, needle, opts) when is_binary(needle) do
+    Options.validate_query!(opts)
     fields = Query.query_fields(opts)
     resource = Input.resource(scene)
 
@@ -360,10 +393,14 @@ defmodule Figler.Scene do
         ) :: [scene_node()]
   def text_contains(scene_or_nodes, needle, opts \\ [])
 
-  def text_contains(nodes, needle, _opts) when is_list(nodes),
-    do: Query.text_contains(nodes, needle)
+  def text_contains(nodes, needle, opts) when is_list(nodes) do
+    Options.validate_query!(opts)
+    Query.text_contains(nodes, needle)
+  end
 
   def text_contains(%Graph{} = graph, needle, opts) when is_binary(needle) do
+    Options.validate_query!(opts)
+
     graph.nodes
     |> Map.values()
     |> Query.text_contains(needle)
@@ -371,6 +408,7 @@ defmodule Figler.Scene do
   end
 
   def text_contains(scene, needle, opts) when is_binary(needle) do
+    Options.validate_query!(opts)
     fields = Query.query_fields(opts)
     resource = Input.resource(scene)
 
@@ -397,7 +435,17 @@ defmodule Figler.Scene do
   Finds nodes by common projected fields without interpolating XPath.
   """
   @spec find(binary() | Index.t() | Graph.t() | reference(), keyword()) :: [scene_node()]
+  def find(%Graph{} = graph, opts) when is_list(opts) do
+    Options.validate_find!(opts)
+
+    graph
+    |> find_candidates(opts)
+    |> Query.filter_find_results(opts)
+  end
+
   def find(scene, opts) when is_list(opts) do
+    Options.validate_find!(opts)
+
     scene
     |> Input.resource()
     |> find_candidates(opts)
@@ -409,7 +457,12 @@ defmodule Figler.Scene do
   """
   @spec tree(binary() | Index.t() | Graph.t() | reference(), keyword()) ::
           [Node.t()] | Node.t() | nil
-  def tree(scene, opts \\ []) when is_list(opts) do
+  def tree(scene, opts \\ [])
+
+  def tree(%Graph{} = graph, opts) when is_list(opts), do: Graph.tree(graph, opts)
+
+  def tree(scene, opts) when is_list(opts) do
+    Options.validate_tree!(opts)
     scene |> Input.resource() |> Tree.projected(opts)
   end
 
@@ -418,6 +471,15 @@ defmodule Figler.Scene do
   """
   @spec payload!(binary()) :: binary()
   defdelegate payload!(binary), to: Input
+
+  defp parse_guid!(operation, guid) do
+    GUID.parse(guid) || raise Error.invalid_guid(operation, guid)
+  end
+
+  defp validate_guid!(operation, guid) do
+    parse_guid!(operation, guid)
+    :ok
+  end
 
   defp find_candidates(index, opts) do
     cond do

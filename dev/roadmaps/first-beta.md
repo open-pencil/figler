@@ -78,7 +78,7 @@ normal semantic-versioning rules.
 
 - [x] Audit public modules and hide codegen, projection internals, and backend
       implementation modules that are not part of the contract.
-- [ ] Stabilize the document/query/graph entrypoints and their error tuples.
+- [x] Stabilize the document/query/graph entrypoints and their error tuples.
 - [x] Stabilize render selection options: page, root, scale, background, output
       format, fonts, and strict mode.
 - [x] Define a documented warning taxonomy with stable codes and contextual

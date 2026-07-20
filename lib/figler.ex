@@ -1,8 +1,12 @@
 defmodule Figler do
   @moduledoc """
   Figma schema helpers built on `KiwiCodec`.
+
+  Message decoders raise `Figler.Error` with code `:invalid_document` when a
+  payload cannot be decoded.
   """
 
+  alias Figler.Error
   alias Figler.Native.CodecNifs
 
   @schema_path :figler |> :code.priv_dir() |> Path.join("schema/fig.kiwi")
@@ -32,7 +36,7 @@ defmodule Figler do
   """
   @spec decode_message(binary()) :: Figler.Schema.Message.t()
   def decode_message(binary) when is_binary(binary) do
-    KiwiCodec.decode(binary, Figler.Schema.Message)
+    Error.protect(:decode_message, fn -> KiwiCodec.decode(binary, Figler.Schema.Message) end)
   end
 
   @doc """
@@ -43,7 +47,7 @@ defmodule Figler do
   """
   @spec decode_sparse_message(binary()) :: map()
   def decode_sparse_message(binary) when is_binary(binary) do
-    CodecNifs.decode_sparse_message(binary)
+    Error.protect(:decode_sparse_message, fn -> CodecNifs.decode_sparse_message(binary) end)
   end
 
   @doc """
@@ -59,8 +63,10 @@ defmodule Figler do
   """
   @spec decode_message_runtime(binary()) :: map()
   def decode_message_runtime(binary) when is_binary(binary) do
-    prepared_schema()
-    |> KiwiCodec.SchemaInterpreter.decode("Message", binary)
+    Error.protect(:decode_message_runtime, fn ->
+      prepared_schema()
+      |> KiwiCodec.SchemaInterpreter.decode("Message", binary)
+    end)
   end
 
   @doc """

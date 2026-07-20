@@ -8,6 +8,7 @@ defmodule Figler.Document do
   """
 
   alias Figler.Document.Page
+  alias Figler.Error
   alias Figler.Native.CodecNifs
   alias Figler.Scene.Graph.GUID
 
@@ -34,30 +35,38 @@ defmodule Figler.Document do
           pages: [Page.t()]
         }
 
-  @doc "Opens an exported `.fig` archive, `fig-kiwi` container, or raw Kiwi payload."
-  @spec open(binary()) :: {:ok, t()} | {:error, term()}
+  @doc """
+  Opens an exported `.fig` archive, `fig-kiwi` container, or raw Kiwi payload.
+
+  Returns `{:error, %Figler.Error{}}` for malformed input.
+  """
+  @spec open(binary()) :: {:ok, t()} | {:error, Error.t()}
   def open(input) when is_binary(input) do
     {:ok, open!(input)}
   rescue
-    error in [ArgumentError, KiwiCodec.DecodeError, ErlangError] -> {:error, error}
+    error in Error -> {:error, error}
   end
 
-  @doc "Like `open/1`, but raises when the input cannot be decoded."
+  @doc "Like `open/1`, but raises `Figler.Error` when the input cannot be decoded."
   @spec open!(binary()) :: t()
-  def open!(<<"PK", _rest::binary>> = archive) do
+  def open!(input) when is_binary(input),
+    do: Error.protect(:open_document, fn -> do_open!(input) end)
+
+  defp do_open!(<<"PK", _rest::binary>> = archive) do
     entries = unzip!(archive)
     canvas = canvas!(entries)
     build(:archive, canvas, Figler.Container.data(canvas), entries)
   end
 
-  def open!(<<"fig-kiwi", _rest::binary>> = canvas) do
+  defp do_open!(<<"fig-kiwi", _rest::binary>> = canvas) do
     build(:container, canvas, Figler.Container.data(canvas), %{})
   end
 
-  def open!(payload) when is_binary(payload), do: build(:payload, nil, payload, %{})
+  defp do_open!(payload), do: build(:payload, nil, payload, %{})
 
   defp build(source, canvas, payload, entries) do
-    {pages, blobs} = CodecNifs.decode_document_metadata(payload)
+    {pages, blobs} =
+      Error.protect(:open_document, fn -> CodecNifs.decode_document_metadata(payload) end)
 
     %__MODULE__{
       source: source,
@@ -73,7 +82,7 @@ defmodule Figler.Document do
   defp unzip!(archive) do
     case :zip.extract(archive, [:memory]) do
       {:ok, entries} -> Map.new(entries, &archive_entry/1)
-      {:error, reason} -> raise ArgumentError, "cannot read FIG ZIP: #{inspect(reason)}"
+      {:error, reason} -> raise Error.new(:invalid_archive, :open_document, %{reason: reason})
     end
   end
 
@@ -99,7 +108,7 @@ defmodule Figler.Document do
 
   defp fallback_canvas!(entries) do
     case Enum.find_value(entries, &canvas_entry/1) do
-      nil -> raise ArgumentError, "ZIP does not contain canvas.fig or canvas"
+      nil -> raise Error.new(:missing_canvas, :open_document)
       canvas -> canvas
     end
   end

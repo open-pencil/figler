@@ -3,6 +3,7 @@ defmodule Figler.DocumentTest do
 
   alias Figler.Document
   alias Figler.Document.Page
+  alias Figler.Error
 
   import Figler.Test.SceneFixture
 
@@ -38,7 +39,30 @@ defmodule Figler.DocumentTest do
     {:ok, {_name, archive}} =
       :zip.create(~c"invalid.fig", [{~c"metadata.json", "{}"}], [:memory])
 
-    assert {:error, %ArgumentError{message: message}} = Document.open(archive)
-    assert message =~ "canvas.fig or canvas"
+    assert {:error,
+            %Error{code: :missing_canvas, operation: :open_document, context: %{}} = error} =
+             Document.open(archive)
+
+    assert Exception.message(error) == "FIG archive is missing canvas.fig during open_document"
+
+    assert_raise Error, "FIG archive is missing canvas.fig during open_document", fn ->
+      Document.open!(archive)
+    end
+  end
+
+  test "normalizes malformed archive, container, and Kiwi payload failures" do
+    assert {:error, %Error{code: :invalid_archive, operation: :open_document}} =
+             Document.open(<<"PK", 0, 1, 2>>)
+
+    for input <- [<<"fig-kiwi", 0, 1, 2>>, <<1, 2, 3>>] do
+      assert {:error,
+              %Error{
+                code: :invalid_document,
+                operation: :open_document,
+                context: %{reason: reason}
+              }} = Document.open(input)
+
+      assert is_binary(reason)
+    end
   end
 end

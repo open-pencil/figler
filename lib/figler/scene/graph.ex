@@ -7,17 +7,22 @@ defmodule Figler.Scene.Graph do
   semantics: populated instances, symbol overrides, component props, derived
   symbol data, and variable/style resolution.
 
-  The current graph keeps a pure Elixir working set seeded from the native raw
-  index. Query and navigation APIs can already accept a graph, while resolver
-  stages grow in Elixir where they are easier to inspect and verify.
+  The graph keeps a pure Elixir working set seeded from the native raw index.
+  Query and navigation APIs accept the resulting graph, while Figma resolver
+  stages remain inspectable in Elixir.
+
+  Malformed graph options and GUIDs raise `Figler.Error` with stable codes and
+  structured context.
   """
 
+  alias Figler.Error
   alias Figler.Native.CodecNifs
   alias Figler.Native.SceneNifs, as: NativeScene
   alias Figler.Scene
   alias Figler.Scene.Graph.Build
   alias Figler.Scene.Graph.Diff
   alias Figler.Scene.Graph.GUID
+  alias Figler.Scene.Graph.Options
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Index
   alias Figler.Scene.Node
@@ -77,16 +82,7 @@ defmodule Figler.Scene.Graph do
             stats: map()
           }
 
-  @default_stages [
-    :populate_instances,
-    :symbol_overrides,
-    :sync_overrides,
-    :component_props,
-    :sync_component_props,
-    :derived_symbol_data,
-    :stack_layout,
-    :variables
-  ]
+  @default_stages Options.stages()
 
   @doc """
   Builds an effective scene graph handle.
@@ -94,10 +90,9 @@ defmodule Figler.Scene.Graph do
   Accepts the same binary inputs as `Figler.Scene.index/1`, an existing
   `%Figler.Scene.Index{}`, a native index resource, or another graph.
 
-  Options are stored on the graph and define the intended resolver pipeline.
-  The first implementation builds a pure Elixir working graph from structured
-  seed nodes. Resolver stages are no-ops until their metadata extractors are
-  wired, but the data shape and stage dispatcher are in place.
+  Options are validated, stored on the graph, and define the resolver pipeline.
+  Unknown stages and conflicting selection options raise `Figler.Error` rather
+  than silently selecting a different pipeline.
 
   Options:
 
@@ -116,6 +111,8 @@ defmodule Figler.Scene.Graph do
   def build(input, opts \\ [])
 
   def build(%__MODULE__{} = graph, opts) when is_list(opts) do
+    Options.validate_build!(opts)
+
     if opts == [] do
       graph
     else
@@ -128,23 +125,29 @@ defmodule Figler.Scene.Graph do
   end
 
   def build(%Index{resource: resource} = index, opts) when is_list(opts) do
-    build_from_seed(index, resource, opts)
+    Options.validate_build!(opts)
+    Error.protect(:graph, fn -> build_from_seed(index, resource, opts) end)
   end
 
   def build(binary, opts) when is_binary(binary) and is_list(opts) do
-    payload = Scene.payload!(binary)
-    opts = maybe_pre_focused_opts(opts)
+    Options.validate_build!(opts)
 
-    if focused?(opts) do
-      seed_nodes = seed_nodes_from_payload(payload, opts)
-      build_focused_from_seed(payload, opts, seed_nodes)
-    else
-      build_with_native_records(payload, opts)
-    end
+    Error.protect(:graph, fn ->
+      payload = Scene.payload!(binary)
+      opts = maybe_pre_focused_opts(opts)
+
+      if focused?(opts) do
+        seed_nodes = seed_nodes_from_payload(payload, opts)
+        build_focused_from_seed(payload, opts, seed_nodes)
+      else
+        build_with_native_records(payload, opts)
+      end
+    end)
   end
 
   def build(resource, opts) when is_reference(resource) and is_list(opts) do
-    build_from_seed(nil, resource, opts)
+    Options.validate_build!(opts)
+    Error.protect(:graph, fn -> build_from_seed(nil, resource, opts) end)
   end
 
   @doc """
@@ -155,6 +158,7 @@ defmodule Figler.Scene.Graph do
   """
   @spec profile(binary() | Index.t() | reference() | t(), keyword()) :: map()
   def profile(input, opts \\ []) when is_list(opts) do
+    Options.validate_build!(opts)
     selected_stages = stages(opts)
 
     base_opts =
@@ -194,17 +198,24 @@ defmodule Figler.Scene.Graph do
   @spec seed_nodes(binary() | Index.t() | reference() | t(), keyword()) :: [SeedNode.t()]
   def seed_nodes(input, opts \\ [])
 
-  def seed_nodes(%__MODULE__{seed_nodes: seed_nodes}, _opts) do
+  def seed_nodes(%__MODULE__{seed_nodes: seed_nodes}, opts) when is_list(opts) do
+    Options.validate_build!(opts)
     Map.values(seed_nodes)
   end
 
-  def seed_nodes(binary, opts) when is_binary(binary) do
-    binary
-    |> Scene.payload!()
-    |> seed_nodes_from_payload(opts)
+  def seed_nodes(binary, opts) when is_binary(binary) and is_list(opts) do
+    Options.validate_build!(opts)
+
+    Error.protect(:graph_seed_nodes, fn ->
+      binary
+      |> Scene.payload!()
+      |> seed_nodes_from_payload(opts)
+    end)
   end
 
   def seed_nodes(input, opts) when is_list(opts) do
+    Options.validate_build!(opts)
+
     input
     |> Scene.query("//*", fields: Keyword.get(opts, :fields, :all))
     |> Enum.map(&SeedNode.from_node/1)
@@ -240,7 +251,7 @@ defmodule Figler.Scene.Graph do
   """
   @spec explain(t(), String.t()) :: map() | nil
   def explain(%__MODULE__{} = graph, guid) when is_binary(guid) do
-    graph_guid = GUID.parse!(guid)
+    graph_guid = parse_guid!(:graph_explain, guid)
 
     case Map.get(graph.nodes, graph_guid) do
       nil ->
@@ -276,7 +287,7 @@ defmodule Figler.Scene.Graph do
   @spec source_node(t(), String.t()) :: Node.t() | nil
   def source_node(%__MODULE__{} = graph, guid) when is_binary(guid) do
     graph.seed_nodes
-    |> Map.get(GUID.parse!(guid))
+    |> Map.get(parse_guid!(:graph_source_node, guid))
     |> case do
       nil -> nil
       seed -> SeedNode.to_node(seed)
@@ -295,7 +306,10 @@ defmodule Figler.Scene.Graph do
       Figler.Scene.Graph.tree(graph, root: "3740:112537", depth: 3)
   """
   @spec tree(t(), keyword()) :: [Node.t()] | Node.t() | nil
-  def tree(%__MODULE__{} = graph, opts \\ []) when is_list(opts), do: Tree.graph_tree(graph, opts)
+  def tree(%__MODULE__{} = graph, opts \\ []) when is_list(opts) do
+    Options.validate_tree!(opts)
+    Tree.graph_tree(graph, opts)
+  end
 
   @doc """
   Returns instance-specific effective graph metadata for a node.
@@ -304,7 +318,7 @@ defmodule Figler.Scene.Graph do
   """
   @spec instance(t(), String.t()) :: map() | nil
   def instance(%__MODULE__{} = graph, guid) when is_binary(guid) do
-    graph_guid = GUID.parse!(guid)
+    graph_guid = parse_guid!(:graph_instance, guid)
 
     case Map.get(graph.nodes, graph_guid) do
       %Node{node_type: "instance"} ->
@@ -334,6 +348,7 @@ defmodule Figler.Scene.Graph do
   """
   @spec diff(t(), keyword()) :: [map()]
   def diff(%__MODULE__{} = graph, opts \\ []) when is_list(opts) do
+    Options.validate_diff!(opts)
     Diff.run(graph, opts)
   end
 
@@ -342,6 +357,8 @@ defmodule Figler.Scene.Graph do
   """
   @spec unresolved(t(), keyword()) :: [term()]
   def unresolved(%__MODULE__{unresolved: unresolved}, opts \\ []) do
+    Options.validate_unresolved!(opts)
+
     case Keyword.get(opts, :limit, :all) do
       :all -> unresolved
       limit when is_integer(limit) and limit >= 0 -> Enum.take(unresolved, limit)
@@ -353,8 +370,9 @@ defmodule Figler.Scene.Graph do
   """
   @spec diff_node(Index.t() | reference(), t(), String.t()) :: map() | nil
   def diff_node(index, %__MODULE__{} = graph, guid) when is_binary(guid) do
+    graph_guid = parse_guid!(:graph_diff_node, guid)
     raw = Scene.node(index, guid)
-    resolved = graph.nodes |> Map.get(GUID.parse!(guid)) |> Query.public_node()
+    resolved = graph.nodes |> Map.get(graph_guid) |> Query.public_node()
 
     cond do
       is_nil(raw) and is_nil(resolved) -> nil
@@ -372,7 +390,12 @@ defmodule Figler.Scene.Graph do
   defp build_with_native_records(payload, opts) do
     stages = stages(opts)
     projected_stages = projection_stages(opts, stages)
-    records = CodecNifs.decode_graph_seed_records(payload, projected_stages)
+
+    records =
+      Error.protect(:graph, fn ->
+        CodecNifs.decode_graph_seed_records(payload, projected_stages)
+      end)
+
     {resource, summary_map} = NativeScene.build_index_with_summary(payload)
     index = %Index{resource: resource}
     summary = Summary.from_map(summary_map)
@@ -414,14 +437,9 @@ defmodule Figler.Scene.Graph do
     projected_stages = projection_stages(opts, selected_stages)
 
     case Keyword.get(opts, :focus) do
-      nil ->
+      focus when focus in [nil, []] ->
         payload
-        |> CodecNifs.decode_graph_seed_records(projected_stages)
-        |> SeedNode.from_native_records()
-
-      [] ->
-        payload
-        |> CodecNifs.decode_graph_seed_records(projected_stages)
+        |> decode_native_seed_records(projected_stages)
         |> SeedNode.from_native_records()
 
       _focus ->
@@ -429,16 +447,24 @@ defmodule Figler.Scene.Graph do
     end
   end
 
+  defp decode_native_seed_records(payload, projected_stages) do
+    Error.protect(:graph_seed_nodes, fn ->
+      CodecNifs.decode_graph_seed_records(payload, projected_stages)
+    end)
+  end
+
   defp sparse_message(payload, opts) do
     case Keyword.get(opts, :focus) do
       nil ->
-        CodecNifs.decode_sparse_message(payload)
+        Error.protect(:graph, fn -> CodecNifs.decode_sparse_message(payload) end)
 
       [] ->
-        CodecNifs.decode_sparse_message(payload)
+        Error.protect(:graph, fn -> CodecNifs.decode_sparse_message(payload) end)
 
       focus ->
-        CodecNifs.decode_graph_focused_sparse_message(payload, Enum.map(focus, &GUID.format/1))
+        Error.protect(:graph, fn ->
+          CodecNifs.decode_graph_focused_sparse_message(payload, Enum.map(focus, &GUID.format/1))
+        end)
     end
   end
 
@@ -528,7 +554,7 @@ defmodule Figler.Scene.Graph do
   defp parse_focus(focus) do
     focus
     |> List.wrap()
-    |> Enum.map(&GUID.parse!/1)
+    |> Enum.map(&parse_guid!(:graph, &1))
     |> Enum.uniq()
   end
 
@@ -557,9 +583,10 @@ defmodule Figler.Scene.Graph do
         :ok
 
       missing ->
-        raise ArgumentError,
-              "graph seed metadata was not projected for stages #{inspect(missing)}; " <>
-                "rebuild the graph from its original input with the broader stage plan"
+        raise Error.new(:insufficient_graph_projection, :graph, %{
+                missing_stages: missing,
+                projected_stages: projected
+              })
     end
   end
 
@@ -568,6 +595,10 @@ defmodule Figler.Scene.Graph do
       nil -> @default_stages
       index -> Enum.take(@default_stages, index + 1)
     end
+  end
+
+  defp parse_guid!(operation, guid) do
+    GUID.parse(guid) || raise Error.invalid_guid(operation, guid)
   end
 
   defp summary_stats(summary) do

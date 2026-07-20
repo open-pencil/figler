@@ -1,6 +1,7 @@
 defmodule Figler.Scene.GraphTest do
   use ExUnit.Case, async: true
 
+  alias Figler.Error
   alias Figler.Native.CodecNifs
   alias Figler.Scene
   alias Figler.Scene.Graph
@@ -95,6 +96,8 @@ defmodule Figler.Scene.GraphTest do
     assert explanation.instance == nil
 
     assert [%Node{guid: "0:1", children: []}] = Graph.tree(graph, root: "0:0", depth: 1).children
+    assert Scene.tree(graph, root: "0:0", depth: 1) == Graph.tree(graph, root: "0:0", depth: 1)
+    assert Scene.find(graph, type: :canvas, name: "Page 1") == [scene_canvas()]
     assert Graph.diff(graph) == []
 
     assert Graph.diff_node(Scene.index(message_payload()), graph, "0:1") == %{
@@ -179,7 +182,7 @@ defmodule Figler.Scene.GraphTest do
     assert graph.stages == [:populate_instances]
     assert graph.projection_stages == [:populate_instances]
 
-    assert_raise ArgumentError, ~r/not projected for stages \[:symbol_overrides\]/, fn ->
+    assert_raise Error, "graph is missing required projected data during graph", fn ->
       Graph.build(graph, only: :symbol_overrides)
     end
 

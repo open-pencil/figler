@@ -200,6 +200,7 @@ defmodule Figler.MixProject do
             "priv/schema",
             "guides/rendering-support.md",
             "guides/render-warnings.md",
+            "guides/errors-and-options.md",
             "mix.exs",
             "README.md",
             "CHANGELOG.md",
@@ -221,7 +222,8 @@ defmodule Figler.MixProject do
         "README.md",
         "CHANGELOG.md",
         "guides/rendering-support.md",
-        "guides/render-warnings.md"
+        "guides/render-warnings.md",
+        "guides/errors-and-options.md"
       ],
       filter_modules: &public_doc_module?/2,
       groups_for_modules: docs_groups_for_modules(),
@@ -254,7 +256,8 @@ defmodule Figler.MixProject do
   defp docs_groups_for_modules do
     [
       "Generated schema": [~r/^Figler\.Schema/],
-      "Scene graph": [~r/^Figler\.Scene\.Graph$/],
+      Errors: [Figler.Error, Figler.OptionError],
+      "Scene graph": [~r/^Figler\.Scene\.Graph(\.Options)?$/],
       "Scene graph diagnostics": [~r/^Figler\.Scene\.Graph\.(Oracle|Profile)(\.|$)/],
       "Scene graph internals": [
         ~r/^Figler\.Scene\.Graph\.(Build|Component|Diff|GUID|Nodes|Patch|Provenance|Seed|Symbol)(\.|$)/

@@ -6,7 +6,35 @@ defmodule Figler.Native.SceneNifs do
   native maps into documented scene structs.
   """
 
+  alias Figler.Error
   alias Figler.Native.Module
+
+  @operations %{
+    decode_summary: :summary,
+    build_index: :index,
+    build_index_with_summary: :index,
+    query_xpath: :query,
+    query_xpath_fields: :query,
+    query_index: :query,
+    query_index_fields: :query,
+    index_node: :node,
+    index_parent: :parent,
+    index_roots: :roots,
+    index_children: :children,
+    index_siblings: :siblings,
+    index_by_type: :by_type,
+    index_by_type_fields: :by_type,
+    index_named: :named,
+    index_name_contains: :name_contains,
+    index_name_contains_fields: :name_contains,
+    index_text_contains: :text_contains,
+    index_text_contains_fields: :text_contains,
+    index_components: :components,
+    index_with_fills: :with_fills,
+    index_with_strokes: :with_strokes,
+    index_ancestors: :ancestors,
+    index_descendants: :descendants
+  }
 
   @delegates [
     {:decode_summary, [:binary], :decode_scene_summary},
@@ -37,9 +65,12 @@ defmodule Figler.Native.SceneNifs do
 
   for {name, arg_names, nif_name} <- @delegates do
     args = Enum.map(arg_names, &Macro.var(&1, nil))
+    operation = Map.fetch!(@operations, name)
 
     def unquote(name)(unquote_splicing(args)) do
-      Module.unquote(nif_name)(unquote_splicing(args))
+      Error.protect(unquote(operation), fn ->
+        Module.unquote(nif_name)(unquote_splicing(args))
+      end)
     end
   end
 end

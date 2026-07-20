@@ -7,6 +7,8 @@ defmodule Figler.Render.Options do
   option name, a stable code, and the rejected value.
   """
 
+  alias Figler.OptionError
+
   @type option ::
           {:root, String.t() | non_neg_integer()}
           | {:page, String.t() | non_neg_integer()}
@@ -21,7 +23,7 @@ defmodule Figler.Render.Options do
           | {:font_languages, [String.t()]}
           | {:system_font_fallback, boolean()}
 
-  @type error :: %{option: atom(), code: atom(), value: term()}
+  @type error :: OptionError.t()
 
   @keys [
     :root,
@@ -109,5 +111,5 @@ defmodule Figler.Render.Options do
     if is_list(value), do: [], else: [error(key, :invalid_list, value)]
   end
 
-  defp error(option, code, value), do: %{option: option, code: code, value: value}
+  defp error(option, code, value), do: OptionError.new(option, code, value)
 end

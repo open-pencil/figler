@@ -9,6 +9,7 @@ defmodule Figler.Scene.Input do
   """
 
   alias Figler.Container
+  alias Figler.Error
   alias Figler.Scene.Graph
   alias Figler.Scene.Index
 
@@ -16,14 +17,17 @@ defmodule Figler.Scene.Input do
   Extracts the raw Figma Kiwi `Message` binary from any supported scene input.
   """
   @spec payload!(binary()) :: binary()
-  def payload!(<<"PK", _rest::binary>> = zip_binary) do
+  def payload!(binary) when is_binary(binary),
+    do: Error.protect(:extract_payload, fn -> do_payload!(binary) end)
+
+  defp do_payload!(<<"PK", _rest::binary>> = zip_binary) do
     zip_binary
     |> unzip_canvas!()
-    |> payload!()
+    |> do_payload!()
   end
 
-  def payload!(<<"fig-kiwi", _rest::binary>> = binary), do: Container.data(binary)
-  def payload!(binary) when is_binary(binary), do: binary
+  defp do_payload!(<<"fig-kiwi", _rest::binary>> = binary), do: Container.data(binary)
+  defp do_payload!(binary), do: binary
 
   @doc """
   Returns a native scene index resource for a binary, graph, index, or resource.
@@ -38,13 +42,13 @@ defmodule Figler.Scene.Input do
   defp unzip_canvas!(zip_binary) do
     case :zip.extract(zip_binary, [:memory, {:file_list, [~c"canvas.fig"]}]) do
       {:ok, entries} -> canvas_entry!(entries)
-      {:error, reason} -> raise ArgumentError, "cannot read FIG ZIP: #{inspect(reason)}"
+      {:error, reason} -> raise Error.new(:invalid_archive, :extract_payload, %{reason: reason})
     end
   end
 
   defp canvas_entry!(entries) do
     case Enum.find_value(entries, &canvas_entry/1) do
-      nil -> raise ArgumentError, "ZIP does not contain canvas.fig"
+      nil -> raise Error.new(:missing_canvas, :extract_payload)
       canvas -> canvas
     end
   end
