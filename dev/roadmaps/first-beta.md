@@ -76,7 +76,7 @@ what the current code actually supports.
 **Exit condition:** documented beta APIs and result shapes can evolve only under
 normal semantic-versioning rules.
 
-- [ ] Audit public modules and hide codegen, projection internals, and backend
+- [x] Audit public modules and hide codegen, projection internals, and backend
       implementation modules that are not part of the contract.
 - [ ] Stabilize the document/query/graph entrypoints and their error tuples.
 - [ ] Stabilize render selection options: page, root, scale, background, output

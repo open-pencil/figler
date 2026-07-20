@@ -17,6 +17,24 @@ defmodule Figler.PackageTest do
     refute "dev/roadmaps/first-beta.md" in files
   end
 
+  test "filters implementation modules from HexDocs without deleting their module docs" do
+    filter = Mix.Project.config() |> Keyword.fetch!(:docs) |> Keyword.fetch!(:filter_modules)
+
+    for module <- [
+          Figler.Native,
+          Figler.Render.Projection,
+          Figler.Render.Skia,
+          Figler.Scene.Projection,
+          Figler.Scene.Query
+        ] do
+      refute filter.(module, %{})
+      assert {:docs_v1, _, _, _, module_doc, _, _} = Code.fetch_docs(module)
+      assert is_map(module_doc)
+    end
+
+    assert filter.(Figler.Render.SourceNode, %{})
+  end
+
   test "limits RustQ and Reach to development and test compilation" do
     deps = Mix.Project.config() |> Keyword.fetch!(:deps)
 

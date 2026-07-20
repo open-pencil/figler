@@ -8,6 +8,10 @@
   out of production dependency resolution and runtime loading. Add unpacked
   query-only and Skia-enabled package consumer gates, and upgrade to KiwiCodec
   0.3.1.
+- Keep the published beta API reference focused on user-facing document, scene,
+  graph, rendering-neutral value, and oracle modules by filtering native NIF,
+  projection, query-helper, and Skia backend implementation modules from
+  HexDocs while preserving their module documentation in source.
 - Render true inside and outside stroke alignment with bounded shape masks and
   stroke-aware scene bounds. Extend effect silhouettes to typed text and
   compound editable vectors, apply morphology-backed inner-shadow spread to

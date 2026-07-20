@@ -217,10 +217,32 @@ defmodule Figler.MixProject do
     [
       main: "readme",
       extras: ["README.md", "CHANGELOG.md", "guides/rendering-support.md"],
+      filter_modules: &public_doc_module?/2,
       groups_for_modules: docs_groups_for_modules(),
       source_ref: "v#{@version}",
       source_url: @source_url
     ]
+  end
+
+  defp public_doc_module?(module, _metadata) do
+    name = Atom.to_string(module)
+
+    name not in [
+      "Elixir.Figler.Render.Projection",
+      "Elixir.Figler.Scene.Input",
+      "Elixir.Figler.Scene.Projection",
+      "Elixir.Figler.Scene.Query",
+      "Elixir.Figler.Scene.Tree"
+    ] and
+      not Enum.any?(
+        [
+          "Elixir.Figler.Codegen",
+          "Elixir.Figler.Native",
+          "Elixir.Figler.Render.Skia",
+          "Elixir.Mix.Tasks.Figler."
+        ],
+        &String.starts_with?(name, &1)
+      )
   end
 
   defp docs_groups_for_modules do
@@ -232,10 +254,8 @@ defmodule Figler.MixProject do
         ~r/^Figler\.Scene\.Graph\.(Build|Component|Diff|GUID|Nodes|Patch|Provenance|Seed|Symbol)(\.|$)/
       ],
       Documents: [Figler.Document, Figler.Document.Page],
-      "Scene projection": [~r/^Figler\.Scene(\.|$)/],
-      Rendering: [~r/^Figler\.Render(\.|$)/],
-      "Native bridge": [~r/^Figler\.Native(\.|$)/],
-      "Code generation": [~r/^Figler\.Codegen/]
+      "Scene queries": [~r/^Figler\.Scene(\.|$)/],
+      Rendering: [~r/^Figler\.Render(\.|$)/]
     ]
   end
 end
