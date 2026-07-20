@@ -60,16 +60,16 @@ representative production files.
 **Exit condition:** the repository, README, changelog, and public docs describe
 what the current code actually supports.
 
-- [ ] Integrate the completed stroke, effect, paint, and geometry-aware rendering
+- [x] Integrate the completed stroke, effect, paint, and geometry-aware rendering
       tranches on the primary branch.
 - [x] Use released Skia `0.3.7`; keep all local/path dependencies out of the
       release tree.
-- [ ] Update installation and rendering examples to the current Skia API.
-- [ ] Publish a feature support matrix with `supported`, `approximate`,
+- [x] Update installation and rendering examples to the current Skia API.
+- [x] Publish a feature support matrix with `supported`, `approximate`,
       `diagnostic-only`, and `deferred` tiers.
-- [ ] Remove stale claims that inner shadows, background blur, diamond gradients,
+- [x] Remove stale claims that inner shadows, background blur, diamond gradients,
       or editable vectors are unsupported.
-- [ ] State explicitly that OpenPencil is the visual oracle, not a parity claim.
+- [x] State explicitly that OpenPencil is the visual oracle, not a parity claim.
 
 ## Milestone B1: stabilize the public beta API
 
@@ -85,7 +85,7 @@ normal semantic-versioning rules.
       fields.
 - [ ] Ensure every approximation exposed by the renderer is represented by a
       structured warning.
-- [ ] Verify optional-Skia behavior: query and graph APIs compile and run without
+- [x] Verify optional-Skia behavior: query and graph APIs compile and run without
       Skia installed; rendering fails with a clear capability error.
 - [ ] Document the supported Elixir, OTP, Rust, and platform matrix.
 
@@ -149,19 +149,19 @@ Recommended beta minimums:
 **Exit condition:** the unpacked Hex artifact behaves like a consumer dependency,
 not like the development repository.
 
-- [ ] Remove the package-incompatible `override: true` RustQ dependency and
-      separate development codegen dependencies from runtime dependencies.
-- [ ] Exclude development codegen and Mix task modules from the runtime package
-      when consumers do not need them.
-- [ ] Ensure production consumers do not compile or load RustQ, Reach, ExDNA,
-      VibeKit, or generator modules.
-- [ ] Build and test an unpacked package consumer with Skia enabled.
-- [ ] Build and test an unpacked query-only consumer without Skia.
-- [ ] Cargo-check the packaged native source with the documented stable Rust
-      version.
-- [ ] Verify generated files and schemas are fresh before packaging.
-- [ ] Verify package contents, licenses, checksums, docs links, and source refs.
-- [ ] Keep precompiled Figler NIFs out of the beta.1 gate unless a supported
+- [x] Remove the package-incompatible `override: true` RustQ dependency.
+- [x] Separate transitive KiwiCodec/RustQ generator dependencies from runtime
+      dependencies; packaged consumers neither resolve nor load them.
+- [x] Exclude Figler development codegen and Mix task modules from the runtime
+      package.
+- [x] Ensure production consumers do not load RustQ, Reach, ExDNA, VibeKit, or
+      generator modules.
+- [x] Build and test an unpacked package consumer with Skia enabled.
+- [x] Build and test an unpacked query-only consumer without Skia.
+- [x] Compile the packaged native source with the documented stable Rust version.
+- [x] Verify generated files and schemas are fresh before packaging.
+- [x] Verify package contents, licenses, checksums, docs links, and source refs.
+- [x] Keep precompiled Figler NIFs out of the beta.1 gate unless a supported
       target matrix and immutable artifact workflow are ready.
 
 ## Milestone B5: documentation and release readiness

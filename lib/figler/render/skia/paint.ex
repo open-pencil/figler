@@ -168,7 +168,7 @@ defmodule Figler.Render.Skia.Paint do
   defp resolve_missing_image_hash, do: {:error, :missing_image_hash}
   defp resolve_image_asset(_paint, _size, nil), do: {:error, :missing_image_asset}
 
-  defp resolve_image_asset(paint, size, %Skia.Image{} = image) do
+  defp resolve_image_asset(paint, size, %{__struct__: Skia.Image} = image) do
     with {:ok, matrix, tile} <- image_matrix(paint, size, image) do
       shader = Skia.Shader.image(image, matrix: matrix, tile: tile, sampling: :linear)
 

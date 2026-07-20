@@ -1,3 +1,8 @@
+unless Code.ensure_loaded?(Figler.Mix.KiwiCodegen),
+  do: Code.require_file("lib/mix/figler/kiwi_codegen.ex")
+
+Figler.Mix.KiwiCodegen.load!()
+
 use RustQ.Config
 
 alias RustQ.Rustler.Nif
@@ -11,7 +16,7 @@ unless Code.ensure_loaded?(Figler.Scene.Projection) do
 end
 
 unless Code.ensure_loaded?(Figler.Scene.Projection.Native) do
-  Code.require_file("lib/figler/scene/projection/native.ex")
+  Code.require_file("codegen/figler/scene/projection/native.ex")
 end
 
 unless Code.ensure_loaded?(Figler.Scene.Graph.Seed.Projection) do

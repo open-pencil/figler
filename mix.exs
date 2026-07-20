@@ -166,7 +166,7 @@ defmodule Figler.MixProject do
       {:ezstd, "~> 1.2"},
       {:rustler, "~> 0.38"},
       {:skia, "~> 0.3.7", optional: true},
-      {:reach, "~> 2.6", runtime: false},
+      {:reach, "~> 2.6", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_dna, "~> 1.5", only: [:dev, :test], runtime: false},
@@ -176,11 +176,11 @@ defmodule Figler.MixProject do
   end
 
   defp kiwi_codec_dep do
-    {:kiwi_codec, "~> 0.3.0"}
+    {:kiwi_codec, "~> 0.3.1"}
   end
 
   defp rustq_dep do
-    {:rustq, "~> 1.0.0-rc.3", override: true, runtime: false}
+    {:rustq, "~> 1.0.0-rc.3", only: [:dev, :test], runtime: false}
   end
 
   defp json_codec_dep do
@@ -191,26 +191,32 @@ defmodule Figler.MixProject do
     [
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
-      files: [
-        "codegen",
-        "lib",
-        "native/Cargo.toml",
-        "native/Cargo.lock",
-        "native/src",
-        "priv/schema",
-        "mix.exs",
-        "rustq.exs",
-        "README.md",
-        "CHANGELOG.md",
-        "LICENSE*"
-      ]
+      files:
+        runtime_files() ++
+          [
+            "native/Cargo.toml",
+            "native/Cargo.lock",
+            "native/src",
+            "priv/schema",
+            "guides/rendering-support.md",
+            "mix.exs",
+            "README.md",
+            "CHANGELOG.md",
+            "LICENSE*"
+          ]
     ]
+  end
+
+  defp runtime_files do
+    "lib/**/*.ex"
+    |> Path.wildcard()
+    |> Enum.reject(&String.starts_with?(&1, "lib/mix/"))
   end
 
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CHANGELOG.md"],
+      extras: ["README.md", "CHANGELOG.md", "guides/rendering-support.md"],
       groups_for_modules: docs_groups_for_modules(),
       source_ref: "v#{@version}",
       source_url: @source_url

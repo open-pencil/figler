@@ -168,15 +168,19 @@ normalizes it into typed rendering values (including text and font requests),
 applies effective instance overrides, and compiles one batched Skia document
 for a single native rendering boundary.
 
-The rendering surface supports affine transforms, opacity, rectangular
-clipping, solid and positioned linear/radial/angular gradient paints, archive
-and message-blob image fills (`FILL`, `FIT`, transformed `STRETCH`, and `TILE`),
-basic strokes, rectangles, ellipses, lines, UTF-16-indexed rich-text style
-runs with per-run fonts and solid fills, imported vector paths, flattened
-boolean geometry, node blend layers, drop shadows, foreground blur,
-and alpha/luminance sibling masks. Diamond gradients and outline masks are
-explicit approximations. Editable vector networks, unflattened booleans, inner
-shadows, and backdrop blur are reported rather than silently approximated.
+The rendering surface supports affine transforms, opacity, clipping, solid and
+transformed linear/radial/angular/diamond gradients, archive and message-blob
+image fills (`FILL`, `FIT`, transformed `STRETCH`, and `TILE`), styled and
+aligned strokes, rectangles, frames, sections, symbols, instances, ellipses,
+lines, UTF-16-indexed rich text, imported and boolean paths, editable vector
+networks, blend layers, drop and inner shadows, foreground and background blur,
+and alpha/luminance sibling masks.
+
+Unsupported features are never silently replaced with rectangles. Polygon,
+star, and partial-ellipse geometry; decorative stroke caps; pattern/noise/custom
+paints and effects; and some live boolean or image-filter semantics remain
+explicitly diagnostic. Outline masks remain approximate. See the
+[rendering support matrix](guides/rendering-support.md) for the beta contract.
 
 Unsupported or approximate features are listed in `metadata.warnings`; this
 includes unavailable requested font families, missing glyph coverage, malformed

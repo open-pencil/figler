@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Shape the Hex package around production consumers: exclude Figler's RustQ
+  generators and development Mix tasks, compile KiwiCodec's Rustler generator
+  only for Figler development/tests, and keep RustQ, Reach, ExDNA, and VibeKit
+  out of production dependency resolution and runtime loading. Add unpacked
+  query-only and Skia-enabled package consumer gates, and upgrade to KiwiCodec
+  0.3.1.
 - Render true inside and outside stroke alignment with bounded shape masks and
   stroke-aware scene bounds. Extend effect silhouettes to typed text and
   compound editable vectors, apply morphology-backed inner-shadow spread to

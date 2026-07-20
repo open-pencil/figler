@@ -1,3 +1,5 @@
+Figler.Mix.KiwiCodegen.load!()
+
 defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
   use RustQ.Meta,
     rust_sources: ["native/src/templates/kiwi_skip_helpers.rs"],
