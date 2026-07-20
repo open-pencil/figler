@@ -6,8 +6,9 @@
 
 - Optional headless raster rendering through Skia, with PNG, JPEG, WEBP, and
   raw RGBA output.
-- Rendering support for the documented beta subset, including rectangles,
-  ellipses, partial ellipse rings, regular polygons, stars, editable vectors,
+- Rendering support for the documented beta subset, including rectangles with
+  independent corner radii, ellipses, partial ellipse rings, regular polygons,
+  stars, editable vectors,
   fills, transformed gradients, image paints, strokes,
   rich text, effects, clipping, and sibling masks.
 - `%Figler.Render.Warning{}` diagnostics with stable codes and structured

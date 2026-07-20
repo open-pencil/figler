@@ -189,8 +189,9 @@ for a single native rendering boundary.
 The rendering surface supports affine transforms, opacity, clipping, solid and
 transformed linear/radial/angular/diamond gradients, archive and message-blob
 image fills (`FILL`, `FIT`, transformed `STRETCH`, and `TILE`), styled and
-aligned strokes, rectangles, frames, sections, symbols, instances, ellipses,
-partial ellipse rings, regular polygons, stars, lines, UTF-16-indexed rich text,
+aligned strokes, rectangles with uniform or independent circular corner radii,
+frames, sections, symbols, instances, ellipses, partial ellipse rings, regular
+polygons, stars, lines, UTF-16-indexed rich text,
 imported and boolean paths, editable vector networks, blend layers, drop and
 inner shadows, foreground and background blur, and alpha/luminance sibling
 masks.
@@ -198,8 +199,9 @@ masks.
 Unsupported features are never silently replaced with rectangles. Decorative
 stroke caps; pattern/noise/custom paints and effects; and some live boolean or
 image-filter semantics remain
-explicitly diagnostic. Outline masks remain approximate. See the
-[rendering support matrix](guides/rendering-support.md) for the beta contract.
+explicitly diagnostic. Outline masks remain approximate. Figma smooth corners
+retain their radii but use circular arcs and report an approximation warning.
+See the [rendering support matrix](guides/rendering-support.md) for the beta contract.
 
 Unsupported or approximate features are listed in `metadata.warnings`; the
 [warning-code reference](guides/render-warnings.md) documents the stable warning

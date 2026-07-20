@@ -46,6 +46,27 @@ defmodule Figler.Render.Projection do
     %{name: :star_inner_scale, source_name: "starInnerScale"},
     %{name: :arc_data, source_name: "arcData"},
     %{name: :corner_radius, source_name: "cornerRadius"},
+    %{
+      name: :rectangle_top_left_corner_radius,
+      source_name: "rectangleTopLeftCornerRadius"
+    },
+    %{
+      name: :rectangle_top_right_corner_radius,
+      source_name: "rectangleTopRightCornerRadius"
+    },
+    %{
+      name: :rectangle_bottom_right_corner_radius,
+      source_name: "rectangleBottomRightCornerRadius"
+    },
+    %{
+      name: :rectangle_bottom_left_corner_radius,
+      source_name: "rectangleBottomLeftCornerRadius"
+    },
+    %{
+      name: :rectangle_corner_radii_independent,
+      source_name: "rectangleCornerRadiiIndependent"
+    },
+    %{name: :corner_smoothing, source_name: "cornerSmoothing"},
     %{name: :frame_mask_disabled, source_name: "frameMaskDisabled"}
   ]
 

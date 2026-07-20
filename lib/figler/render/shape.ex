@@ -77,10 +77,10 @@ defmodule Figler.Render.Shape do
 
   def issues(%Arc{} = arc) do
     cond do
-      not finite?(arc.start_angle) or not finite?(arc.end_angle) ->
+      not finite_number?(arc.start_angle) or not finite_number?(arc.end_angle) ->
         [%{code: :arc_angles_invalid, start_angle: arc.start_angle, end_angle: arc.end_angle}]
 
-      not finite?(arc.inner_radius) or arc.inner_radius < 0 or arc.inner_radius >= 1 ->
+      not finite_number?(arc.inner_radius) or arc.inner_radius < 0 or arc.inner_radius >= 1 ->
         [%{code: :arc_inner_radius_invalid, inner_radius: arc.inner_radius}]
 
       true ->
@@ -110,11 +110,13 @@ defmodule Figler.Render.Shape do
     %Arc{start_angle: start_angle, end_angle: end_angle, inner_radius: inner_radius}
   end
 
-  defp finite?(value) when is_integer(value), do: true
+  @doc false
+  @spec finite_number?(term()) :: boolean()
+  def finite_number?(value) when is_integer(value), do: true
 
-  defp finite?(value) when is_float(value) do
+  def finite_number?(value) when is_float(value) do
     :erlang.float_to_binary(value, [:compact]) not in ["inf", "-inf", "nan"]
   end
 
-  defp finite?(_value), do: false
+  def finite_number?(_value), do: false
 end

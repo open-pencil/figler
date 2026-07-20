@@ -78,6 +78,12 @@ fn render_projection_node_from_decoder<'a>(
     let mut star_inner_scale = nil;
     let mut arc_data = nil;
     let mut corner_radius = nil;
+    let mut rectangle_top_left_corner_radius = nil;
+    let mut rectangle_top_right_corner_radius = nil;
+    let mut rectangle_bottom_right_corner_radius = nil;
+    let mut rectangle_bottom_left_corner_radius = nil;
+    let mut rectangle_corner_radii_independent = nil;
+    let mut corner_smoothing = nil;
     let mut frame_mask_disabled = nil;
 
     loop {
@@ -213,6 +219,22 @@ fn render_projection_node_from_decoder<'a>(
                 arc_data = decode_sparse_arc_data_from_decoder(env, decoder)?
             }
             RENDER_FIELD_CORNER_RADIUS => corner_radius = decoder.read_var_float(env)?,
+            RENDER_FIELD_RECTANGLE_TOP_LEFT_CORNER_RADIUS => {
+                rectangle_top_left_corner_radius = decoder.read_var_float(env)?
+            }
+            RENDER_FIELD_RECTANGLE_TOP_RIGHT_CORNER_RADIUS => {
+                rectangle_top_right_corner_radius = decoder.read_var_float(env)?
+            }
+            RENDER_FIELD_RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS => {
+                rectangle_bottom_right_corner_radius = decoder.read_var_float(env)?
+            }
+            RENDER_FIELD_RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS => {
+                rectangle_bottom_left_corner_radius = decoder.read_var_float(env)?
+            }
+            RENDER_FIELD_RECTANGLE_CORNER_RADII_INDEPENDENT => {
+                rectangle_corner_radii_independent = decoder.read_bool()?.encode(env)
+            }
+            RENDER_FIELD_CORNER_SMOOTHING => corner_smoothing = decoder.read_var_float(env)?,
             RENDER_FIELD_FRAME_MASK_DISABLED => {
                 frame_mask_disabled = decoder.read_bool()?.encode(env)
             }

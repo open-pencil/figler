@@ -49,6 +49,9 @@ same list:
 | `star_inner_scale_invalid` | Star inner scale is not strictly between zero and one. |
 | `arc_angles_invalid` | Partial-ellipse angles are non-finite. |
 | `arc_inner_radius_invalid` | Partial-ellipse inner radius is outside `[0, 1)`. |
+| `corner_radius_invalid` | A rectangular corner radius is negative or non-finite. |
+| `corner_smoothing_invalid` | Corner smoothing is outside `[0, 1]` or non-finite. |
+| `corner_smoothing_approximated` | Figma smooth corners use circular corner arcs while preserving each radius. |
 | `outline_mask_approximated` | Outline masks use the documented approximation. |
 | `mask_type_unsupported` | The requested mask type is unsupported. |
 

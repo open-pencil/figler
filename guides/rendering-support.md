@@ -47,6 +47,7 @@ mode returns `{:error, {:unsupported_render_features, warnings}}` instead.
 | --- | --- |
 | Frames, sections, symbols, and instances | Supported |
 | Rectangles and rounded rectangles | Supported |
+| Independent rectangular corner radii | Supported |
 | Ellipses | Supported |
 | Lines | Supported |
 | Text | Supported |
@@ -57,7 +58,7 @@ mode returns `{:error, {:unsupported_render_features, warnings}}` instead.
 | Regular polygon and star nodes | Supported |
 | Arc/partial-ellipse and ellipse-ring geometry | Supported |
 | Unresolved live boolean geometry | Diagnostic-only |
-| Figma smooth-corner fidelity | Deferred |
+| Figma smooth corners | Circular-radius approximation with warning; rejected in strict mode |
 
 Figler does not fall back to drawing an unsupported shape as a rectangle.
 

@@ -47,6 +47,12 @@ defmodule Figler.Render.SourceNode do
           star_inner_scale: float() | nil,
           arc_data: Figler.Render.Shape.Arc.t() | nil,
           corner_radius: float() | nil,
+          rectangle_top_left_corner_radius: float() | nil,
+          rectangle_top_right_corner_radius: float() | nil,
+          rectangle_bottom_right_corner_radius: float() | nil,
+          rectangle_bottom_left_corner_radius: float() | nil,
+          rectangle_corner_radii_independent: boolean() | nil,
+          corner_smoothing: float() | nil,
           stroke_weight: float() | nil,
           frame_mask_disabled: boolean() | nil
         }

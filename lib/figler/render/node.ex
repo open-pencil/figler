@@ -7,6 +7,7 @@ defmodule Figler.Render.Node do
   backend sees the scene.
   """
 
+  alias Figler.Render.CornerRadii
   alias Figler.Render.Shape
   alias Figler.Render.SourceNode
   alias Figler.Render.Stroke
@@ -42,9 +43,9 @@ defmodule Figler.Render.Node do
                    :count,
                    :star_inner_scale,
                    :arc_data,
-                   :corner_radius,
                    :frame_mask_disabled
-                 ] ++ Text.source_fields() ++ Stroke.source_fields()
+                 ] ++
+                   Text.source_fields() ++ Stroke.source_fields() ++ CornerRadii.source_fields()
 
   @enforce_keys [:guid, :source_guid, :node_type]
   defstruct [
@@ -64,6 +65,7 @@ defmodule Figler.Render.Node do
     :boolean_operation,
     :shape,
     :corner_radius,
+    :corners,
     :stroke,
     :frame_mask_disabled,
     effects: [],
@@ -95,6 +97,7 @@ defmodule Figler.Render.Node do
           boolean_operation: atom() | nil,
           shape: Shape.t(),
           corner_radius: float() | nil,
+          corners: CornerRadii.t(),
           stroke: Stroke.t(),
           frame_mask_disabled: boolean() | nil
         }
@@ -108,6 +111,7 @@ defmodule Figler.Render.Node do
     {text_attrs, source_attrs} = Map.split(source_attrs, Text.source_fields())
     {stroke_attrs, source_attrs} = Map.split(source_attrs, Stroke.source_fields())
     {shape_attrs, source_attrs} = Map.split(source_attrs, Shape.source_fields())
+    {corner_attrs, source_attrs} = Map.split(source_attrs, CornerRadii.source_fields())
     text_node = graph_node |> Map.from_struct() |> Map.merge(text_attrs)
 
     attrs =
@@ -120,6 +124,8 @@ defmodule Figler.Render.Node do
         node_type: node_type,
         vector_network: vector_network,
         shape: Shape.from_source(node_type, shape_attrs),
+        corner_radius: Map.get(corner_attrs, :corner_radius),
+        corners: CornerRadii.from_source(corner_attrs),
         stroke: Stroke.from_effective(stroke_attrs),
         text:
           Text.from_effective(

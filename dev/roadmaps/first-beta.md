@@ -97,7 +97,7 @@ design-system selections without rectangle fallbacks.
 ### Beta blockers
 
 - [x] Add typed polygon, star, and arc/partial-ellipse rendering.
-- [ ] Support independent corner radii and document smooth-corner behavior.
+- [x] Support independent corner radii and document smooth-corner behavior.
 - [ ] Audit clipping for every supported container and transformed path type.
 - [ ] Audit live boolean geometry versus flattened/imported geometry and reject
       unresolved cases explicitly.

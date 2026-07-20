@@ -540,6 +540,46 @@ defmodule Figler.RenderTest do
     assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
   end
 
+  test "renders independent corner radii and reports smooth-corner approximation" do
+    assert {:ok, scene} = corner_geometry_payload() |> Render.prepare()
+
+    assert %RenderNode{
+             corner_radius: 3.0,
+             corners: %Figler.Render.CornerRadii{
+               top_left: 4.0,
+               top_right: 8.0,
+               bottom_right: 16.0,
+               bottom_left: 12.0,
+               independent?: true,
+               smoothing: smoothing
+             }
+           } = scene.render_nodes[{1, 1}]
+
+    assert_in_delta smoothing, 0.4, 1.0e-6
+
+    assert {:ok,
+            %{
+              warnings: [
+                %Warning{
+                  code: :corner_smoothing_approximated,
+                  severity: :approximation,
+                  context: %{smoothing: warning_smoothing}
+                }
+              ],
+              document: document
+            }} = SkiaBackend.compile(scene)
+
+    assert_in_delta warning_smoothing, 0.4, 1.0e-6
+
+    assert [%{op: :path, args: [%{__struct__: Skia.Path}]}] =
+             Enum.filter(Skia.commands(document), &(&1.op == :path))
+
+    assert {:error,
+            {:unsupported_render_features,
+             [%Warning{code: :corner_smoothing_approximated, severity: :approximation}]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
   test "reports malformed primitive geometry and rejects it in strict mode" do
     assert {:ok, scene} = invalid_primitive_shape_payload() |> Render.prepare()
 
@@ -947,6 +987,30 @@ defmodule Figler.RenderTest do
         visible: true,
         arc_data: arc_data,
         fill_paints: [solid_paint(0.0, 0.0, 1.0)]
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp corner_geometry_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :rectangle, "Independent corners", canvas_guid,
+        size: vector(100, 80),
+        transform: matrix(0, 0),
+        visible: true,
+        corner_radius: 3.0,
+        rectangle_top_left_corner_radius: 4.0,
+        rectangle_top_right_corner_radius: 8.0,
+        rectangle_bottom_left_corner_radius: 12.0,
+        rectangle_bottom_right_corner_radius: 16.0,
+        rectangle_corner_radii_independent: true,
+        corner_smoothing: 0.4,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
       )
     ]
     |> encode_nodes()

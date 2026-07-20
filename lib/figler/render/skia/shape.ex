@@ -2,6 +2,7 @@ defmodule Figler.Render.Skia.Shape do
   @moduledoc false
   @compile {:no_warn_undefined, [Skia, Skia.Path, Skia.PathEffect, Skia.TextSpan]}
 
+  alias Figler.Render.CornerRadii
   alias Figler.Render.Node
   alias Figler.Render.Shape, as: PrimitiveShape
   alias Figler.Render.Shape.Arc
@@ -22,6 +23,10 @@ defmodule Figler.Render.Skia.Shape do
 
   @doc false
   @spec issues(Node.t()) :: [map()]
+  def issues(%Node{shape: shape, corners: %CornerRadii{} = corners}) do
+    PrimitiveShape.issues(shape) ++ CornerRadii.warnings(corners)
+  end
+
   def issues(%Node{shape: shape}), do: PrimitiveShape.issues(shape)
 
   @spec visible_paints?(Node.t()) :: boolean()
@@ -59,17 +64,16 @@ defmodule Figler.Render.Skia.Shape do
         effect_opts
       )
       when type in @rectangular_types do
-    inset = Keyword.get(effect_opts, :inset, 0.0)
-    radius = max((node.corner_radius || 0.0) - inset, 0.0)
-
-    Skia.rect(document,
-      x: inset,
-      y: inset,
-      width: max(width - inset * 2, 0.0),
-      height: max(height - inset * 2, 0.0),
-      radius: radius,
-      fill: Keyword.get(opts, :fill, :white),
-      blend_mode: Keyword.get(opts, :blend_mode, :src_over)
+    draw_rect(
+      document,
+      node,
+      width,
+      height,
+      [
+        fill: Keyword.get(opts, :fill, :white),
+        blend_mode: Keyword.get(opts, :blend_mode, :src_over)
+      ],
+      Keyword.get(effect_opts, :inset, 0.0)
     )
   end
 
@@ -347,17 +351,105 @@ defmodule Figler.Render.Skia.Shape do
          opts,
          _assets
        )
-       when type in @rectangular_types do
-    Skia.rect(
-      document,
-      Keyword.merge(
-        [x: 0, y: 0, width: width, height: height, radius: node.corner_radius || 0],
-        opts
-      )
-    )
-  end
+       when type in @rectangular_types,
+       do: draw_rect(document, node, width, height, opts, 0.0)
 
   defp draw_shape(document, _node, _kind, _opts, _assets), do: document
+
+  defp draw_rect(document, node, width, height, opts, inset) do
+    source_corners = node_corners(node)
+    corners = CornerRadii.inset(source_corners, inset)
+    rect = {inset, inset, max(width - inset * 2, 0.0), max(height - inset * 2, 0.0)}
+
+    cond do
+      not CornerRadii.valid?(source_corners) ->
+        document
+
+      corners.independent? ->
+        Skia.path(document, independent_corner_path(rect, corners), opts)
+
+      true ->
+        {x, y, rect_width, rect_height} = rect
+
+        Skia.rect(
+          document,
+          Keyword.merge(
+            [x: x, y: y, width: rect_width, height: rect_height, radius: corners.top_left],
+            opts
+          )
+        )
+    end
+  end
+
+  defp node_corners(%Node{corners: %CornerRadii{} = corners}), do: corners
+
+  defp node_corners(%Node{corner_radius: radius}),
+    do: CornerRadii.from_source(%{corner_radius: radius})
+
+  defp independent_corner_path({x, y, width, height}, corners) do
+    %{top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl} =
+      normalize_corner_radii(corners, width, height)
+
+    right = x + width
+    bottom = y + height
+
+    Skia.Path.new()
+    |> Skia.Path.move_to(x + tl, y)
+    |> Skia.Path.line_to(right - tr, y)
+    |> top_right_corner(right, y, tr)
+    |> Skia.Path.line_to(right, bottom - br)
+    |> bottom_right_corner(right, bottom, br)
+    |> Skia.Path.line_to(x + bl, bottom)
+    |> bottom_left_corner(x, bottom, bl)
+    |> Skia.Path.line_to(x, y + tl)
+    |> top_left_corner(x, y, tl)
+    |> Skia.Path.close()
+  end
+
+  defp normalize_corner_radii(corners, width, height) do
+    scale =
+      [
+        radius_scale(width, corners.top_left + corners.top_right),
+        radius_scale(width, corners.bottom_left + corners.bottom_right),
+        radius_scale(height, corners.top_left + corners.bottom_left),
+        radius_scale(height, corners.top_right + corners.bottom_right)
+      ]
+      |> Enum.min()
+
+    %{
+      top_left: corners.top_left * scale,
+      top_right: corners.top_right * scale,
+      bottom_right: corners.bottom_right * scale,
+      bottom_left: corners.bottom_left * scale
+    }
+  end
+
+  defp radius_scale(_side, sum) when sum <= 0, do: 1.0
+  defp radius_scale(side, sum), do: min(1.0, max(side, 0.0) / sum)
+
+  defp top_right_corner(path, right, top, radius) when radius <= 0,
+    do: Skia.Path.line_to(path, right, top)
+
+  defp top_right_corner(path, _right, _top, radius),
+    do: Skia.Path.r_arc_to(path, {radius, radius}, 0, false, :cw, {radius, radius})
+
+  defp bottom_right_corner(path, right, bottom, radius) when radius <= 0,
+    do: Skia.Path.line_to(path, right, bottom)
+
+  defp bottom_right_corner(path, _right, _bottom, radius),
+    do: Skia.Path.r_arc_to(path, {radius, radius}, 0, false, :cw, {-radius, radius})
+
+  defp bottom_left_corner(path, left, bottom, radius) when radius <= 0,
+    do: Skia.Path.line_to(path, left, bottom)
+
+  defp bottom_left_corner(path, _left, _bottom, radius),
+    do: Skia.Path.r_arc_to(path, {radius, radius}, 0, false, :cw, {-radius, -radius})
+
+  defp top_left_corner(path, left, top, radius) when radius <= 0,
+    do: Skia.Path.line_to(path, left, top)
+
+  defp top_left_corner(path, _left, _top, radius),
+    do: Skia.Path.r_arc_to(path, {radius, radius}, 0, false, :cw, {radius, -radius})
 
   defp draw_primitive_path(document, node, opts) do
     case primitive_path(node, 0.0) do

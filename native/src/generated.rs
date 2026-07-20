@@ -11012,6 +11012,12 @@ const RENDER_FIELD_COUNT: u32 = 10;
 const RENDER_FIELD_STAR_INNER_SCALE: u32 = 24;
 const RENDER_FIELD_ARC_DATA: u32 = 195;
 const RENDER_FIELD_CORNER_RADIUS: u32 = 20;
+const RENDER_FIELD_RECTANGLE_TOP_LEFT_CORNER_RADIUS: u32 = 145;
+const RENDER_FIELD_RECTANGLE_TOP_RIGHT_CORNER_RADIUS: u32 = 146;
+const RENDER_FIELD_RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS: u32 = 148;
+const RENDER_FIELD_RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS: u32 = 147;
+const RENDER_FIELD_RECTANGLE_CORNER_RADII_INDEPENDENT: u32 = 149;
+const RENDER_FIELD_CORNER_SMOOTHING: u32 = 160;
 const RENDER_FIELD_FRAME_MASK_DISABLED: u32 = 115;
 const RENDER_VECTOR_DATA_FIELD_NETWORK_BLOB: u32 = 1;
 const RENDER_VECTOR_DATA_FIELD_NORMALIZED_SIZE: u32 = 2;
@@ -11091,6 +11097,12 @@ fn render_projection_node_from_decoder<'a>(
     let mut star_inner_scale = nil;
     let mut arc_data = nil;
     let mut corner_radius = nil;
+    let mut rectangle_top_left_corner_radius = nil;
+    let mut rectangle_top_right_corner_radius = nil;
+    let mut rectangle_bottom_right_corner_radius = nil;
+    let mut rectangle_bottom_left_corner_radius = nil;
+    let mut rectangle_corner_radii_independent = nil;
+    let mut corner_smoothing = nil;
     let mut frame_mask_disabled = nil;
     loop {
         match decoder.read_var_uint()? {
@@ -11249,6 +11261,24 @@ fn render_projection_node_from_decoder<'a>(
                 arc_data = decode_sparse_arc_data_from_decoder(env, decoder)?;
             }
             RENDER_FIELD_CORNER_RADIUS => corner_radius = decoder.read_var_float(env)?,
+            RENDER_FIELD_RECTANGLE_TOP_LEFT_CORNER_RADIUS => {
+                rectangle_top_left_corner_radius = decoder.read_var_float(env)?;
+            }
+            RENDER_FIELD_RECTANGLE_TOP_RIGHT_CORNER_RADIUS => {
+                rectangle_top_right_corner_radius = decoder.read_var_float(env)?;
+            }
+            RENDER_FIELD_RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS => {
+                rectangle_bottom_right_corner_radius = decoder.read_var_float(env)?;
+            }
+            RENDER_FIELD_RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS => {
+                rectangle_bottom_left_corner_radius = decoder.read_var_float(env)?;
+            }
+            RENDER_FIELD_RECTANGLE_CORNER_RADII_INDEPENDENT => {
+                rectangle_corner_radii_independent = decoder.read_bool()?.encode(env);
+            }
+            RENDER_FIELD_CORNER_SMOOTHING => {
+                corner_smoothing = decoder.read_var_float(env)?;
+            }
             RENDER_FIELD_FRAME_MASK_DISABLED => {
                 frame_mask_disabled = decoder.read_bool()?.encode(env);
             }
@@ -11264,7 +11294,9 @@ fn render_projection_node_from_decoder<'a>(
         stroke_weight, stroke_align, stroke_cap, stroke_cap_size, stroke_join,
         miter_limit, dash_pattern, fill_geometry, stroke_geometry, vector_data,
         boolean_operation, count, star_inner_scale, arc_data, corner_radius,
-        frame_mask_disabled
+        rectangle_top_left_corner_radius, rectangle_top_right_corner_radius,
+        rectangle_bottom_right_corner_radius, rectangle_bottom_left_corner_radius,
+        rectangle_corner_radii_independent, corner_smoothing, frame_mask_disabled
     ];
     Ok(rustler::types::tuple::make_tuple(env, &record))
 }
