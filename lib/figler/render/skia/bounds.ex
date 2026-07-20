@@ -65,9 +65,13 @@ defmodule Figler.Render.Skia.Bounds do
           |> include_stroke_bounds(matrix, node.size, node)
           |> include_effect_bounds(matrix, node.size, node)
 
-        scene.children
-        |> Map.get(guid, [])
-        |> Enum.reduce(bounds, &node_bounds(scene, &1, matrix, &2))
+        if Node.clips_children?(node) do
+          bounds
+        else
+          scene.children
+          |> Map.get(guid, [])
+          |> Enum.reduce(bounds, &node_bounds(scene, &1, matrix, &2))
+        end
 
       _missing_or_hidden ->
         bounds

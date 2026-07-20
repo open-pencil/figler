@@ -52,6 +52,7 @@ same list:
 | `corner_radius_invalid` | A rectangular corner radius is negative or non-finite. |
 | `corner_smoothing_invalid` | Corner smoothing is outside `[0, 1]` or non-finite. |
 | `corner_smoothing_approximated` | Figma smooth corners use circular corner arcs while preserving each radius. |
+| `container_clip_unsupported` | A clipping flag appears on a node type without supported Figma container clipping semantics. |
 | `outline_mask_approximated` | Outline masks use the documented approximation. |
 | `mask_type_unsupported` | The requested mask type is unsupported. |
 

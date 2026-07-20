@@ -43,6 +43,8 @@
 - Shape effects no longer accidentally include child content.
 - Effect, mask, and aligned-stroke layers use geometry-aware bounds instead of
   unbounded compositing surfaces.
+- Clipped containers now use independent corner paths, preserve transformed
+  descendant clipping, and exclude clipped overflow from output bounds.
 - Text styling and fallback no longer split Unicode scalars or grapheme
   clusters.
 - Invalid vector networks, geometry, paint transforms, image settings, text

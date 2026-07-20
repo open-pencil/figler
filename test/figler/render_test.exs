@@ -138,6 +138,42 @@ defmodule Figler.RenderTest do
     assert {:ok, %{width: 120, height: 80}} = Skia.to_raw(result.document)
   end
 
+  test "clips transformed path children to independent container corners and bounds" do
+    assert {:ok, scene} = clipped_path_payload(:frame) |> Render.prepare()
+
+    assert {:ok, %{warnings: [], bounds: bounds, document: document}} =
+             SkiaBackend.compile(scene)
+
+    assert bounds == %Bounds{min_x: 10.0, min_y: 10.0, max_x: 50.0, max_y: 50.0}
+    assert {:ok, %{width: 40, height: 40}} = Skia.to_raw(document)
+
+    commands = Skia.commands(document)
+    assert Enum.any?(commands, &(&1.op == :clip_path))
+
+    clip_index = Enum.find_index(commands, &(&1.op == :clip_path))
+
+    child_transform_index =
+      Enum.find_index(commands, fn
+        %{op: :concat, opts: opts} -> elem(Keyword.fetch!(opts, :matrix), 0) < 0.8
+        _command -> false
+      end)
+
+    assert clip_index < child_transform_index
+  end
+
+  test "rejects clipping flags on unsupported container types" do
+    assert {:ok, scene} = clipped_path_payload(:section) |> Render.prepare()
+
+    assert {:ok,
+            %{warnings: [%Warning{code: :container_clip_unsupported, severity: :unsupported}]}} =
+             SkiaBackend.compile(scene)
+
+    assert {:error,
+            {:unsupported_render_features,
+             [%Warning{code: :container_clip_unsupported, severity: :unsupported}]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
   test "normalizes UTF-16-indexed rich text style runs" do
     assert {:ok, scene} = rich_text_payload() |> Render.prepare()
     text = scene.render_nodes[{1, 1}].text
@@ -1260,6 +1296,53 @@ defmodule Figler.RenderTest do
       )
     ]
     |> encode_nodes()
+  end
+
+  defp clipped_path_payload(container_type) do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    container_guid = guid(1, 1)
+    geometry = struct(Figler.Schema.Path, winding_rule: :nonzero, commands_blob: 0)
+
+    child_transform =
+      struct(Figler.Schema.Matrix,
+        m00: 0.70710678,
+        m01: -0.70710678,
+        m02: 20.0,
+        m10: 0.70710678,
+        m11: 0.70710678,
+        m12: -20.0
+      )
+
+    nodes = [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(container_guid, container_type, "Clipping container", canvas_guid,
+        size: vector(40, 40),
+        transform: matrix(10, 10),
+        visible: true,
+        frame_mask_disabled: false,
+        rectangle_top_left_corner_radius: 4.0,
+        rectangle_top_right_corner_radius: 8.0,
+        rectangle_bottom_right_corner_radius: 12.0,
+        rectangle_bottom_left_corner_radius: 16.0,
+        rectangle_corner_radii_independent: true,
+        fill_paints: [solid_paint(0.1, 0.1, 0.1)]
+      ),
+      node(guid(1, 2), :vector, "Transformed path", container_guid,
+        size: vector(80, 80),
+        transform: child_transform,
+        visible: true,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)],
+        fill_geometry: [geometry]
+      )
+    ]
+
+    blob =
+      <<1, f32(0.0)::binary, f32(80.0)::binary, 2, f32(40.0)::binary, f32(0.0)::binary, 2,
+        f32(80.0)::binary, f32(80.0)::binary, 0>>
+
+    encode_nodes(nodes, [struct(Figler.Schema.Blob, bytes: blob)])
   end
 
   defp geometry_payload do

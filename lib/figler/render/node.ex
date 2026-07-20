@@ -17,6 +17,7 @@ defmodule Figler.Render.Node do
   alias Figler.Schema.NodeType
 
   @node_types NodeType.__kiwi_metadata__().enum_by_name |> Map.keys() |> MapSet.new()
+  @clipping_container_types [:frame, :instance, :symbol]
   @node_types_by_name Map.new(@node_types, &{Atom.to_string(&1), &1})
 
   @graph_fields [
@@ -101,6 +102,18 @@ defmodule Figler.Render.Node do
           stroke: Stroke.t(),
           frame_mask_disabled: boolean() | nil
         }
+
+  @doc false
+  @spec clips_children?(t()) :: boolean()
+  def clips_children?(%__MODULE__{node_type: type, frame_mask_disabled: false})
+      when type in @clipping_container_types,
+      do: true
+
+  def clips_children?(%__MODULE__{}), do: false
+
+  @doc false
+  @spec clipping_container_type?(NodeType.t() | :unknown) :: boolean()
+  def clipping_container_type?(type), do: type in @clipping_container_types
 
   @doc false
   @spec from_effective(SceneNode.t(), GUID.figma_guid(), SourceNode.t() | nil) :: t()

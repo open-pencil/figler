@@ -41,7 +41,8 @@ defmodule Figler.Render.Skia.Diagnostics do
         geometry_warnings(node, assets) ++
         font_warnings(node, assets) ++
         text_warnings(node) ++
-        effect_warnings(node) ++ mask_warnings(node) ++ shape_warnings(node)
+        effect_warnings(node) ++
+        mask_warnings(node) ++ clip_warnings(node) ++ shape_warnings(node)
 
     Enum.reduce(node_warnings, warnings, &[&1 | &2])
   end
@@ -197,6 +198,14 @@ defmodule Figler.Render.Skia.Diagnostics do
         []
     end
   end
+
+  defp clip_warnings(%Node{frame_mask_disabled: false, node_type: type} = node) do
+    if Node.clipping_container_type?(type),
+      do: [],
+      else: [warning(node.guid, :shape, {:container_clip_unsupported, type})]
+  end
+
+  defp clip_warnings(_node), do: []
 
   defp mask_warnings(%Node{mask: true, mask_type: :outline} = node),
     do: [warning(node.guid, :mask, :outline_mask_approximated)]

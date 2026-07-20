@@ -37,7 +37,7 @@ mode returns `{:error, {:unsupported_render_features, warnings}}` instead.
 | Component properties and effective values | Supported |
 | Focused native source projection | Supported |
 | Affine transforms, visibility, and opacity | Supported |
-| Frame/container clipping | Supported |
+| Frame, symbol/component, and instance clipping | Supported for transformed descendants and independent corners |
 | Common node blend modes | Supported |
 | Linear burn | Diagnostic-only |
 

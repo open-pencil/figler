@@ -56,6 +56,26 @@ defmodule Figler.Render.Skia.ShapeTest do
            ] = Skia.Path.segments(path)
   end
 
+  test "recognizes every supported clipping container type" do
+    for type <- [:frame, :instance, :symbol] do
+      node = %Node{
+        guid: {1, 4},
+        source_guid: {1, 4},
+        node_type: type,
+        frame_mask_disabled: false
+      }
+
+      assert Node.clips_children?(node)
+    end
+
+    refute Node.clips_children?(%Node{
+             guid: {1, 5},
+             source_guid: {1, 5},
+             node_type: :section,
+             frame_mask_disabled: false
+           })
+  end
+
   test "rejects malformed rectangular corners instead of drawing them" do
     node = %Node{
       guid: {1, 3},

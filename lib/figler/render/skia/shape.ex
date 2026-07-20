@@ -52,6 +52,34 @@ defmodule Figler.Render.Skia.Shape do
   def effect_shape_supported?(%{node_type: type}), do: type in @effect_shape_types
 
   @doc false
+  @spec clip_children(Skia.Document.t(), Node.t()) :: Skia.Document.t()
+  def clip_children(
+        document,
+        %Node{size: %{x: width, y: height}} = node
+      ) do
+    corners = node_corners(node)
+
+    cond do
+      not CornerRadii.valid?(corners) ->
+        document
+
+      corners.independent? ->
+        Skia.clip_path(document, independent_corner_path({0.0, 0.0, width, height}, corners))
+
+      true ->
+        Skia.clip_rect(document,
+          x: 0,
+          y: 0,
+          width: width,
+          height: height,
+          radius: corners.top_left
+        )
+    end
+  end
+
+  def clip_children(document, _node), do: document
+
+  @doc false
   @spec draw_silhouette(Skia.Document.t(), Node.t(), map(), keyword(), keyword()) ::
           Skia.Document.t()
   def draw_silhouette(document, node, assets, opts, effect_opts \\ [])

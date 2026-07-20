@@ -98,7 +98,7 @@ design-system selections without rectangle fallbacks.
 
 - [x] Add typed polygon, star, and arc/partial-ellipse rendering.
 - [x] Support independent corner radii and document smooth-corner behavior.
-- [ ] Audit clipping for every supported container and transformed path type.
+- [x] Audit clipping for every supported container and transformed path type.
 - [ ] Audit live boolean geometry versus flattened/imported geometry and reject
       unresolved cases explicitly.
 - [ ] Verify stroke alignment, dashes, joins, and bounds on open, closed,

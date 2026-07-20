@@ -20,8 +20,6 @@ defmodule Figler.Render.Skia do
   alias Figler.Render.Warning
   alias Figler.Scene.Graph.GUID
 
-  @container_types [:canvas, :frame, :instance, :symbol]
-
   @type bounds :: Bounds.t()
 
   @doc "Compiles an effective scene into a Skia command document."
@@ -226,20 +224,7 @@ defmodule Figler.Render.Skia do
     |> Skia.ImageFilter.color_filter()
   end
 
-  defp maybe_clip(document, %Node{node_type: type, size: %{x: width, y: height}} = node)
-       when type in @container_types do
-    if node.frame_mask_disabled == false do
-      Skia.clip_rect(document,
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
-        radius: node.corner_radius || 0
-      )
-    else
-      document
-    end
+  defp maybe_clip(document, %Node{} = node) do
+    if Node.clips_children?(node), do: Shape.clip_children(document, node), else: document
   end
-
-  defp maybe_clip(document, _node), do: document
 end
