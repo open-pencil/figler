@@ -42,7 +42,7 @@ hard to work with. Figler gives you multiple levels of access:
 For optional native raster rendering, also add Skia:
 
 ```elixir
-{:skia, "~> 0.1.1"}
+{:skia, "~> 0.3.7"}
 ```
 
 Figler uses a Rustler native extension for high-performance decoding and scene
