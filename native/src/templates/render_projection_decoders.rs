@@ -74,6 +74,9 @@ fn render_projection_node_from_decoder<'a>(
     let mut stroke_geometry = empty;
     let mut vector_data = nil;
     let mut boolean_operation = nil;
+    let mut count = nil;
+    let mut star_inner_scale = nil;
+    let mut arc_data = nil;
     let mut corner_radius = nil;
     let mut frame_mask_disabled = nil;
 
@@ -203,6 +206,11 @@ fn render_projection_node_from_decoder<'a>(
             }
             RENDER_FIELD_BOOLEAN_OPERATION => {
                 boolean_operation = decode_sparse_boolean_operation_from_decoder(env, decoder)?
+            }
+            RENDER_FIELD_COUNT => count = decoder.read_var_uint()?.encode(env),
+            RENDER_FIELD_STAR_INNER_SCALE => star_inner_scale = decoder.read_var_float(env)?,
+            RENDER_FIELD_ARC_DATA => {
+                arc_data = decode_sparse_arc_data_from_decoder(env, decoder)?
             }
             RENDER_FIELD_CORNER_RADIUS => corner_radius = decoder.read_var_float(env)?,
             RENDER_FIELD_FRAME_MASK_DISABLED => {

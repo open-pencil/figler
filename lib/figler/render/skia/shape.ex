@@ -1,18 +1,28 @@
 defmodule Figler.Render.Skia.Shape do
   @moduledoc false
-  @compile {:no_warn_undefined, [Skia, Skia.PathEffect, Skia.TextSpan]}
+  @compile {:no_warn_undefined, [Skia, Skia.Path, Skia.PathEffect, Skia.TextSpan]}
 
   alias Figler.Render.Node
+  alias Figler.Render.Shape, as: PrimitiveShape
+  alias Figler.Render.Shape.Arc
+  alias Figler.Render.Shape.Polygon
+  alias Figler.Render.Shape.Star
   alias Figler.Render.Skia.Paint
   alias Figler.Render.Stroke
 
   @rectangular_types [:frame, :instance, :rectangle, :rounded_rectangle, :section, :symbol]
-  @stroke_alignment_types @rectangular_types ++ [:boolean_operation, :ellipse, :vector]
+  @primitive_path_types [:regular_polygon, :star]
+  @stroke_alignment_types @rectangular_types ++
+                            @primitive_path_types ++ [:boolean_operation, :ellipse, :vector]
   @effect_shape_types @stroke_alignment_types ++ [:text]
   @supported_types @effect_shape_types ++ [:line]
 
   @spec supported_type?(Figler.Schema.NodeType.t() | :unknown) :: boolean()
   def supported_type?(type), do: type in @supported_types
+
+  @doc false
+  @spec issues(Node.t()) :: [map()]
+  def issues(%Node{shape: shape}), do: PrimitiveShape.issues(shape)
 
   @spec visible_paints?(Node.t()) :: boolean()
   def visible_paints?(node) do
@@ -65,6 +75,16 @@ defmodule Figler.Render.Skia.Shape do
 
   def draw_silhouette(
         document,
+        %Node{node_type: :ellipse, shape: %Arc{}} = node,
+        _assets,
+        opts,
+        effect_opts
+      ) do
+    draw_primitive_silhouette(document, node, opts, effect_opts)
+  end
+
+  def draw_silhouette(
+        document,
         %Node{node_type: :ellipse, size: %{x: width, y: height}},
         _assets,
         opts,
@@ -80,6 +100,17 @@ defmodule Figler.Render.Skia.Shape do
       fill: Keyword.get(opts, :fill, :white),
       blend_mode: Keyword.get(opts, :blend_mode, :src_over)
     )
+  end
+
+  def draw_silhouette(
+        document,
+        %Node{node_type: type} = node,
+        _assets,
+        opts,
+        effect_opts
+      )
+      when type in @primitive_path_types do
+    draw_primitive_silhouette(document, node, opts, effect_opts)
   end
 
   def draw_silhouette(
@@ -138,6 +169,21 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   def draw_silhouette(document, _node, _assets, _opts, _effect_opts), do: document
+
+  defp draw_primitive_silhouette(document, node, opts, effect_opts) do
+    case primitive_path(node, Keyword.get(effect_opts, :inset, 0.0)) do
+      %{__struct__: Skia.Path} = path ->
+        path_opts = [
+          fill: Keyword.get(opts, :fill, :white),
+          blend_mode: Keyword.get(opts, :blend_mode, :src_over)
+        ]
+
+        Skia.path(document, path, path_opts)
+
+      nil ->
+        document
+    end
+  end
 
   defp silhouette_text_span(span, node, assets, fill) do
     span_opts =
@@ -230,12 +276,31 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_shape(
          document,
+         %Node{node_type: :ellipse, shape: %Arc{}} = node,
+         _kind,
+         opts,
+         _assets
+       ),
+       do: draw_primitive_path(document, node, opts)
+
+  defp draw_shape(
+         document,
          %Node{node_type: :ellipse, size: size},
          _kind,
          opts,
          _assets
        ),
        do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
+
+  defp draw_shape(
+         document,
+         %Node{node_type: type} = node,
+         _kind,
+         opts,
+         _assets
+       )
+       when type in @primitive_path_types,
+       do: draw_primitive_path(document, node, opts)
 
   defp draw_shape(document, %Node{node_type: :line, size: size}, _kind, opts, _assets) do
     line_opts =
@@ -293,6 +358,115 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   defp draw_shape(document, _node, _kind, _opts, _assets), do: document
+
+  defp draw_primitive_path(document, node, opts) do
+    case primitive_path(node, 0.0) do
+      %{__struct__: Skia.Path} = path -> Skia.path(document, path, opts)
+      nil -> document
+    end
+  end
+
+  defp primitive_path(%Node{shape: shape, size: size}, inset)
+       when is_map(size) and is_number(inset) do
+    if PrimitiveShape.valid?(shape) do
+      shape_path(shape, size, inset)
+    end
+  end
+
+  defp primitive_path(_node, _inset), do: nil
+
+  defp shape_path(%Polygon{point_count: count}, size, inset),
+    do: polygon_path(size, inset, count, 1.0)
+
+  defp shape_path(%Star{point_count: count, inner_scale: scale}, size, inset),
+    do: polygon_path(size, inset, count * 2, scale)
+
+  defp shape_path(%Arc{} = arc, size, inset), do: arc_path(size, inset, arc)
+
+  defp polygon_path(size, inset, total_points, inner_scale) do
+    {x, y, width, height} = inset_rect(size, inset)
+    center_x = x + width / 2
+    center_y = y + height / 2
+    radius_x = width / 2
+    radius_y = height / 2
+
+    0..(total_points - 1)
+    |> Enum.reduce(Skia.Path.new(), fn index, path ->
+      angle = -:math.pi() / 2 + 2 * :math.pi() * index / total_points
+      radius = if total_points > 0 and rem(index, 2) == 1, do: inner_scale, else: 1.0
+      point_x = center_x + radius_x * radius * :math.cos(angle)
+      point_y = center_y + radius_y * radius * :math.sin(angle)
+
+      if index == 0,
+        do: Skia.Path.move_to(path, point_x, point_y),
+        else: Skia.Path.line_to(path, point_x, point_y)
+    end)
+    |> Skia.Path.close()
+  end
+
+  defp arc_path(size, inset, arc) do
+    {x, y, width, height} = inset_rect(size, inset)
+    start_degrees = radians_to_degrees(arc.start_angle)
+    sweep_degrees = radians_to_degrees(arc.end_angle - arc.start_angle)
+    center_x = x + width / 2
+    center_y = y + height / 2
+    outer_start = ellipse_point(center_x, center_y, width / 2, height / 2, arc.start_angle)
+
+    cond do
+      arc.inner_radius > 0 ->
+        inner_width = width * arc.inner_radius
+        inner_height = height * arc.inner_radius
+        inner_x = center_x - inner_width / 2
+        inner_y = center_y - inner_height / 2
+
+        inner_end =
+          ellipse_point(
+            center_x,
+            center_y,
+            inner_width / 2,
+            inner_height / 2,
+            arc.end_angle
+          )
+
+        Skia.Path.new()
+        |> Skia.Path.move_to(elem(outer_start, 0), elem(outer_start, 1))
+        |> Skia.Path.arc_to({x, y, width, height}, start_degrees, sweep_degrees)
+        |> Skia.Path.line_to(elem(inner_end, 0), elem(inner_end, 1))
+        |> Skia.Path.arc_to(
+          {inner_x, inner_y, inner_width, inner_height},
+          start_degrees + sweep_degrees,
+          -sweep_degrees
+        )
+        |> Skia.Path.close()
+
+      abs(sweep_degrees) >= 359.99 ->
+        Skia.Path.new()
+        |> Skia.Path.arc_to(
+          {x, y, width, height},
+          start_degrees,
+          sweep_degrees,
+          force_move_to: true
+        )
+        |> Skia.Path.close()
+
+      true ->
+        Skia.Path.new()
+        |> Skia.Path.move_to(center_x, center_y)
+        |> Skia.Path.line_to(elem(outer_start, 0), elem(outer_start, 1))
+        |> Skia.Path.arc_to({x, y, width, height}, start_degrees, sweep_degrees)
+        |> Skia.Path.close()
+    end
+  end
+
+  defp inset_rect(size, inset) do
+    {inset, inset, max(size.x - inset * 2, 0.0), max(size.y - inset * 2, 0.0)}
+  end
+
+  defp ellipse_point(center_x, center_y, radius_x, radius_y, angle) do
+    {center_x + radius_x * :math.cos(angle), center_y + radius_y * :math.sin(angle)}
+  end
+
+  defp radians_to_degrees(value), do: value * 180 / :math.pi()
 
   defp line_paint_opts(opts) do
     if Keyword.has_key?(opts, :stroke) do

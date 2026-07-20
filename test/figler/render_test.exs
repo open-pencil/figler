@@ -484,6 +484,82 @@ defmodule Figler.RenderTest do
     assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
   end
 
+  test "renders typed polygons, stars, and partial ellipse arcs as paths" do
+    assert {:ok, scene} = primitive_shape_payload() |> Render.prepare()
+
+    assert %RenderNode{shape: %Figler.Render.Shape.Polygon{point_count: 3}} =
+             scene.render_nodes[{1, 1}]
+
+    assert %RenderNode{
+             shape: %Figler.Render.Shape.Star{point_count: 5, inner_scale: inner_scale}
+           } = scene.render_nodes[{1, 2}]
+
+    assert_in_delta inner_scale, 0.4, 1.0e-6
+
+    assert %RenderNode{
+             shape: %Figler.Render.Shape.Arc{
+               start_angle: start_angle,
+               end_angle: end_angle,
+               inner_radius: inner_radius
+             }
+           } = scene.render_nodes[{1, 3}]
+
+    assert_in_delta start_angle, 0.0, 1.0e-6
+    assert_in_delta end_angle, :math.pi() * 1.5, 1.0e-6
+    assert_in_delta inner_radius, 0.5, 1.0e-6
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene)
+
+    paths = Enum.filter(Skia.commands(document), &(&1.op == :path))
+    fill_paths = Enum.filter(paths, &Keyword.has_key?(&1.opts, :fill))
+    stroke_paths = Enum.filter(paths, &Keyword.has_key?(&1.opts, :stroke))
+    assert [polygon, star, arc] = fill_paths
+    assert [_polygon_stroke] = stroke_paths
+
+    assert [{:move_to, polygon_x, polygon_y} | _polygon_segments] =
+             Skia.Path.segments(hd(polygon.args))
+
+    assert_in_delta polygon_x, 50.0, 1.0e-6
+    assert_in_delta polygon_y, 0.0, 1.0e-6
+    assert Enum.count_until(Skia.Path.segments(hd(polygon.args)), 5) == 4
+    assert Enum.count_until(Skia.Path.segments(hd(star.args)), 12) == 11
+
+    assert [
+             {:move_to, arc_start_x, arc_start_y},
+             {:arc_to, arc_x, arc_y, 100.0, 80.0, arc_start_degrees, {_sweep, false}}
+             | _arc_segments
+           ] = Skia.Path.segments(hd(arc.args))
+
+    for value <- [arc_start_y - 40.0, arc_x, arc_y, arc_start_degrees] do
+      assert_in_delta value, 0.0, 1.0e-6
+    end
+
+    assert_in_delta arc_start_x, 100.0, 1.0e-6
+    assert Enum.count_until(Skia.Path.segments(hd(arc.args)), 6) == 5
+    refute Enum.any?(Skia.commands(document), &(&1.op in [:rect, :oval]))
+    assert {:ok, %{data: data}} = Skia.to_raw(document)
+    assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
+  end
+
+  test "reports malformed primitive geometry and rejects it in strict mode" do
+    assert {:ok, scene} = invalid_primitive_shape_payload() |> Render.prepare()
+
+    assert {:ok,
+            %{
+              warnings: [
+                %Warning{code: :star_inner_scale_invalid, severity: :invalid, context: context}
+              ],
+              document: document
+            }} = SkiaBackend.compile(scene)
+
+    assert context == %{inner_scale: 1.5}
+    refute Enum.any?(Skia.commands(document), &(&1.op == :path))
+
+    assert {:error,
+            {:unsupported_render_features,
+             [%Warning{code: :star_inner_scale_invalid, severity: :invalid}]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
   test "renders editable vector networks without derived geometry blobs" do
     assert {:ok, scene} = editable_vector_payload() |> Render.prepare()
     node = scene.render_nodes[{1, 1}]
@@ -619,7 +695,7 @@ defmodule Figler.RenderTest do
 
     assert {:ok,
             %{
-              warnings: [%{feature: :shape, value: {:shape_unsupported, :star}}],
+              warnings: [%{feature: :shape, value: {:shape_unsupported, :slice}}],
               document: document
             }} =
              SkiaBackend.compile(scene)
@@ -834,6 +910,67 @@ defmodule Figler.RenderTest do
              SkiaBackend.compile(scene, strict: true)
   end
 
+  defp primitive_shape_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    arc_data =
+      struct(Figler.Schema.ArcData,
+        starting_angle: 0.0,
+        ending_angle: :math.pi() * 1.5,
+        inner_radius: 0.5
+      )
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :regular_polygon, "Triangle", canvas_guid,
+        size: vector(100, 80),
+        transform: matrix(0, 0),
+        visible: true,
+        count: 3,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)],
+        stroke_paints: [solid_paint(0.0, 0.0, 0.0)],
+        stroke_weight: 2.0
+      ),
+      node(guid(1, 2), :star, "Star", canvas_guid,
+        size: vector(100, 80),
+        transform: matrix(120, 0),
+        visible: true,
+        count: 5,
+        star_inner_scale: 0.4,
+        fill_paints: [solid_paint(0.0, 1.0, 0.0)]
+      ),
+      node(guid(1, 3), :ellipse, "Arc", canvas_guid,
+        size: vector(100, 80),
+        transform: matrix(240, 0),
+        visible: true,
+        arc_data: arc_data,
+        fill_paints: [solid_paint(0.0, 0.0, 1.0)]
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp invalid_primitive_shape_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :star, "Invalid Star", canvas_guid,
+        size: vector(100, 80),
+        transform: matrix(0, 0),
+        visible: true,
+        count: 5,
+        star_inner_scale: 1.5,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      )
+    ]
+    |> encode_nodes()
+  end
+
   defp unsupported_shape_payload do
     document_guid = guid(0, 0)
     canvas_guid = guid(0, 1)
@@ -841,7 +978,7 @@ defmodule Figler.RenderTest do
     [
       node(document_guid, :document, "Document"),
       node(canvas_guid, :canvas, "Page 1", document_guid),
-      node(guid(1, 1), :star, "Star", canvas_guid,
+      node(guid(1, 1), :slice, "Slice", canvas_guid,
         size: vector(20, 20),
         transform: matrix(0, 0),
         visible: true,

@@ -6,6 +6,8 @@ defmodule Figler.Codegen.Native.Scene do
   into the Rust fragments inserted into the scene NIF templates.
   """
 
+  @compile {:no_warn_undefined, [{KiwiCodec.RustlerGenerator.Skip, :message_arm, 2}]}
+
   alias Figler.Codegen.Native.AtomCache
   alias Figler.Codegen.Native.RenderProjection
   alias Figler.Codegen.Native.SupportFunction

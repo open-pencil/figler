@@ -181,10 +181,20 @@ defmodule Figler.Render.Skia.Diagnostics do
     do: paint.visible in [nil, true] and paint.type not in [:solid]
 
   defp shape_warnings(%Node{node_type: type} = node) do
-    if Shape.supported_type?(type) or not Shape.visible_paints?(node) do
-      []
-    else
-      [warning(node.guid, :shape, {:shape_unsupported, type})]
+    issues = Shape.issues(node)
+
+    cond do
+      issues != [] ->
+        Enum.map(issues, &warning(node.guid, :shape, &1))
+
+      not Shape.visible_paints?(node) ->
+        []
+
+      not Shape.supported_type?(type) ->
+        [warning(node.guid, :shape, {:shape_unsupported, type})]
+
+      true ->
+        []
     end
   end
 

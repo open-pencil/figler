@@ -44,6 +44,11 @@ same list:
 | `geometry_missing` | A visible vector/boolean paint has no usable geometry. |
 | `invalid_geometry` | Imported path data failed validation or decoding. |
 | `invalid_vector_network` | Editable vector-network data failed validation. |
+| `polygon_point_count_invalid` | Polygon point count is outside the safe supported range. |
+| `star_point_count_invalid` | Star point count is outside the safe supported range. |
+| `star_inner_scale_invalid` | Star inner scale is not strictly between zero and one. |
+| `arc_angles_invalid` | Partial-ellipse angles are non-finite. |
+| `arc_inner_radius_invalid` | Partial-ellipse inner radius is outside `[0, 1)`. |
 | `outline_mask_approximated` | Outline masks use the documented approximation. |
 | `mask_type_unsupported` | The requested mask type is unsupported. |
 

@@ -42,6 +42,9 @@ defmodule Figler.Render.Projection do
     %{name: :stroke_geometry, source_name: "strokeGeometry", list?: true},
     %{name: :vector_data, source_name: "vectorData"},
     %{name: :boolean_operation, source_name: "booleanOperation"},
+    %{name: :count, source_name: "count"},
+    %{name: :star_inner_scale, source_name: "starInnerScale"},
+    %{name: :arc_data, source_name: "arcData"},
     %{name: :corner_radius, source_name: "cornerRadius"},
     %{name: :frame_mask_disabled, source_name: "frameMaskDisabled"}
   ]

@@ -7,6 +7,7 @@ defmodule Figler.Render.Node do
   backend sees the scene.
   """
 
+  alias Figler.Render.Shape
   alias Figler.Render.SourceNode
   alias Figler.Render.Stroke
   alias Figler.Render.Text
@@ -38,6 +39,9 @@ defmodule Figler.Render.Node do
                    :stroke_geometry,
                    :vector_data,
                    :boolean_operation,
+                   :count,
+                   :star_inner_scale,
+                   :arc_data,
                    :corner_radius,
                    :frame_mask_disabled
                  ] ++ Text.source_fields() ++ Stroke.source_fields()
@@ -58,6 +62,7 @@ defmodule Figler.Render.Node do
     :mask,
     :mask_type,
     :boolean_operation,
+    :shape,
     :corner_radius,
     :stroke,
     :frame_mask_disabled,
@@ -88,6 +93,7 @@ defmodule Figler.Render.Node do
           fill_geometry: [Figler.Render.GeometryRef.t()],
           stroke_geometry: [Figler.Render.GeometryRef.t()],
           boolean_operation: atom() | nil,
+          shape: Shape.t(),
           corner_radius: float() | nil,
           stroke: Stroke.t(),
           frame_mask_disabled: boolean() | nil
@@ -101,6 +107,7 @@ defmodule Figler.Render.Node do
     {vector_network, source_attrs} = Map.pop(source_attrs, :vector_data)
     {text_attrs, source_attrs} = Map.split(source_attrs, Text.source_fields())
     {stroke_attrs, source_attrs} = Map.split(source_attrs, Stroke.source_fields())
+    {shape_attrs, source_attrs} = Map.split(source_attrs, Shape.source_fields())
     text_node = graph_node |> Map.from_struct() |> Map.merge(text_attrs)
 
     attrs =
@@ -112,6 +119,7 @@ defmodule Figler.Render.Node do
         source_guid: source_guid,
         node_type: node_type,
         vector_network: vector_network,
+        shape: Shape.from_source(node_type, shape_attrs),
         stroke: Stroke.from_effective(stroke_attrs),
         text:
           Text.from_effective(

@@ -54,8 +54,8 @@ mode returns `{:error, {:unsupported_render_features, warnings}}` instead.
 | Flattened boolean geometry | Supported |
 | Editable vector networks and compound regions | Supported, oracle-covered |
 | Even-odd and winding fill rules | Supported |
-| Polygon and star nodes | Diagnostic-only |
-| Arc/partial-ellipse geometry | Diagnostic-only |
+| Regular polygon and star nodes | Supported |
+| Arc/partial-ellipse and ellipse-ring geometry | Supported |
 | Unresolved live boolean geometry | Diagnostic-only |
 | Figma smooth-corner fidelity | Deferred |
 

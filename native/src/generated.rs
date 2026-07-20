@@ -11008,6 +11008,9 @@ const RENDER_FIELD_FILL_GEOMETRY: u32 = 51;
 const RENDER_FIELD_STROKE_GEOMETRY: u32 = 52;
 const RENDER_FIELD_VECTOR_DATA: u32 = 48;
 const RENDER_FIELD_BOOLEAN_OPERATION: u32 = 36;
+const RENDER_FIELD_COUNT: u32 = 10;
+const RENDER_FIELD_STAR_INNER_SCALE: u32 = 24;
+const RENDER_FIELD_ARC_DATA: u32 = 195;
 const RENDER_FIELD_CORNER_RADIUS: u32 = 20;
 const RENDER_FIELD_FRAME_MASK_DISABLED: u32 = 115;
 const RENDER_VECTOR_DATA_FIELD_NETWORK_BLOB: u32 = 1;
@@ -11084,6 +11087,9 @@ fn render_projection_node_from_decoder<'a>(
     let mut stroke_geometry = empty;
     let mut vector_data = nil;
     let mut boolean_operation = nil;
+    let mut count = nil;
+    let mut star_inner_scale = nil;
+    let mut arc_data = nil;
     let mut corner_radius = nil;
     let mut frame_mask_disabled = nil;
     loop {
@@ -11235,6 +11241,13 @@ fn render_projection_node_from_decoder<'a>(
                     decoder,
                 )?;
             }
+            RENDER_FIELD_COUNT => count = decoder.read_var_uint()?.encode(env),
+            RENDER_FIELD_STAR_INNER_SCALE => {
+                star_inner_scale = decoder.read_var_float(env)?;
+            }
+            RENDER_FIELD_ARC_DATA => {
+                arc_data = decode_sparse_arc_data_from_decoder(env, decoder)?;
+            }
             RENDER_FIELD_CORNER_RADIUS => corner_radius = decoder.read_var_float(env)?,
             RENDER_FIELD_FRAME_MASK_DISABLED => {
                 frame_mask_disabled = decoder.read_bool()?.encode(env);
@@ -11250,7 +11263,8 @@ fn render_projection_node_from_decoder<'a>(
         max_lines, blend_mode, mask, mask_type, effects, fill_paints, stroke_paints,
         stroke_weight, stroke_align, stroke_cap, stroke_cap_size, stroke_join,
         miter_limit, dash_pattern, fill_geometry, stroke_geometry, vector_data,
-        boolean_operation, corner_radius, frame_mask_disabled
+        boolean_operation, count, star_inner_scale, arc_data, corner_radius,
+        frame_mask_disabled
     ];
     Ok(rustler::types::tuple::make_tuple(env, &record))
 }
