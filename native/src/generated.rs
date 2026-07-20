@@ -10997,12 +10997,18 @@ const RENDER_FIELD_MASK_TYPE: u32 = 317;
 const RENDER_FIELD_EFFECTS: u32 = 43;
 const RENDER_FIELD_FILL_PAINTS: u32 = 38;
 const RENDER_FIELD_STROKE_PAINTS: u32 = 39;
+const RENDER_FIELD_STROKE_WEIGHT: u32 = 26;
+const RENDER_FIELD_STROKE_ALIGN: u32 = 29;
+const RENDER_FIELD_STROKE_CAP: u32 = 30;
+const RENDER_FIELD_STROKE_CAP_SIZE: u32 = 497;
+const RENDER_FIELD_STROKE_JOIN: u32 = 31;
+const RENDER_FIELD_MITER_LIMIT: u32 = 25;
+const RENDER_FIELD_DASH_PATTERN: u32 = 13;
 const RENDER_FIELD_FILL_GEOMETRY: u32 = 51;
 const RENDER_FIELD_STROKE_GEOMETRY: u32 = 52;
 const RENDER_FIELD_VECTOR_DATA: u32 = 48;
 const RENDER_FIELD_BOOLEAN_OPERATION: u32 = 36;
 const RENDER_FIELD_CORNER_RADIUS: u32 = 20;
-const RENDER_FIELD_STROKE_WEIGHT: u32 = 26;
 const RENDER_FIELD_FRAME_MASK_DISABLED: u32 = 115;
 const RENDER_VECTOR_DATA_FIELD_NETWORK_BLOB: u32 = 1;
 const RENDER_VECTOR_DATA_FIELD_NORMALIZED_SIZE: u32 = 2;
@@ -11067,12 +11073,18 @@ fn render_projection_node_from_decoder<'a>(
     let mut effects = empty;
     let mut fill_paints = empty;
     let mut stroke_paints = empty;
+    let mut stroke_weight = nil;
+    let mut stroke_align = nil;
+    let mut stroke_cap = nil;
+    let mut stroke_cap_size = nil;
+    let mut stroke_join = nil;
+    let mut miter_limit = nil;
+    let mut dash_pattern = empty;
     let mut fill_geometry = empty;
     let mut stroke_geometry = empty;
     let mut vector_data = nil;
     let mut boolean_operation = nil;
     let mut corner_radius = nil;
-    let mut stroke_weight = nil;
     let mut frame_mask_disabled = nil;
     loop {
         match decoder.read_var_uint()? {
@@ -11178,6 +11190,28 @@ fn render_projection_node_from_decoder<'a>(
                     decode_sparse_paint_from_decoder,
                 )?;
             }
+            RENDER_FIELD_STROKE_WEIGHT => stroke_weight = decoder.read_var_float(env)?,
+            RENDER_FIELD_STROKE_ALIGN => {
+                stroke_align = decode_sparse_stroke_align_from_decoder(env, decoder)?;
+            }
+            RENDER_FIELD_STROKE_CAP => {
+                stroke_cap = decode_sparse_stroke_cap_from_decoder(env, decoder)?;
+            }
+            RENDER_FIELD_STROKE_CAP_SIZE => {
+                stroke_cap_size = decode_sparse_number_from_decoder(env, decoder)?;
+            }
+            RENDER_FIELD_STROKE_JOIN => {
+                stroke_join = decode_sparse_stroke_join_from_decoder(env, decoder)?;
+            }
+            RENDER_FIELD_MITER_LIMIT => miter_limit = decoder.read_var_float(env)?,
+            RENDER_FIELD_DASH_PATTERN => {
+                let len = decoder.read_var_uint()? as usize;
+                let mut values = Vec::with_capacity(len);
+                for _ in 0..len {
+                    values.push(decoder.read_var_float(env)?);
+                }
+                dash_pattern = values.encode(env);
+            }
             RENDER_FIELD_FILL_GEOMETRY => {
                 fill_geometry = graph_seed_repeated_terms(
                     env,
@@ -11202,7 +11236,6 @@ fn render_projection_node_from_decoder<'a>(
                 )?;
             }
             RENDER_FIELD_CORNER_RADIUS => corner_radius = decoder.read_var_float(env)?,
-            RENDER_FIELD_STROKE_WEIGHT => stroke_weight = decoder.read_var_float(env)?,
             RENDER_FIELD_FRAME_MASK_DISABLED => {
                 frame_mask_disabled = decoder.read_bool()?.encode(env);
             }
@@ -11215,8 +11248,9 @@ fn render_projection_node_from_decoder<'a>(
         text_underline_offset, text_decoration_fill_paints, text_case,
         text_align_horizontal, text_align_vertical, text_auto_resize, text_truncation,
         max_lines, blend_mode, mask, mask_type, effects, fill_paints, stroke_paints,
-        fill_geometry, stroke_geometry, vector_data, boolean_operation, corner_radius,
-        stroke_weight, frame_mask_disabled
+        stroke_weight, stroke_align, stroke_cap, stroke_cap_size, stroke_join,
+        miter_limit, dash_pattern, fill_geometry, stroke_geometry, vector_data,
+        boolean_operation, corner_radius, frame_mask_disabled
     ];
     Ok(rustler::types::tuple::make_tuple(env, &record))
 }

@@ -5,6 +5,7 @@ defmodule Figler.Render.Skia.Diagnostics do
   alias Figler.Render.Skia.Effects
   alias Figler.Render.Skia.Paint
   alias Figler.Render.Skia.Shape
+  alias Figler.Render.Stroke
   alias Figler.Render.Text
   alias Figler.Render.Text.Case, as: TextCase
   alias Figler.Scene.Graph.GUID
@@ -35,6 +36,7 @@ defmodule Figler.Render.Skia.Diagnostics do
     node_warnings =
       paint_warnings(node.guid, :fill, node.fill_paints || [], node, assets) ++
         paint_warnings(node.guid, :stroke, node.stroke_paints || [], node, assets) ++
+        stroke_warnings(node) ++
         geometry_warnings(node, assets) ++
         font_warnings(node, assets) ++
         text_warnings(node) ++
@@ -72,6 +74,42 @@ defmodule Figler.Render.Skia.Diagnostics do
         [warning(guid, kind, {Map.get(paint, :type), reason})]
     end
   end
+
+  defp stroke_warnings(%Node{stroke_paints: paints} = node) do
+    if Enum.any?(paints || [], &(Map.get(&1, :visible) != false)) do
+      node
+      |> stroke_warning_values()
+      |> Enum.map(&warning(node.guid, :stroke, &1))
+    else
+      []
+    end
+  end
+
+  defp stroke_warning_values(%Node{stroke: nil}), do: []
+
+  defp stroke_warning_values(%Node{stroke: stroke}) do
+    []
+    |> add_stroke_warning(
+      stroke.align not in [nil, :center],
+      {:stroke_align_approximated, stroke.align}
+    )
+    |> add_stroke_warning(
+      not Stroke.supported_cap?(stroke),
+      {:stroke_cap_unsupported, stroke.cap}
+    )
+    |> add_stroke_warning(not is_nil(stroke.cap_size), :stroke_cap_size_unsupported)
+    |> add_stroke_warning(
+      not Stroke.valid_dash_pattern?(stroke),
+      {:dash_pattern_invalid, stroke.dash_pattern}
+    )
+    |> add_stroke_warning(
+      is_number(stroke.miter_limit) and stroke.miter_limit <= 0,
+      {:stroke_miter_invalid, stroke.miter_limit}
+    )
+  end
+
+  defp add_stroke_warning(warnings, true, value), do: [value | warnings]
+  defp add_stroke_warning(warnings, false, _value), do: warnings
 
   defp font_warnings(node, assets) do
     assets.font_warnings

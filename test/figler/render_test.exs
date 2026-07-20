@@ -459,6 +459,12 @@ defmodule Figler.RenderTest do
     paths = Enum.filter(commands, &(&1.op == :path))
     assert [_, _, _] = paths
     assert Enum.all?(paths, &(Keyword.get(&1.opts, :fill_rule) == :even_odd))
+
+    stroke_command = Enum.find(paths, &Keyword.has_key?(&1.opts, :stroke))
+    assert stroke_command.opts[:stroke_cap] == :round
+    assert stroke_command.opts[:stroke_join] == :bevel
+    assert stroke_command.opts[:stroke_miter] == 6.0
+    assert stroke_command.opts[:path_effect] == {:dash_path_effect, [8.0, 4.0], 0.0}
     refute Enum.any?(commands, &(&1.op == :rect))
 
     assert %SourceNode{fill_geometry: [%{commands_blob: 0}]} = scene.source_nodes[{1, 1}]
@@ -489,6 +495,38 @@ defmodule Figler.RenderTest do
 
     assert {:ok, %{width: 200, height: 50, data: data}} = Skia.to_raw(document)
     assert <<229, 51, 26, 255, _rest::binary>> = data
+  end
+
+  test "reports approximated and unsupported stroke styles in strict mode" do
+    assert {:ok, scene} = geometry_payload() |> Render.prepare()
+    node = scene.render_nodes[{1, 1}]
+
+    stroke = %{
+      node.stroke
+      | align: :inside,
+        cap: :arrow_equilateral,
+        cap_size: %Figler.Render.Text.Measurement{value: 2.0, units: :pixels},
+        miter_limit: 0.0,
+        dash_pattern: [4.0]
+    }
+
+    scene = %{
+      scene
+      | render_nodes: Map.put(scene.render_nodes, node.guid, %{node | stroke: stroke})
+    }
+
+    assert {:ok, %{warnings: warnings}} = SkiaBackend.compile(scene)
+    codes = Enum.map(warnings, & &1.value)
+    assert {:stroke_align_approximated, :inside} in codes
+    assert {:stroke_cap_unsupported, :arrow_equilateral} in codes
+    assert :stroke_cap_size_unsupported in codes
+    assert {:dash_pattern_invalid, [4.0]} in codes
+    assert {:stroke_miter_invalid, 0.0} in codes
+
+    assert {:error, {:unsupported_render_features, strict_warnings}} =
+             SkiaBackend.compile(scene, strict: true)
+
+    assert [_, _, _, _, _ | _] = strict_warnings
   end
 
   test "applies node blend modes and drop-shadow image filters" do
@@ -779,6 +817,12 @@ defmodule Figler.RenderTest do
         visible: true,
         fill_paints: [fill],
         stroke_paints: [fill],
+        stroke_weight: 3.0,
+        stroke_align: :center,
+        stroke_cap: :round,
+        stroke_join: :bevel,
+        miter_limit: 6.0,
+        dash_pattern: [8.0, 4.0],
         fill_geometry: [geometry],
         stroke_geometry: [geometry]
       ),

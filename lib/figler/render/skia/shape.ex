@@ -1,9 +1,10 @@
 defmodule Figler.Render.Skia.Shape do
   @moduledoc false
-  @compile {:no_warn_undefined, [Skia, Skia.TextSpan]}
+  @compile {:no_warn_undefined, [Skia, Skia.PathEffect, Skia.TextSpan]}
 
   alias Figler.Render.Node
   alias Figler.Render.Skia.Paint
+  alias Figler.Render.Stroke
 
   @rectangular_types [:frame, :instance, :rectangle, :rounded_rectangle, :section, :symbol]
   @supported_types @rectangular_types ++ [:boolean_operation, :ellipse, :line, :text, :vector]
@@ -21,8 +22,8 @@ defmodule Figler.Render.Skia.Shape do
   @spec draw_node(Skia.Document.t(), Node.t(), map()) :: Skia.Document.t()
   def draw_node(document, node, assets) do
     document = Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
-    weight = node.stroke_weight || 1
-    Enum.reduce(node.stroke_paints || [], document, &draw_stroke(&2, node, &1, weight, assets))
+    stroke = node.stroke || %Stroke{}
+    Enum.reduce(node.stroke_paints || [], document, &draw_stroke(&2, node, &1, stroke, assets))
   end
 
   defp draw_fill(document, node, paint, assets) do
@@ -39,16 +40,16 @@ defmodule Figler.Render.Skia.Shape do
          document,
          %Node{node_type: node_type},
          %{type: paint_type},
-         _weight,
+         _stroke,
          _assets
        )
        when node_type not in [:vector, :boolean_operation] and paint_type != :solid,
        do: document
 
-  defp draw_stroke(document, node, paint, weight, assets) do
+  defp draw_stroke(document, node, paint, stroke, assets) do
     case Paint.resolve(paint, node.size, assets.images) do
       {:ok, resolved} ->
-        opts = [stroke: resolved.paint, stroke_width: weight]
+        opts = stroke_opts(resolved.paint, stroke)
         draw_resolved(document, node, :stroke, opts, resolved, assets)
 
       {:error, _reason} ->
@@ -84,12 +85,13 @@ defmodule Figler.Render.Skia.Shape do
        do: Skia.oval(document, Keyword.merge([x: 0, y: 0, width: size.x, height: size.y], opts))
 
   defp draw_shape(document, %Node{node_type: :line, size: size}, _kind, opts, _assets) do
-    Skia.line(document,
-      from: {0, 0},
-      to: {size.x, size.y},
-      stroke: Keyword.get(opts, :stroke, Keyword.get(opts, :fill, :black)),
-      stroke_width: Keyword.get(opts, :stroke_width, 1)
-    )
+    line_opts =
+      Keyword.merge(
+        [from: {0, 0}, to: {size.x, size.y}],
+        line_paint_opts(opts)
+      )
+
+    Skia.line(document, line_opts)
   end
 
   defp draw_shape(
@@ -138,6 +140,17 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   defp draw_shape(document, _node, _kind, _opts, _assets), do: document
+
+  defp line_paint_opts(opts) do
+    if Keyword.has_key?(opts, :stroke) do
+      opts
+    else
+      opts
+      |> Keyword.put(:stroke, Keyword.get(opts, :fill, :black))
+      |> Keyword.put_new(:stroke_width, 1)
+      |> Keyword.delete(:fill)
+    end
+  end
 
   defp rich_text?([_, _ | _]), do: true
   defp rich_text?(spans), do: Enum.any?(spans, &(&1.style_id != 0))
@@ -252,6 +265,25 @@ defmodule Figler.Render.Skia.Shape do
     assets.geometries
     |> Map.get(node.guid, %{})
     |> Map.get(kind, [])
+  end
+
+  defp stroke_opts(paint, stroke) do
+    [stroke: paint, stroke_width: stroke.weight || 1]
+    |> put_option(:stroke_cap, Stroke.skia_cap(stroke))
+    |> put_option(:stroke_join, stroke.join)
+    |> put_option(:stroke_miter, stroke_miter(stroke.miter_limit))
+    |> put_dash_pattern(stroke)
+  end
+
+  defp stroke_miter(value) when is_number(value) and value > 0, do: value
+  defp stroke_miter(_value), do: nil
+
+  defp put_dash_pattern(opts, %Stroke{dash_pattern: []}), do: opts
+
+  defp put_dash_pattern(opts, %Stroke{} = stroke) do
+    if Stroke.valid_dash_pattern?(stroke),
+      do: Keyword.put(opts, :path_effect, Skia.PathEffect.dash(stroke.dash_pattern)),
+      else: opts
   end
 
   defp geometry_paint_opts(opts, :fill), do: opts

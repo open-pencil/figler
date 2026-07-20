@@ -63,12 +63,18 @@ fn render_projection_node_from_decoder<'a>(
     let mut effects = empty;
     let mut fill_paints = empty;
     let mut stroke_paints = empty;
+    let mut stroke_weight = nil;
+    let mut stroke_align = nil;
+    let mut stroke_cap = nil;
+    let mut stroke_cap_size = nil;
+    let mut stroke_join = nil;
+    let mut miter_limit = nil;
+    let mut dash_pattern = empty;
     let mut fill_geometry = empty;
     let mut stroke_geometry = empty;
     let mut vector_data = nil;
     let mut boolean_operation = nil;
     let mut corner_radius = nil;
-    let mut stroke_weight = nil;
     let mut frame_mask_disabled = nil;
 
     loop {
@@ -156,6 +162,28 @@ fn render_projection_node_from_decoder<'a>(
                     decode_sparse_paint_from_decoder,
                 )?
             }
+            RENDER_FIELD_STROKE_WEIGHT => stroke_weight = decoder.read_var_float(env)?,
+            RENDER_FIELD_STROKE_ALIGN => {
+                stroke_align = decode_sparse_stroke_align_from_decoder(env, decoder)?
+            }
+            RENDER_FIELD_STROKE_CAP => {
+                stroke_cap = decode_sparse_stroke_cap_from_decoder(env, decoder)?
+            }
+            RENDER_FIELD_STROKE_CAP_SIZE => {
+                stroke_cap_size = decode_sparse_number_from_decoder(env, decoder)?
+            }
+            RENDER_FIELD_STROKE_JOIN => {
+                stroke_join = decode_sparse_stroke_join_from_decoder(env, decoder)?
+            }
+            RENDER_FIELD_MITER_LIMIT => miter_limit = decoder.read_var_float(env)?,
+            RENDER_FIELD_DASH_PATTERN => {
+                let len = decoder.read_var_uint()? as usize;
+                let mut values = Vec::with_capacity(len);
+                for _ in 0..len {
+                    values.push(decoder.read_var_float(env)?);
+                }
+                dash_pattern = values.encode(env);
+            }
             RENDER_FIELD_FILL_GEOMETRY => {
                 fill_geometry = graph_seed_repeated_terms(
                     env,
@@ -177,7 +205,6 @@ fn render_projection_node_from_decoder<'a>(
                 boolean_operation = decode_sparse_boolean_operation_from_decoder(env, decoder)?
             }
             RENDER_FIELD_CORNER_RADIUS => corner_radius = decoder.read_var_float(env)?,
-            RENDER_FIELD_STROKE_WEIGHT => stroke_weight = decoder.read_var_float(env)?,
             RENDER_FIELD_FRAME_MASK_DISABLED => {
                 frame_mask_disabled = decoder.read_bool()?.encode(env)
             }

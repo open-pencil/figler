@@ -31,12 +31,18 @@ defmodule Figler.Render.Projection do
     %{name: :effects, source_name: "effects", list?: true},
     %{name: :fill_paints, source_name: "fillPaints", list?: true},
     %{name: :stroke_paints, source_name: "strokePaints", list?: true},
+    %{name: :stroke_weight, source_name: "strokeWeight"},
+    %{name: :stroke_align, source_name: "strokeAlign"},
+    %{name: :stroke_cap, source_name: "strokeCap"},
+    %{name: :stroke_cap_size, source_name: "strokeCapSize"},
+    %{name: :stroke_join, source_name: "strokeJoin"},
+    %{name: :miter_limit, source_name: "miterLimit"},
+    %{name: :dash_pattern, source_name: "dashPattern", list?: true},
     %{name: :fill_geometry, source_name: "fillGeometry", list?: true},
     %{name: :stroke_geometry, source_name: "strokeGeometry", list?: true},
     %{name: :vector_data, source_name: "vectorData"},
     %{name: :boolean_operation, source_name: "booleanOperation"},
     %{name: :corner_radius, source_name: "cornerRadius"},
-    %{name: :stroke_weight, source_name: "strokeWeight"},
     %{name: :frame_mask_disabled, source_name: "frameMaskDisabled"}
   ]
 

@@ -31,6 +31,13 @@ defmodule Figler.Render.SourceNode do
           effects: [Figler.Render.Effect.t()],
           fill_paints: [Figler.Render.Paint.t()],
           stroke_paints: [Figler.Render.Paint.t()],
+          stroke_weight: float() | nil,
+          stroke_align: atom() | nil,
+          stroke_cap: atom() | nil,
+          stroke_cap_size: Measurement.t() | nil,
+          stroke_join: atom() | nil,
+          miter_limit: float() | nil,
+          dash_pattern: [float()],
           fill_geometry: [Figler.Render.GeometryRef.t()],
           stroke_geometry: [Figler.Render.GeometryRef.t()],
           vector_data: VectorNetworkRef.t() | nil,
@@ -71,7 +78,8 @@ defmodule Figler.Render.SourceNode do
               :line_height,
               :letter_spacing,
               :text_decoration_thickness,
-              :text_underline_offset
+              :text_underline_offset,
+              :stroke_cap_size
             ],
        do: Measurement.from_sparse(value)
 
