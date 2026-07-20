@@ -122,16 +122,16 @@ under strict mode:
 **Exit condition:** beta confidence comes from representative real selections,
 not only synthetic feature fixtures.
 
-- [ ] Maintain at least five legally usable real `.fig` archives outside git,
+- [x] Maintain at least five legally usable real `.fig` archives outside git,
       covering a design system, typography-heavy UI, image-heavy composition,
       vectors/illustration, and nested components/instances.
-- [ ] Record at least 30 representative page/root selections across those files.
-- [ ] Render each selection with identical root, scale, bounds, fonts, and
+- [x] Record at least 30 representative page/root selections across those files.
+- [x] Render each selection with identical root, scale, bounds, fonts, and
       background in Figler and OpenPencil.
-- [ ] Store fixture/reference hashes and case-specific pixel thresholds in
+- [x] Store fixture/reference hashes and case-specific pixel thresholds in
       external manifests.
-- [ ] Reject oracle cases where OpenPencil ignores the tested feature.
-- [ ] Run every supported case with `strict: true` and no unexpected warnings.
+- [x] Reject oracle cases where OpenPencil ignores the tested feature.
+- [x] Run every supported case with `strict: true` and no unexpected warnings.
 - [ ] Add malformed archive, Kiwi, vector-network, text-range, image, and
       transform cases that must fail without panic or unbounded allocation.
 - [ ] Record cold/warm time and peak-memory budgets for query, graph, projection,

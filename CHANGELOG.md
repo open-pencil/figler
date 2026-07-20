@@ -57,6 +57,8 @@
   fallback output.
 - Live boolean operations without flattened or imported geometry are rejected
   explicitly instead of disappearing silently.
+- Full-circle `arcData` ellipses and rings are emitted as renderable half-arc
+  path segments instead of disappearing on a 360-degree backend arc.
 - Instance clones retain effective paint, effect, vector, text, and layout
   overrides during rendering.
 

@@ -3,6 +3,7 @@ defmodule Figler.Render.Skia.ShapeTest do
 
   alias Figler.Render.CornerRadii
   alias Figler.Render.Node
+  alias Figler.Render.Shape.Arc
   alias Figler.Render.Shape.Star
   alias Figler.Render.Skia.Shape
 
@@ -21,6 +22,26 @@ defmodule Figler.Render.Skia.ShapeTest do
     assert [%{op: :path, args: [%{__struct__: Skia.Path}]}] = Skia.commands(rendered)
     assert Shape.stroke_alignment_supported?(node)
     assert Shape.effect_shape_supported?(node)
+  end
+
+  test "splits full ellipse sweeps into renderable half arcs" do
+    node = %Node{
+      guid: {1, 6},
+      source_guid: {1, 6},
+      node_type: :ellipse,
+      size: %{x: 100.0, y: 80.0},
+      shape: %Arc{start_angle: 0.0, end_angle: 2 * :math.pi(), inner_radius: 0.0}
+    }
+
+    rendered = Shape.draw_silhouette(Skia.canvas(100, 80), node, %{}, fill: :white)
+    assert [%{op: :path, args: [path]}] = Skia.commands(rendered)
+
+    assert [
+             {:move_to, 100.0, 40.0},
+             {:arc_to, +0.0, +0.0, 100.0, 80.0, +0.0, {180.0, false}},
+             {:arc_to, +0.0, +0.0, 100.0, 80.0, 180.0, {180.0, false}},
+             :close
+           ] = Skia.Path.segments(path)
   end
 
   test "uses one path for independent rectangular corners and their effect silhouette" do

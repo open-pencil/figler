@@ -561,9 +561,9 @@ defmodule Figler.Render.Skia.Shape do
 
         Skia.Path.new()
         |> Skia.Path.move_to(elem(outer_start, 0), elem(outer_start, 1))
-        |> Skia.Path.arc_to({x, y, width, height}, start_degrees, sweep_degrees)
+        |> append_ellipse_arc({x, y, width, height}, start_degrees, sweep_degrees)
         |> Skia.Path.line_to(elem(inner_end, 0), elem(inner_end, 1))
-        |> Skia.Path.arc_to(
+        |> append_ellipse_arc(
           {inner_x, inner_y, inner_width, inner_height},
           start_degrees + sweep_degrees,
           -sweep_degrees
@@ -572,22 +572,30 @@ defmodule Figler.Render.Skia.Shape do
 
       abs(sweep_degrees) >= 359.99 ->
         Skia.Path.new()
-        |> Skia.Path.arc_to(
-          {x, y, width, height},
-          start_degrees,
-          sweep_degrees,
-          force_move_to: true
-        )
+        |> Skia.Path.move_to(elem(outer_start, 0), elem(outer_start, 1))
+        |> append_ellipse_arc({x, y, width, height}, start_degrees, sweep_degrees)
         |> Skia.Path.close()
 
       true ->
         Skia.Path.new()
         |> Skia.Path.move_to(center_x, center_y)
         |> Skia.Path.line_to(elem(outer_start, 0), elem(outer_start, 1))
-        |> Skia.Path.arc_to({x, y, width, height}, start_degrees, sweep_degrees)
+        |> append_ellipse_arc({x, y, width, height}, start_degrees, sweep_degrees)
         |> Skia.Path.close()
     end
   end
+
+  defp append_ellipse_arc(path, rect, start_degrees, sweep_degrees)
+       when abs(sweep_degrees) >= 359.99 do
+    half_sweep = sweep_degrees / 2
+
+    path
+    |> Skia.Path.arc_to(rect, start_degrees, half_sweep)
+    |> Skia.Path.arc_to(rect, start_degrees + half_sweep, half_sweep)
+  end
+
+  defp append_ellipse_arc(path, rect, start_degrees, sweep_degrees),
+    do: Skia.Path.arc_to(path, rect, start_degrees, sweep_degrees)
 
   defp inset_rect(size, inset) do
     {inset, inset, max(size.x - inset * 2, 0.0), max(size.y - inset * 2, 0.0)}
