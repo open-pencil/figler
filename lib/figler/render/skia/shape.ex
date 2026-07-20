@@ -241,6 +241,13 @@ defmodule Figler.Render.Skia.Shape do
   defp text_font_opts(opts, _font, resolved),
     do: Keyword.put(opts, :font, resolved.font)
 
+  defp geometry_paths(assets, %{vector_network: reference} = node, kind)
+       when not is_nil(reference) do
+    assets.vector_geometries
+    |> Map.get(node.guid, %{})
+    |> Map.get(kind, [])
+  end
+
   defp geometry_paths(assets, node, kind) do
     assets.geometries
     |> Map.get(node.guid, %{})
@@ -248,5 +255,5 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   defp geometry_paint_opts(opts, :fill), do: opts
-  defp geometry_paint_opts(opts, :stroke), do: [fill: Keyword.get(opts, :stroke, :black)]
+  defp geometry_paint_opts(opts, :stroke), do: opts
 end

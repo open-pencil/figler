@@ -12,6 +12,7 @@ defmodule Figler.Render.SourceNode do
   alias Figler.Render.Projection
   alias Figler.Render.Text.Measurement
   alias Figler.Render.Text.Source, as: TextSource
+  alias Figler.Render.VectorNetwork.Ref, as: VectorNetworkRef
   alias Figler.Scene.Graph.GUID
 
   @field_names Projection.field_names()
@@ -32,6 +33,7 @@ defmodule Figler.Render.SourceNode do
           stroke_paints: [Figler.Render.Paint.t()],
           fill_geometry: [Figler.Render.GeometryRef.t()],
           stroke_geometry: [Figler.Render.GeometryRef.t()],
+          vector_data: VectorNetworkRef.t() | nil,
           boolean_operation: atom() | nil,
           corner_radius: float() | nil,
           stroke_weight: float() | nil,
@@ -62,6 +64,7 @@ defmodule Figler.Render.SourceNode do
   end
 
   defp normalize_field(:text_data, value), do: TextSource.from_sparse(value)
+  defp normalize_field(:vector_data, value), do: VectorNetworkRef.from_sparse(value)
 
   defp normalize_field(field, value)
        when field in [

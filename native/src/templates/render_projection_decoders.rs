@@ -1,5 +1,38 @@
 __rq_render_projection_field_constants!();
 
+fn render_vector_data_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    let nil = graph_seed_nil(env);
+    let mut blob_index = nil;
+    let mut normalized_size = nil;
+
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            RENDER_VECTOR_DATA_FIELD_NETWORK_BLOB => {
+                blob_index = decoder.read_var_uint()?.encode(env)
+            }
+            RENDER_VECTOR_DATA_FIELD_NORMALIZED_SIZE => {
+                normalized_size = decode_sparse_vector_from_decoder(env, decoder)?
+            }
+            RENDER_VECTOR_DATA_FIELD_STYLE_OVERRIDE_TABLE => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            _field => return Err(rustler::Error::BadArg),
+        }
+    }
+
+    Ok(rustler::types::tuple::make_tuple(
+        env,
+        &[blob_index, normalized_size],
+    ))
+}
+
 fn render_projection_node_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
@@ -32,6 +65,7 @@ fn render_projection_node_from_decoder<'a>(
     let mut stroke_paints = empty;
     let mut fill_geometry = empty;
     let mut stroke_geometry = empty;
+    let mut vector_data = nil;
     let mut boolean_operation = nil;
     let mut corner_radius = nil;
     let mut stroke_weight = nil;
@@ -135,6 +169,9 @@ fn render_projection_node_from_decoder<'a>(
                     decoder,
                     decode_sparse_path_from_decoder,
                 )?
+            }
+            RENDER_FIELD_VECTOR_DATA => {
+                vector_data = render_vector_data_from_decoder(env, decoder)?
             }
             RENDER_FIELD_BOOLEAN_OPERATION => {
                 boolean_operation = decode_sparse_boolean_operation_from_decoder(env, decoder)?

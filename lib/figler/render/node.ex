@@ -35,6 +35,7 @@ defmodule Figler.Render.Node do
                    :stroke_paints,
                    :fill_geometry,
                    :stroke_geometry,
+                   :vector_data,
                    :boolean_operation,
                    :corner_radius,
                    :stroke_weight,
@@ -52,6 +53,7 @@ defmodule Figler.Render.Node do
     :visible,
     :opacity,
     :text,
+    :vector_network,
     :blend_mode,
     :mask,
     :mask_type,
@@ -76,6 +78,7 @@ defmodule Figler.Render.Node do
           visible: boolean() | nil,
           opacity: float() | nil,
           text: Text.t() | nil,
+          vector_network: Figler.Render.VectorNetwork.Ref.t() | nil,
           blend_mode: atom() | nil,
           mask: boolean() | nil,
           mask_type: atom() | nil,
@@ -95,6 +98,7 @@ defmodule Figler.Render.Node do
   def from_effective(%SceneNode{} = graph_node, source_guid, source) do
     node_type = normalize_node_type(graph_node.node_type)
     {text_source, source_attrs} = source |> source_attrs(graph_node) |> Map.pop(:text_data)
+    {vector_network, source_attrs} = Map.pop(source_attrs, :vector_data)
     {text_attrs, source_attrs} = Map.split(source_attrs, Text.source_fields())
     text_node = graph_node |> Map.from_struct() |> Map.merge(text_attrs)
 
@@ -106,6 +110,7 @@ defmodule Figler.Render.Node do
         guid: graph_node.guid,
         source_guid: source_guid,
         node_type: node_type,
+        vector_network: vector_network,
         text:
           Text.from_effective(
             text_node,

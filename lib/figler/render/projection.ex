@@ -33,6 +33,7 @@ defmodule Figler.Render.Projection do
     %{name: :stroke_paints, source_name: "strokePaints", list?: true},
     %{name: :fill_geometry, source_name: "fillGeometry", list?: true},
     %{name: :stroke_geometry, source_name: "strokeGeometry", list?: true},
+    %{name: :vector_data, source_name: "vectorData"},
     %{name: :boolean_operation, source_name: "booleanOperation"},
     %{name: :corner_radius, source_name: "cornerRadius"},
     %{name: :stroke_weight, source_name: "strokeWeight"},

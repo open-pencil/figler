@@ -156,14 +156,25 @@ defmodule Figler.Render.Skia.Diagnostics do
 
   defp geometry_warning(warnings, node, assets, kind, paints) do
     if Enum.any?(paints, &(Map.get(&1, :visible) != false)) do
-      case get_in(assets, [Access.key(:geometry_errors), node.guid, kind]) do
-        nil -> missing_geometry_warning(warnings, node, kind)
-        reason -> [warning(node.guid, kind, {:invalid_geometry, reason}) | warnings]
+      case Map.get(assets.vector_network_errors, node.guid) do
+        nil -> geometry_reference_warning(warnings, node, assets, kind)
+        reason -> [warning(node.guid, kind, {:invalid_vector_network, reason}) | warnings]
       end
     else
       warnings
     end
   end
+
+  defp geometry_reference_warning(warnings, node, assets, kind) do
+    case get_in(assets, [Access.key(:geometry_errors), node.guid, kind]) do
+      nil -> missing_geometry_warning(warnings, node, kind)
+      reason -> [warning(node.guid, kind, {:invalid_geometry, reason}) | warnings]
+    end
+  end
+
+  defp missing_geometry_warning(warnings, %{vector_network: reference}, _kind)
+       when not is_nil(reference),
+       do: warnings
 
   defp missing_geometry_warning(warnings, node, kind) do
     if geometry_references(node, kind) == [] do

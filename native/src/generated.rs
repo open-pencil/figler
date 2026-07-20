@@ -10999,13 +10999,44 @@ const RENDER_FIELD_FILL_PAINTS: u32 = 38;
 const RENDER_FIELD_STROKE_PAINTS: u32 = 39;
 const RENDER_FIELD_FILL_GEOMETRY: u32 = 51;
 const RENDER_FIELD_STROKE_GEOMETRY: u32 = 52;
+const RENDER_FIELD_VECTOR_DATA: u32 = 48;
 const RENDER_FIELD_BOOLEAN_OPERATION: u32 = 36;
 const RENDER_FIELD_CORNER_RADIUS: u32 = 20;
 const RENDER_FIELD_STROKE_WEIGHT: u32 = 26;
 const RENDER_FIELD_FRAME_MASK_DISABLED: u32 = 115;
+const RENDER_VECTOR_DATA_FIELD_NETWORK_BLOB: u32 = 1;
+const RENDER_VECTOR_DATA_FIELD_NORMALIZED_SIZE: u32 = 2;
+const RENDER_VECTOR_DATA_FIELD_STYLE_OVERRIDE_TABLE: u32 = 3;
 const DOCUMENT_FIELD_NODE_CHANGES: u32 = 4;
 const DOCUMENT_FIELD_BLOBS: u32 = 6;
 const DOCUMENT_NODE_TYPE_CANVAS: u32 = 2;
+fn render_vector_data_from_decoder<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+) -> NifResult<Term<'a>> {
+    let nil = graph_seed_nil(env);
+    let mut blob_index = nil;
+    let mut normalized_size = nil;
+    loop {
+        match decoder.read_var_uint()? {
+            0 => break,
+            RENDER_VECTOR_DATA_FIELD_NETWORK_BLOB => {
+                blob_index = decoder.read_var_uint()?.encode(env);
+            }
+            RENDER_VECTOR_DATA_FIELD_NORMALIZED_SIZE => {
+                normalized_size = decode_sparse_vector_from_decoder(env, decoder)?;
+            }
+            RENDER_VECTOR_DATA_FIELD_STYLE_OVERRIDE_TABLE => {
+                let len = decoder.read_var_uint()? as usize;
+                for _ in 0..len {
+                    skip_node_change_from_decoder(decoder)?;
+                }
+            }
+            _field => return Err(rustler::Error::BadArg),
+        }
+    }
+    Ok(rustler::types::tuple::make_tuple(env, &[blob_index, normalized_size]))
+}
 fn render_projection_node_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
@@ -11038,6 +11069,7 @@ fn render_projection_node_from_decoder<'a>(
     let mut stroke_paints = empty;
     let mut fill_geometry = empty;
     let mut stroke_geometry = empty;
+    let mut vector_data = nil;
     let mut boolean_operation = nil;
     let mut corner_radius = nil;
     let mut stroke_weight = nil;
@@ -11160,6 +11192,9 @@ fn render_projection_node_from_decoder<'a>(
                     decode_sparse_path_from_decoder,
                 )?;
             }
+            RENDER_FIELD_VECTOR_DATA => {
+                vector_data = render_vector_data_from_decoder(env, decoder)?;
+            }
             RENDER_FIELD_BOOLEAN_OPERATION => {
                 boolean_operation = decode_sparse_boolean_operation_from_decoder(
                     env,
@@ -11180,8 +11215,8 @@ fn render_projection_node_from_decoder<'a>(
         text_underline_offset, text_decoration_fill_paints, text_case,
         text_align_horizontal, text_align_vertical, text_auto_resize, text_truncation,
         max_lines, blend_mode, mask, mask_type, effects, fill_paints, stroke_paints,
-        fill_geometry, stroke_geometry, boolean_operation, corner_radius, stroke_weight,
-        frame_mask_disabled
+        fill_geometry, stroke_geometry, vector_data, boolean_operation, corner_radius,
+        stroke_weight, frame_mask_disabled
     ];
     Ok(rustler::types::tuple::make_tuple(env, &record))
 }

@@ -23,7 +23,30 @@ defmodule Figler.Codegen.Native.RenderProjection do
         A.const(constant_name, :u32, A.lit(Map.fetch!(ids, field.source_name)))
       end)
 
-    render_fields ++ document_constants(definition_map)
+    render_fields ++ vector_data_constants(definition_map) ++ document_constants(definition_map)
+  end
+
+  defp vector_data_constants(definition_map) do
+    fields = definition_map |> Map.fetch!("VectorData") |> then(& &1.fields)
+    ids = Map.new(fields, &{&1.name, &1.id})
+
+    [
+      A.const(
+        "RENDER_VECTOR_DATA_FIELD_NETWORK_BLOB",
+        :u32,
+        A.lit(Map.fetch!(ids, "vectorNetworkBlob"))
+      ),
+      A.const(
+        "RENDER_VECTOR_DATA_FIELD_NORMALIZED_SIZE",
+        :u32,
+        A.lit(Map.fetch!(ids, "normalizedSize"))
+      ),
+      A.const(
+        "RENDER_VECTOR_DATA_FIELD_STYLE_OVERRIDE_TABLE",
+        :u32,
+        A.lit(Map.fetch!(ids, "styleOverrideTable"))
+      )
+    ]
   end
 
   defp document_constants(definition_map) do

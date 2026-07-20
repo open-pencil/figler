@@ -5,11 +5,16 @@ defmodule Figler.Render.Skia.Assets do
   alias Figler.Render.Geometry
   alias Figler.Render.Skia.Fonts
   alias Figler.Render.Skia.Paint
+  alias Figler.Render.Skia.VectorNetwork, as: SkiaVectorNetwork
+  alias Figler.Render.VectorNetwork
 
   defstruct images: %{},
             errors: %{},
             geometries: %{},
             geometry_errors: %{},
+            vector_geometries: %{},
+            vector_networks: %{},
+            vector_network_errors: %{},
             fonts: %{},
             font_spans: %{},
             font_warnings: %{}
@@ -19,6 +24,9 @@ defmodule Figler.Render.Skia.Assets do
           errors: map(),
           geometries: map(),
           geometry_errors: map(),
+          vector_geometries: map(),
+          vector_networks: %{optional(tuple()) => VectorNetwork.t()},
+          vector_network_errors: %{optional(tuple()) => term()},
           fonts: %{optional(tuple()) => Figler.Render.Skia.Fonts.Resolved.t()},
           font_spans: %{optional(tuple()) => [Figler.Render.Skia.Fonts.Span.t()]},
           font_warnings: %{optional(tuple()) => [map()]}
@@ -33,6 +41,7 @@ defmodule Figler.Render.Skia.Assets do
         scene
         |> load_image_assets(nodes)
         |> load_geometry_assets(nodes, scene.document.blobs)
+        |> load_vector_network_assets(nodes, scene.document.blobs)
 
       {:ok,
        %{
@@ -128,6 +137,31 @@ defmodule Figler.Render.Skia.Assets do
       {:error, reason} -> put_geometry_result(assets, :geometry_errors, node.guid, kind, reason)
     end
   end
+
+  defp load_vector_network_assets(assets, nodes, blobs) do
+    Enum.reduce(nodes, assets, &load_vector_network_asset(&2, &1, blobs))
+  end
+
+  defp load_vector_network_asset(assets, %{vector_network: nil}, _blobs), do: assets
+
+  defp load_vector_network_asset(assets, node, blobs) do
+    reference = node.vector_network
+
+    with index when is_integer(index) <- reference.blob_index,
+         blob when is_binary(blob) <- Enum.at(blobs, index),
+         {:ok, network} <- VectorNetwork.decode(blob, reference.normalized_size, node.size),
+         {:ok, paths} <- SkiaVectorNetwork.paths(network) do
+      assets
+      |> put_in([Access.key(:vector_networks), node.guid], network)
+      |> put_in([Access.key(:vector_geometries), node.guid], paths)
+    else
+      nil -> put_vector_network_error(assets, node.guid, :missing_vector_network_blob)
+      {:error, reason} -> put_vector_network_error(assets, node.guid, reason)
+    end
+  end
+
+  defp put_vector_network_error(assets, guid, reason),
+    do: put_in(assets, [Access.key(:vector_network_errors), guid], reason)
 
   defp put_geometry_result(assets, collection, guid, kind, value) do
     source_values = assets |> Map.fetch!(collection) |> Map.get(guid, %{}) |> Map.put(kind, value)

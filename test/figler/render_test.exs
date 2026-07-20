@@ -271,13 +271,16 @@ defmodule Figler.RenderTest do
   test "reports font substitutions and rejects them in strict mode" do
     assert {:ok, scene} = phase_one_payload() |> Render.prepare()
 
-    scene =
-      put_in(
-        scene.render_nodes[{1, 4}].text.font.family,
-        "__Figler Missing Font__"
-      )
+    assert {:ok, fallback} = Skia.Typeface.match_character("T")
+    node = scene.render_nodes[{1, 4}]
+    missing_font = %{node.text.font | family: "__Figler Missing Font__"}
+    runs = Enum.map(node.text.runs, &%{&1 | font: missing_font})
+    text = %{node.text | font: missing_font, runs: runs}
+    scene = %{scene | render_nodes: Map.put(scene.render_nodes, node.guid, %{node | text: text})}
+    fallback_opts = [fallback_typefaces: [fallback], system_font_fallback: false]
 
-    assert {:ok, %{warnings: warnings, document: document}} = SkiaBackend.compile(scene)
+    assert {:ok, %{warnings: warnings, document: document}} =
+             SkiaBackend.compile(scene, fallback_opts)
 
     text_command = Enum.find(Skia.commands(document), &(&1.op == :text))
     assert %Skia.Font{} = text_command.opts[:font]
@@ -287,7 +290,7 @@ defmodule Figler.RenderTest do
              Enum.filter(warnings, &(&1.feature == :font))
 
     assert {:error, {:unsupported_render_features, strict_warnings}} =
-             SkiaBackend.compile(scene, strict: true)
+             SkiaBackend.compile(scene, [strict: true] ++ fallback_opts)
 
     assert Enum.any?(strict_warnings, &match?(%{value: %{code: :font_substituted}}, &1))
   end
@@ -349,6 +352,23 @@ defmodule Figler.RenderTest do
     assert text_command.opts[:vertical_align] == :bottom
     assert text_command.opts[:max_lines] == 1
     assert text_command.opts[:ellipsis] == "…"
+  end
+
+  test "applies editable vector network overrides to instance clones" do
+    payload = instance_vector_override_payload()
+    assert {:ok, scene} = Render.prepare(payload)
+
+    assert {clone_guid, %{source: :instance_clone, source_guid: {5, 2}}} =
+             Enum.find(scene.graph.provenance, fn {_guid, provenance} ->
+               provenance[:source] == :instance_clone and provenance[:source_guid] == {5, 2}
+             end)
+
+    assert %RenderNode{vector_network: %{blob_index: 1}} = scene.render_nodes[clone_guid]
+    assert {:ok, clone_scene} = Render.prepare(payload, root: GUID.format(clone_guid))
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(clone_scene)
+    assert {:ok, %{width: 100, height: 100, data: data}} = Skia.to_raw(document)
+    assert <<0, 0, 0, 0, _rest::binary>> = data
+    assert <<_prefix::binary-size(39_800), 51, 153, 242, 255, _rest::binary>> = data
   end
 
   test "renders populated instance clones from projected source metadata" do
@@ -448,6 +468,27 @@ defmodule Figler.RenderTest do
 
     assert {:ok, %{data: data}} = Skia.to_raw(document)
     assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
+  end
+
+  test "renders editable vector networks without derived geometry blobs" do
+    assert {:ok, scene} = editable_vector_payload() |> Render.prepare()
+    node = scene.render_nodes[{1, 1}]
+
+    assert %RenderNode{
+             vector_network: %Figler.Render.VectorNetwork.Ref{
+               blob_index: 0,
+               normalized_size: %{x: 100.0, y: 100.0}
+             },
+             fill_geometry: [],
+             stroke_geometry: []
+           } = node
+
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene)
+    assert [%{op: :path} | _] = Enum.filter(Skia.commands(document), &(&1.op == :path))
+    refute Enum.any?(Skia.commands(document), &(&1.op == :rect))
+
+    assert {:ok, %{width: 200, height: 50, data: data}} = Skia.to_raw(document)
+    assert <<229, 51, 26, 255, _rest::binary>> = data
   end
 
   test "applies node blend modes and drop-shadow image filters" do
@@ -553,6 +594,24 @@ defmodule Figler.RenderTest do
 
     assert {:ok, %{warnings: [%{feature: :fill, value: :geometry_missing}]}} =
              SkiaBackend.compile(scene)
+
+    assert {:error, {:unsupported_render_features, [_warning]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
+  test "reports malformed editable vector networks in strict mode" do
+    malformed = <<4::little-unsigned-32, 4::little-unsigned-32, 1::little-unsigned-32>>
+    assert {:ok, scene} = editable_vector_payload(malformed) |> Render.prepare()
+
+    assert {:ok,
+            %{
+              warnings: [
+                %{
+                  feature: :fill,
+                  value: {:invalid_vector_network, :invalid_vector_network_counts}
+                }
+              ]
+            }} = SkiaBackend.compile(scene)
 
     assert {:error, {:unsupported_render_features, [_warning]}} =
              SkiaBackend.compile(scene, strict: true)
@@ -746,6 +805,50 @@ defmodule Figler.RenderTest do
     encode_nodes(nodes, [struct(Figler.Schema.Blob, bytes: blob)])
   end
 
+  defp editable_vector_payload(blob \\ editable_square_blob()) do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    vector_data =
+      struct(Figler.Schema.VectorData,
+        vector_network_blob: 0,
+        normalized_size: vector(100, 100),
+        style_override_table: [struct(Figler.Schema.NodeChange, style_id: 1)]
+      )
+
+    nodes = [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :vector, "Editable rectangle", canvas_guid,
+        size: vector(200, 50),
+        transform: matrix(0, 0),
+        visible: true,
+        vector_data: vector_data,
+        fill_paints: [solid_paint(0.9, 0.2, 0.1)]
+      )
+    ]
+
+    encode_nodes(nodes, [struct(Figler.Schema.Blob, bytes: blob)])
+  end
+
+  defp editable_square_blob do
+    vertices = [{0.0, 0.0}, {100.0, 0.0}, {100.0, 100.0}, {0.0, 100.0}]
+    segments = [{0, 1}, {1, 2}, {2, 3}, {3, 0}]
+
+    <<4::little-unsigned-32, 4::little-unsigned-32, 1::little-unsigned-32>> <>
+      Enum.map_join(vertices, fn {x, y} ->
+        <<0::little-unsigned-32, x::little-float-32, y::little-float-32>>
+      end) <>
+      Enum.map_join(segments, fn {start, finish} ->
+        <<0::little-unsigned-32, start::little-unsigned-32, 0.0::little-float-32,
+          0.0::little-float-32, finish::little-unsigned-32, 0.0::little-float-32,
+          0.0::little-float-32>>
+      end) <>
+      <<0::little-unsigned-32, 1::little-unsigned-32, 4::little-unsigned-32,
+        0::little-unsigned-32, 1::little-unsigned-32, 2::little-unsigned-32,
+        3::little-unsigned-32>>
+  end
+
   defp instance_paint_override_payload do
     document_guid = guid(0, 0)
     canvas_guid = guid(0, 1)
@@ -843,6 +946,80 @@ defmodule Figler.RenderTest do
       )
     ]
     |> encode_nodes()
+  end
+
+  defp instance_vector_override_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    component_guid = guid(5, 1)
+    child_guid = guid(5, 2)
+
+    base_vector_data =
+      struct(Figler.Schema.VectorData,
+        vector_network_blob: 0,
+        normalized_size: vector(100, 100)
+      )
+
+    override_vector_data =
+      struct(Figler.Schema.VectorData,
+        vector_network_blob: 1,
+        normalized_size: vector(100, 100)
+      )
+
+    override =
+      struct(Figler.Schema.NodeChange,
+        guid_path: struct(Figler.Schema.GUIDPath, guids: [child_guid]),
+        vector_data: override_vector_data
+      )
+
+    nodes = [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(component_guid, :symbol, "Editable component", canvas_guid,
+        size: vector(100, 100),
+        transform: matrix(0, 0),
+        visible: true
+      ),
+      node(child_guid, :vector, "Editable shape", component_guid,
+        size: vector(100, 100),
+        transform: matrix(0, 0),
+        visible: true,
+        vector_data: base_vector_data,
+        fill_paints: [solid_paint(0.2, 0.6, 0.95)]
+      ),
+      node(guid(6, 1), :instance, "Editable instance", canvas_guid,
+        size: vector(100, 100),
+        transform: matrix(120, 0),
+        visible: true,
+        symbol_data:
+          struct(Figler.Schema.SymbolData,
+            symbol_id: component_guid,
+            symbol_overrides: [override]
+          )
+      )
+    ]
+
+    encode_nodes(nodes, [
+      struct(Figler.Schema.Blob, bytes: editable_square_blob()),
+      struct(Figler.Schema.Blob, bytes: editable_triangle_blob())
+    ])
+  end
+
+  defp editable_triangle_blob do
+    vertices = [{0.0, 100.0}, {50.0, 0.0}, {100.0, 100.0}]
+    segments = [{0, 1}, {1, 2}, {2, 0}]
+
+    <<3::little-unsigned-32, 3::little-unsigned-32, 1::little-unsigned-32>> <>
+      Enum.map_join(vertices, fn {x, y} ->
+        <<0::little-unsigned-32, x::little-float-32, y::little-float-32>>
+      end) <>
+      Enum.map_join(segments, fn {start, finish} ->
+        <<0::little-unsigned-32, start::little-unsigned-32, 0.0::little-float-32,
+          0.0::little-float-32, finish::little-unsigned-32, 0.0::little-float-32,
+          0.0::little-float-32>>
+      end) <>
+      <<1::little-unsigned-32, 1::little-unsigned-32, 3::little-unsigned-32,
+        0::little-unsigned-32, 1::little-unsigned-32, 2::little-unsigned-32>>
   end
 
   defp instance_payload do
