@@ -103,7 +103,7 @@ design-system selections without rectangle fallbacks.
       unresolved cases explicitly.
 - [x] Verify stroke alignment, dashes, joins, and bounds on open, closed,
       compound, and transformed paths.
-- [ ] Verify effect order and bounds on nested frames, instances, masks, and text.
+- [x] Verify effect order and bounds on nested frames, instances, masks, and text.
 
 ### Explicitly deferrable from beta.1
 

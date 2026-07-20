@@ -130,8 +130,9 @@ files or directories.
 | Inner shadow on supported shapes, vectors, and text | Supported, oracle-covered |
 | Foreground/layer blur | Supported, oracle-covered |
 | Shape-masked background blur | Supported, oracle-covered |
-| Bounded offscreen layers | Supported |
+| Bounded offscreen layers for nested frames, instances, text, and masks | Supported |
 | Effect ordering around shapes and children | Supported |
+| Mask-node opacity and supported effects | Supported |
 | Alpha sibling masks | Supported, oracle-covered |
 | Luminance sibling masks preserving source alpha | Supported, oracle-covered |
 | Outline masks | Approximate |

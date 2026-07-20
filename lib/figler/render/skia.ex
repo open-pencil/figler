@@ -98,14 +98,24 @@ defmodule Figler.Render.Skia do
   defp render_transformed(document, scene, node, assets) do
     resolved = Effects.resolve(node, node.opacity)
     shape_opts = bound_shape_opts(resolved.shape_opts, node)
+    group_opts = bound_group_opts(resolved.group_opts, scene, node)
 
-    if resolved.group_opts == [] do
+    if group_opts == [] do
       render_node_content(document, scene, node, assets, shape_opts, resolved)
     else
-      Skia.layer(document, resolved.group_opts, fn layer ->
+      Skia.layer(document, group_opts, fn layer ->
         render_node_content(layer, scene, node, assets, shape_opts, resolved)
       end)
     end
+  end
+
+  defp bound_group_opts([], _scene, _node), do: []
+
+  defp bound_group_opts(opts, scene, node) do
+    Keyword.merge(
+      opts,
+      BoundsCompiler.local_subtree(scene, node) |> BoundsCompiler.layer_option()
+    )
   end
 
   defp bound_shape_opts([], _node), do: []
@@ -209,12 +219,33 @@ defmodule Figler.Render.Skia do
     case Map.get(scene.render_nodes, guid) do
       %Node{visible: visible} = node when visible != false ->
         Skia.group(document, [concat: Affine.from_value(node.transform)], fn transformed ->
-          Shape.draw_node(transformed, node, assets)
+          render_mask_transformed(transformed, node, assets)
         end)
 
       _missing_or_hidden ->
         document
     end
+  end
+
+  defp render_mask_transformed(document, node, assets) do
+    resolved = Effects.resolve(node, node.opacity)
+    shape_opts = bound_shape_opts(resolved.shape_opts, node)
+    group_opts = bound_mask_group_opts(resolved.group_opts, node)
+
+    render = fn layer ->
+      layer
+      |> Effects.render_background_blurs(node, assets, resolved)
+      |> render_shape(node, assets, shape_opts)
+      |> Effects.render_inner_shadows(node, assets, resolved)
+    end
+
+    if group_opts == [], do: render.(document), else: Skia.layer(document, group_opts, render)
+  end
+
+  defp bound_mask_group_opts([], _node), do: []
+
+  defp bound_mask_group_opts(opts, node) do
+    Keyword.merge(opts, BoundsCompiler.shape(node) |> BoundsCompiler.layer_option())
   end
 
   defp mask_node?(scene, guid), do: match?(%Node{mask: true}, Map.get(scene.render_nodes, guid))

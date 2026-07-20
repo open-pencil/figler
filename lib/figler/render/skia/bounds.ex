@@ -27,6 +27,20 @@ defmodule Figler.Render.Skia.Bounds do
     |> include_effect_bounds(Affine.identity(), node.size, node)
   end
 
+  @doc false
+  @spec local_subtree(Figler.Render.Scene.t(), Node.t()) :: Bounds.t() | nil
+  def local_subtree(scene, %Node{} = node) do
+    bounds = shape(node)
+
+    if node.node_type == :boolean_operation or Node.clips_children?(node) do
+      bounds
+    else
+      scene.children
+      |> Map.get(node.guid, [])
+      |> Enum.reduce(bounds, &node_bounds(scene, &1, Affine.identity(), &2))
+    end
+  end
+
   @spec layer_option(Bounds.t() | nil) :: keyword()
   def layer_option(nil), do: []
 

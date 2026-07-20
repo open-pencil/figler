@@ -827,6 +827,7 @@ defmodule Figler.RenderTest do
 
     assert Enum.any?(commands, fn command ->
              command.op == :save_layer and Keyword.get(command.opts, :blend_mode) == :multiply and
+               command.opts[:bounds] == {-8.0, -8.0, 66.0, 61.0} and
                is_nil(Keyword.get(command.opts, :image_filter))
            end)
 
@@ -859,6 +860,33 @@ defmodule Figler.RenderTest do
             {:unsupported_render_features,
              [%Warning{code: :shape_unsupported, severity: :unsupported}]}} =
              SkiaBackend.compile(scene, strict: true)
+  end
+
+  test "bounds instance isolation around cloned child effects" do
+    assert {:ok, scene} = instance_effect_payload() |> Render.prepare(root: "2:1")
+
+    assert {:ok, %{warnings: [], document: document, bounds: bounds}} =
+             SkiaBackend.compile(scene, strict: true)
+
+    assert bounds == %Bounds{min_x: 52.0, min_y: -8.0, max_x: 110.0, max_y: 28.0}
+
+    commands = Skia.commands(document)
+
+    instance_layer_index =
+      Enum.find_index(commands, fn command ->
+        opacity = command.opts[:opacity]
+        command.op == :save_layer and is_number(opacity) and abs(opacity - 0.6) < 1.0e-6
+      end)
+
+    child_effect_index =
+      Enum.find_index(commands, fn command ->
+        command.op == :save_layer and
+          match?({:drop_shadow_filter, _, _, _, _, _, _}, command.opts[:image_filter])
+      end)
+
+    assert instance_layer_index < child_effect_index
+    assert Enum.at(commands, instance_layer_index).opts[:bounds] == {-8.0, -8.0, 58.0, 36.0}
+    assert Enum.at(commands, child_effect_index).opts[:bounds] == {-8.0, -8.0, 58.0, 36.0}
   end
 
   test "renders bounded inner shadows above shape paints" do
@@ -934,6 +962,30 @@ defmodule Figler.RenderTest do
            end)
 
     assert Enum.count(commands, &(&1.op == :rect)) == 2
+  end
+
+  test "applies bounded mask-node effects inside mask compositing" do
+    assert {:ok, scene} = mask_effect_payload() |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene, strict: true)
+
+    commands = Skia.commands(document)
+
+    mask_layer_index =
+      Enum.find_index(commands, &(&1.op == :save_layer and &1.opts[:blend_mode] == :dst_in))
+
+    opacity_layer_index =
+      Enum.find_index(commands, &(&1.op == :save_layer and &1.opts[:opacity] == 0.5))
+
+    effect_layer_index =
+      Enum.find_index(commands, fn command ->
+        command.op == :save_layer and
+          match?({:drop_shadow_filter, _, _, _, _, _, _}, command.opts[:image_filter])
+      end)
+
+    assert mask_layer_index < opacity_layer_index
+    assert opacity_layer_index < effect_layer_index
+    assert Enum.at(commands, opacity_layer_index).opts[:bounds] == {-8.0, -8.0, 38.0, 56.0}
+    assert Enum.at(commands, effect_layer_index).opts[:bounds] == {-8.0, -8.0, 38.0, 56.0}
   end
 
   test "reports outline-mask approximation in strict mode" do
@@ -1326,6 +1378,45 @@ defmodule Figler.RenderTest do
         mask: true,
         mask_type: mask_type,
         fill_paints: [mask_paint]
+      ),
+      node(guid(1, 2), :rectangle, "Masked content", canvas_guid,
+        parent_position: "b",
+        size: vector(40, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp mask_effect_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    shadow =
+      struct(Figler.Schema.Effect,
+        type: :drop_shadow,
+        visible: true,
+        radius: 4.0,
+        offset: vector(2, 0),
+        color: struct(Figler.Schema.Color, r: 0.0, g: 0.0, b: 0.0, a: 0.8),
+        blend_mode: :normal
+      )
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :rectangle, "Effect mask", canvas_guid,
+        parent_position: "a",
+        size: vector(20, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        opacity: 0.5,
+        mask: true,
+        mask_type: :alpha,
+        effects: [shadow],
+        fill_paints: [solid_paint(1.0, 1.0, 1.0)]
       ),
       node(guid(1, 2), :rectangle, "Masked content", canvas_guid,
         parent_position: "b",
@@ -1783,6 +1874,47 @@ defmodule Figler.RenderTest do
       end) <>
       <<1::little-unsigned-32, 1::little-unsigned-32, 3::little-unsigned-32,
         0::little-unsigned-32, 1::little-unsigned-32, 2::little-unsigned-32>>
+  end
+
+  defp instance_effect_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    component_guid = guid(1, 1)
+
+    shadow =
+      struct(Figler.Schema.Effect,
+        type: :drop_shadow,
+        visible: true,
+        radius: 4.0,
+        offset: vector(2, 0),
+        color: struct(Figler.Schema.Color, r: 0.0, g: 0.0, b: 0.0, a: 0.8),
+        blend_mode: :normal
+      )
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(component_guid, :symbol, "Effect source", canvas_guid,
+        size: vector(40, 20),
+        transform: matrix(0, 0),
+        visible: true
+      ),
+      node(guid(1, 2), :rectangle, "Shadow child", component_guid,
+        size: vector(40, 20),
+        transform: matrix(0, 0),
+        visible: true,
+        effects: [shadow],
+        fill_paints: [solid_paint(0.8, 0.2, 0.1)]
+      ),
+      node(guid(2, 1), :instance, "Effect instance", canvas_guid,
+        size: vector(40, 20),
+        transform: matrix(60, 0),
+        visible: true,
+        opacity: 0.6,
+        symbol_data: struct(Figler.Schema.SymbolData, symbol_id: component_guid)
+      )
+    ]
+    |> encode_nodes()
   end
 
   defp instance_payload do
