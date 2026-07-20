@@ -90,7 +90,7 @@ defmodule Figler.Render.Skia.EffectsTest do
     assert resolved.warnings == []
   end
 
-  test "diagnoses invalid radii and vector inner-shadow spread" do
+  test "supports vector inner-shadow spread while diagnosing invalid radii" do
     source = %{
       node_type: :vector,
       blend_mode: :normal,
@@ -101,12 +101,13 @@ defmodule Figler.Render.Skia.EffectsTest do
 
     warnings = Effects.resolve(source, 1.0).warnings
     assert {:effect_radius_invalid, :inner_shadow, -1.0} in warnings
-    assert {:inner_shadow_spread_unsupported, 2.0} in warnings
+    refute {:inner_shadow_spread_unsupported, 2.0} in warnings
+    assert [%{spread: 2.0}] = Effects.resolve(source, 1.0).inner_shadows
   end
 
   test "rejects effects that require an unsupported shape mask" do
     source = %{
-      node_type: :text,
+      node_type: :line,
       blend_mode: :normal,
       effects: [
         %{type: :inner_shadow, visible: true},
@@ -115,7 +116,7 @@ defmodule Figler.Render.Skia.EffectsTest do
     }
 
     warnings = Effects.resolve(source, 1.0).warnings
-    assert {:effect_shape_unsupported, :inner_shadow, :text} in warnings
-    assert {:effect_shape_unsupported, :background_blur, :text} in warnings
+    assert {:effect_shape_unsupported, :inner_shadow, :line} in warnings
+    assert {:effect_shape_unsupported, :background_blur, :line} in warnings
   end
 end

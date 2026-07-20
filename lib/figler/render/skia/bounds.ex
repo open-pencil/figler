@@ -23,6 +23,7 @@ defmodule Figler.Render.Skia.Bounds do
   def shape(node) do
     nil
     |> include_rect(Affine.identity(), node.size)
+    |> include_stroke_bounds(Affine.identity(), node.size, node)
     |> include_effect_bounds(Affine.identity(), node.size, node)
   end
 
@@ -52,6 +53,7 @@ defmodule Figler.Render.Skia.Bounds do
 
         bounds
         |> include_rect(matrix, node.size)
+        |> include_stroke_bounds(matrix, node.size, node)
         |> include_effect_bounds(matrix, node.size, node)
 
       %Node{visible: visible} = node when visible != false ->
@@ -60,6 +62,7 @@ defmodule Figler.Render.Skia.Bounds do
         bounds =
           bounds
           |> include_rect(matrix, node.size)
+          |> include_stroke_bounds(matrix, node.size, node)
           |> include_effect_bounds(matrix, node.size, node)
 
         scene.children
@@ -102,6 +105,29 @@ defmodule Figler.Render.Skia.Bounds do
 
     union(bounds, point_bounds)
   end
+
+  defp include_stroke_bounds(bounds, _matrix, nil, _node), do: bounds
+
+  defp include_stroke_bounds(bounds, matrix, %{x: width, y: height}, node) do
+    visible? = Enum.any?(node.stroke_paints || [], &(Map.get(&1, :visible) != false))
+    stroke = node.stroke
+
+    if visible? and not is_nil(stroke) and is_number(stroke.weight) and stroke.weight > 0 do
+      padding = stroke_padding(stroke.align, stroke.weight)
+
+      include_local_rect(
+        bounds,
+        matrix,
+        {-padding, -padding, width + padding * 2, height + padding * 2}
+      )
+    else
+      bounds
+    end
+  end
+
+  defp stroke_padding(:inside, _weight), do: 0.0
+  defp stroke_padding(:outside, weight), do: weight
+  defp stroke_padding(_alignment, weight), do: weight / 2
 
   defp include_effect_bounds(bounds, _matrix, nil, _node), do: bounds
 

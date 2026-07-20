@@ -87,10 +87,14 @@ defmodule Figler.Render.Skia.Diagnostics do
 
   defp stroke_warning_values(%Node{stroke: nil}), do: []
 
-  defp stroke_warning_values(%Node{stroke: stroke}) do
+  defp stroke_warning_values(%Node{stroke: stroke} = node) do
+    unsupported_alignment? =
+      stroke.align not in [nil, :center] and
+        (stroke.align not in [:inside, :outside] or not Shape.stroke_alignment_supported?(node))
+
     []
     |> add_stroke_warning(
-      stroke.align not in [nil, :center],
+      unsupported_alignment?,
       {:stroke_align_approximated, stroke.align}
     )
     |> add_stroke_warning(

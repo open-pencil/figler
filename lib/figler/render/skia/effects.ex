@@ -150,15 +150,6 @@ defmodule Figler.Render.Skia.Effects do
          {input, backgrounds, inner, warnings}
        ) do
     warnings = effect_shape_warnings(effect, node, :inner_shadow, warnings)
-
-    warnings =
-      if node.node_type in [:vector, :boolean_operation] and
-           (Map.get(effect, :spread) || 0.0) != 0.0 do
-        [{:inner_shadow_spread_unsupported, Map.get(effect, :spread)} | warnings]
-      else
-        warnings
-      end
-
     {input, backgrounds, [effect | inner], warnings}
   end
 
@@ -237,21 +228,39 @@ defmodule Figler.Render.Skia.Effects do
          node,
          assets,
          effect,
-         {x, y, width, height},
+         {x, y, width, height} = bounds,
          translate,
          spread
        ) do
     shadow_layer
     |> Skia.rect(x: x, y: y, width: width, height: height, fill: effect_color(effect))
     |> Skia.group([translate: translate], fn shifted ->
-      Shape.draw_silhouette(
-        shifted,
-        node,
-        assets,
-        [fill: :black, blend_mode: :clear],
-        inset: spread
-      )
+      clear_inner_shadow_hole(shifted, node, assets, bounds, spread)
     end)
+  end
+
+  defp clear_inner_shadow_hole(document, node, assets, bounds, spread)
+       when node.node_type in [:vector, :boolean_operation, :text] and spread != 0.0 do
+    filter =
+      if spread > 0,
+        do: Skia.ImageFilter.erode(spread),
+        else: Skia.ImageFilter.dilate(abs(spread))
+
+    Skia.layer(
+      document,
+      [bounds: bounds, image_filter: filter, blend_mode: :dst_out],
+      &Shape.draw_silhouette(&1, node, assets, fill: :black)
+    )
+  end
+
+  defp clear_inner_shadow_hole(document, node, assets, _bounds, spread) do
+    Shape.draw_silhouette(
+      document,
+      node,
+      assets,
+      [fill: :black, blend_mode: :clear],
+      inset: spread
+    )
   end
 
   defp mask_effect_shape(document, node, assets, bounds) do
@@ -280,10 +289,6 @@ defmodule Figler.Render.Skia.Effects do
   end
 
   defp local_bounds(%{size: %{x: width, y: height}}), do: {0.0, 0.0, width, height}
-
-  defp inner_shadow_spread(%{node_type: type}, _effect)
-       when type in [:vector, :boolean_operation],
-       do: 0.0
 
   defp inner_shadow_spread(_node, effect), do: Map.get(effect, :spread) || 0.0
 

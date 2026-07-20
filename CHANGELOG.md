@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Render true inside and outside stroke alignment with bounded shape masks and
+  stroke-aware scene bounds. Extend effect silhouettes to typed text and
+  compound editable vectors, apply morphology-backed inner-shadow spread to
+  vector regions and glyphs, and add same-scene OpenPencil coverage for aligned
+  dashed vector strokes, vector inner shadows, and glyph-masked blur/shadows.
 - Render transformed radial and angular gradients on ordinary and editable
   vector geometry, and replace the radial diamond-gradient approximation with a
   true cached SkSL diamond shader. Improve image paint matrices for fit/fill,

@@ -500,7 +500,58 @@ defmodule Figler.RenderTest do
     assert <<229, 51, 26, 255, _rest::binary>> = data
   end
 
-  test "reports approximated and unsupported stroke styles in strict mode" do
+  test "renders inside and outside strokes with bounded shape masks" do
+    for {alignment, expected_bounds, mask_blend} <- [
+          {:inside, %Bounds{min_x: 0.0, min_y: 0.0, max_x: 20.0, max_y: 20.0}, :dst_in},
+          {:outside, %Bounds{min_x: -4.0, min_y: -4.0, max_x: 24.0, max_y: 24.0}, :dst_out}
+        ] do
+      assert {:ok, scene} = stroke_alignment_payload(alignment) |> Render.prepare()
+
+      assert {:ok, %{warnings: [], document: document, bounds: ^expected_bounds}} =
+               SkiaBackend.compile(scene, strict: true)
+
+      commands = Skia.commands(document)
+
+      assert Enum.any?(commands, fn command ->
+               command.op == :save_layer and command.opts[:blend_mode] == mask_blend
+             end)
+
+      assert Enum.any?(commands, fn command ->
+               command.op == :rect and command.opts[:stroke_width] == 8.0
+             end)
+
+      assert {:ok, %{data: data}} = Skia.to_raw(document)
+      assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
+    end
+  end
+
+  test "applies inner-shadow spread to editable vector silhouettes" do
+    assert {:ok, scene} = editable_vector_payload() |> Render.prepare()
+    node = scene.render_nodes[{1, 1}]
+
+    effect = %{
+      type: :inner_shadow,
+      visible: true,
+      radius: 4.0,
+      spread: 2.0,
+      offset: %{x: 2.0, y: 2.0},
+      color: %{r: 0.0, g: 0.0, b: 0.0, a: 0.8}
+    }
+
+    scene = %{
+      scene
+      | render_nodes: Map.put(scene.render_nodes, node.guid, %{node | effects: [effect]})
+    }
+
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene, strict: true)
+
+    assert Enum.any?(Skia.commands(document), fn command ->
+             command.op == :save_layer and
+               match?({:morphology_filter, :erode, 2.0, 2.0, _}, command.opts[:image_filter])
+           end)
+  end
+
+  test "reports unsupported stroke styles in strict mode" do
     assert {:ok, scene} = geometry_payload() |> Render.prepare()
     node = scene.render_nodes[{1, 1}]
 
@@ -520,7 +571,7 @@ defmodule Figler.RenderTest do
 
     assert {:ok, %{warnings: warnings}} = SkiaBackend.compile(scene)
     codes = Enum.map(warnings, & &1.value)
-    assert {:stroke_align_approximated, :inside} in codes
+    refute {:stroke_align_approximated, :inside} in codes
     assert {:stroke_cap_unsupported, :arrow_equilateral} in codes
     assert :stroke_cap_size_unsupported in codes
     assert {:dash_pattern_invalid, [4.0]} in codes
@@ -529,7 +580,7 @@ defmodule Figler.RenderTest do
     assert {:error, {:unsupported_render_features, strict_warnings}} =
              SkiaBackend.compile(scene, strict: true)
 
-    assert [_, _, _, _, _ | _] = strict_warnings
+    assert [_, _, _, _ | _] = strict_warnings
   end
 
   test "applies node blend modes and drop-shadow image filters" do
@@ -592,6 +643,26 @@ defmodule Figler.RenderTest do
     assert Enum.any?(commands, fn command ->
              command.op == :rect and command.opts[:blend_mode] == :clear
            end)
+  end
+
+  test "uses glyph silhouettes for text inner shadows and background blur" do
+    assert {:ok, scene} = text_effect_payload() |> Render.prepare()
+    assert {:ok, %{warnings: warnings, document: document}} = SkiaBackend.compile(scene)
+    refute Enum.any?(warnings, &(&1.feature == :effect))
+
+    commands = Skia.commands(document)
+
+    assert Enum.any?(commands, fn command ->
+             command.op == :save_layer and not is_nil(command.opts[:backdrop_filter])
+           end)
+
+    assert Enum.any?(commands, fn command ->
+             command.op == :save_layer and command.opts[:blend_mode] == :dst_out and
+               match?({:morphology_filter, :erode, 1.0, 1.0, _}, command.opts[:image_filter])
+           end)
+
+    assert {:ok, %{data: data}} = Skia.to_raw(document)
+    assert Enum.any?(:binary.bin_to_list(data), &(&1 != 0))
   end
 
   test "renders bounded background blur through the shape mask" do
@@ -780,6 +851,60 @@ defmodule Figler.RenderTest do
     |> encode_nodes()
   end
 
+  defp text_effect_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    inner_shadow =
+      struct(Figler.Schema.Effect,
+        type: :inner_shadow,
+        visible: true,
+        radius: 3.0,
+        spread: 1.0,
+        offset: vector(2, 2),
+        color: struct(Figler.Schema.Color, r: 0.0, g: 0.0, b: 0.0, a: 0.8)
+      )
+
+    background_blur =
+      struct(Figler.Schema.Effect, type: :background_blur, visible: true, radius: 4.0)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :rectangle, "Backdrop left", canvas_guid,
+        parent_position: "a",
+        size: vector(60, 40),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(0.1, 0.3, 0.9)]
+      ),
+      node(guid(1, 2), :rectangle, "Backdrop right", canvas_guid,
+        parent_position: "b",
+        size: vector(60, 40),
+        transform: matrix(60, 0),
+        visible: true,
+        fill_paints: [solid_paint(0.9, 0.2, 0.3)]
+      ),
+      node(guid(1, 3), :text, "Effect text", canvas_guid,
+        parent_position: "c",
+        size: vector(100, 28),
+        transform: matrix(10, 6),
+        visible: true,
+        text_data: struct(Figler.Schema.TextData, characters: "Effects"),
+        font_name:
+          struct(Figler.Schema.FontName,
+            family: "Arial",
+            style: "Bold",
+            postscript: "Arial-BoldMT"
+          ),
+        font_size: 24.0,
+        fill_paints: [solid_paint(1.0, 1.0, 1.0, 0.35)],
+        effects: [background_blur, inner_shadow]
+      )
+    ]
+    |> encode_nodes()
+  end
+
   defp background_blur_payload do
     document_guid = guid(0, 0)
     canvas_guid = guid(0, 1)
@@ -884,6 +1009,26 @@ defmodule Figler.RenderTest do
         transform: matrix(0, 0),
         visible: true,
         fill_paints: [solid_paint(1.0, 0.0, 0.0)]
+      )
+    ]
+    |> encode_nodes()
+  end
+
+  defp stroke_alignment_payload(alignment) do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :rectangle, "Aligned stroke", canvas_guid,
+        size: vector(20, 20),
+        transform: matrix(0, 0),
+        visible: true,
+        stroke_paints: [solid_paint(0.2, 0.7, 1.0)],
+        stroke_weight: 4.0,
+        stroke_align: alignment,
+        stroke_join: :round
       )
     ]
     |> encode_nodes()

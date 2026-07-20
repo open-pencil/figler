@@ -7,8 +7,9 @@ defmodule Figler.Render.Skia.Shape do
   alias Figler.Render.Stroke
 
   @rectangular_types [:frame, :instance, :rectangle, :rounded_rectangle, :section, :symbol]
-  @effect_shape_types @rectangular_types ++ [:boolean_operation, :ellipse, :vector]
-  @supported_types @effect_shape_types ++ [:line, :text]
+  @stroke_alignment_types @rectangular_types ++ [:boolean_operation, :ellipse, :vector]
+  @effect_shape_types @stroke_alignment_types ++ [:text]
+  @supported_types @effect_shape_types ++ [:line]
 
   @spec supported_type?(Figler.Schema.NodeType.t() | :unknown) :: boolean()
   def supported_type?(type), do: type in @supported_types
@@ -26,6 +27,10 @@ defmodule Figler.Render.Skia.Shape do
     stroke = node.stroke || %Stroke{}
     Enum.reduce(node.stroke_paints || [], document, &draw_stroke(&2, node, &1, stroke, assets))
   end
+
+  @doc false
+  @spec stroke_alignment_supported?(Node.t() | map()) :: boolean()
+  def stroke_alignment_supported?(%{node_type: type}), do: type in @stroke_alignment_types
 
   @doc false
   @spec effect_shape_supported?(Node.t() | map()) :: boolean()
@@ -97,7 +102,51 @@ defmodule Figler.Render.Skia.Shape do
     end)
   end
 
+  def draw_silhouette(
+        document,
+        %Node{node_type: :text, text: text, size: size} = node,
+        assets,
+        opts,
+        _effect_opts
+      ) do
+    fill = Keyword.get(opts, :fill, :white)
+
+    text_opts = [
+      x: 0,
+      y: 0,
+      size: text.font.size || 14,
+      fill: fill,
+      blend_mode: Keyword.get(opts, :blend_mode, :src_over)
+    ]
+
+    text_opts = text_layout_opts(text_opts, text, size)
+    spans = Map.get(assets.font_spans, node.guid, [])
+
+    if rich_text?(spans) do
+      skia_spans = Enum.map(spans, &silhouette_text_span(&1, node, assets, fill))
+      Skia.text(document, "", Keyword.put(text_opts, :spans, skia_spans))
+    else
+      span = List.first(spans)
+
+      text_opts =
+        text_opts
+        |> text_font_opts((span && span.font) || text.font, span && span.resolved)
+        |> typography_opts(span, node, assets)
+
+      Skia.text(document, text.content, text_opts)
+    end
+  end
+
   def draw_silhouette(document, _node, _assets, _opts, _effect_opts), do: document
+
+  defp silhouette_text_span(span, node, assets, fill) do
+    span_opts =
+      [size: span.font.size || text_size(node), fill: fill]
+      |> text_font_opts(span.font, span.resolved)
+      |> typography_opts(span, node, assets)
+
+    Skia.TextSpan.new(span.content, span_opts)
+  end
 
   defp draw_fill(document, node, paint, assets) do
     case Paint.resolve(paint, node.size, assets.images) do
@@ -123,7 +172,7 @@ defmodule Figler.Render.Skia.Shape do
     case Paint.resolve(paint, node.size, assets.images) do
       {:ok, resolved} ->
         opts = stroke_opts(resolved.paint, stroke)
-        draw_resolved(document, node, :stroke, opts, resolved, assets)
+        draw_resolved_stroke(document, node, opts, resolved, assets, stroke)
 
       {:error, _reason} ->
         document
@@ -137,6 +186,37 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_resolved(document, node, kind, opts, _resolved, assets),
     do: draw_shape(document, node, kind, opts, assets)
+
+  defp draw_resolved_stroke(document, node, opts, resolved, assets, stroke)
+       when stroke.align in [:inside, :outside] do
+    if stroke_alignment_supported?(node) do
+      draw_aligned_stroke(document, node, opts, resolved, assets, stroke)
+    else
+      draw_resolved(document, node, :stroke, opts, resolved, assets)
+    end
+  end
+
+  defp draw_resolved_stroke(document, node, opts, resolved, assets, _stroke),
+    do: draw_resolved(document, node, :stroke, opts, resolved, assets)
+
+  defp draw_aligned_stroke(document, node, opts, resolved, assets, stroke) do
+    weight = stroke.weight || 1.0
+    bounds = {-weight, -weight, node.size.x + weight * 2, node.size.y + weight * 2}
+    doubled_opts = Keyword.put(opts, :stroke_width, weight * 2)
+    mask_blend = if stroke.align == :inside, do: :dst_in, else: :dst_out
+
+    Skia.layer(document, [bounds: bounds], fn isolated ->
+      mask_aligned_stroke(isolated, node, doubled_opts, resolved, assets, bounds, mask_blend)
+    end)
+  end
+
+  defp mask_aligned_stroke(isolated, node, opts, resolved, assets, bounds, mask_blend) do
+    isolated = draw_resolved(isolated, node, :stroke, opts, resolved, assets)
+
+    Skia.layer(isolated, [bounds: bounds, blend_mode: mask_blend], fn mask ->
+      draw_silhouette(mask, node, assets, fill: :white)
+    end)
+  end
 
   defp draw_shape(document, %Node{node_type: type} = node, kind, opts, assets)
        when type in [:vector, :boolean_operation] do
