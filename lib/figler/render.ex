@@ -52,8 +52,10 @@ defmodule Figler.Render do
   with `:fallback_font_paths` or `:fallback_typefaces`.
 
   Public options are documented by `Figler.Render.Options`. Unknown or malformed
-  options return `{:error, {:invalid_render_options, errors}}`. Rendering without
-  the optional Skia dependency returns `{:error, :skia_not_available}`.
+  options return `{:error, {:invalid_render_options, errors}}`. Non-finite or
+  oversized output bounds return `{:error, {:invalid_render_bounds, context}}`
+  before a canvas is allocated. Rendering without the optional Skia dependency
+  returns `{:error, :skia_not_available}`.
   """
   @spec render(binary() | Document.t() | RenderScene.t(), keyword()) ::
           {:ok, binary() | map(), map()} | {:error, term()}

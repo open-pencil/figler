@@ -22,6 +22,9 @@ defmodule Figler.Render.Skia do
 
   @type bounds :: Bounds.t()
 
+  @max_output_dimension 16_384
+  @max_output_pixels 67_108_864
+
   @doc "Compiles an effective scene into a Skia command document."
   @spec compile(RenderScene.t(), keyword()) ::
           {:ok,
@@ -33,21 +36,28 @@ defmodule Figler.Render.Skia do
            }}
           | {:error, term()}
   def compile(%RenderScene{root: root_guid} = scene, opts \\ []) do
-    with {:ok, bounds} <- BoundsCompiler.content(scene, root_guid) do
+    with {:ok, bounds} <- content_bounds(scene, root_guid, opts) do
       compile_root(scene, root_guid, bounds, opts)
     end
+  end
+
+  defp content_bounds(scene, root_guid, opts) do
+    BoundsCompiler.content(scene, root_guid)
+  rescue
+    ArithmeticError -> invalid_bounds(:non_finite, nil, render_scale(opts))
   end
 
   defp compile_root(scene, root_guid, bounds, opts) do
     child_guids = BoundsCompiler.render_guids(scene, root_guid)
 
-    with {:ok, assets} <- Assets.load(scene, child_guids, opts) do
+    with {:ok, dimensions} <- output_dimensions(bounds, opts),
+         {:ok, assets} <- Assets.load(scene, child_guids, opts) do
       warnings = Diagnostics.collect(scene, child_guids, assets)
 
       if Keyword.get(opts, :strict, false) and warnings != [] do
         {:error, {:unsupported_render_features, warnings}}
       else
-        document = build_document(scene, child_guids, bounds, assets, opts)
+        document = build_document(scene, child_guids, bounds, dimensions, assets, opts)
 
         {:ok,
          %{
@@ -60,10 +70,8 @@ defmodule Figler.Render.Skia do
     end
   end
 
-  defp build_document(scene, child_guids, bounds, assets, opts) do
+  defp build_document(scene, child_guids, bounds, {width, height}, assets, opts) do
     scale = opts |> Keyword.get(:scale, 1.0) |> :erlang.float()
-    width = max(1, ceil((bounds.max_x - bounds.min_x) * scale))
-    height = max(1, ceil((bounds.max_y - bounds.min_y) * scale))
 
     width
     |> Skia.canvas(height)
@@ -71,6 +79,65 @@ defmodule Figler.Render.Skia do
     |> Skia.group([scale: {scale, scale}], fn scaled ->
       render_scaled(scaled, scene, child_guids, bounds, assets)
     end)
+  end
+
+  defp output_dimensions(%Bounds{} = bounds, opts) do
+    scale = render_scale(opts)
+    width = (bounds.max_x - bounds.min_x) * scale
+    height = (bounds.max_y - bounds.min_y) * scale
+
+    cond do
+      not finite?(width) or not finite?(height) ->
+        invalid_bounds(:non_finite, bounds, scale)
+
+      width < 0 or height < 0 ->
+        invalid_bounds(:negative_extent, bounds, scale)
+
+      width > @max_output_dimension or height > @max_output_dimension ->
+        invalid_bounds(:output_too_large, bounds, scale, width, height)
+
+      true ->
+        validate_rounded_dimensions(bounds, scale, width, height)
+    end
+  rescue
+    ArithmeticError -> invalid_bounds(:non_finite, bounds, render_scale(opts))
+  end
+
+  defp validate_rounded_dimensions(bounds, scale, width, height) do
+    dimensions = {max(1, ceil(width)), max(1, ceil(height))}
+
+    case dimensions do
+      {rounded_width, rounded_height}
+      when rounded_width * rounded_height > @max_output_pixels ->
+        invalid_bounds(:output_too_large, bounds, scale, width, height)
+
+      _safe ->
+        {:ok, dimensions}
+    end
+  end
+
+  defp invalid_bounds(reason, bounds, scale, width \\ nil, height \\ nil) do
+    {:error,
+     {:invalid_render_bounds,
+      %{
+        reason: reason,
+        bounds: bounds_value(bounds),
+        scale: scale,
+        output_width: width,
+        output_height: height,
+        max_output_dimension: @max_output_dimension,
+        max_output_pixels: @max_output_pixels
+      }}}
+  end
+
+  defp bounds_value(%Bounds{} = bounds), do: Map.from_struct(bounds)
+  defp bounds_value(nil), do: nil
+
+  defp render_scale(opts), do: opts |> Keyword.get(:scale, 1.0) |> :erlang.float()
+
+  defp finite?(value) do
+    encoded = :erlang.float_to_binary(value, [:compact])
+    encoded not in ["nan", "inf", "-inf"]
   end
 
   defp render_scaled(document, scene, child_guids, bounds, assets) do

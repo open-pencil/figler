@@ -29,7 +29,7 @@ mode returns `{:error, {:unsupported_render_features, warnings}}` instead.
 
 | Feature | Status |
 | --- | --- |
-| Complete `.fig` ZIP/archive input | Supported |
+| Complete `.fig` ZIP/archive input | Supported within documented pre-extraction safety limits |
 | Raw Kiwi message input | Supported |
 | Page and root selection | Supported |
 | Archive `images/*` and message blobs | Supported |
@@ -37,6 +37,7 @@ mode returns `{:error, {:unsupported_render_features, warnings}}` instead.
 | Component properties and effective values | Supported |
 | Focused native source projection | Supported |
 | Affine transforms, visibility, and opacity | Supported |
+| Bounded output allocation | Invalid/oversized bounds rejected before canvas allocation |
 | Frame, symbol/component, and instance clipping | Supported for transformed descendants and independent corners |
 | Common node blend modes | Supported |
 | Linear burn | Diagnostic-only |

@@ -69,6 +69,42 @@ defmodule Figler.RenderTest do
     assert metadata.warnings == []
   end
 
+  test "rejects oversized and non-finite output bounds before canvas allocation" do
+    assert {:ok, scene} = render_payload(:solid) |> Render.prepare()
+    node = scene.render_nodes[{1, 1}]
+
+    oversized =
+      %{
+        scene
+        | render_nodes: Map.put(scene.render_nodes, node.guid, %{node | size: vector(20_000, 50)})
+      }
+
+    assert {:error,
+            {:invalid_render_bounds,
+             %{
+               reason: :output_too_large,
+               output_width: 20_000.0,
+               output_height: 50.0,
+               max_output_dimension: 16_384,
+               max_output_pixels: 67_108_864
+             }}} = SkiaBackend.compile(oversized)
+
+    assert {:error, {:invalid_render_bounds, %{reason: :output_too_large}}} =
+             Render.render(oversized)
+
+    huge_transform = %{node.transform | m00: 1.0e308}
+
+    non_finite =
+      %{
+        scene
+        | render_nodes:
+            Map.put(scene.render_nodes, node.guid, %{node | transform: huge_transform})
+      }
+
+    assert {:error, {:invalid_render_bounds, %{reason: :non_finite}}} =
+             SkiaBackend.compile(non_finite)
+  end
+
   @tag :tmp_dir
   test "runs same-scene visual oracle manifests", %{tmp_dir: tmp_dir} do
     payload = render_payload(:solid)
@@ -1064,6 +1100,27 @@ defmodule Figler.RenderTest do
             }} = SkiaBackend.compile(scene)
 
     assert {:error, {:unsupported_render_features, [_warning]}} =
+             SkiaBackend.compile(scene, strict: true)
+  end
+
+  test "reports malformed image assets and rejects them in strict mode" do
+    image_paint =
+      struct(Figler.Schema.Paint,
+        type: :image,
+        visible: true,
+        image: struct(Figler.Schema.Image, hash: <<0xCA, 0xFE>>),
+        image_scale_mode: :fill
+      )
+
+    archive = fig_archive(paint_payload(image_paint), [{~c"images/cafe", <<0, 1, 2, 3>>}])
+    assert {:ok, scene} = Render.prepare(archive)
+
+    assert {:ok, %{warnings: [%Warning{code: :invalid_image_asset, severity: :invalid}]}} =
+             SkiaBackend.compile(scene)
+
+    assert {:error,
+            {:unsupported_render_features,
+             [%Warning{code: :invalid_image_asset, severity: :invalid}]}} =
              SkiaBackend.compile(scene, strict: true)
   end
 

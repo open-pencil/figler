@@ -83,5 +83,25 @@ Unknown stages are errors; `until: :unknown` never silently means the full
 pipeline. Graph trees validate `:root` and `:depth`, graph diffs validate
 `:root`, and unresolved diagnostics validate `limit: :all | non_neg_integer`.
 
+## Render errors and safety limits
+
 Rendering has its own option contract in `Figler.Render.Options`; strict-mode
 render diagnostics are covered by the [render warning reference](render-warnings.md).
+Its stable error results are:
+
+| Result | Meaning |
+| --- | --- |
+| `{:error, {:invalid_render_options, errors}}` | An option is unknown, conflicting, or malformed. |
+| `{:error, {:unsupported_render_features, warnings}}` | `strict: true` rejected one or more structured diagnostics. |
+| `{:error, {:invalid_render_bounds, context}}` | Output bounds are negative, non-finite, larger than 16,384 pixels on one axis, or larger than 67,108,864 total pixels after scaling. |
+| `{:error, :skia_not_available}` | The optional Skia dependency is not installed. |
+
+Bounds are checked before image/font loading and canvas allocation. The bounds
+context includes the reason, requested scale and dimensions, source bounds, and
+active limits. Archive metadata is likewise checked before extraction: archives
+with more than 4,096 entries, an entry larger than 256 MiB, or more than 512 MiB
+of declared uncompressed content are rejected as `invalid_archive`.
+
+`:background` accepts `:transparent`, the named Skia colors, `#RRGGBB` or
+`#RRGGBBAA`, and three/four-channel integer tuples. Invalid colors are option
+errors rather than deferred backend exceptions.

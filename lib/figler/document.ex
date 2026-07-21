@@ -12,6 +12,10 @@ defmodule Figler.Document do
   alias Figler.Native.CodecNifs
   alias Figler.Scene.Graph.GUID
 
+  @max_archive_entries 4_096
+  @max_archive_entry_bytes 268_435_456
+  @max_archive_uncompressed_bytes 536_870_912
+
   @enforce_keys [:source, :payload]
   defstruct [
     :source,
@@ -80,11 +84,52 @@ defmodule Figler.Document do
   end
 
   defp unzip!(archive) do
-    case :zip.extract(archive, [:memory]) do
-      {:ok, entries} -> Map.new(entries, &archive_entry/1)
+    with {:ok, table} <- :zip.table(archive),
+         :ok <- validate_archive_table(table),
+         {:ok, entries} <- :zip.extract(archive, [:memory]) do
+      Map.new(entries, &archive_entry/1)
+    else
       {:error, reason} -> raise Error.new(:invalid_archive, :open_document, %{reason: reason})
     end
   end
+
+  defp validate_archive_table(table) do
+    table
+    |> Enum.reduce_while({0, 0}, &count_archive_entry/2)
+    |> case do
+      {:error, details} -> {:error, {:archive_limits_exceeded, details}}
+      {_count, _total} -> :ok
+    end
+  end
+
+  defp count_archive_entry({:zip_comment, _comment}, totals), do: {:cont, totals}
+
+  defp count_archive_entry(
+         {:zip_file, _path,
+          {:file_info, size, _type, _access, _atime, _mtime, _ctime, _mode, _links, _major,
+           _minor, _inode, _uid, _gid}, _comment, _offset, _compressed},
+         {count, total}
+       )
+       when is_integer(size) and size >= 0 do
+    next = %{entry_count: count + 1, entry_bytes: size, total_bytes: total + size}
+
+    cond do
+      next.entry_count > @max_archive_entries ->
+        {:halt, {:error, Map.put(next, :limit, :entry_count)}}
+
+      next.entry_bytes > @max_archive_entry_bytes ->
+        {:halt, {:error, Map.put(next, :limit, :entry_bytes)}}
+
+      next.total_bytes > @max_archive_uncompressed_bytes ->
+        {:halt, {:error, Map.put(next, :limit, :total_bytes)}}
+
+      true ->
+        {:cont, {next.entry_count, next.total_bytes}}
+    end
+  end
+
+  defp count_archive_entry(_entry, _totals),
+    do: {:halt, {:error, %{limit: :invalid_archive_table}}}
 
   defp archive_entry({path, contents}) do
     {normalize_path(path), IO.iodata_to_binary(contents)}

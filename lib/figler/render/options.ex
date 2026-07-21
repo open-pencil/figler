@@ -14,7 +14,16 @@ defmodule Figler.Render.Options do
           | {:page, String.t() | non_neg_integer()}
           | {:graph, keyword()}
           | {:scale, number()}
-          | {:background, term()}
+          | {:background,
+             :black
+             | :white
+             | :red
+             | :green
+             | :blue
+             | :transparent
+             | String.t()
+             | {0..255, 0..255, 0..255}
+             | {0..255, 0..255, 0..255, 0..255}}
           | {:format, :png | :jpeg | :webp | :raw}
           | {:quality, 0..100}
           | {:strict, boolean()}
@@ -95,7 +104,12 @@ defmodule Figler.Render.Options do
   end
 
   defp validate_option({:fallback_typefaces, value}), do: list_error(:fallback_typefaces, value)
-  defp validate_option({:background, _value}), do: []
+
+  defp validate_option({:background, value}) do
+    if valid_background?(value),
+      do: [],
+      else: [error(:background, :invalid_background, value)]
+  end
 
   defp validate_option(value), do: [error(:options, :invalid_option_entry, value)]
 
@@ -106,6 +120,26 @@ defmodule Figler.Render.Options do
       errors
     end
   end
+
+  defp valid_background?(value)
+       when value in [:black, :white, :red, :green, :blue, :transparent],
+       do: true
+
+  defp valid_background?("#" <> hex) when byte_size(hex) in [6, 8],
+    do: match?({_value, ""}, Integer.parse(hex, 16))
+
+  defp valid_background?({red, green, blue}),
+    do: Enum.all?([red, green, blue], &valid_color_channel?/1)
+
+  defp valid_background?({:rgba, red, green, blue, alpha}),
+    do: Enum.all?([red, green, blue, alpha], &valid_color_channel?/1)
+
+  defp valid_background?({red, green, blue, alpha}),
+    do: Enum.all?([red, green, blue, alpha], &valid_color_channel?/1)
+
+  defp valid_background?(_value), do: false
+
+  defp valid_color_channel?(value), do: is_integer(value) and value in 0..255
 
   defp list_error(key, value) do
     if is_list(value), do: [], else: [error(key, :invalid_list, value)]

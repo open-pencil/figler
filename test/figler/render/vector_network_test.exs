@@ -52,10 +52,13 @@ defmodule Figler.Render.VectorNetworkTest do
   end
 
   test "rejects malformed counts, indices, and trailing bytes" do
-    assert {:error, :invalid_vector_network_counts} =
-             VectorNetwork.decode(
-               <<10::little-unsigned-32, 0::little-unsigned-32, 0::little-unsigned-32>>
-             )
+    for vertex_count <- [10, 0xFFFFFFFF] do
+      assert {:error, :invalid_vector_network_counts} =
+               VectorNetwork.decode(
+                 <<vertex_count::little-unsigned-32, 0::little-unsigned-32,
+                   0::little-unsigned-32>>
+               )
+    end
 
     invalid_segment = network_blob([{0.0, 0.0}], [{0, {0.0, 0.0}, 2, {0.0, 0.0}}], [])
 

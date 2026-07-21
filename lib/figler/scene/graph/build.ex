@@ -8,6 +8,7 @@ defmodule Figler.Scene.Graph.Build do
   override rules.
   """
 
+  alias Figler.Error
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.Build.ClonePopulation
   alias Figler.Scene.Graph.Build.DerivedData
@@ -16,6 +17,7 @@ defmodule Figler.Scene.Graph.Build do
   alias Figler.Scene.Graph.Build.StackLayout
   alias Figler.Scene.Graph.Build.Variables
   alias Figler.Scene.Graph.Component.Properties, as: ComponentProps
+  alias Figler.Scene.Graph.GUID
   alias Figler.Scene.Graph.Nodes
   alias Figler.Scene.Graph.Provenance
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
@@ -45,6 +47,7 @@ defmodule Figler.Scene.Graph.Build do
   end
 
   defp from_initial_indexes(initial, opts, options) do
+    validate_parent_cycles!(initial.seed_nodes)
     children = build_children(initial.children_entries)
     roots = build_roots(initial.root_entries, initial.seed_nodes)
 
@@ -217,6 +220,46 @@ defmodule Figler.Scene.Graph.Build do
        ) do
     entry = {guid, position || "", index}
     Map.update(children, parent_guid, [entry], &[entry | &1])
+  end
+
+  defp validate_parent_cycles!(seed_nodes) do
+    parents =
+      Map.new(seed_nodes, fn {guid, seed} ->
+        parent = if Map.has_key?(seed_nodes, seed.parent_guid), do: seed.parent_guid
+        {guid, parent}
+      end)
+
+    _complete =
+      Enum.reduce(Map.keys(parents), MapSet.new(), fn guid, complete ->
+        case walk_parent_chain(guid, parents, complete, MapSet.new()) do
+          {:ok, visited} -> MapSet.union(complete, visited)
+          {:cycle, cycle_guid} -> raise_parent_cycle!(cycle_guid)
+        end
+      end)
+
+    :ok
+  end
+
+  defp walk_parent_chain(nil, _parents, _complete, visited), do: {:ok, visited}
+
+  defp walk_parent_chain(guid, parents, complete, visited) do
+    cond do
+      MapSet.member?(complete, guid) ->
+        {:ok, visited}
+
+      MapSet.member?(visited, guid) ->
+        {:cycle, guid}
+
+      true ->
+        walk_parent_chain(Map.get(parents, guid), parents, complete, MapSet.put(visited, guid))
+    end
+  end
+
+  defp raise_parent_cycle!(guid) do
+    raise Error.new(:invalid_document, :graph, %{
+            reason: :cyclic_parent_reference,
+            guid: GUID.format(guid)
+          })
   end
 
   defp build_children(children_entries) do

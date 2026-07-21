@@ -132,9 +132,9 @@ not only synthetic feature fixtures.
       external manifests.
 - [x] Reject oracle cases where OpenPencil ignores the tested feature.
 - [x] Run every supported case with `strict: true` and no unexpected warnings.
-- [ ] Add malformed archive, Kiwi, vector-network, text-range, image, and
+- [x] Add malformed archive, Kiwi, vector-network, text-range, image, and
       transform cases that must fail without panic or unbounded allocation.
-- [ ] Record cold/warm time and peak-memory budgets for query, graph, projection,
+- [x] Record cold/warm time and peak-memory budgets for query, graph, projection,
       asset loading, compilation, and rasterization.
 
 Recommended beta minimums:

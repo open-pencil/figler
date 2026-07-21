@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "description": "Local regression ceilings for the Figler 0.1.0-beta.1 representative workload",
+  "budgets": {
+    "query": {
+      "cold_ms": 64,
+      "warm_p95_ms": 32,
+      "peak_beam_delta_bytes": 8388608,
+      "peak_rss_delta_bytes": 33554432
+    },
+    "graph": {
+      "cold_ms": 9000,
+      "warm_p95_ms": 8000,
+      "peak_beam_delta_bytes": 1342177280,
+      "peak_rss_delta_bytes": 2415919104
+    },
+    "projection": {
+      "cold_ms": 300,
+      "warm_p95_ms": 250,
+      "peak_beam_delta_bytes": 8388608,
+      "peak_rss_delta_bytes": 67108864
+    },
+    "asset_loading": {
+      "cold_ms": 100,
+      "warm_p95_ms": 50,
+      "peak_beam_delta_bytes": 16777216,
+      "peak_rss_delta_bytes": 134217728
+    },
+    "compilation": {
+      "cold_ms": 250,
+      "warm_p95_ms": 100,
+      "peak_beam_delta_bytes": 33554432,
+      "peak_rss_delta_bytes": 134217728
+    },
+    "rasterization": {
+      "cold_ms": 250,
+      "warm_p95_ms": 100,
+      "peak_beam_delta_bytes": 33554432,
+      "peak_rss_delta_bytes": 268435456
+    }
+  },
+  "reference": {
+    "generated_at": "2026-07-21T07:04:32.046203Z",
+    "host": {
+      "os": "Linux x86_64",
+      "cpu": "AMD Ryzen 9 9950X 16-Core Processor",
+      "logical_cpus": 32,
+      "memory_bytes": 130118082560
+    },
+    "runtime": {
+      "elixir": "1.20.2",
+      "otp": "29",
+      "schedulers": 32
+    },
+    "fixtures": {
+      "large": {
+        "name": "Preline UI Figma (Community).fig",
+        "bytes": 109068949,
+        "sha256": "d2cb7b3cd131dafd82647a605191afb2cc05669a0b7403c8a320f024dcae8950",
+        "root": "292075:63881"
+      },
+      "render": {
+        "name": "features.fig",
+        "bytes": 30899,
+        "sha256": "7df352eef40e771b839d74d452287fa2e02311af9824e8bc00a0cfe791bfaa6c",
+        "root": "170:1"
+      }
+    },
+    "measurements": {
+      "query": {
+        "cold_ms": 12.999,
+        "warm_p50_ms": 10.561,
+        "warm_p95_ms": 11.504,
+        "peak_beam_delta_bytes": 281944,
+        "peak_rss_delta_bytes": 3960832
+      },
+      "graph": {
+        "cold_ms": 5537.879,
+        "warm_p50_ms": 5029.622,
+        "warm_p95_ms": 5095.738,
+        "peak_beam_delta_bytes": 881978384,
+        "peak_rss_delta_bytes": 1830379520
+      },
+      "projection": {
+        "cold_ms": 113.16,
+        "warm_p50_ms": 115.149,
+        "warm_p95_ms": 119.282,
+        "peak_beam_delta_bytes": 112,
+        "peak_rss_delta_bytes": 9695232
+      },
+      "asset_loading": {
+        "cold_ms": 4.732,
+        "warm_p50_ms": 0.003,
+        "warm_p95_ms": 0.007,
+        "peak_beam_delta_bytes": 142048,
+        "peak_rss_delta_bytes": 4395008
+      },
+      "compilation": {
+        "cold_ms": 7.986,
+        "warm_p50_ms": 0.088,
+        "warm_p95_ms": 0.106,
+        "peak_beam_delta_bytes": 460520,
+        "peak_rss_delta_bytes": 1974272
+      },
+      "rasterization": {
+        "cold_ms": 1.79,
+        "warm_p50_ms": 0.637,
+        "warm_p95_ms": 0.659,
+        "peak_beam_delta_bytes": 15912,
+        "peak_rss_delta_bytes": 839680
+      }
+    }
+  }
+}

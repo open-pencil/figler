@@ -59,6 +59,9 @@
   explicitly instead of disappearing silently.
 - Full-circle `arcData` ellipses and rings are emitted as renderable half-arc
   path segments instead of disappearing on a 360-degree backend arc.
+- Cyclic parent graphs, oversized or non-finite render bounds, excessive archive
+  expansion, and malformed background colors now fail before recursive traversal,
+  canvas allocation, archive extraction, or backend command construction.
 - Instance clones retain effective paint, effect, vector, text, and layout
   overrides during rendering.
 

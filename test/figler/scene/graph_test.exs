@@ -175,6 +175,27 @@ defmodule Figler.Scene.GraphTest do
     assert from_records == from_seeds
   end
 
+  test "rejects cyclic parents and treats missing parents as roots" do
+    cycle = [
+      node({1, 1}, :frame, parent_guid: {1, 2}),
+      node({1, 2}, :frame, parent_guid: {1, 1})
+    ]
+
+    error =
+      assert_raise Error, "invalid Figma document during graph", fn ->
+        resolve(cycle, stages: [])
+      end
+
+    assert error.code == :invalid_document
+    assert error.operation == :graph
+    assert error.context.reason == :cyclic_parent_reference
+    assert error.context.guid in ["1:1", "1:2"]
+
+    graph = resolve([node({2, 1}, :frame, parent_guid: {9, 9})], stages: [])
+    assert graph.roots == [{2, 1}]
+    assert graph.children == %{{9, 9} => [{2, 1}]}
+  end
+
   test "profiles graph construction" do
     assert %{graph: %Graph{} = graph, initial_ms: initial_ms, total_ms: total_ms, stages: stages} =
              Graph.profile(message_payload(), until: :populate_instances)

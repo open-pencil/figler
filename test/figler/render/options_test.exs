@@ -22,15 +22,28 @@ defmodule Figler.Render.OptionsTest do
 
   test "returns stable errors for unknown and malformed options" do
     assert {:error, {:invalid_render_options, errors}} =
-             Options.validate(root: -1, scale: 0, format: :svg, strict: :yes, unknown: true)
+             Options.validate(
+               root: -1,
+               scale: 0,
+               format: :svg,
+               strict: :yes,
+               background: "not-a-color",
+               unknown: true
+             )
 
     assert Enum.map(errors, &{&1.option, &1.code}) == [
              root: :invalid_selection,
              scale: :invalid_scale,
              format: :invalid_format,
              strict: :invalid_boolean,
+             background: :invalid_background,
              unknown: :unknown_option
            ]
+
+    assert {:error,
+            {:invalid_render_options,
+             [%{option: :options, code: :invalid_keyword_list, value: [:not_an_option]}]}} =
+             Options.validate([:not_an_option])
   end
 
   test "rejects conflicting root and page selection" do

@@ -50,11 +50,44 @@ defmodule Figler.DocumentTest do
     end
   end
 
+  test "rejects archives with unbounded entry counts before extraction" do
+    entries =
+      [{~c"canvas.fig", canvas_container()}] ++
+        Enum.map(1..4_096, fn index ->
+          {String.to_charlist("images/#{index}"), <<>>}
+        end)
+
+    {:ok, {_name, archive}} = :zip.create(~c"too-many-entries.fig", entries, [:memory])
+
+    assert {:error,
+            %Error{
+              code: :invalid_archive,
+              operation: :open_document,
+              context: %{
+                reason:
+                  {:archive_limits_exceeded,
+                   %{limit: :entry_count, entry_count: 4_097, total_bytes: total_bytes}}
+              }
+            }} = Document.open(archive)
+
+    assert total_bytes == byte_size(canvas_container())
+  end
+
   test "normalizes malformed archive, container, and Kiwi payload failures" do
     assert {:error, %Error{code: :invalid_archive, operation: :open_document}} =
              Document.open(<<"PK", 0, 1, 2>>)
 
-    for input <- [<<"fig-kiwi", 0, 1, 2>>, <<1, 2, 3>>] do
+    payload = message_payload()
+    container = canvas_container()
+
+    truncated_inputs =
+      for binary <- [payload, container],
+          size <- [0, 1, 4, div(byte_size(binary), 2), byte_size(binary) - 1],
+          uniq: true do
+        binary_part(binary, 0, size)
+      end
+
+    for input <- [<<"fig-kiwi", 0, 1, 2>>, <<1, 2, 3>> | truncated_inputs] do
       assert {:error,
               %Error{
                 code: :invalid_document,
