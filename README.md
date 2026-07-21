@@ -1,6 +1,6 @@
 # Figler
 
-Read and query Figma files from Elixir.
+Read, query, resolve, and render Figma files from Elixir.
 
 Figler lets Elixir applications inspect Figma `.fig` files without shelling
 out to Node or materializing the entire Figma document into huge nested structs.
@@ -36,7 +36,7 @@ hard to work with. Figler gives you multiple levels of access:
 ## Installation
 
 ```elixir
-{:figler, "~> 0.1"}
+{:figler, "~> 0.1.0-beta.1"}
 ```
 
 For optional native raster rendering, also add Skia:
@@ -61,7 +61,12 @@ Other Unix-like source builds are best effort during beta. Windows is not yet a
 validated beta target. Source builds require Cargo/Rust, a C/C++ toolchain,
 CMake, and Make because the dependency graph builds both the Figler NIF and
 zstd. Skia may require additional platform libraries when forced to build from
-source rather than using one of its precompiled artifacts.
+source rather than using one of its precompiled artifacts. See [Production
+guidance](guides/production.md) for fonts, performance, build prerequisites,
+linker troubleshooting, and the beta compatibility policy.
+
+The short [querying and headless-rendering tutorial](guides/getting-started.md)
+shows the indexed-query, focused-graph, strict-render, and prepared-scene workflows.
 
 ## Quick start: query a Figma file
 
@@ -206,10 +211,11 @@ See the [rendering support matrix](guides/rendering-support.md) for the beta con
 Unsupported or approximate features are listed in `metadata.warnings`; the
 [warning-code reference](guides/render-warnings.md) documents the stable warning
 shape, severity classes, and current codes. This includes unavailable requested
-font families, missing glyph coverage, malformed style ranges, and font substitutions. Figler resolves each grapheme cluster
-against its style run's requested font and Figma fallback-font metadata, then
-asks Skia for installed character-aware fallbacks. Callers can provide deterministic
-fallbacks with `fallback_font_paths: [...]` or already-loaded
+font families, missing glyph coverage, malformed style ranges, and font
+substitutions. Figler resolves each grapheme cluster against its style run's
+requested font and Figma fallback-font metadata, then asks Skia for installed
+character-aware fallbacks. Callers can provide deterministic fallbacks with
+`fallback_font_paths: [...]` or already-loaded
 `fallback_typefaces: [...]`, and can pass BCP-47 hints with
 `font_languages: [...]`. Pass `strict: true` to reject substitutions instead of
 silently accepting fallback glyphs or a partial rendering. Visual tests can
@@ -355,7 +361,9 @@ FIGLER_BENCH_FULL_DECODE=0 \
 
 Fixture timings report p50/p95 after two warmups and seven measured samples.
 Use `FIGLER_BENCH_WARMUP` and `FIGLER_BENCH_SAMPLES` to tune those counts. Memory
-columns are BEAM process deltas and exclude native resource allocations.
+columns are BEAM process deltas and exclude native resource allocations. See
+[Production guidance](guides/production.md) before choosing full graphs or
+service-level memory and latency limits.
 
 Oracle comparisons can use a Node-compatible OpenPencil CLI build:
 

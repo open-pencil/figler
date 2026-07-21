@@ -1,7 +1,7 @@
 defmodule Figler.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.1.0-beta.1"
   @source_url "https://github.com/open-pencil/figler"
 
   def project do
@@ -10,7 +10,7 @@ defmodule Figler.MixProject do
       version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      description: "Read and query Figma files from Elixir",
+      description: "Read, query, resolve, and render Figma files from Elixir",
       elixirc_paths: elixirc_paths(Mix.env()),
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix], flags: [:no_opaque]],
@@ -198,9 +198,11 @@ defmodule Figler.MixProject do
             "native/Cargo.lock",
             "native/src",
             "priv/schema",
+            "guides/getting-started.md",
             "guides/rendering-support.md",
             "guides/render-warnings.md",
             "guides/errors-and-options.md",
+            "guides/production.md",
             "mix.exs",
             "README.md",
             "CHANGELOG.md",
@@ -221,9 +223,11 @@ defmodule Figler.MixProject do
       extras: [
         "README.md",
         "CHANGELOG.md",
+        "guides/getting-started.md",
         "guides/rendering-support.md",
         "guides/render-warnings.md",
-        "guides/errors-and-options.md"
+        "guides/errors-and-options.md",
+        "guides/production.md"
       ],
       filter_modules: &public_doc_module?/2,
       groups_for_modules: docs_groups_for_modules(),

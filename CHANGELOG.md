@@ -2,8 +2,12 @@
 
 ## Unreleased
 
+## 0.1.0-beta.1 - 2026-07-21
+
 ### Added
 
+- Native scene indexing, XPath-style queries, sparse/full schema decoding, and
+  effective graphs for resolved Figma instances and overrides.
 - Optional headless raster rendering through Skia, with PNG, JPEG, WEBP, and
   raw RGBA output.
 - Rendering support for the documented beta subset, including rectangles with
@@ -64,9 +68,3 @@
   canvas allocation, archive extraction, or backend command construction.
 - Instance clones retain effective paint, effect, vector, text, and layout
   overrides during rendering.
-
-## 0.1.0 - 2026-06-26
-
-- Initial Figma Kiwi schema package with generated schema modules and message helpers.
-- Add native scene indexing, XPath-style querying, sparse decoding, and graph helpers for Figma files.
-- Generate native decoder code with `rustq` and `kiwi_codec` 0.2.0.

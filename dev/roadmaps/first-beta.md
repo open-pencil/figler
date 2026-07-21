@@ -169,15 +169,15 @@ not like the development repository.
 **Exit condition:** a new consumer can evaluate, install, use, and troubleshoot
 Figler from the published docs.
 
-- [ ] Add a short query tutorial and a short headless-render tutorial.
+- [x] Add a short query tutorial and a short headless-render tutorial.
 - [x] Publish the rendering support matrix and warning-code reference.
-- [ ] Document font resolution order, caller-supplied fonts, and strict
+- [x] Document font resolution order, caller-supplied fonts, and strict
       substitution behavior.
-- [ ] Document performance guidance for full files versus focused roots.
-- [ ] Document native source-build requirements and common linker failures.
-- [ ] Add a beta compatibility policy: public APIs are usable but may change
+- [x] Document performance guidance for full files versus focused roots.
+- [x] Document native source-build requirements and common linker failures.
+- [x] Add a beta compatibility policy: public APIs are usable but may change
       between beta releases with changelog notice.
-- [ ] Convert the unreleased changelog into concise `0.1.0-beta.1` notes.
+- [x] Convert the unreleased changelog into concise `0.1.0-beta.1` notes.
 - [ ] Run package, docs, Cargo, Credo, Dialyzer, ExDNA, Reach, and external-oracle
       gates from a clean synchronized commit.
 
