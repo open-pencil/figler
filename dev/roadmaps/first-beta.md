@@ -178,20 +178,20 @@ Figler from the published docs.
 - [x] Add a beta compatibility policy: public APIs are usable but may change
       between beta releases with changelog notice.
 - [x] Convert the unreleased changelog into concise `0.1.0-beta.1` notes.
-- [ ] Run package, docs, Cargo, Credo, Dialyzer, ExDNA, Reach, and external-oracle
+- [x] Run package, docs, Cargo, Credo, Dialyzer, ExDNA, Reach, and external-oracle
       gates from a clean synchronized commit.
 
 ## `0.1.0-beta.1` release gate
 
 All of the following must be true:
 
-- [ ] Milestones B0, B1, B3, B4, and B5 are complete.
-- [ ] Every B2 beta blocker is complete or deliberately moved to the documented
+- [x] Milestones B0, B1, B3, B4, and B5 are complete.
+- [x] Every B2 beta blocker is complete or deliberately moved to the documented
       deferred tier before release.
-- [ ] The repository is clean and contains no path/git diagnostic dependencies.
+- [x] The repository is clean and contains no path/git diagnostic dependencies.
 - [ ] Local and GitHub CI are green on the supported matrix.
-- [ ] The external real-file oracle suite is green.
-- [ ] The unpacked Hex package passes both rendering and query-only consumer
+- [x] The external real-file oracle suite is green.
+- [x] The unpacked Hex package passes both rendering and query-only consumer
       tests.
 - [ ] Hex package and HexDocs publication, version tag, and GitHub Release use
       the same immutable release commit.
