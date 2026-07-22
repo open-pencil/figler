@@ -4,8 +4,11 @@ defmodule FiglerQueryConsumer do
     encoded = Figler.encode_message(message)
     decoded = Figler.decode_message(encoded)
     sparse = Figler.decode_sparse_message(encoded)
+    document = Figler.decode!(encoded)
+    roundtrip = Figler.encode!(document)
 
     decoded.type == :node_changes and sparse.type == :node_changes and
+      Figler.decode!(roundtrip).message == message and
       :code.is_loaded(Skia) == false and
       :code.is_loaded(Figler.Codegen.Native) == false and
       :code.is_loaded(Figler.Scene.Projection.Native) == false and

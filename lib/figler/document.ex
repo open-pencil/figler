@@ -2,9 +2,10 @@ defmodule Figler.Document do
   @moduledoc """
   A complete decoded boundary for a Figma document.
 
-  Unlike the lightweight scene input normalizer, this representation preserves
-  archive entries and rendering assets alongside the raw Kiwi payload and
-  projected document metadata. Use it when later stages need more than scene records.
+  This representation preserves archive entries and rendering assets alongside
+  the raw Kiwi payload and document metadata. `open/1` leaves `:message` as
+  `nil` for analysis and rendering; `Figler.decode/1` additionally fills it
+  with a complete generated message for ordinary Elixir transformations.
   """
 
   alias Figler.Document.Page
@@ -20,7 +21,9 @@ defmodule Figler.Document do
   defstruct [
     :source,
     :canvas,
+    :canvas_path,
     :payload,
+    :message,
     entries: %{},
     images: %{},
     blobs: [],
@@ -32,7 +35,9 @@ defmodule Figler.Document do
   @type t :: %__MODULE__{
           source: source(),
           canvas: binary() | nil,
+          canvas_path: String.t() | nil,
           payload: binary(),
+          message: Figler.Schema.Message.t() | nil,
           entries: %{optional(String.t()) => binary()},
           images: %{optional(String.t()) => binary()},
           blobs: [binary()],
@@ -58,8 +63,8 @@ defmodule Figler.Document do
 
   defp do_open!(<<"PK", _rest::binary>> = archive) do
     entries = unzip!(archive)
-    canvas = canvas!(entries)
-    build(:archive, canvas, Figler.Container.data(canvas), entries)
+    {canvas_path, canvas} = canvas!(entries)
+    build(:archive, canvas, Figler.Container.data(canvas), entries, canvas_path)
   end
 
   defp do_open!(<<"fig-kiwi", _rest::binary>> = canvas) do
@@ -68,14 +73,16 @@ defmodule Figler.Document do
 
   defp do_open!(payload), do: build(:payload, nil, payload, %{})
 
-  defp build(source, canvas, payload, entries) do
+  defp build(source, canvas, payload, entries, canvas_path \\ nil) do
     {pages, blobs} =
       Error.protect(:open_document, fn -> CodecNifs.decode_document_metadata(payload) end)
 
     %__MODULE__{
       source: source,
       canvas: canvas,
+      canvas_path: canvas_path,
       payload: payload,
+      message: nil,
       entries: entries,
       images: archive_images(entries),
       blobs: Enum.map(blobs, &message_blob/1),
@@ -142,24 +149,57 @@ defmodule Figler.Document do
     |> String.trim_leading("./")
   end
 
+  @doc false
+  @spec encode_payload!(t(), binary()) :: binary()
+  def encode_payload!(%__MODULE__{source: :payload}, payload) when is_binary(payload), do: payload
+
+  def encode_payload!(%__MODULE__{source: :container, canvas: canvas}, payload)
+      when is_binary(canvas) and is_binary(payload) do
+    Figler.Container.replace_data(canvas, payload)
+  end
+
+  def encode_payload!(
+        %__MODULE__{
+          source: :archive,
+          canvas: canvas,
+          canvas_path: canvas_path,
+          entries: entries
+        },
+        payload
+      )
+      when is_binary(canvas) and is_binary(canvas_path) and is_map(entries) and is_binary(payload) do
+    canvas = Figler.Container.replace_data(canvas, payload)
+    entries = Map.put(entries, canvas_path, canvas)
+
+    zip_entries =
+      entries
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.map(fn {path, contents} -> {String.to_charlist(path), contents} end)
+
+    case :zip.create(~c"document.fig", zip_entries, [:memory]) do
+      {:ok, {_name, archive}} -> archive
+      {:error, reason} -> raise Error.new(:invalid_document, :encode_document, %{reason: reason})
+    end
+  end
+
+  def encode_payload!(%__MODULE__{}, _payload) do
+    raise Error.new(:invalid_document, :encode_document, %{reason: :invalid_document_state})
+  end
+
   defp canvas!(entries) do
-    ["canvas.fig", "canvas"]
-    |> Enum.find_value(&Map.get(entries, &1))
-    |> case do
+    case Enum.find(["canvas.fig", "canvas"], &Map.has_key?(entries, &1)) do
       nil -> fallback_canvas!(entries)
-      canvas -> canvas
+      path -> {path, Map.fetch!(entries, path)}
     end
   end
 
   defp fallback_canvas!(entries) do
-    case Enum.find_value(entries, &canvas_entry/1) do
+    case Enum.find(entries, fn {path, _contents} ->
+           Path.basename(path) in ["canvas.fig", "canvas"]
+         end) do
       nil -> raise Error.new(:missing_canvas, :open_document)
-      canvas -> canvas
+      canvas_entry -> canvas_entry
     end
-  end
-
-  defp canvas_entry({path, contents}) do
-    if Path.basename(path) in ["canvas.fig", "canvas"], do: contents
   end
 
   defp archive_images(entries) do

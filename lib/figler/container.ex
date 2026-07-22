@@ -40,6 +40,27 @@ defmodule Figler.Container do
     KiwiCodec.Container.build(chunks, opts)
   end
 
+  @doc """
+  Replaces the encoded message in a `fig-kiwi` container.
+
+  The original schema chunk, container version, and any trailing chunks are
+  preserved. The new data uses the same compression family as the original
+  data chunk.
+  """
+  @spec replace_data(binary(), iodata()) :: binary()
+  def replace_data(container, data) when is_binary(container) do
+    case parse(container) do
+      %{magic: magic, version: version, chunks: [schema, encoded_data | trailing]} ->
+        build([schema, compress_like(encoded_data, data) | trailing],
+          magic: magic,
+          version: version
+        )
+
+      %{chunks: _incomplete} ->
+        raise KiwiCodec.DecodeError, message: "fig-kiwi container is missing its data chunk"
+    end
+  end
+
   @spec inflate(binary()) :: binary()
   def inflate(<<0x28, 0xB5, 0x2F, 0xFD, _rest::binary>> = data) do
     case :ezstd.decompress(data) do
@@ -52,6 +73,11 @@ defmodule Figler.Container do
   end
 
   def inflate(data), do: KiwiCodec.Container.inflate(data)
+
+  defp compress_like(<<0x28, 0xB5, 0x2F, 0xFD, _rest::binary>>, data),
+    do: data |> IO.iodata_to_binary() |> :ezstd.compress()
+
+  defp compress_like(_encoded_data, data), do: deflate(data)
 
   @spec deflate(iodata()) :: binary()
   defdelegate deflate(data), to: KiwiCodec.Container

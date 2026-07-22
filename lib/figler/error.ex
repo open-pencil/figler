@@ -55,7 +55,7 @@ defmodule Figler.Error do
     error in __MODULE__ ->
       reraise error, __STACKTRACE__
 
-    error in [ErlangError, KiwiCodec.DecodeError] ->
+    error in [ErlangError, KiwiCodec.DecodeError, KiwiCodec.EncodeError] ->
       reraise native(operation, error), __STACKTRACE__
   end
 

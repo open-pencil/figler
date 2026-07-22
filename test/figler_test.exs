@@ -3,6 +3,8 @@ defmodule FiglerTest do
 
   alias Figler.Error
 
+  import Figler.Test.SceneFixture
+
   test "parses vendored Figma schema" do
     schema = Figler.schema()
 
@@ -48,5 +50,56 @@ defmodule FiglerTest do
 
     assert parsed.version == 101
     assert Enum.map(parsed.chunks, &Figler.Container.inflate/1) == ["schema", "data"]
+  end
+
+  test "decodes, transforms, and encodes complete fig archives with ordinary Elixir" do
+    archive =
+      fig_zip([
+        {~c"images/deadbeef", <<1, 2, 3>>},
+        {~c"metadata.json", ~s({"name":"Fixture"})}
+      ])
+
+    document = Figler.decode!(archive)
+
+    updated =
+      update_in(document.message.node_changes, fn nodes ->
+        Enum.map(nodes, fn
+          %{name: "Page 1"} = node -> %{node | name: "Renamed page"}
+          node -> node
+        end)
+      end)
+
+    encoded = Figler.encode!(updated)
+    reopened = Figler.decode!(encoded)
+
+    assert Enum.any?(reopened.message.node_changes, &(&1.name == "Renamed page"))
+    assert reopened.entries["metadata.json"] == ~s({"name":"Fixture"})
+    assert reopened.images == %{"deadbeef" => <<1, 2, 3>>}
+    assert reopened.canvas_path == "canvas.fig"
+  end
+
+  test "encodes complete documents back to their original representation" do
+    for {input, source, prefix} <- [
+          {message_payload(), :payload, <<1>>},
+          {canvas_container(), :container, "fig-kiwi"},
+          {fig_zip(), :archive, "PK"}
+        ] do
+      assert {:ok, document} = Figler.decode(input)
+      assert document.source == source
+      assert {:ok, encoded} = Figler.encode(document)
+      assert String.starts_with?(encoded, prefix)
+      assert Figler.decode!(encoded).message == document.message
+    end
+  end
+
+  test "returns structured document encoding failures" do
+    document = %{Figler.decode!(message_payload()) | message: %{invalid: true}}
+
+    assert {:error,
+            %Error{
+              code: :invalid_document,
+              operation: :encode_document,
+              context: %{reason: :invalid_message}
+            }} = Figler.encode(document)
   end
 end

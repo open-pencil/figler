@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 0.1.0-beta.1 - 2026-07-21
+## 0.1.0-beta.1 - 2026-07-22
 
 ### Added
 
@@ -23,6 +23,10 @@
   UTF-16-compatible rich-text style ranges.
 - Visual-oracle helpers for comparing Figler output with reference PNGs and
   running repeatable manifest-based render checks.
+- Complete-document `Figler.decode/1` and `Figler.encode/1` APIs for transforming
+  `.fig` archives with ordinary Elixir structs, pattern matching, `Enum`, and
+  `Access`, while preserving archive entries, images, container metadata, and
+  the original input representation.
 - Preservation of complete `.fig` archives, including Kiwi payloads, archive
   entries, message blobs, and `images/*` assets.
 
