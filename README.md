@@ -1,6 +1,14 @@
 # Figler
 
+[![Hex.pm](https://img.shields.io/hexpm/v/figler.svg)](https://hex.pm/packages/figler)
+[![HexDocs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/figler)
+[![CI](https://github.com/open-pencil/figler/actions/workflows/ci.yml/badge.svg)](https://github.com/open-pencil/figler/actions/workflows/ci.yml)
+
 Read, query, resolve, and render Figma files from Elixir.
+
+> **Beta:** Figler renders a documented Figma subset rather than claiming full
+> Figma or OpenPencil parity. Use `strict: true` to reject unsupported,
+> approximate, substituted, malformed, or missing behavior.
 
 Figler lets Elixir applications inspect Figma `.fig` files without shelling
 out to Node or materializing the entire Figma document into huge nested structs.
@@ -321,16 +329,16 @@ mix kiwi.gen priv/schema/fig.kiwi --module-prefix Figler.Schema --out lib/genera
 mix format
 ```
 
-Regenerate native Rust source from `rustq.exs`:
+Regenerate native Rust source and Elixir NIF stubs from `rustq.exs`:
 
 ```sh
-mix rustq.gen native
+mix rustq.gen
 ```
 
-Check generated files are fresh:
+Check every generated RustQ target is fresh:
 
 ```sh
-mix rustq.gen --check native
+mix rustq.gen --check
 ```
 
 ## Benchmarks and oracle fixtures
@@ -364,14 +372,6 @@ Use `FIGLER_BENCH_WARMUP` and `FIGLER_BENCH_SAMPLES` to tune those counts. Memor
 columns are BEAM process deltas and exclude native resource allocations. See
 [Production guidance](guides/production.md) before choosing full graphs or
 service-level memory and latency limits.
-
-Oracle comparisons can use a Node-compatible OpenPencil CLI build:
-
-```sh
-FIGLER_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
-FIGLER_OPEN_PENCIL_NODE_CLI=/path/to/openpencil-cli.js \
-  mix test test/open_pencil_node_oracle_test.exs
-```
 
 ## Development
 
