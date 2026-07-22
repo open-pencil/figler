@@ -1,21 +1,22 @@
-# Errors and options
+# Errors and Options
 
 Figler keeps successful query and graph calls lightweight while exposing one
 stable malformed-input error shape.
 
 ## Error convention
 
-`Figler.Document.open/1` is tuple-returning:
+`Figler.decode/1`, `Figler.encode/1`, and `Figler.Document.open/1` are
+tuple-returning:
 
 ```elixir
-case Figler.Document.open(fig_binary) do
+case Figler.decode(fig_binary) do
   {:ok, document} -> document
   {:error, %Figler.Error{code: code} = error} -> {code, error.context}
 end
 ```
 
-`Figler.Document.open!/1`, message decoders, scene queries, navigation helpers,
-and effective-graph functions return their successful value directly and raise
+Their bang variants, message decoders, scene queries, navigation helpers, and
+effective-graph functions return their successful value directly and raise
 `Figler.Error` for malformed input. This preserves normal query shapes such as
 `[Figler.Scene.Node.t()]`, `node | nil`, and `Figler.Scene.Graph.t()`.
 
@@ -43,8 +44,9 @@ Current codes are:
 | `insufficient_graph_projection` | Reusing a focused graph requires metadata that was not projected. |
 
 Stable operation atoms follow the public surface: `:open_document`,
-`:decode_message`, `:decode_sparse_message`, `:decode_message_runtime`,
-`:extract_payload`, `:summary`, `:index`, `:query`, the navigation/helper name
+`:decode_document`, `:encode_document`, `:decode_message`,
+`:decode_sparse_message`, `:decode_message_runtime`, `:extract_payload`,
+`:summary`, `:index`, `:query`, the navigation/helper name
 (such as `:node` or `:children`), and graph operations prefixed with `graph`.
 
 Application code should branch on fields rather than matching exception-message
@@ -86,7 +88,7 @@ pipeline. Graph trees validate `:root` and `:depth`, graph diffs validate
 ## Render errors and safety limits
 
 Rendering has its own option contract in `Figler.Render.Options`; strict-mode
-render diagnostics are covered by the [render warning reference](render-warnings.md).
+render diagnostics are covered by the [render warning reference](../rendering/rendering-warnings.md).
 Its stable error results are:
 
 | Result | Meaning |

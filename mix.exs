@@ -10,7 +10,7 @@ defmodule Figler.MixProject do
       version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      description: "Read, query, resolve, and render Figma files from Elixir",
+      description: "Analyze, transform, and render Figma files from Elixir",
       elixirc_paths: elixirc_paths(Mix.env()),
       aliases: aliases(),
       dialyzer: [plt_add_apps: [:mix], flags: [:no_opaque]],
@@ -198,11 +198,7 @@ defmodule Figler.MixProject do
             "native/Cargo.lock",
             "native/src",
             "priv/schema",
-            "guides/getting-started.md",
-            "guides/rendering-support.md",
-            "guides/render-warnings.md",
-            "guides/errors-and-options.md",
-            "guides/production.md",
+            "guides",
             "mix.exs",
             "README.md",
             "CHANGELOG.md",
@@ -223,11 +219,27 @@ defmodule Figler.MixProject do
       extras: [
         "README.md",
         "CHANGELOG.md",
-        "guides/getting-started.md",
-        "guides/rendering-support.md",
-        "guides/render-warnings.md",
-        "guides/errors-and-options.md",
-        "guides/production.md"
+        "guides/introduction/getting-started.md",
+        "guides/introduction/why-figler.md",
+        "guides/querying/querying-scenes.md",
+        "guides/querying/effective-graphs.md",
+        "guides/querying/transforming-files.md",
+        "guides/querying/schema-and-codecs.md",
+        "guides/rendering/headless-rendering.md",
+        "guides/rendering/rendering-support.md",
+        "guides/rendering/rendering-warnings.md",
+        "guides/rendering/fonts.md",
+        "guides/production/performance-and-safety.md",
+        "guides/production/native-builds.md",
+        "guides/production/compatibility.md",
+        "guides/reference/errors-and-options.md"
+      ],
+      groups_for_extras: [
+        Introduction: ~r/guides\/introduction\//,
+        "Analysis and Transformation": ~r/guides\/querying\//,
+        Rendering: ~r/guides\/rendering\//,
+        Production: ~r/guides\/production\//,
+        Reference: ~r/guides\/reference\//
       ],
       filter_modules: &public_doc_module?/2,
       groups_for_modules: docs_groups_for_modules(),
@@ -259,6 +271,7 @@ defmodule Figler.MixProject do
 
   defp docs_groups_for_modules do
     [
+      Core: [Figler, Figler.Container, Figler.Sparse],
       "Generated schema": [~r/^Figler\.Schema/],
       Errors: [Figler.Error, Figler.OptionError],
       "Scene graph": [~r/^Figler\.Scene\.Graph(\.Options)?$/],

@@ -1,4 +1,4 @@
-# Rendering support
+# Rendering Support
 
 Figler is a headless renderer for a documented Figma subset. It does not claim
 complete Figma or OpenPencil parity.

@@ -1,4 +1,4 @@
-# Rendering warnings
+# Rendering Warnings
 
 Figler reports every unsupported, approximate, substituted, malformed, or
 missing rendering feature as a `%Figler.Render.Warning{}`:

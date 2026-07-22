@@ -1,385 +1,178 @@
-# Figler
+# Figler 🎨
 
-[![Hex.pm](https://img.shields.io/hexpm/v/figler.svg)](https://hex.pm/packages/figler)
-[![HexDocs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/figler)
-[![CI](https://github.com/open-pencil/figler/actions/workflows/ci.yml/badge.svg)](https://github.com/open-pencil/figler/actions/workflows/ci.yml)
+[![Hex.pm](https://img.shields.io/hexpm/v/figler.svg)](https://hex.pm/packages/figler) [![Documentation](https://img.shields.io/badge/documentation-gray)](https://hexdocs.pm/figler) [![CI](https://github.com/open-pencil/figler/actions/workflows/ci.yml/badge.svg)](https://github.com/open-pencil/figler/actions/workflows/ci.yml)
 
-Read, query, resolve, and render Figma files from Elixir.
+Fast `.fig` tooling for Elixir. Analyze production-sized Figma files, transform them with ordinary Elixir, and render pages or individual layers on the server.
 
-> **Beta:** Figler renders a documented Figma subset rather than claiming full
-> Figma or OpenPencil parity. Use `strict: true` to reject unsupported,
-> approximate, substituted, malformed, or missing behavior.
+Figler parses `.fig` files faster than Figma's JavaScript implementation while giving you structs, pattern matching, `Enum`, XPath-style queries, and headless Skia rendering inside the BEAM.
 
-Figler lets Elixir applications inspect Figma `.fig` files without shelling
-out to Node or materializing the entire Figma document into huge nested structs.
-It is designed for tooling that needs to answer questions like:
+```elixir
+fig = File.read!("design.fig")
+index = Figler.Scene.index(fig)
 
-- What pages, frames, components, and text nodes are in this file?
-- Which nodes match a type, name, text snippet, or XPath-style selector?
-- What does a scene look like after Figma instance overrides and component
-  properties are applied?
-- Can I decode a full Figma message when I need exact schema data?
-- Can I scan large files quickly when I only need a handful of fields?
+buttons = Figler.Scene.name_contains(index, "Button")
+copy = Figler.Scene.text_contains(index, "Checkout")
 
-Figler includes the Figma Kiwi schema, generated Elixir schema modules, native
-sparse decoders, a fast projected scene index, and an effective scene graph for
-resolved Figma semantics.
+{:ok, png, %{warnings: []}} =
+  Figler.Render.render(fig, root: "12:34", scale: 2, strict: true)
 
-## Why Figler?
+File.write!("button.png", png)
+```
 
-Figma files are large, deeply nested, and encoded with Figma's Kiwi schema.
-Naively decoding every field into every generated struct can be expensive and
-hard to work with. Figler gives you multiple levels of access:
+No Node.js process, browser session, REST export pipeline, or conversion to generic JSON.
 
-- **Fast scene queries** for common inspection tasks, backed by native decoding.
-- **Reusable indexes** when running many queries over the same file.
-- **Sparse decoding** when you need schema-shaped data but only fields present
-  on the wire.
-- **Full generated structs** when you need exact typed access to the complete
-  Figma message schema.
-- **Effective scene graphs** when raw nodes are not enough and you need Figma
-  semantics such as populated instances, symbol overrides, component props,
-  swaps, derived symbol data, and layout metadata.
+## Why Figler
+
+Figma's own file tooling is built around JavaScript. Analyzing a large design from Elixir normally means running another runtime, converting the file, or sending it to an external service.
+
+Figler reads the original `.fig` file directly. Build an index once, then inspect pages, components, text, hierarchy, geometry, and styles with small, focused queries. Large files stay practical for background jobs, design-system checks, asset pipelines, migrations, and automated exports.
+
+When you need to edit a file, decode it into generated Elixir structs and use the language you already know. Pattern matching and `Enum` are the transformation API. Encoding rebuilds the original representation and preserves untouched archive entries, metadata, images, and Kiwi container data.
+
+Rendering is part of the same library. Figler resolves components, instances, overrides, variables, layout, vectors, paints, effects, masks, images, and rich text before compiling the selected root into one batched Skia document.
+
+See [Why Figler](https://hexdocs.pm/figler/why-figler.html) for common use cases and the design behind the API.
 
 ## Installation
 
 ```elixir
-{:figler, "~> 0.1.0-beta.1"}
+def deps do
+  [
+    {:figler, "~> 0.1.0-beta.1"},
+    {:skia, "~> 0.3.7"} # optional, only needed for rendering
+  ]
+end
 ```
 
-For optional native raster rendering, also add Skia:
+Figler requires Elixir 1.19 or later and a stable Rust toolchain to build its native parser. Rendering uses Skia's published native artifacts when available.
 
-```elixir
-{:skia, "~> 0.3.7"}
-```
+See [Getting Started](https://hexdocs.pm/figler/getting-started.html).
 
-Figler uses a Rustler native extension for high-performance decoding and scene
-queries. Building from source requires a Rust toolchain.
+## Analyze designs
 
-### Beta compatibility
-
-| Layer | Supported beta baseline |
-| --- | --- |
-| Elixir / OTP | Elixir 1.19 on OTP 27; Elixir 1.20 on OTP 29 |
-| Rust | Stable Rust 1.97 |
-| Figler native | Source-built and CI-tested on x86-64 Linux |
-| Skia rendering | Optional Skia 0.3.7; its published native target matrix applies |
-
-Other Unix-like source builds are best effort during beta. Windows is not yet a
-validated beta target. Source builds require Cargo/Rust, a C/C++ toolchain,
-CMake, and Make because the dependency graph builds both the Figler NIF and
-zstd. Skia may require additional platform libraries when forced to build from
-source rather than using one of its precompiled artifacts. See [Production
-guidance](guides/production.md) for fonts, performance, build prerequisites,
-linker troubleshooting, and the beta compatibility policy.
-
-The short [querying and headless-rendering tutorial](guides/getting-started.md)
-shows the indexed-query, focused-graph, strict-render, and prepared-scene workflows.
-
-## Quick start: query a Figma file
-
-Most scene APIs accept a Figma `.fig` file directly. Lower-level APIs can also
-work with already-extracted Figma Kiwi binaries when you have them.
+Build an index once and run as many queries as you need:
 
 ```elixir
 alias Figler.Scene
 
-fig = File.read!("design.fig")
+index = "design.fig" |> File.read!() |> Scene.index()
 
-summary = Scene.summary(fig)
-pages = Scene.pages(fig)
-text_nodes = Scene.query(fig, "//text[@text]", fields: [:name, :text])
-```
-
-For repeated queries, build an index once:
-
-```elixir
-index = Scene.index(fig)
-
-frames = Scene.by_type(index, :frame)
-buttons = Scene.name_contains(index, "Button")
-labels = Scene.text_contains(index, "Label", fields: [:name, :text])
+pages = Scene.pages(index)
 components = Scene.components(index)
-filled_nodes = Scene.with_fills(index)
+frames = Scene.by_type(index, :frame, fields: [:name, :size])
+buttons = Scene.name_contains(index, "Button")
+labels = Scene.text_contains(index, "Continue", fields: [:name, :text])
 ```
 
-Navigate the scene without writing selectors:
+Use XPath-style selectors for structural questions:
 
 ```elixir
-roots = Scene.roots(index)
-node = Scene.node(index, "0:123")
-parent = Scene.parent(index, "0:123")
-children = Scene.children(index, "0:123")
-descendants = Scene.descendants(index, "0:123")
+visible_text =
+  Scene.query(index, "//text[@visible='true'][@text]",
+    fields: [:name, :text, :parent_guid]
+  )
+
+cards = Scene.query(index, "//frame[contains(@name, 'Card')]")
 ```
 
-Helpers also compose on returned node lists:
+Navigate through the document without rebuilding it:
 
 ```elixir
-button_labels =
-  index
-  |> Scene.by_type(:text)
-  |> Scene.name_contains("Button")
-  |> Scene.attribute(:text)
-
-all_text =
-  index
-  |> Scene.text_nodes()
-  |> Scene.text(sep: "\n")
+node = Scene.node(index, "12:34")
+parent = Scene.parent(index, "12:34")
+children = Scene.children(index, "12:34")
+descendants = Scene.descendants(index, "12:34")
 ```
 
-Scene queries return `%Figler.Scene.Node{}` structs. Projected fields include
-GUID, type, name, parent GUID, position, size, transform, visibility, lock
-state, text, font metadata, style GUIDs, component keys, and paint counts.
-Malformed archives, payloads, selectors, GUIDs, and options use the documented
-[`Figler.Error` contract](guides/errors-and-options.md); a valid lookup with no
-match still returns `nil` or `[]`.
+See [Querying Scenes](https://hexdocs.pm/figler/querying-scenes.html).
 
-## XPath-style selectors
+## Transform `.fig` files
 
-Use `Scene.query/3` when a selector is clearer than helper calls:
+Decode the complete file, change ordinary Elixir structs, and encode it again:
 
 ```elixir
-canvases = Scene.query(index, "//canvas")
-visible_text = Scene.query(index, "//text[@visible='true'][@text]")
-card_frames = Scene.query(index, "//frame[contains(@name, 'Card')]")
+alias Figler.Schema.NodeChange
+
+fig = File.read!("design.fig")
+document = Figler.decode!(fig)
+
+document =
+  update_in(document.message.node_changes, fn nodes ->
+    Enum.map(nodes, fn
+      %NodeChange{text_data: %{characters: "Buy now"} = text} = node ->
+        %{node | text_data: %{text | characters: "Checkout"}}
+
+      node ->
+        node
+    end)
+  end)
+
+File.write!("updated.fig", Figler.encode!(document))
 ```
 
-Use the `:fields` option to keep returned nodes small and push field filtering
-into native code:
+The same API works for complete `.fig` archives, standalone `fig-kiwi` containers, and raw Figma messages. Output keeps the same representation as the input.
+
+Because transformations are just data transformations, you can compose them with normal functions, pattern matching, `Enum.map/2`, `update_in/2`, and `put_in/2` instead of learning an editing DSL.
+
+See [Transforming Files](https://hexdocs.pm/figler/transforming-files.html).
+
+## Resolve what users see
+
+Raw file records describe the source document. Effective graphs apply instance population, swaps, component properties, overrides, variables, and layout so you can inspect the resulting design:
 
 ```elixir
-Scene.query(index, "//text[@text]", fields: [:name, :text])
+graph = Figler.Scene.graph(fig, root: "12:34")
+
+resolved_copy = Figler.Scene.text_contains(graph, "Continue")
+tree = Figler.Scene.Graph.tree(graph, root: "12:34", depth: 4)
+instance = Figler.Scene.Graph.instance(graph, "12:34")
+explanation = Figler.Scene.Graph.explain(graph, "12:34")
 ```
 
-For dynamic values, prefer helpers such as `Scene.name_contains/3` and
-`Scene.text_contains/3` instead of interpolating selector strings.
+See [Effective Graphs](https://hexdocs.pm/figler/effective-graphs.html).
 
-## Effective scene graphs
+## Render headlessly
 
-The projected index is the fast raw view. A graph is the semantic view.
-
-Use `Scene.graph/2` when you need resolved Figma behavior rather than only raw
-node records:
-
-```elixir
-graph = Scene.graph(fig, root: "0:123")
-
-resolved_text = Scene.text_contains(graph, "Submit")
-tree = Scene.Graph.tree(graph, root: "0:123", depth: 3)
-explanation = Scene.Graph.explain(graph, "0:123")
-changes = Scene.Graph.diff(graph, root: "0:123")
-instance = Scene.Graph.instance(graph, "0:123")
-stats = Scene.Graph.stats(graph)
-```
-
-Graphs are useful for debugging design systems, comparing fixtures, inspecting
-instances, and building tools that need effective scene structure. Use `root:`
-or `focus:` to limit work to a subtree and its semantic dependencies.
-
-## Render with Skia
-
-Open a complete document when rendering needs archive assets as well as scene
-data. The document retains `canvas.fig`, `images/*`, message blobs, archive
-entries, and page metadata without densely decoding every `NodeChange`:
+Render a page, frame, component, or individual layer without a browser:
 
 ```elixir
 document = Figler.Document.open!(fig)
-image = document.images["deadbeef..."]
 
 {:ok, png, metadata} =
-  document
-  |> Figler.Render.render(page: 0, scale: 2, format: :png)
+  Figler.Render.render(document,
+    root: "12:34",
+    scale: 2,
+    background: :transparent,
+    format: :png,
+    strict: true,
+    fallback_font_paths: ["priv/fonts/Inter-Regular.ttf"]
+  )
 
-File.write!("page.png", png)
+File.write!("selection.png", png)
+metadata.bounds
 ```
 
-Rendering projects only the selected root's paint and shape metadata,
-normalizes it into typed rendering values (including text and font requests),
-applies effective instance overrides, and compiles one batched Skia document
-for a single native rendering boundary.
+Use `strict: true` for automated exports. Unsupported features, approximations, missing assets, and font substitutions become an error instead of silently changing the image. Non-strict mode returns the same information as structured warnings alongside the rendered output.
 
-The rendering surface supports affine transforms, opacity, clipping, solid and
-transformed linear/radial/angular/diamond gradients, archive and message-blob
-image fills (`FILL`, `FIT`, transformed `STRETCH`, and `TILE`), styled and
-aligned strokes, rectangles with uniform or independent circular corner radii,
-frames, sections, symbols, instances, ellipses, partial ellipse rings, regular
-polygons, stars, lines, UTF-16-indexed rich text,
-imported and boolean paths, editable vector networks, blend layers, drop and
-inner shadows, foreground and background blur, and alpha/luminance sibling
-masks.
+See [Headless Rendering](https://hexdocs.pm/figler/headless-rendering.html), the [Rendering Support Matrix](https://hexdocs.pm/figler/rendering-support.html), and [Rendering Warnings](https://hexdocs.pm/figler/rendering-warnings.html).
 
-Unsupported features are never silently replaced with rectangles. Decorative
-stroke caps; pattern/noise/custom paints and effects; and some live boolean or
-image-filter semantics remain
-explicitly diagnostic. Outline masks remain approximate. Figma smooth corners
-retain their radii but use circular arcs and report an approximation warning.
-See the [rendering support matrix](guides/rendering-support.md) for the beta contract.
+## Beta status
 
-Unsupported or approximate features are listed in `metadata.warnings`; the
-[warning-code reference](guides/render-warnings.md) documents the stable warning
-shape, severity classes, and current codes. This includes unavailable requested
-font families, missing glyph coverage, malformed style ranges, and font
-substitutions. Figler resolves each grapheme cluster against its style run's
-requested font and Figma fallback-font metadata, then asks Skia for installed
-character-aware fallbacks. Callers can provide deterministic fallbacks with
-`fallback_font_paths: [...]` or already-loaded
-`fallback_typefaces: [...]`, and can pass BCP-47 hints with
-`font_languages: [...]`. Pass `strict: true` to reject substitutions instead of
-silently accepting fallback glyphs or a partial rendering. Visual tests can
-compare decoded OpenPencil reference PNGs with Figler RGBA output through
-`Figler.Render.Oracle.compare_png/3`. For repeatable same-scene comparisons,
-create a `render-manifest.json` that records the `.fig` fixture, reference PNG,
-root or page, scale, background, thresholds, optional fallback font paths and
-language tags, and optional `expected_warning_codes`, then run:
+`0.1.0-beta.1` provides production-shaped analysis, transformation, and rendering APIs, but rendering intentionally supports a documented subset of Figma. It does not promise pixel identity with Figma or OpenPencil for arbitrary documents.
 
-```bash
-mix figler.render.oracles --manifest /path/to/render-manifest.json
-# or discover manifests recursively without checking large fixtures into git
-FIGLER_RENDER_ORACLE_DIR=/path/to/oracles mix figler.render.oracles
-```
+See [Compatibility](https://hexdocs.pm/figler/compatibility.html), [Performance and Safety](https://hexdocs.pm/figler/performance-and-safety.html), and the [Changelog](https://hexdocs.pm/figler/changelog.html).
 
-## Decode Figma messages
+## Documentation
 
-When you need exact schema data, decode into generated Elixir structs:
-
-```elixir
-message = Figler.decode_message(payload)
-
-%Figler.Schema.Message{
-  type: :node_changes,
-  node_changes: node_changes
-} = message
-```
-
-You can also encode generated structs back to Kiwi binary:
-
-```elixir
-binary = Figler.encode_message(message)
-```
-
-The vendored schema is available for tooling:
-
-```elixir
-schema_text = Figler.schema_text()
-schema = Figler.schema()
-```
-
-## Sparse decoding for large messages
-
-Sparse decoding keeps the schema shape but avoids allocating every absent field.
-It returns maps containing only values present in the encoded payload.
-
-```elixir
-sparse = Figler.decode_sparse_message(payload)
-
-Figler.Sparse.module(sparse)
-Figler.Sparse.fields(sparse)
-Figler.Sparse.present?(sparse, :node_changes)
-Figler.Sparse.get(sparse, :node_changes)
-```
-
-Sparse maps include `:__kiwi_module__`, so tooling can still identify the
-corresponding `Figler.Schema.*` module.
-
-## Low-level Figma Kiwi binaries
-
-Most users should start with `Figler.Scene` and pass a `.fig` file directly.
-If you are building import/export tooling and already have Figma's internal
-Kiwi container binary, `Figler.Container` can parse it directly:
-
-```elixir
-parsed = Figler.Container.parse(container_binary)
-chunks = Enum.map(parsed.chunks, &Figler.Container.inflate/1)
-
-decoded = Figler.Container.decode(container_binary)
-payload = Figler.Container.data(container_binary)
-```
-
-To normalize any supported input into the raw Figma Kiwi `Message` binary:
-
-```elixir
-payload = Figler.Scene.payload!(binary)
-```
-
-## Runtime map encoding/decoding
-
-For dynamic tools that do not want generated structs, use the runtime schema
-interpreter:
-
-```elixir
-message = Figler.decode_message_runtime(payload)
-binary = Figler.encode_message_runtime(%{"type" => "NODE_CHANGES"})
-```
-
-Figler caches the versioned parsed schema and reuses prepared interpreter indexes
-for these calls. Prefer generated structs or native projections for the hottest
-large-file paths.
-
-## Generated code
-
-Figler checks in generated Elixir schema modules and generated Rust source so
-consumers do not need to run code generation during normal use.
-
-Regenerate Elixir schema modules from `priv/schema/fig.kiwi`:
-
-```sh
-rm -rf lib/generated
-mix kiwi.gen priv/schema/fig.kiwi --module-prefix Figler.Schema --out lib/generated
-mix format
-```
-
-Regenerate native Rust source and Elixir NIF stubs from `rustq.exs`:
-
-```sh
-mix rustq.gen
-```
-
-Check every generated RustQ target is fresh:
-
-```sh
-mix rustq.gen --check
-```
-
-## Benchmarks and oracle fixtures
-
-Message benchmark:
-
-```sh
-elixir bench/message_bench.exs
-```
-
-This Benchee suite covers static and interpreted codecs plus native sparse,
-graph-seed, scene-index, and graph-materialization paths.
-
-OpenPencil fixture benchmark:
-
-```sh
-FIGLER_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
-  mix figler.bench.fixtures
-```
-
-Skip expensive full materialization on large fixtures:
-
-```sh
-FIGLER_OPEN_PENCIL_FIXTURE_DIR=/path/to/open-pencil/tests/fixtures \
-FIGLER_BENCH_FULL_DECODE=0 \
-  mix figler.bench.fixtures nuxtui.fig
-```
-
-Fixture timings report p50/p95 after two warmups and seven measured samples.
-Use `FIGLER_BENCH_WARMUP` and `FIGLER_BENCH_SAMPLES` to tune those counts. Memory
-columns are BEAM process deltas and exclude native resource allocations. See
-[Production guidance](guides/production.md) before choosing full graphs or
-service-level memory and latency limits.
+Full guides and API documentation are available on [HexDocs](https://hexdocs.pm/figler).
 
 ## Development
 
-```sh
+```bash
 mix deps.get
 mix ci
 ```
 
-`mix ci` checks Elixir compilation, generated native freshness, formatting,
-Rust formatting/checks/clippy, tests, Credo, Dialyzer, clone detection, and
-architecture/smell checks.
+## License
+
+MIT © 2026 dannote

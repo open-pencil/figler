@@ -1,12 +1,10 @@
 defmodule Figler.Scene do
   @moduledoc """
-  Projected native scene helpers.
+  Fast queries and navigation for Figma scenes.
 
   These functions accept `.fig` files directly, as well as already-extracted
-  Figma Kiwi binaries for lower-level tooling.
-
-  The scene is scanned natively and projected into lightweight structs instead
-  of materializing the full generated schema tree.
+  Figma Kiwi binaries. Build an index once to run repeated name, text, type,
+  structural, and hierarchy queries over the same design.
 
   Successful calls return their documented value directly. Malformed inputs,
   selectors, GUIDs, and options raise `Figler.Error`; valid lookups with no match
