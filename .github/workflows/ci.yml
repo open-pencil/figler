@@ -13,7 +13,7 @@ jobs:
   ci:
     uses: elixir-vibe/actions/.github/workflows/elixir-rustler-ci.yml@v1
     with:
-      latest-command: mix docs --warnings-as-errors && mix compile --force --warnings-as-errors && mix ci
+      latest-command: mix compile --force --warnings-as-errors && mix docs --warnings-as-errors && mix ci
       min-command: mix compile --force --warnings-as-errors && mix test
       rust-cache-workspaces: |
         native -> target
