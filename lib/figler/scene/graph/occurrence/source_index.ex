@@ -1,7 +1,8 @@
 defmodule Figler.Scene.Graph.Occurrence.SourceIndex do
-  @moduledoc false
-
-  # Archive records by GUID, with children in saved order.
+  @moduledoc """
+  Source records by GUID, with children in saved order, prepared for the
+  occurrence interpreter.
+  """
 
   alias Figler.Scene.Graph.Occurrence.GUID
   alias Figler.Scene.Graph.Occurrence.Prepare

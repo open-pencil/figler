@@ -1,8 +1,10 @@
 defmodule Figler.Scene.Graph.Occurrence.GUID do
-  @moduledoc false
+  @moduledoc """
+  GUIDs as the occurrence interpreter compares and indexes them.
 
-  # Sparse records carry GUIDs as `%{session_id: _, local_id: _}` maps; the
-  # interpreter compares and indexes them as `{session_id, local_id}` tuples.
+  Sparse records carry GUIDs as `%{session_id: _, local_id: _}` maps; the
+  interpreter uses `{session_id, local_id}` tuples.
+  """
 
   @unset {0xFFFFFFFF, 0xFFFFFFFF}
 

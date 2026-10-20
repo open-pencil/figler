@@ -37,7 +37,6 @@ type Occurrence = {
   mainComponentId: string | null
   properties: Record<string, any>
   children: Occurrence[]
-  derivedSize?: { x: number; y: number }
 }
 
 const guid = (value: GUID | undefined) => (value ? `${value.sessionID}:${value.localID}` : null)
@@ -51,8 +50,8 @@ function project(node: Occurrence, depth: number): Record<string, unknown> {
     visible: p.visible ?? true
   }
   if (p.type === 'INSTANCE') out.main_component_id = node.mainComponentId
-  const size = node.derivedSize ?? p.size
-  if (size) out.size = [size.x, size.y]
+  // The materialized width and height, which come from the record's size.
+  if (p.size) out.size = [p.size.x, p.size.y]
   if (p.transform) out.position = [p.transform.m02, p.transform.m12]
   if (p.opacity !== undefined && p.opacity !== 1) out.opacity = p.opacity
   if (p.type === 'TEXT') out.characters = p.textData?.characters ?? ''

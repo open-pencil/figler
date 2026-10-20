@@ -23,6 +23,12 @@ defmodule Figler.Scene do
   alias Figler.Scene.Summary
   alias Figler.Scene.Tree
 
+  @typedoc """
+  A raw `Message` binary with the binary Kiwi schema it was written with, as
+  returned by `source!/1`. The schema is empty when the input carried none.
+  """
+  @type source :: {payload :: binary(), schema :: binary()}
+
   @type summary :: Summary.t()
   @type scene_node :: Node.t()
   @type scene_index :: Index.t()
@@ -477,7 +483,7 @@ defmodule Figler.Scene do
   Pass the result to `graph/2` instead of a payload when decoding repeatedly,
   so fields added by newer Figma versions can still be skipped.
   """
-  @spec source!(binary()) :: Input.source()
+  @spec source!(binary()) :: source()
   defdelegate source!(binary), to: Input
 
   defp parse_guid!(operation, guid) do

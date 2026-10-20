@@ -2,7 +2,7 @@ defmodule Figler.Native.SceneNifs do
   @moduledoc """
   Thin Elixir wrapper around native scene index and query entrypoints.
 
-  Entrypoints that decode take a payload binary or a `t:Figler.Scene.Input.source/0`.
+  Entrypoints that decode take a payload binary or a `t:Figler.Scene.source/0`.
 
   `Figler.Scene` builds on these delegates to normalize inputs and project
   native maps into documented scene structs.

@@ -64,12 +64,12 @@ defmodule Figler.Scene.ErrorContractTest do
   end
 
   test "rejects ambiguous and unsupported graph options" do
-    assert_error(:graph, :until, :invalid_stage, fn ->
-      Scene.graph(message_payload(), until: :unknown)
+    assert_error(:graph, :until, :unknown_option, fn ->
+      Scene.graph(message_payload(), until: :variables)
     end)
 
-    assert_error(:graph, :selection, :conflicting_stage_selection, fn ->
-      Scene.graph(message_payload(), stages: [:variables], until: :variables)
+    assert_error(:graph, :selection, :conflicting_focus_selection, fn ->
+      Scene.graph(message_payload(), focus: "0:1", root: "0:1")
     end)
 
     assert_error(:graph, :resolve_variables, :invalid_resolution_mode, fn ->

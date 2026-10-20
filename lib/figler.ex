@@ -93,10 +93,10 @@ defmodule Figler do
   Decodes a Figma `Message` into generated schema structs.
 
   Accepts a `.fig` archive, a `fig-kiwi` container, a raw `Message` payload, or
-  a `t:Figler.Scene.Input.source/0`. Fields that newer Figma versions add are
+  a `t:Figler.Scene.source/0`. Fields that newer Figma versions add are
   skipped using the schema embedded in the file.
   """
-  @spec decode_message(binary() | Input.source()) :: Message.t()
+  @spec decode_message(binary() | Figler.Scene.source()) :: Message.t()
   def decode_message(input) when is_binary(input) or is_tuple(input) do
     Error.protect(:decode_message, fn ->
       {payload, schema} =

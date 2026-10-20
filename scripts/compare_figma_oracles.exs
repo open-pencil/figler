@@ -22,7 +22,7 @@ shared_graph? = System.get_env("FIGLER_ORACLE_SHARED_GRAPH") in ["1", "true", "T
 
     {build_us, graph} =
       :timer.tc(fn ->
-        Figler.Scene.graph(fixture_payload, root: node_guids, until: :stack_layout)
+        Figler.Scene.graph(fixture_payload, root: node_guids)
       end)
 
     {compare_us, results} =

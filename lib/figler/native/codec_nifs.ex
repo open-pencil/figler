@@ -6,7 +6,7 @@ defmodule Figler.Native.CodecNifs do
   `KiwiCodec.decode/2`; the native codec surface is reserved for sparse and
   focus-oriented map decoding that avoids materializing full schema structs.
 
-  Every entrypoint takes a payload binary or a `t:Figler.Scene.Input.source/0`.
+  Every entrypoint takes a payload binary or a `t:Figler.Scene.source/0`.
   A source's schema lets the decoders skip fields newer Figma files add.
   """
 

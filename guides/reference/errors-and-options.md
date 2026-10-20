@@ -70,20 +70,16 @@ and `:value`.
 
 ## Effective-graph options
 
-`Figler.Scene.graph/2`, `Figler.Scene.Graph.build/2`, and graph profiling/seed
-entrypoints validate:
+`Figler.Scene.graph/2`, `Figler.Scene.Graph.build/2`, and graph profiling
+validate:
 
-- one of `:stages`, `:only`, or `:until`
-- `:skip`
 - one of `:focus` or `:root`
 - `resolve_variables: false | :known | :preserve`
 - `resolve_styles: false | :refs | :known`
 - optional projected `:fields`
 
-Resolver stage atoms are listed by `Figler.Scene.Graph.Options.stages/0`.
-Unknown stages are errors; `until: :unknown` never silently means the full
-pipeline. Graph trees validate `:root` and `:depth`, graph diffs validate
-`:root`, and unresolved diagnostics validate `limit: :all | non_neg_integer`.
+Graph trees validate `:root` and `:depth`, graph diffs validate `:root`, and
+unresolved diagnostics validate `limit: :all | non_neg_integer`.
 
 ## Render errors and safety limits
 

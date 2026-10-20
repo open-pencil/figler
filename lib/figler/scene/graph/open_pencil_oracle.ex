@@ -97,7 +97,7 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
   @spec project_occurrence(Occurrence.t()) :: map()
   def project_occurrence(%Occurrence{properties: properties} = occurrence) do
     type = properties |> Map.get(:type) |> to_string() |> String.upcase()
-    size = occurrence.derived_size || Map.get(properties, :size)
+    size = Map.get(properties, :size)
     transform = Map.get(properties, :transform)
     opacity = Map.get(properties, :opacity)
 

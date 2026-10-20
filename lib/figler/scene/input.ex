@@ -20,7 +20,7 @@ defmodule Figler.Scene.Input do
   The schema is empty when the input carried none, as for a raw `Message`.
   Native decoders use it to skip fields Figler's compiled schema does not know.
   """
-  @type source :: {payload :: binary(), schema :: binary()}
+  @type source :: Figler.Scene.source()
 
   @doc """
   Extracts the raw Figma Kiwi `Message` binary from any supported scene input.

@@ -3,13 +3,16 @@ defmodule Figler.Scene.Graph do
   Effective scene graph handle.
 
   `Figler.Scene.Index` is the fast raw projection of Kiwi node records.
-  `Figler.Scene.Graph` is the separate surface intended for resolved Figma
-  semantics: populated instances, symbol overrides, component props, derived
-  symbol data, and variable/style resolution.
+  `Figler.Scene.Graph` is the surface for resolved Figma semantics: every
+  instance is expanded into its own occurrences with swaps, component property
+  assignments, symbol overrides, uniform scale, placed constraints, and saved
+  derived data applied.
 
-  The graph keeps a pure Elixir working set seeded from the native raw index.
-  Query and navigation APIs accept the resulting graph, while Figma resolver
-  stages remain inspectable in Elixir.
+  Instances are resolved by `Figler.Scene.Graph.Occurrence.Interpreter`, a port
+  of OpenPencil's occurrence-scoped reader. Layers inside an expansion have
+  clone GUIDs (`"clone:<instance>/<source>/..."`) so each use of a component is
+  addressable on its own. Overrides that cannot be resolved are reported by
+  `unresolved/2` rather than failing the build.
 
   Malformed graph options and GUIDs raise `Figler.Error` with stable codes and
   structured context.
@@ -17,39 +20,31 @@ defmodule Figler.Scene.Graph do
 
   alias Figler.Error
   alias Figler.Native.CodecNifs
-  alias Figler.Native.SceneNifs, as: NativeScene
   alias Figler.Scene
-  alias Figler.Scene.Graph.Build
   alias Figler.Scene.Graph.Diff
   alias Figler.Scene.Graph.GUID
+  alias Figler.Scene.Graph.Materialize
+  alias Figler.Scene.Graph.Occurrence.SourceIndex
   alias Figler.Scene.Graph.Options
-  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Index
   alias Figler.Scene.Input
   alias Figler.Scene.Node
   alias Figler.Scene.Query
-  alias Figler.Scene.Summary
   alias Figler.Scene.Tree
 
   @enforce_keys [:resource]
   defstruct [
     :resource,
     :source,
-    mode: :projected,
-    stages: [],
-    projection_stages: :all,
+    mode: :interpreted,
     options: [],
-    seed_nodes: %{},
+    sources: %{},
+    records: %{},
     nodes: %{},
     children: %{},
     roots: [],
     by_type: %{},
     by_name: %{},
-    clone_index: %{},
-    clone_source_index: %{},
-    source_instance_guids: [],
-    stack_seed_guids: [],
-    component_prop_refs: %{},
     provenance: %{},
     unresolved: [],
     stats: %{}
@@ -60,172 +55,136 @@ defmodule Figler.Scene.Graph do
   """
   @opaque t :: %__MODULE__{
             resource: reference() | nil,
-            source: Index.t() | Input.source() | nil,
-            mode: :projected | :resolved,
-            stages: [atom()],
-            projection_stages: :all | [atom()],
+            source: Index.t() | Scene.source() | reference() | nil,
+            mode: :interpreted | :projected,
             options: keyword(),
-            seed_nodes: %{optional(GUID.graph_guid()) => SeedNode.t()},
+            sources: %{optional(GUID.figma_guid()) => map()},
+            records: %{optional(GUID.graph_guid()) => map()},
             nodes: %{optional(GUID.graph_guid()) => Node.t()},
             children: %{optional(GUID.graph_guid()) => [GUID.graph_guid()]},
             roots: [GUID.graph_guid()],
             by_type: %{optional(String.t()) => [GUID.graph_guid()]},
             by_name: %{optional(String.t()) => [GUID.graph_guid()]},
-            clone_index: %{optional({GUID.figma_guid(), GUID.graph_guid()}) => GUID.graph_guid()},
-            clone_source_index: %{
-              optional({GUID.figma_guid(), GUID.figma_guid()}) => GUID.graph_guid()
-            },
-            source_instance_guids: [GUID.figma_guid()],
-            stack_seed_guids: [GUID.graph_guid()],
-            component_prop_refs: %{optional(GUID.figma_guid()) => {GUID.graph_guid(), atom()}},
             provenance: %{optional(GUID.graph_guid()) => map()},
             unresolved: [term()],
             stats: map()
           }
 
-  @default_stages Options.stages()
-
   @doc """
   Builds an effective scene graph handle.
 
-  Accepts the same binary inputs as `Figler.Scene.index/1`, an existing
-  `%Figler.Scene.Index{}`, a native index resource, or another graph.
-
-  Options are validated, stored on the graph, and define the resolver pipeline.
-  Unknown stages and conflicting selection options raise `Figler.Error` rather
-  than silently selecting a different pipeline.
+  Accepts the same binary inputs as `Figler.Scene.index/1`, a
+  `t:Figler.Scene.source/0`, or another graph. A `%Figler.Scene.Index{}`
+  or native index resource carries no override data, so it builds a projected
+  graph with instances left unexpanded.
 
   Options:
 
-    * `:stages` - explicit resolver stages. Defaults to the standard pipeline.
-    * `:only` - alias for `:stages`, useful for focused debugging.
-    * `:until` - include default stages through this stage.
-    * `:skip` - remove stages from the selected pipeline.
-    * `:focus` - one or more source GUIDs to resolve. When set, resolver stages
-      only run from matching source instances and their source descendants.
+    * `:focus` - one or more source GUIDs. Only their subtrees, ancestors, and
+      the components they use are decoded and interpreted.
     * `:root` - alias for `:focus`, useful for resolving one subtree.
     * `:resolve_variables` - `false`, `:known`, or `:preserve`. Defaults to `:known`.
     * `:resolve_styles` - `false`, `:refs`, or `:known`. Defaults to `false`.
-    * `:fields` - optional projected fields hint for future graph materialization.
+    * `:fields` - fields to project when building from an index.
   """
-  @spec build(binary() | Input.source() | Index.t() | reference() | t(), keyword()) :: t()
+  @spec build(binary() | Scene.source() | Index.t() | reference() | t(), keyword()) :: t()
   def build(input, opts \\ [])
 
   def build(%__MODULE__{} = graph, opts) when is_list(opts) do
     Options.validate_build!(opts)
-
-    if opts == [] do
-      graph
-    else
-      selected_stages = stages(opts)
-      ensure_projected_stages!(graph, selected_stages)
-
-      %__MODULE__{graph | stages: selected_stages, options: normalize_options(opts)}
-      |> Build.resolve()
-    end
-  end
-
-  def build(%Index{resource: resource} = index, opts) when is_list(opts) do
-    Options.validate_build!(opts)
-    Error.protect(:graph, fn -> build_from_seed(index, resource, opts) end)
+    graph
   end
 
   def build({payload, schema} = source, opts)
       when is_binary(payload) and is_binary(schema) and is_list(opts) do
     Options.validate_build!(opts)
-    Error.protect(:graph, fn -> build_from_source(source, opts) end)
+    Error.protect(:graph, fn -> source |> interpret(opts) |> Map.fetch!(:graph) end)
   end
 
   def build(binary, opts) when is_binary(binary) and is_list(opts) do
     Options.validate_build!(opts)
-    Error.protect(:graph, fn -> binary |> Input.source!() |> build_from_source(opts) end)
+
+    Error.protect(:graph, fn ->
+      binary |> Input.source!() |> interpret(opts) |> Map.fetch!(:graph)
+    end)
+  end
+
+  def build(%Index{resource: resource} = index, opts) when is_list(opts) do
+    Options.validate_build!(opts)
+    Error.protect(:graph, fn -> projected(index, resource, opts) end)
   end
 
   def build(resource, opts) when is_reference(resource) and is_list(opts) do
     Options.validate_build!(opts)
-    Error.protect(:graph, fn -> build_from_seed(nil, resource, opts) end)
-  end
-
-  defp build_from_source(source, opts) do
-    opts = maybe_pre_focused_opts(opts)
-
-    if focused?(opts) do
-      seed_nodes = seed_nodes_from_payload(source, opts)
-      build_focused_from_seed(source, opts, seed_nodes)
-    else
-      build_with_native_records(source, opts)
-    end
+    Error.protect(:graph, fn -> projected(resource, resource, opts) end)
   end
 
   @doc """
-  Profiles graph construction and resolver stages.
+  Profiles graph construction.
 
-  Returns the final graph, total build time, initial seed/materialization time,
-  and per-stage timings. Options are the same as `build/2`.
+  Returns the graph, the total time, and the time of each phase: `:decode`,
+  `:index`, and `:interpret` (which includes materializing the graph).
+  Options are the same as `build/2`.
   """
-  @spec profile(binary() | Input.source() | Index.t() | reference() | t(), keyword()) :: map()
+  @spec profile(binary() | Scene.source(), keyword()) :: map()
   def profile(input, opts \\ []) when is_list(opts) do
     Options.validate_build!(opts)
-    selected_stages = stages(opts)
 
-    base_opts =
-      opts
-      |> stage_profile_opts([])
-      |> Keyword.put(:projection_stages, selected_stages)
-
-    {initial_us, graph} = :timer.tc(fn -> build(input, base_opts) end)
-
-    stage_plans =
-      selected_stages
-      |> Enum.with_index()
-      |> Enum.map(fn {stage, index} -> {stage, Enum.drop(selected_stages, index)} end)
-
-    {stage_results, %__MODULE__{} = graph} =
-      Enum.map_reduce(stage_plans, graph, fn {stage, remaining_stages}, acc ->
-        {stage_us, next} =
-          :timer.tc(fn -> Build.resolve_stage(acc, stage, remaining_stages) end)
-
-        {%{stage: stage, ms: native_ms(stage_us), graph: stats(next)}, next}
-      end)
-
-    initial_ms = native_ms(initial_us)
-    graph = %__MODULE__{graph | stages: selected_stages}
-
-    %{
-      graph: graph,
-      initial_ms: initial_ms,
-      total_ms: initial_ms + Enum.reduce(stage_results, 0, &(&1.ms + &2)),
-      stages: stage_results
-    }
-  end
-
-  @doc """
-  Returns structured seed nodes for the graph resolver.
-  """
-  @spec seed_nodes(binary() | Index.t() | reference() | t(), keyword()) :: [SeedNode.t()]
-  def seed_nodes(input, opts \\ [])
-
-  def seed_nodes(%__MODULE__{seed_nodes: seed_nodes}, opts) when is_list(opts) do
-    Options.validate_build!(opts)
-    Map.values(seed_nodes)
-  end
-
-  def seed_nodes(binary, opts) when is_binary(binary) and is_list(opts) do
-    Options.validate_build!(opts)
-
-    Error.protect(:graph_seed_nodes, fn ->
-      binary
-      |> Input.source!()
-      |> seed_nodes_from_payload(opts)
+    Error.protect(:graph, fn ->
+      source = if is_tuple(input), do: input, else: Input.source!(input)
+      interpret(source, opts)
     end)
   end
 
-  def seed_nodes(input, opts) when is_list(opts) do
-    Options.validate_build!(opts)
+  defp interpret(source, opts) do
+    opts = normalize_options(opts)
+    {decode_us, message} = :timer.tc(fn -> decode(source, opts) end)
+    {index_us, index} = :timer.tc(fn -> SourceIndex.new(message.node_changes) end)
+    {interpret_us, fields} = :timer.tc(fn -> Materialize.graph(index) end)
 
-    input
-    |> Scene.query("//*", fields: Keyword.get(opts, :fields, :all))
-    |> Enum.map(&SeedNode.from_node/1)
+    attrs = [resource: nil, source: source, options: opts, sources: index.sources]
+    graph = struct!(__MODULE__, Map.to_list(fields) ++ attrs)
+
+    phases = [
+      %{phase: :decode, ms: ms(decode_us)},
+      %{phase: :index, ms: ms(index_us)},
+      %{phase: :interpret, ms: ms(interpret_us)}
+    ]
+
+    %{graph: graph, total_ms: Enum.reduce(phases, 0, &(&1.ms + &2)), phases: phases}
+  end
+
+  defp decode(source, opts) do
+    case Keyword.get(opts, :focus) do
+      nil ->
+        CodecNifs.decode_sparse_message(source)
+
+      focus ->
+        CodecNifs.decode_graph_focused_sparse_message(source, Enum.map(focus, &GUID.format/1))
+    end
+  end
+
+  # A projected index has no override data: nodes keep their source records'
+  # projection and instances stay unexpanded.
+  defp projected(source, resource, opts) do
+    nodes = Scene.query(source, "//*", fields: Keyword.get(opts, :fields, :all))
+    by_guid = Map.new(nodes, &{GUID.parse!(&1.guid), %{&1 | children: nil}})
+    guids = Map.keys(by_guid)
+
+    %__MODULE__{
+      resource: resource,
+      source: source,
+      mode: :projected,
+      options: normalize_options(opts),
+      nodes: by_guid,
+      children:
+        nodes
+        |> Enum.filter(& &1.parent_guid)
+        |> Enum.group_by(&GUID.parse!(&1.parent_guid), &GUID.parse!(&1.guid)),
+      roots: for(node <- nodes, is_nil(node.parent_guid), do: GUID.parse!(node.guid)),
+      by_type: Enum.group_by(guids, &by_guid[&1].node_type),
+      by_name: guids |> Enum.reject(&is_nil(by_guid[&1].name)) |> Enum.group_by(&by_guid[&1].name)
+    }
   end
 
   @doc """
@@ -235,12 +194,8 @@ defmodule Figler.Scene.Graph do
   def stats(%__MODULE__{} = graph) do
     Map.merge(graph.stats, %{
       node_count: map_size(graph.nodes),
-      seed_count: map_size(graph.seed_nodes),
       clone_count: clone_count(graph),
-      source_seed_count: seed_count(graph, :source),
-      clone_seed_count: seed_count(graph, :clone),
-      source_instance_count: instance_count(graph, :source),
-      clone_instance_count: instance_count(graph, :clone),
+      instance_count: graph.by_type |> Map.get("instance", []) |> length(),
       unresolved_count: length(graph.unresolved),
       applied_count: applied_count(graph)
     })
@@ -249,9 +204,9 @@ defmodule Figler.Scene.Graph do
   @doc """
   Explains how a node appears in the effective graph.
 
-  The explanation includes the resolved node, projected source node when known,
-  provenance, applied resolver operations, unresolved diagnostics recorded on
-  the node, and instance metadata for instance nodes.
+  The explanation includes the resolved node, its projected source node,
+  provenance, the property claims applied to it, and instance metadata for
+  instance nodes.
 
       graph = Figler.Scene.graph(fig_binary, root: "3740:112537")
       Figler.Scene.Graph.explain(graph, "3740:112537")
@@ -266,40 +221,50 @@ defmodule Figler.Scene.Graph do
 
       %Node{} = node ->
         public_node = Query.public_node(node)
+        provenance = provenance(graph, graph_guid)
 
         %{
           guid: GUID.format(graph_guid),
           node: public_node,
           source_node: source_node(graph, public_node.guid),
-          source: Map.get(provenance(graph, graph_guid), :source, :projected_index),
-          source_guid:
-            graph |> provenance(graph_guid) |> Map.get(:source_guid, graph_guid) |> GUID.format(),
+          source: provenance.source,
+          source_guid: GUID.format(provenance.source_guid),
           parent_guid: public_node.parent_guid,
-          child_guids:
-            graph
-            |> Map.get(:children, %{})
-            |> Map.get(graph_guid, [])
-            |> Enum.map(&GUID.format/1),
-          applied: Map.get(provenance(graph, graph_guid), :applied, []),
-          unresolved: Map.get(provenance(graph, graph_guid), :unresolved, []),
-          instance: instance(graph, public_node.guid),
-          stages: graph.stages
+          child_guids: graph.children |> Map.get(graph_guid, []) |> Enum.map(&GUID.format/1),
+          applied: Map.get(provenance, :applied, []),
+          bindings: Map.get(provenance, :bindings, []),
+          unresolved: Map.get(provenance, :unresolved, []),
+          instance: instance(graph, public_node.guid)
         }
     end
   end
 
   @doc """
-  Returns the projected source node for a graph node.
+  Returns the projected source node a graph node was built from.
   """
   @spec source_node(t(), String.t()) :: Node.t() | nil
   def source_node(%__MODULE__{} = graph, guid) when is_binary(guid) do
-    graph.seed_nodes
-    |> Map.get(parse_guid!(:graph_source_node, guid))
-    |> case do
-      nil -> nil
-      seed -> SeedNode.to_node(seed)
+    graph_guid = parse_guid!(:graph_source_node, guid)
+    source_guid = provenance(graph, graph_guid).source_guid
+
+    case Map.get(graph.sources, source_guid) do
+      nil ->
+        graph.nodes |> Map.get(source_guid) |> Query.public_node()
+
+      record ->
+        record
+        |> Materialize.node(source_guid, SourceIndex.parent_id(record))
+        |> Query.public_node()
     end
   end
+
+  @doc """
+  Returns the effective record of a graph node: the sparse `NodeChange` map
+  with every override resolved.
+  """
+  @spec record(t(), String.t()) :: map() | nil
+  def record(%__MODULE__{} = graph, guid) when is_binary(guid),
+    do: Map.get(graph.records, parse_guid!(:graph_record, guid))
 
   @doc """
   Returns a resolved tree from the effective graph.
@@ -329,17 +294,18 @@ defmodule Figler.Scene.Graph do
 
     case Map.get(graph.nodes, graph_guid) do
       %Node{node_type: "instance"} ->
-        seed = Map.get(graph.seed_nodes, graph_guid)
-        component_guid = instance_component_guid(seed)
+        record = Map.get(graph.records, graph_guid, %{})
+        provenance = provenance(graph, graph_guid)
+        component_guid = Map.get(provenance, :component_guid)
 
         %{
           guid: GUID.format(graph_guid),
           component_guid: GUID.format(component_guid),
           component: component_node(graph, component_guid),
-          component_prop_assignments: Map.get(seed || %{}, :component_prop_assignments, []),
-          symbol_overrides: Map.get(seed || %{}, :symbol_overrides, []),
-          derived_symbol_data: Map.get(seed || %{}, :derived_symbol_data, []),
-          provenance: provenance(graph, graph_guid)
+          component_prop_assignments: Map.get(record, :component_prop_assignments, []),
+          symbol_overrides: get_in(record, [:symbol_data, :symbol_overrides]) || [],
+          derived_symbol_data: Map.get(record, :derived_symbol_data, []),
+          provenance: provenance
         }
 
       _node ->
@@ -360,7 +326,15 @@ defmodule Figler.Scene.Graph do
   end
 
   @doc """
-  Returns unresolved graph items.
+  Returns diagnostics for overrides the graph could not resolve.
+
+    * `{:unresolved_property, owner, main_component, path, reason}`
+    * `{:unresolved_assignment, owner, main_component, path, reason}`
+    * `{:missing_component, owner, component}`
+    * `{:missing_slot_content, slot, content}`
+
+  GUIDs are `{session_id, local_id}` tuples and `reason` is `:missing_target`
+  or `:ambiguous_target`.
   """
   @spec unresolved(t(), keyword()) :: [term()]
   def unresolved(%__MODULE__{unresolved: unresolved}, opts \\ []) do
@@ -388,137 +362,24 @@ defmodule Figler.Scene.Graph do
     end
   end
 
-  defp build_focused_from_seed(payload, opts, seed_nodes) do
-    nil
-    |> build_from_seed(nil, opts, seed_nodes)
-    |> Map.put(:source, payload)
+  @doc false
+  @spec provenance(t(), GUID.graph_guid()) :: map()
+  def provenance(%__MODULE__{} = graph, guid) do
+    Map.get(graph.provenance, guid, %{
+      source: :projected_index,
+      source_guid: guid,
+      applied: [],
+      unresolved: []
+    })
   end
 
-  defp build_with_native_records(payload, opts) do
-    stages = stages(opts)
-    projected_stages = projection_stages(opts, stages)
-
-    records =
-      Error.protect(:graph, fn ->
-        CodecNifs.decode_graph_seed_records(payload, projected_stages)
-      end)
-
-    {resource, summary_map} = NativeScene.build_index_with_summary(payload)
-    index = %Index{resource: resource}
-    summary = Summary.from_map(summary_map)
-    options = normalize_options(opts)
-
-    %__MODULE__{} =
-      graph =
-      records
-      |> Build.from_native_records(
-        resource: resource,
-        source: index,
-        stages: stages,
-        projection_stages: projected_stages,
-        options: options
-      )
-      |> Build.resolve()
-
-    %__MODULE__{
-      graph
-      | stats:
-          Map.merge(summary_stats(summary), Map.take(graph.stats, [:resolver, :resolved_stages]))
-    }
-  end
-
-  defp seed_nodes_from_payload(payload, opts) do
-    opts = normalize_focus(opts)
-
-    if Keyword.get(opts, :native, true) do
-      native_seed_nodes(payload, opts)
-    else
-      payload
-      |> Input.to_source()
-      |> Figler.decode_message()
-      |> SeedNode.from_message(opts)
-    end
-  end
-
-  defp native_seed_nodes(payload, opts) do
-    selected_stages = stages(opts)
-    projected_stages = projection_stages(opts, selected_stages)
-
-    case Keyword.get(opts, :focus) do
-      focus when focus in [nil, []] ->
-        payload
-        |> decode_native_seed_records(projected_stages)
-        |> SeedNode.from_native_records()
-
-      _focus ->
-        payload |> sparse_message(opts) |> SeedNode.from_message()
-    end
-  end
-
-  defp decode_native_seed_records(payload, projected_stages) do
-    Error.protect(:graph_seed_nodes, fn ->
-      CodecNifs.decode_graph_seed_records(payload, projected_stages)
-    end)
-  end
-
-  defp sparse_message(payload, opts) do
-    case Keyword.get(opts, :focus) do
-      nil ->
-        Error.protect(:graph, fn -> CodecNifs.decode_sparse_message(payload) end)
-
-      [] ->
-        Error.protect(:graph, fn -> CodecNifs.decode_sparse_message(payload) end)
-
-      focus ->
-        Error.protect(:graph, fn ->
-          CodecNifs.decode_graph_focused_sparse_message(payload, Enum.map(focus, &GUID.format/1))
-        end)
-    end
-  end
-
-  defp focused?(opts), do: Keyword.has_key?(opts, :focus) or Keyword.has_key?(opts, :root)
-
-  defp maybe_pre_focused_opts(opts) do
-    if focused?(opts), do: Keyword.put(opts, :pre_focused, true), else: opts
-  end
-
-  defp stage_profile_opts(opts, stage) do
-    opts
-    |> Keyword.delete(:until)
-    |> Keyword.delete(:stages)
-    |> Keyword.put(:only, stage)
-  end
-
-  defp native_ms(microseconds), do: microseconds / 1_000
-
-  defp build_from_seed(index, resource, opts, seed_nodes \\ nil) do
-    stages = stages(opts)
-    options = normalize_options(opts)
-    seed_nodes = seed_nodes || seed_nodes(index || resource)
-
-    seed_nodes
-    |> Build.from_seed(resource: resource, source: index, stages: stages, options: options)
-    |> Build.resolve()
-  end
+  defp component_node(_graph, nil), do: nil
+  defp component_node(graph, guid), do: graph.nodes |> Map.get(guid) |> Query.public_node()
 
   defp clone_count(graph) do
     Enum.count(graph.nodes, fn
       {{:clone, _root_guid, _source_path}, _node} -> true
       _entry -> false
-    end)
-  end
-
-  defp seed_count(graph, origin) do
-    Enum.count(graph.seed_nodes, fn {_guid, seed} -> seed.origin == origin end)
-  end
-
-  defp instance_count(graph, :source) do
-    Enum.count(graph.source_instance_guids, &Map.has_key?(graph.nodes, &1))
-  end
-
-  defp instance_count(graph, origin) do
-    Enum.count(graph.seed_nodes, fn {_guid, seed} ->
-      seed.origin == origin and seed.node_type == "instance"
     end)
   end
 
@@ -528,93 +389,27 @@ defmodule Figler.Scene.Graph do
     end)
   end
 
-  defp instance_component_guid(%SeedNode{component_guid: guid}) when is_tuple(guid), do: guid
-  defp instance_component_guid(%SeedNode{symbol_id: guid}) when is_tuple(guid), do: guid
-  defp instance_component_guid(_seed), do: nil
-
-  defp component_node(_graph, nil), do: nil
-  defp component_node(graph, guid), do: graph.nodes |> Map.get(guid) |> Query.public_node()
-
-  defp provenance(graph, guid), do: Map.get(graph.provenance, guid, projected_provenance(guid))
-
-  defp projected_provenance(guid) do
-    %{source: :projected_index, source_guid: guid, applied: [], unresolved: []}
-  end
-
   defp normalize_options(opts) do
     opts
-    |> Keyword.delete(:projection_stages)
     |> normalize_focus()
+    |> Keyword.delete(:root)
     |> Keyword.put_new(:resolve_variables, :known)
     |> Keyword.put_new(:resolve_styles, false)
   end
 
   defp normalize_focus(opts) do
-    focus = Keyword.get(opts, :focus, Keyword.get(opts, :root))
-
-    if is_nil(focus) do
-      opts
-    else
-      Keyword.put(opts, :focus, parse_focus(focus))
+    case Keyword.get(opts, :focus, Keyword.get(opts, :root)) do
+      nil -> opts
+      focus -> Keyword.put(opts, :focus, parse_focus(focus))
     end
   end
 
-  defp parse_focus(focus) do
-    focus
-    |> List.wrap()
-    |> Enum.map(&parse_guid!(:graph, &1))
-    |> Enum.uniq()
-  end
+  defp parse_focus(focus),
+    do: focus |> List.wrap() |> Enum.map(&parse_guid!(:graph, &1)) |> Enum.uniq()
 
-  defp stages(opts) do
-    selected =
-      cond do
-        Keyword.has_key?(opts, :only) -> List.wrap(Keyword.fetch!(opts, :only))
-        Keyword.has_key?(opts, :stages) -> List.wrap(Keyword.fetch!(opts, :stages))
-        until = Keyword.get(opts, :until) -> stages_until(until)
-        true -> @default_stages
-      end
-
-    skip = opts |> Keyword.get(:skip, []) |> List.wrap()
-    Enum.reject(selected, &(&1 in skip))
-  end
-
-  defp projection_stages(opts, selected_stages) do
-    Keyword.get(opts, :projection_stages, selected_stages)
-  end
-
-  defp ensure_projected_stages!(%__MODULE__{projection_stages: :all}, _stages), do: :ok
-
-  defp ensure_projected_stages!(%__MODULE__{projection_stages: projected}, stages) do
-    case stages -- projected do
-      [] ->
-        :ok
-
-      missing ->
-        raise Error.new(:insufficient_graph_projection, :graph, %{
-                missing_stages: missing,
-                projected_stages: projected
-              })
-    end
-  end
-
-  defp stages_until(until) do
-    case Enum.find_index(@default_stages, &(&1 == until)) do
-      nil -> @default_stages
-      index -> Enum.take(@default_stages, index + 1)
-    end
-  end
+  defp ms(microseconds), do: microseconds / 1_000
 
   defp parse_guid!(operation, guid) do
     GUID.parse(guid) || raise Error.invalid_guid(operation, guid)
-  end
-
-  defp summary_stats(summary) do
-    %{
-      node_count: summary.node_count,
-      parented_count: summary.parented_count,
-      root_count: summary.root_count,
-      type_counts: summary.type_counts
-    }
   end
 end

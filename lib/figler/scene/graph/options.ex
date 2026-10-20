@@ -10,47 +10,10 @@ defmodule Figler.Scene.Graph.Options do
   alias Figler.OptionError
   alias Figler.Scene.Graph.GUID
 
-  @stages [
-    :populate_instances,
-    :symbol_overrides,
-    :sync_overrides,
-    :component_props,
-    :sync_component_props,
-    :derived_symbol_data,
-    :stack_layout,
-    :variables
-  ]
-
-  @build_keys [
-    :stages,
-    :only,
-    :until,
-    :skip,
-    :focus,
-    :root,
-    :resolve_variables,
-    :resolve_styles,
-    :fields,
-    :projection_stages,
-    :native
-  ]
-
-  @type stage ::
-          :populate_instances
-          | :symbol_overrides
-          | :sync_overrides
-          | :component_props
-          | :sync_component_props
-          | :derived_symbol_data
-          | :stack_layout
-          | :variables
+  @build_keys [:focus, :root, :resolve_variables, :resolve_styles, :fields]
 
   @type build_option ::
-          {:stages, stage() | [stage()]}
-          | {:only, stage() | [stage()]}
-          | {:until, stage()}
-          | {:skip, stage() | [stage()]}
-          | {:focus, String.t() | GUID.graph_guid() | [String.t() | GUID.graph_guid()]}
+          {:focus, String.t() | GUID.graph_guid() | [String.t() | GUID.graph_guid()]}
           | {:root, String.t() | GUID.graph_guid()}
           | {:resolve_variables, false | :known | :preserve}
           | {:resolve_styles, false | :refs | :known}
@@ -62,7 +25,6 @@ defmodule Figler.Scene.Graph.Options do
   @spec validate_build!(keyword()) :: :ok
   def validate_build!(opts) do
     validate_keyword!(:graph, opts, &build_option/1)
-    validate_exclusive!(opts, [:stages, :only, :until], :conflicting_stage_selection)
     validate_exclusive!(opts, [:focus, :root], :conflicting_focus_selection)
   end
 
@@ -78,14 +40,6 @@ defmodule Figler.Scene.Graph.Options do
   @spec validate_unresolved!(keyword()) :: :ok
   def validate_unresolved!(opts), do: validate_keyword!(:graph_unresolved, opts, &limit_option/1)
 
-  @doc "Returns the supported resolver stages in execution order."
-  @spec stages() :: [stage()]
-  def stages, do: @stages
-
-  defp build_option({key, value}) when key in [:stages, :only, :skip],
-    do: stage_list_error(key, value)
-
-  defp build_option({:until, value}), do: stage_error(:until, value)
   defp build_option({:focus, value}), do: focus_error(:focus, value)
   defp build_option({:root, value}), do: root_option({:root, value})
 
@@ -102,14 +56,6 @@ defmodule Figler.Scene.Graph.Options do
   end
 
   defp build_option({:fields, value}), do: fields_error(value)
-
-  defp build_option({:projection_stages, :all}), do: []
-
-  defp build_option({:projection_stages, value}),
-    do: stage_list_error(:projection_stages, value)
-
-  defp build_option({:native, value}) when is_boolean(value), do: []
-  defp build_option({:native, value}), do: [error(:native, :invalid_boolean, value)]
 
   defp build_option({key, value}) when key not in @build_keys,
     do: [error(key, :unknown_option, value)]
@@ -129,18 +75,6 @@ defmodule Figler.Scene.Graph.Options do
   defp limit_option({:limit, value}) when is_integer(value) and value >= 0, do: []
   defp limit_option({:limit, value}), do: [error(:limit, :invalid_limit, value)]
   defp limit_option({key, value}), do: [error(key, :unknown_option, value)]
-
-  defp stage_list_error(key, value) do
-    stages = List.wrap(value)
-
-    if is_nil(value) or not Enum.all?(stages, &(&1 in @stages)),
-      do: [error(key, :invalid_stage, value)],
-      else: []
-  end
-
-  defp stage_error(key, value) do
-    if value in @stages, do: [], else: [error(key, :invalid_stage, value)]
-  end
 
   defp focus_error(key, value) do
     values = List.wrap(value)

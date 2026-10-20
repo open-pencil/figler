@@ -32,12 +32,12 @@ defmodule Figler.Scene.Graph.Oracle do
   Graph input is used as-is, which lets batch runners build the graph once and
   compare multiple oracle entries against it.
   """
-  @spec run(binary() | Figler.Scene.Input.source() | Graph.t(), Path.t(), Entry.t()) :: map()
+  @spec run(binary() | Figler.Scene.source() | Graph.t(), Path.t(), Entry.t()) :: map()
   def run(fixture_binary, base_dir, %Entry{} = entry)
       when is_binary(fixture_binary) or is_tuple(fixture_binary) do
     {build_us, graph} =
       :timer.tc(fn ->
-        Figler.Scene.graph(fixture_binary, root: entry.node, until: :stack_layout)
+        Figler.Scene.graph(fixture_binary, root: entry.node)
       end)
 
     graph

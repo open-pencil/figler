@@ -2,8 +2,30 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking:** effective graphs resolve instances with a port of OpenPencil's
+  occurrence-scoped reader. Every use of a component is expanded into its own
+  occurrences; swaps and property assignments are routed to the instance they
+  configure; overrides apply inner instances first, and an override keeps a
+  field unless a strictly outer instance assigned it; uniform scale, placed
+  constraints, slots, and saved derived data are applied. On OpenPencil's
+  fixture files the resolved trees match OpenPencil's reader exactly.
+- **Breaking:** the resolver stage options (`:stages`, `:only`, `:until`,
+  `:skip`) and the graph's `seed_nodes/2` function are removed.
+  `Figler.Scene.Graph.profile/2` reports `:decode`, `:index`, and `:interpret`
+  phases instead of stages.
+- **Breaking:** unresolved diagnostics are now
+  `{:unresolved_property | :unresolved_assignment, owner, main_component, path, reason}`,
+  `{:missing_component, owner, component}`, and
+  `{:missing_slot_content, slot, content}`.
+- Building a graph from a `%Figler.Scene.Index{}` produces a projected graph
+  with instances left unexpanded, since an index carries no override data.
+
 ### Fixed
 
+- Overrides on one instance no longer leak into the shared component or other
+  instances of it.
 - Read files saved by current Figma releases. Their embedded schema adds message
   fields Figler's vendored schema lacks, and every decoder used to reject them
   as an invalid document. Native and Elixir decoders now skip such fields using
@@ -14,9 +36,10 @@
 - `Figler.Scene.source!/1` returns a payload together with its embedded schema;
   native entrypoints, `Figler.Scene.graph/2`, and `Figler.decode_message/1`
   accept it.
-- `mix figler.openpencil` and `Figler.Scene.Graph.OpenPencilOracle` diff
-  effective graphs against OpenPencil's occurrence interpreter, run from an
-  OpenPencil checkout through `scripts/openpencil_oracle.ts`.
+- `Figler.Scene.Graph.record/2` returns a node's effective `NodeChange` record.
+- The `figler.openpencil` mix task and `Figler.Scene.Graph.OpenPencilOracle`
+  diff effective graphs against OpenPencil's occurrence interpreter, run from
+  an OpenPencil checkout through `scripts/openpencil_oracle.ts`.
 
 ## 0.1.0-beta.1 - 2026-07-22
 

@@ -7,7 +7,7 @@ defmodule Figler.Render.OptionsTest do
     assert :ok =
              Options.validate(
                root: "1:2",
-               graph: [until: :component_props],
+               graph: [root: "1:2"],
                scale: 2,
                background: :transparent,
                format: :png,

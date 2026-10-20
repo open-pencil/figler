@@ -102,23 +102,23 @@ defmodule Figler.Render do
     end
   end
 
+  # Render fields come from the source record, with the occurrence's effective
+  # record applied over them.
   defp effective_render_nodes(graph, source_nodes) do
     Map.new(graph.nodes, fn {guid, node} ->
-      source_guid =
-        graph.provenance
-        |> Map.get(guid, %{})
-        |> Map.get(:source_guid, guid)
+      source_guid = Graph.provenance(graph, guid).source_guid
 
-      source = Map.get(source_nodes, source_guid)
+      source =
+        case Map.get(source_nodes, source_guid) do
+          nil -> nil
+          source -> SourceNode.apply_overrides(source, Map.get(graph.records, guid, %{}))
+        end
+
       {guid, RenderNode.from_effective(node, source_guid, source)}
     end)
   end
 
-  defp projection_root(graph, root) do
-    graph.provenance
-    |> Map.get(root, %{})
-    |> Map.get(:source_guid, root)
-  end
+  defp projection_root(graph, root), do: Graph.provenance(graph, root).source_guid
 
   defp render_selected(scene, opts) do
     if Code.ensure_loaded?(Skia),

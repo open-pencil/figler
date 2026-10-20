@@ -41,17 +41,12 @@ defmodule Figler.SceneTest do
     assert Scene.query(index, "//*[@parent_guid='0:0']") == [scene_canvas()]
   end
 
-  test "builds effective graph handles over projected indexes" do
-    graph = Scene.graph(message_payload(), until: :component_props, skip: [:sync_overrides])
+  test "builds effective graph handles" do
+    graph = Scene.graph(message_payload())
 
-    assert %Graph{
-             mode: :projected,
-             stages: [:populate_instances, :symbol_overrides, :component_props]
-           } =
-             graph
-
+    assert %Graph{mode: :interpreted} = graph
     assert Scene.node(graph, "0:1") == scene_canvas()
-    assert Graph.stats(graph).root_count == 1
+    assert Graph.stats(graph).node_count == 2
   end
 
   test "accepts canvas.fig containers" do

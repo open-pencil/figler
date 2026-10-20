@@ -3,17 +3,16 @@ defmodule Figler.Scene.Graph.Diff do
   Computes field-level differences between projected source nodes and resolved graph nodes.
 
   Diff output is used by graph debugging and fixture tooling to show exactly
-  which resolver stages changed a scene node.
+  which fields instance resolution changed on a scene node.
   """
 
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
-  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Node
   alias Figler.Scene.Query
 
   @doc """
-  Returns field-level changes between source seed nodes and resolved graph nodes.
+  Returns field-level changes between projected source nodes and resolved graph nodes.
 
   Pass `:root` to limit the diff to one graph subtree.
   """
@@ -60,30 +59,11 @@ defmodule Figler.Scene.Graph.Diff do
     end
   end
 
+  # The source node keeps the graph node's identity, so only resolved fields differ.
   defp source_node(graph, guid) do
-    case Map.get(graph.seed_nodes, guid) do
-      %SeedNode{} = seed ->
-        seed |> SeedNode.to_node() |> Query.public_node()
-
-      nil ->
-        graph.provenance
-        |> Map.get(guid, %{})
-        |> Map.get(:source_guid)
-        |> then(&source_node_from_seed(graph, guid, &1))
-    end
-  end
-
-  defp source_node_from_seed(_graph, _guid, nil), do: nil
-
-  defp source_node_from_seed(graph, guid, source_guid) do
-    with %SeedNode{} = seed <- Map.get(graph.seed_nodes, source_guid),
-         resolved when not is_nil(resolved) <- Map.get(graph.nodes, guid) do
-      resolved = Query.public_node(resolved)
-
-      seed
-      |> SeedNode.to_node()
-      |> Map.put(:guid, resolved.guid)
-      |> Map.put(:parent_guid, resolved.parent_guid)
+    with %Node{} = resolved <- graph.nodes |> Map.get(guid) |> Query.public_node(),
+         %Node{} = source <- Graph.source_node(graph, GUID.format(guid)) do
+      %{Query.public_node(source) | guid: resolved.guid, parent_guid: resolved.parent_guid}
     else
       _missing -> nil
     end
