@@ -27,7 +27,8 @@ defmodule Figler.Scene.Graph.Occurrence.Claims do
     %{
       target
       | properties: properties,
-        has_own_name: target.has_own_name or Map.has_key?(props, :name)
+        has_own_name: target.has_own_name or Map.has_key?(props, :name),
+        overridden: MapSet.union(target.overridden, MapSet.new(Map.keys(props)))
     }
   end
 
@@ -94,9 +95,13 @@ defmodule Figler.Scene.Graph.Occurrence.Claims do
       else: {[Map.fetch!(last, field) | kept], MapSet.put(seen, field)}
   end
 
-  # Legacy entries precede parameter entries, which may replace them per field.
-  # Unkeyed entries come first, then one entry per field in first-seen order.
-  defp consumption_entries(record) do
+  @doc """
+  A record's variable consumption entries. Legacy entries precede parameter
+  entries, which may replace them per field; unkeyed entries come first, then
+  one entry per field in first-seen order.
+  """
+  @spec consumption_entries(map()) :: [map()]
+  def consumption_entries(record) do
     legacy = get_in(record, [:variable_consumption_map, :entries]) || []
     parameters = get_in(record, [:parameter_consumption_map, :entries]) || []
 

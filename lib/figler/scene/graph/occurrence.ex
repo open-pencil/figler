@@ -32,7 +32,8 @@ defmodule Figler.Scene.Graph.Occurrence do
     layout_scale: 1.0,
     has_own_name: false,
     bound_fields: %{},
-    replaced_components: []
+    replaced_components: [],
+    overridden: MapSet.new()
   ]
 
   @type claim :: %{declared_by: GUID.t(), path: [GUID.t()], properties: map()}
@@ -54,7 +55,8 @@ defmodule Figler.Scene.Graph.Occurrence do
           layout_scale: number(),
           has_own_name: boolean(),
           bound_fields: %{atom() => non_neg_integer()},
-          replaced_components: [GUID.t()]
+          replaced_components: [GUID.t()],
+          overridden: MapSet.t(atom())
         }
 
   @shape %{children: &__MODULE__.children/1, instance?: &__MODULE__.instance?/1}

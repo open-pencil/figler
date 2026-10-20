@@ -7858,6 +7858,10 @@ kiwi_sparse_enum_decoder! {
     variants [
         0 "unknown";
         1 "variable";
+        2 "style_properties";
+        3 "style_properties_fill";
+        4 "style_properties_stroke";
+        5 "style_properties_effect";
     ] }
 
 kiwi_sparse_skip_message_descriptor_decoder! { 
@@ -8099,6 +8103,7 @@ kiwi_sparse_enum_decoder! {
         17 "negate";
         18 "is_truthy";
         19 "keyframe";
+        20 "compose_color";
     ] }
 
 kiwi_sparse_skip_message_descriptor_decoder! { 

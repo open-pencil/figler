@@ -13,6 +13,8 @@ defmodule Figler.Scene.Graph.Materialize do
   alias Figler.Scene.Graph.Occurrence.GUID, as: OccurrenceGUID
   alias Figler.Scene.Graph.Occurrence.Interpreter
   alias Figler.Scene.Graph.Occurrence.SourceIndex
+  alias Figler.Scene.Graph.Variables
+  alias Figler.Scene.Graph.Variables.Bindings
   alias Figler.Scene.Node
 
   defmodule Acc do
@@ -29,13 +31,21 @@ defmodule Figler.Scene.Graph.Materialize do
 
   @doc """
   Interprets every root of `index` and returns graph fields.
+
+  With `variables`, each layer's variable bindings are resolved in the modes it
+  and its ancestors set; without, records keep the values the file saved.
   """
-  @spec graph(SourceIndex.t()) :: map()
-  def graph(%SourceIndex{} = index) do
+  @spec graph(SourceIndex.t(), Variables.t() | nil) :: map()
+  def graph(%SourceIndex{} = index, variables \\ nil) do
+    context = %{index: index, variables: variables}
+
     acc =
       index
       |> root_ids()
-      |> Enum.reduce(%Acc{}, &put_root(&2, index, &1))
+      |> Enum.reduce(
+        %Acc{unresolved: [variable_diagnostics(variables)]},
+        &put_root(&2, context, &1)
+      )
 
     %{
       nodes: acc.nodes,
@@ -60,35 +70,58 @@ defmodule Figler.Scene.Graph.Materialize do
     |> Enum.sort()
   end
 
+  defp variable_diagnostics(nil), do: []
+  defp variable_diagnostics(variables), do: variables.diagnostics
+
   # A document holds pages, which are interpreted one by one.
-  defp put_root(acc, index, id) do
-    record = Map.fetch!(index.sources, id)
+  defp put_root(acc, context, id) do
+    record = Map.fetch!(context.index.sources, id)
     acc = %{acc | roots: [id | acc.roots]}
 
     if Map.get(record, :type) == :document do
       acc = put_node(acc, id, record, nil, nil)
+      modes = explicit_modes(record, context.variables)
 
-      index
+      context.index
       |> SourceIndex.children(id)
-      |> Enum.reduce(acc, &put_interpreted(&2, index, SourceIndex.id(&1), id))
+      |> Enum.reduce(acc, &put_interpreted(&2, context, SourceIndex.id(&1), id, modes))
     else
-      put_interpreted(acc, index, id, nil)
+      put_interpreted(acc, context, id, nil, %{})
     end
   end
 
-  defp put_interpreted(acc, index, id, parent) do
-    {occurrence, diagnostics} = Interpreter.interpret(index, id)
+  defp put_interpreted(acc, context, id, parent, modes) do
+    {occurrence, diagnostics} = Interpreter.interpret(context.index, id)
     acc = %{acc | unresolved: [diagnostics | acc.unresolved]}
-    put_occurrence(acc, occurrence, id, parent, nil)
+    put_occurrence(acc, context, occurrence, {id, parent, nil}, modes)
   end
 
-  defp put_occurrence(acc, %Occurrence{} = occurrence, guid, parent, owner) do
-    acc = put_node(acc, guid, occurrence.properties, parent, provenance(occurrence, guid, owner))
+  defp put_occurrence(acc, context, %Occurrence{} = occurrence, {guid, parent, owner}, modes) do
+    modes = Map.merge(modes, explicit_modes(occurrence.properties, context.variables))
+    record = resolved_record(occurrence, modes, context.variables)
+    acc = put_node(acc, guid, record, parent, provenance(occurrence, guid, owner))
     child_owner = if Occurrence.instance?(occurrence), do: guid, else: owner
 
     Enum.reduce(occurrence.children, acc, fn child, acc ->
-      put_occurrence(acc, child, child_guid(guid, occurrence, child), guid, child_owner)
+      place = {child_guid(guid, occurrence, child), guid, child_owner}
+      put_occurrence(acc, context, child, place, modes)
     end)
+  end
+
+  defp resolved_record(occurrence, _modes, nil), do: occurrence.properties
+
+  defp resolved_record(occurrence, modes, variables),
+    do: Bindings.apply(occurrence.properties, occurrence, modes, variables)
+
+  # The modes a layer sets explicitly, by collection.
+  defp explicit_modes(_record, nil), do: %{}
+
+  defp explicit_modes(record, variables) do
+    for entry <- List.wrap(get_in(record, [:variable_mode_by_set_map, :entries])),
+        collection = Variables.reference(variables, Map.get(entry, :variable_set_id)),
+        mode = OccurrenceGUID.key(Map.get(entry, :variable_mode_id)),
+        into: %{},
+        do: {collection, mode}
   end
 
   # Layers of an instance expansion, and everything below them, are clones.

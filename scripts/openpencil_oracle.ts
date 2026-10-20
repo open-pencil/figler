@@ -1,10 +1,14 @@
-// Dumps OpenPencil's interpreted page trees for a .fig file as JSON.
+// Dumps OpenPencil's page trees for a .fig file as JSON.
 //
-// OpenPencil's occurrence interpreter is the reference for how Figler resolves
-// instances. This script runs it from an OpenPencil checkout and prints a compact,
-// stable projection that `Figler.Scene.Graph.OpenPencilOracle` compares against.
+// OpenPencil's reader is the reference for how Figler resolves instances. This
+// script runs it from an OpenPencil checkout and prints a compact, stable
+// projection that `Figler.Scene.Graph.OpenPencilOracle` compares against.
 //
 //   bun scripts/openpencil_oracle.ts --openpencil ../open-pencil-app file.fig [--page 0:1]
+//
+// By default it dumps the occurrence interpreter's trees. With `--scene` it
+// materializes the document into OpenPencil's scene graph, which also resolves
+// variables, modes, and styles, and dumps the resolved values.
 //
 // The checkout must have its dependencies installed (`bun install`).
 
@@ -17,7 +21,8 @@ const { values, positionals } = parseArgs({
   options: {
     openpencil: { type: 'string', default: process.env.FIGLER_OPENPENCIL_DIR ?? '../open-pencil-app' },
     page: { type: 'string', multiple: true },
-    'max-depth': { type: 'string' }
+    'max-depth': { type: 'string' },
+    scene: { type: 'boolean', default: false }
   }
 })
 
@@ -81,6 +86,86 @@ function pathDiagnostic(d: any) {
 }
 
 const bytes = readFileSync(figPath)
+// OpenPencil's placement matrix, loaded with the scene modules.
+let localMatrix: (node: any) => number[] = () => []
+const buffer = () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+
+if (values.scene) {
+  const { materializeFigArchive } = await import(`${root}/packages/fig/src/document/materialize.ts`)
+  const { getNodeLocalMatrix } = await import(`${root}/packages/scene-graph/src/coordinate.ts`)
+  localMatrix = getNodeLocalMatrix
+  const { reader } = createArchiveDocumentReader(buffer())
+  const pageIds = new Set<string>(
+    reader.pages
+      .filter((page: { id: string; internalOnly: boolean }) =>
+        values.page ? values.page.includes(page.id) : !page.internalOnly
+      )
+      .map((page: { id: string }) => page.id)
+  )
+  const { graph } = materializeFigArchive(buffer(), {
+    ...options,
+    pageIds,
+    onUnsupportedVariableExpression: () => undefined,
+    onUnresolvedBinding: () => undefined
+  })
+  const scenePages = graph
+    .getNode(graph.rootId)
+    .childIds.map((id: string) => graph.getNode(id))
+    .filter((page: any) => pageIds.has(page.source?.id))
+    .map((page: any) => ({ id: page.source.id, name: page.name, tree: projectScene(graph, page, 0) }))
+  const json = JSON.stringify({ file: figPath, pages: scenePages, diagnostics })
+  // Exiting before a piped write drains truncates it.
+  await new Promise((done) => process.stdout.write(json, done))
+  process.exit(0)
+}
+
+function hex(value: number): string {
+  return Math.round(Math.min(1, Math.max(0, value)) * 255)
+    .toString(16)
+    .padStart(2, '0')
+}
+
+function paints(list: any[] | undefined): string[] {
+  return (list ?? [])
+    .filter((paint) => paint.visible !== false && paint.type === 'SOLID' && paint.color)
+    .map(({ color, opacity }) => {
+      const alpha = opacity === undefined || opacity === 1 ? '' : `@${Number(opacity.toFixed(3))}`
+      return `#${hex(color.r)}${hex(color.g)}${hex(color.b)}${hex(color.a ?? 1)}${alpha}`
+    })
+}
+
+function projectScene(graph: any, node: any, depth: number): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    source_id: node.source?.id ?? null,
+    type: node.type === 'COMPONENT' ? 'SYMBOL' : node.type,
+    name: node.name,
+    visible: node.visible
+  }
+  if (node.type !== 'CANVAS') {
+    out.size = [node.width, node.height]
+    // The placement as Figma's matrix translates it, so rotated layers compare too.
+    const matrix = localMatrix(node)
+    out.position = [matrix[2], matrix[5]]
+  }
+  if (node.opacity !== 1) out.opacity = node.opacity
+  if (node.type === 'TEXT') {
+    out.characters = node.text
+    out.font_size = node.fontSize
+  }
+  out.fills = paints(node.fills)
+  out.strokes = paints(node.strokes)
+  if (out.strokes.length) out.stroke_weight = node.strokeWeight
+  if (node.cornerRadius) out.corner_radius = node.cornerRadius
+  if (node.layoutMode && node.layoutMode !== 'NONE') {
+    out.item_spacing = node.itemSpacing
+    out.padding = [node.paddingTop, node.paddingRight, node.paddingBottom, node.paddingLeft]
+  }
+  const children = node.childIds.map((id: string) => graph.getNode(id)).filter(Boolean)
+  if (depth < maxDepth) out.children = children.map((child: any) => projectScene(graph, child, depth + 1))
+  else out.child_count = children.length
+  return out
+}
+
 const { reader } = createArchiveDocumentReader(
   bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
 )

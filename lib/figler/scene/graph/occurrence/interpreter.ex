@@ -108,6 +108,7 @@ defmodule Figler.Scene.Graph.Occurrence.Interpreter do
         binding_claims: record.claims,
         slot_content_id: record.slot_content,
         bound_fields: record.bound,
+        overridden: assigned_visibility(record.claims),
         replaced_components: if(subtree.base, do: root.replaced, else: [])
       })
 
@@ -190,6 +191,13 @@ defmodule Figler.Scene.Graph.Occurrence.Interpreter do
       _field ->
         record
     end
+  end
+
+  # Visibility an outer instance assigns counts as that instance's override.
+  defp assigned_visibility(claims) do
+    if Enum.any?(claims, &match?(%{field: :visible, origin: :assignment}, &1)),
+      do: MapSet.new([:visible]),
+      else: MapSet.new()
   end
 
   defp superseded_guid(%{guid_value: guid}) when guid != nil, do: [GUID.key(guid)]

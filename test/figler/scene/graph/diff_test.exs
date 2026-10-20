@@ -6,7 +6,7 @@ defmodule Figler.Scene.Graph.DiffTest do
   @fixture "test/fixtures/openpencil/variable-override-precedence.fig"
 
   setup_all do
-    {:ok, graph: @fixture |> File.read!() |> Figler.Scene.graph()}
+    {:ok, graph: @fixture |> File.read!() |> Figler.Scene.graph(resolve_variables: false)}
   end
 
   test "reports fields an instance's overrides changed in its subtree", %{graph: graph} do

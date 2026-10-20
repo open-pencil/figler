@@ -10,7 +10,8 @@ defmodule Figler.Scene.GraphTest do
   @instances "test/fixtures/openpencil/variable-override-precedence.fig"
 
   setup_all do
-    {:ok, instances: @instances |> File.read!() |> Scene.graph()}
+    # Instance expansion on its own: variable bindings would replace these texts.
+    {:ok, instances: @instances |> File.read!() |> Scene.graph(resolve_variables: false)}
   end
 
   test "graph public APIs expose effective scene data" do

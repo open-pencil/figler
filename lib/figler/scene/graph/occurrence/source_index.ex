@@ -20,10 +20,16 @@ defmodule Figler.Scene.Graph.Occurrence.SourceIndex do
   @doc """
   Indexes live records, prepared for interpretation. Removed records are
   dropped and duplicate GUIDs raise.
+
+  Pass `styles: false` to keep the values records saved instead of applying
+  the shared styles they reference.
   """
-  @spec new([source_record()]) :: t()
-  def new(records) do
-    live = records |> Enum.reject(&(Map.get(&1, :phase) == :removed)) |> Prepare.records()
+  @spec new([source_record()], keyword()) :: t()
+  def new(records, opts \\ []) do
+    live =
+      records
+      |> Enum.reject(&(Map.get(&1, :phase) == :removed))
+      |> Prepare.records(Keyword.get(opts, :styles, true))
 
     sources = Enum.reduce(live, %{}, &put_source/2)
 

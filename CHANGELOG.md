@@ -21,6 +21,14 @@
   `{:missing_slot_content, slot, content}`.
 - Building a graph from a `%Figler.Scene.Index{}` produces a projected graph
   with instances left unexpanded, since an index carries no override data.
+- Effective graphs resolve variables as OpenPencil does: collections and modes,
+  aliases, formulas, and composed colors, each layer resolving in the modes it
+  and its ancestors set. Bound numbers, paint colors, text, and visibility are
+  written into each layer's effective record; a text binding wins over an
+  instance's literal override, matching what Figma renders.
+- Shared fill, stroke, effect, grid, and text styles are applied to the layers
+  that reference them. `resolve_styles` now defaults to `:known`; pass `false`
+  to keep the values the file saved.
 
 ### Fixed
 
@@ -37,6 +45,10 @@
   native entrypoints, `Figler.Scene.graph/2`, and `Figler.decode_message/1`
   accept it.
 - `Figler.Scene.Graph.record/2` returns a node's effective `NodeChange` record.
+- The `figler.openpencil` task's `--scene` flag compares resolved paints, text,
+  and layout values against OpenPencil's materialized scene graph.
+- The vendored schema adds `ExpressionFunction.COMPOSE_COLOR` and the
+  `PasteAssetType` style values.
 - The `figler.openpencil` mix task and `Figler.Scene.Graph.OpenPencilOracle`
   diff effective graphs against OpenPencil's occurrence interpreter, run from
   an OpenPencil checkout through `scripts/openpencil_oracle.ts`.

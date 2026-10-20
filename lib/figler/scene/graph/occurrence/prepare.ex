@@ -8,17 +8,19 @@ defmodule Figler.Scene.Graph.Occurrence.Prepare do
   #     adapted to `componentPropRefs` and `initialValue`;
   #   * a property definition naming `parentPropDefId` is completed from the
   #     nearest ancestor that defines it. OpenPencil rejects a document whose
-  #     parent is missing; Figler keeps the definition as saved.
+  #     parent is missing; Figler keeps the definition as saved;
+  #   * a record, and each of its override records, takes the paints, effects,
+  #     layout grids, or text fields of the shared styles it references.
 
   alias Figler.Scene.Graph.Occurrence.GUID
 
   @bound_fields [:visible, :text_data, :overridden_symbol_id, :slot_content_id]
 
   @doc "Prepares live records for indexing."
-  @spec records([map()]) :: [map()]
-  def records(records) do
-    records = Enum.map(records, &normalize/1)
-    inherit_property_definitions(records)
+  @spec records([map()], boolean()) :: [map()]
+  def records(records, styles? \\ true) do
+    records = records |> Enum.map(&normalize/1) |> inherit_property_definitions()
+    if styles?, do: apply_styles(records), else: records
   end
 
   # Applies to a record, its override and derived records, and its text ranges.
@@ -165,5 +167,109 @@ defmodule Figler.Scene.Graph.Occurrence.Prepare do
         _many -> raise ArgumentError, "ambiguous parent property #{GUID.format(parent_id)}"
       end
     end)
+  end
+
+  @text_style_fields [:font_size, :font_name, :line_height, :letter_spacing, :text_case]
+
+  defp apply_styles(records) do
+    styles =
+      for %{style_type: type} = record <- records,
+          type != nil,
+          into: %{},
+          do: {GUID.key(record.guid), record}
+
+    if styles == %{} do
+      records
+    else
+      keys = style_keys(records)
+      Enum.map(records, &apply_style_refs(&1, styles, keys))
+    end
+  end
+
+  # Library styles are named by key, and by key and version.
+  defp style_keys(records) do
+    for %{key: key} = record <- records, is_binary(key), reduce: %{} do
+      keys ->
+        id = GUID.key(record.guid)
+        keys = Map.put(keys, key, id)
+        version = Map.get(record, :version)
+        if is_binary(version), do: Map.put(keys, "#{key}@#{version}", id), else: keys
+    end
+  end
+
+  defp apply_style_refs(record, styles, keys) do
+    record
+    |> style_field(
+      :style_id_for_fill,
+      :fill,
+      styles,
+      keys,
+      &Map.put(&1, :fill_paints, &2.fill_paints)
+    )
+    |> style_field(
+      :style_id_for_stroke_fill,
+      :fill,
+      styles,
+      keys,
+      &Map.put(&1, :stroke_paints, &2.fill_paints)
+    )
+    |> style_field(
+      :style_id_for_effect,
+      :effect,
+      styles,
+      keys,
+      &Map.put(&1, :effects, &2.effects)
+    )
+    |> style_field(
+      :style_id_for_grid,
+      :grid,
+      styles,
+      keys,
+      &Map.put(&1, :layout_grids, &2.layout_grids)
+    )
+    |> text_style(styles, keys)
+    |> update_list([:symbol_data, :symbol_overrides], &apply_style_refs(&1, styles, keys))
+  end
+
+  @style_sources %{fill: :fill_paints, effect: :effects, grid: :layout_grids}
+
+  defp style_field(record, field, style_type, styles, keys, put) do
+    case referenced_style(record, field, styles, keys) do
+      %{style_type: ^style_type} = style
+      when is_map_key(style, :erlang.map_get(style_type, @style_sources)) ->
+        put.(record, style)
+
+      _other ->
+        record
+    end
+  end
+
+  # A text style sets the fields it defines, and its decoration even when unset.
+  defp text_style(record, styles, keys) do
+    case referenced_style(record, :style_id_for_text, styles, keys) do
+      %{type: :text, style_type: :text} = style ->
+        record
+        |> Map.merge(Map.take(style, @text_style_fields))
+        |> Map.put(:text_decoration, Map.get(style, :text_decoration))
+        |> Map.reject(fn {field, value} -> field == :text_decoration and is_nil(value) end)
+
+      _other ->
+        record
+    end
+  end
+
+  defp referenced_style(record, field, styles, keys) do
+    case Map.get(record, field) do
+      %{guid: guid} when guid != nil ->
+        Map.get(styles, GUID.key(guid))
+
+      %{asset_ref: %{key: key} = asset} ->
+        version = Map.get(asset, :version)
+        id = (version && Map.get(keys, "#{key}@#{version}")) || Map.get(keys, key)
+        id && Map.get(styles, id)
+
+      _none ->
+        nil
+    end
   end
 end

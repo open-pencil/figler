@@ -26,6 +26,7 @@ defmodule Figler.Scene.Graph do
   alias Figler.Scene.Graph.Materialize
   alias Figler.Scene.Graph.Occurrence.SourceIndex
   alias Figler.Scene.Graph.Options
+  alias Figler.Scene.Graph.Variables
   alias Figler.Scene.Index
   alias Figler.Scene.Input
   alias Figler.Scene.Node
@@ -83,8 +84,11 @@ defmodule Figler.Scene.Graph do
     * `:focus` - one or more source GUIDs. Only their subtrees, ancestors, and
       the components they use are decoded and interpreted.
     * `:root` - alias for `:focus`, useful for resolving one subtree.
-    * `:resolve_variables` - `false`, `:known`, or `:preserve`. Defaults to `:known`.
-    * `:resolve_styles` - `false`, `:refs`, or `:known`. Defaults to `false`.
+    * `:resolve_variables` - `:known` resolves each layer's variable bindings
+      in the modes it uses; `false` or `:preserve` keeps the values the file
+      saved. Defaults to `:known`.
+    * `:resolve_styles` - `:known` applies the shared styles layers reference;
+      `false` or `:refs` keeps the values the file saved. Defaults to `:known`.
     * `:fields` - fields to project when building from an index.
   """
   @spec build(binary() | Scene.source() | Index.t() | reference() | t(), keyword()) :: t()
@@ -139,8 +143,13 @@ defmodule Figler.Scene.Graph do
   defp interpret(source, opts) do
     opts = normalize_options(opts)
     {decode_us, message} = :timer.tc(fn -> decode(source, opts) end)
-    {index_us, index} = :timer.tc(fn -> SourceIndex.new(message.node_changes) end)
-    {interpret_us, fields} = :timer.tc(fn -> Materialize.graph(index) end)
+    styles? = opts[:resolve_styles] == :known
+
+    {index_us, index} =
+      :timer.tc(fn -> SourceIndex.new(message.node_changes, styles: styles?) end)
+
+    variables = if opts[:resolve_variables] == :known, do: Variables.new(index.sources)
+    {interpret_us, fields} = :timer.tc(fn -> Materialize.graph(index, variables) end)
 
     attrs = [resource: nil, source: source, options: opts, sources: index.sources]
     graph = struct!(__MODULE__, Map.to_list(fields) ++ attrs)
@@ -394,7 +403,7 @@ defmodule Figler.Scene.Graph do
     |> normalize_focus()
     |> Keyword.delete(:root)
     |> Keyword.put_new(:resolve_variables, :known)
-    |> Keyword.put_new(:resolve_styles, false)
+    |> Keyword.put_new(:resolve_styles, :known)
   end
 
   defp normalize_focus(opts) do

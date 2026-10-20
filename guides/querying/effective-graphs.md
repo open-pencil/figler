@@ -117,7 +117,9 @@ graph =
   )
 ```
 
-Variable modes are `false`, `:known`, and `:preserve`. Style modes are `false`, `:refs`, and `:known`. Defaults favor known variable values while leaving style resolution disabled.
+With `:known`, the defaults, each layer's variable bindings resolve in the modes it and its ancestors set, falling back to each collection's default mode: bound numbers, paint colors, text, and visibility are written into the layer's values, and layers take the paints, effects, grids, and text fields of the shared styles they reference. `false` (or `:preserve` and `:refs`) keeps the values the file saved.
+
+A text binding wins over an instance's literal text override, as Figma renders it. Visibility an instance overrides keeps its own value.
 
 ## Profile a graph build
 

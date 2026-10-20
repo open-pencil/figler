@@ -6,6 +6,10 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
   prints each page's interpreted tree. This module builds the same projection
   from a Figler graph and reports field-level differences, aligning children by
   their saved order.
+
+  With `scene: true`, OpenPencil materializes the document into its scene
+  graph, which also resolves variables, modes, and styles, and the comparison
+  covers resolved paints, text, and layout values (see `project_scene/2`).
   """
 
   alias Figler.Scene.Graph
@@ -14,7 +18,8 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
   alias Figler.Scene.Graph.Occurrence.GUID, as: OccurrenceGUID
 
   @fields ["source_id", "type", "name", "visible", "main_component_id", "size", "position"] ++
-            ["opacity", "characters"]
+            ["opacity", "characters", "font_size", "fills", "strokes", "stroke_weight"] ++
+            ["corner_radius", "item_spacing", "padding"]
 
   @type diff :: %{path: String.t(), field: String.t(), openpencil: term(), figler: term()}
 
@@ -26,6 +31,8 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
     * `:openpencil` - OpenPencil checkout with installed dependencies. Defaults to
       `FIGLER_OPENPENCIL_DIR` or `../open-pencil-app`.
     * `:pages` - page GUID strings to read. Defaults to every visible page.
+    * `:scene` - dump OpenPencil's materialized scene graph instead of its
+      interpreted occurrence trees.
   """
   @spec expected!(Path.t(), keyword()) :: map()
   def expected!(fig_path, opts \\ []) do
@@ -36,7 +43,8 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
 
     pages = Enum.flat_map(Keyword.get(opts, :pages, []), &["--page", &1])
     script = Path.expand("../../../../scripts/openpencil_oracle.ts", __DIR__)
-    args = [script, "--openpencil", openpencil, fig_path] ++ pages
+    scene = if Keyword.get(opts, :scene, false), do: ["--scene"], else: []
+    args = [script, "--openpencil", openpencil, fig_path] ++ pages ++ scene
 
     case System.cmd("bun", args, stderr_to_stdout: false) do
       {output, 0} -> JSON.decode!(output)
@@ -89,6 +97,144 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
       "main_component_id" => main_component_id(graph, type, node.guid),
       "children" => graph |> Figler.Scene.children(node.guid) |> Enum.map(&project(graph, &1))
     }
+  end
+
+  @doc """
+  Compares every page of OpenPencil's materialized scene against `graph`.
+  """
+  @spec compare_scene(Graph.t(), map()) :: %{pages: [map()], diffs: [diff()], by_field: map()}
+  def compare_scene(%Graph{} = graph, expected) do
+    compare_projected(expected, fn page ->
+      project_scene(graph, Map.fetch!(graph.nodes, GUID.parse!(page)))
+    end)
+  end
+
+  @doc """
+  Projects a graph node's resolved values into the scene oracle's shape.
+
+  OpenPencil's scene graph keeps source identity on layers built from source
+  records but not on components, instances, or anything inside them, which
+  pair by position.
+  Defaults follow OpenPencil's record conversion.
+  """
+  @spec project_scene(Graph.t(), Figler.Scene.Node.t()) :: map()
+  def project_scene(%Graph{} = graph, node, expanded? \\ false) do
+    record = Map.get(graph.records, node.guid, %{})
+    type = scene_type(record)
+    strokes = paints(Map.get(record, :stroke_paints))
+    expanded? = expanded? or type in ["INSTANCE", "SYMBOL"]
+
+    %{
+      "source_id" => if(expanded?, do: nil, else: GUID.format(node.guid)),
+      "type" => type,
+      "name" => Map.get(record, :name),
+      "visible" => Map.get(record, :visible, true),
+      "opacity" => if(Map.get(record, :opacity, 1) not in [1, 1.0], do: record.opacity),
+      "fills" => paints(Map.get(record, :fill_paints)),
+      "strokes" => strokes,
+      "stroke_weight" => if(strokes != [], do: Map.get(record, :stroke_weight, 1)),
+      "corner_radius" => nonzero(Map.get(record, :corner_radius)),
+      "children" =>
+        graph.children
+        |> Map.get(node.guid, [])
+        |> Enum.map(&project_scene(graph, Map.fetch!(graph.nodes, &1), expanded?))
+    }
+    |> Map.merge(scene_geometry(type, record))
+    |> Map.merge(scene_text(type, record))
+    |> Map.merge(scene_layout(record))
+  end
+
+  # OpenPencil's node types: a frame with variant properties is a component set,
+  # and one that resizes to fit its children without auto layout is a group.
+  defp scene_type(%{type: :frame} = record) do
+    cond do
+      Enum.any?(
+        List.wrap(Map.get(record, :component_prop_defs)),
+        &(Map.get(&1, :type) == :variant)
+      ) ->
+        "COMPONENT_SET"
+
+      Map.get(record, :resize_to_fit) == true and Map.get(record, :stack_mode) in [nil, :none] ->
+        "GROUP"
+
+      true ->
+        "FRAME"
+    end
+  end
+
+  defp scene_type(%{type: :regular_polygon}), do: "POLYGON"
+  defp scene_type(%{type: :text_path}), do: "TEXT"
+  defp scene_type(record), do: record |> Map.get(:type) |> to_string() |> String.upcase()
+
+  defp scene_geometry("CANVAS", _record), do: %{}
+
+  defp scene_geometry(_type, record) do
+    size = Map.get(record, :size) || %{x: 0, y: 0}
+    transform = Map.get(record, :transform) || %{m02: 0, m12: 0}
+    %{"size" => [size.x, size.y], "position" => [transform.m02, transform.m12]}
+  end
+
+  defp scene_text("TEXT", record) do
+    %{
+      "characters" => get_in(record, [:text_data, :characters]) || "",
+      "font_size" => Map.get(record, :font_size, 14)
+    }
+  end
+
+  defp scene_text(_type, _record), do: %{}
+
+  # OpenPencil lays out horizontal and vertical stacks; grids read as no layout.
+  defp scene_layout(%{stack_mode: mode} = record) when mode in [:horizontal, :vertical] do
+    base = Map.get(record, :stack_padding, 0)
+
+    %{
+      "item_spacing" => Map.get(record, :stack_spacing, 0),
+      "padding" => [
+        Map.get(record, :stack_vertical_padding, base),
+        Map.get(record, :stack_padding_right, base),
+        Map.get(record, :stack_padding_bottom, base),
+        Map.get(record, :stack_horizontal_padding, base)
+      ]
+    }
+  end
+
+  defp scene_layout(_record), do: %{}
+
+  defp nonzero(value) when value in [nil, 0, 0.0], do: nil
+  defp nonzero(value), do: value
+
+  # Visible solid paints as `#rrggbbaa`, with `@opacity` when not opaque.
+  defp paints(paints) do
+    for %{type: :solid, color: color} = paint <- List.wrap(paints),
+        Map.get(paint, :visible, true) != false do
+      alpha =
+        case Map.get(paint, :opacity) do
+          opacity when opacity in [nil, 1, 1.0] -> ""
+          opacity -> "@#{format_number(opacity)}"
+        end
+
+      "#" <> hex(color.r) <> hex(color.g) <> hex(color.b) <> hex(Map.get(color, :a, 1)) <> alpha
+    end
+  end
+
+  defp hex(value) do
+    value
+    |> max(0)
+    |> min(1)
+    |> Kernel.*(255)
+    |> round()
+    |> Integer.to_string(16)
+    |> String.downcase()
+    |> String.pad_leading(2, "0")
+  end
+
+  # Matches JavaScript's `Number(x.toFixed(3))` rendering.
+  defp format_number(value) do
+    rounded = Float.round(value * 1.0, 3)
+
+    if rounded == trunc(rounded),
+      do: Integer.to_string(trunc(rounded)),
+      else: Float.to_string(rounded)
   end
 
   @doc """
@@ -205,7 +351,11 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
     do: %{path: path, field: field, openpencil: expected, figler: actual}
 
   defp equal?(same, same), do: true
-  defp equal?([a, b], [c, d]), do: equal?(a, c) and equal?(b, d)
+
+  defp equal?(left, right)
+       when is_list(left) and is_list(right) and length(left) == length(right),
+       do: left |> Enum.zip(right) |> Enum.all?(fn {a, b} -> equal?(a, b) end)
+
   defp equal?(a, b) when is_number(a) and is_number(b), do: abs(a - b) <= 0.01
   defp equal?(_a, _b), do: false
 end

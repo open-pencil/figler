@@ -5,12 +5,16 @@ defmodule Mix.Tasks.Figler.Openpencil do
       mix figler.openpencil file.fig [file.fig ...]
       mix figler.openpencil file.fig --page 0:1 --show 40
       mix figler.openpencil file.fig --openpencil ../open-pencil-app --json
+      mix figler.openpencil file.fig --scene
 
   Runs `scripts/openpencil_oracle.ts` with `bun` against an OpenPencil checkout
   (`--openpencil`, `FIGLER_OPENPENCIL_DIR`, or `../open-pencil-app`) that has its
   dependencies installed, then diffs each page's interpreted tree against
   `Figler.Scene.graph/2`. Prints diff counts by field and the first `--show`
   differences (default 20), or the full result with `--json`.
+
+  `--scene` compares resolved values (paints, text, layout) against OpenPencil's
+  materialized scene graph instead of its interpreted occurrence trees.
   """
 
   use Mix.Task
@@ -26,7 +30,13 @@ defmodule Mix.Tasks.Figler.Openpencil do
 
     {opts, files, invalid} =
       OptionParser.parse(args,
-        strict: [openpencil: :string, page: :keep, show: :integer, json: :boolean]
+        strict: [
+          openpencil: :string,
+          page: :keep,
+          show: :integer,
+          json: :boolean,
+          scene: :boolean
+        ]
       )
 
     if invalid != [] or files == [] do
@@ -34,7 +44,7 @@ defmodule Mix.Tasks.Figler.Openpencil do
     end
 
     oracle_opts =
-      [pages: Keyword.get_values(opts, :page)]
+      [pages: Keyword.get_values(opts, :page), scene: Keyword.get(opts, :scene, false)]
       |> put_present(:openpencil, opts[:openpencil])
 
     results = Enum.map(files, &compare(&1, oracle_opts))
@@ -48,8 +58,14 @@ defmodule Mix.Tasks.Figler.Openpencil do
 
   defp compare(file, oracle_opts) do
     expected = OpenPencilOracle.expected!(file, oracle_opts)
-    graph = file |> File.read!() |> Figler.Scene.graph()
-    result = OpenPencilOracle.compare(graph, expected)
+    # Interpreted trees precede variable resolution, which only the scene resolves.
+    graph_opts = if oracle_opts[:scene], do: [], else: [resolve_variables: false]
+    graph = file |> File.read!() |> Figler.Scene.graph(graph_opts)
+
+    result =
+      if oracle_opts[:scene],
+        do: OpenPencilOracle.compare_scene(graph, expected),
+        else: OpenPencilOracle.compare(graph, expected)
 
     %{
       file: file,
