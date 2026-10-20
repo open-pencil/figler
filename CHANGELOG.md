@@ -14,6 +14,9 @@
 - `Figler.Scene.source!/1` returns a payload together with its embedded schema;
   native entrypoints, `Figler.Scene.graph/2`, and `Figler.decode_message/1`
   accept it.
+- `mix figler.openpencil` and `Figler.Scene.Graph.OpenPencilOracle` diff
+  effective graphs against OpenPencil's occurrence interpreter, run from an
+  OpenPencil checkout through `scripts/openpencil_oracle.ts`.
 
 ## 0.1.0-beta.1 - 2026-07-22
 
