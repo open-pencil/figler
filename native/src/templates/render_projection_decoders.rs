@@ -23,7 +23,7 @@ fn render_vector_data_from_decoder<'a>(
                     skip_node_change_from_decoder(decoder)?;
                 }
             }
-            _field => return Err(rustler::Error::BadArg),
+            field => kiwi_unknown_field(decoder, "VectorData", field)?,
         }
     }
 
@@ -307,6 +307,7 @@ fn document_metadata_from_decoder<'a>(
 fn render_projection_nodes_from_slices<'a>(
     env: Env<'a>,
     bytes: &[u8],
+    schema: Option<&KiwiRuntimeSchema>,
     metas: &[GraphFocusMeta],
     wanted: Option<&std::collections::HashSet<GraphFocusGuid>>,
 ) -> NifResult<Term<'a>> {
@@ -319,7 +320,7 @@ fn render_projection_nodes_from_slices<'a>(
         };
 
         if keep {
-            let mut decoder = Decoder::new(&bytes[meta.byte_start..meta.byte_end]);
+            let mut decoder = Decoder::with_schema(&bytes[meta.byte_start..meta.byte_end], schema);
             records.push(render_projection_node_from_decoder(env, &mut decoder)?);
             decoder.finish()?;
         }

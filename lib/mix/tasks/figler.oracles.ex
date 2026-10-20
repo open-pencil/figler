@@ -74,7 +74,7 @@ defmodule Mix.Tasks.Figler.Oracles do
   defp run_manifest(manifest) do
     base_dir = Path.dirname(manifest)
     fixture = fixture_for!(base_dir)
-    payload = fixture |> File.read!() |> Scene.payload!()
+    payload = fixture |> File.read!() |> Scene.source!()
 
     results = Enum.map(Oracle.entries!(manifest), &Oracle.run(payload, base_dir, &1))
 

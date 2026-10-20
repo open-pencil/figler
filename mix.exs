@@ -176,11 +176,11 @@ defmodule Figler.MixProject do
   end
 
   defp kiwi_codec_dep do
-    {:kiwi_codec, "~> 0.3.1"}
+    {:kiwi_codec, path: "../kiwi_codec", override: true}
   end
 
   defp rustq_dep do
-    {:rustq, "~> 1.0.0-rc.3", only: [:dev, :test], runtime: false}
+    {:rustq, "~> 1.0.0-rc.11", only: [:dev, :test], runtime: false}
   end
 
   defp json_codec_dep do

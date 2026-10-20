@@ -45,6 +45,7 @@ fn graph_seed_repeated_terms<'a>(
 
 fn graph_seed_skip_entries_message(
     decoder: &mut Decoder<'_>,
+    definition: &str,
     skip_entry: fn(&mut Decoder<'_>) -> NifResult<()>,
 ) -> NifResult<bool> {
     let mut has_entries = false;
@@ -59,7 +60,7 @@ fn graph_seed_skip_entries_message(
                     skip_entry(decoder)?;
                 }
             }
-            _field => return Err(Error::BadArg),
+            field => kiwi_unknown_field(decoder, definition, field)?,
         }
     }
 
@@ -269,6 +270,7 @@ fn graph_seed_node_record<'a>(
                 } else {
                     retain_clone_seed = graph_seed_skip_entries_message(
                         decoder,
+                        "VariableDataMap",
                         skip_variable_data_map_entry_from_decoder,
                     )? || retain_clone_seed;
                 }
@@ -279,6 +281,7 @@ fn graph_seed_node_record<'a>(
                 } else {
                     retain_clone_seed = graph_seed_skip_entries_message(
                         decoder,
+                        "VariableDataValues",
                         skip_variable_data_values_entry_from_decoder,
                     )? || retain_clone_seed;
                 }

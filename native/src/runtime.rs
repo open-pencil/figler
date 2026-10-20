@@ -1,14 +1,39 @@
-use rustler::{Encoder, Env, Error, NifResult, Term};
+use rustler::{Binary, Encoder, Env, Error, NifResult, Term};
+
+use crate::KiwiRuntimeSchema;
 
 pub struct Decoder<'a> {
     data: &'a [u8],
     index: usize,
+    runtime_schema: Option<&'a KiwiRuntimeSchema>,
+}
+
+/// Reads the schema a file was written with, so decoders can skip fields it adds.
+/// An empty binary means the data came without one.
+pub fn runtime_schema(schema: &Binary<'_>) -> NifResult<Option<KiwiRuntimeSchema>> {
+    if schema.is_empty() {
+        Ok(None)
+    } else {
+        KiwiRuntimeSchema::decode(schema.as_slice()).map(Some)
+    }
 }
 
 #[allow(dead_code)]
 impl<'a> Decoder<'a> {
     pub fn new(data: &'a [u8]) -> Self {
-        Self { data, index: 0 }
+        Self::with_schema(data, None)
+    }
+
+    pub fn with_schema(data: &'a [u8], runtime_schema: Option<&'a KiwiRuntimeSchema>) -> Self {
+        Self {
+            data,
+            index: 0,
+            runtime_schema,
+        }
+    }
+
+    pub fn runtime_schema(&self) -> Option<&'a KiwiRuntimeSchema> {
+        self.runtime_schema
     }
 
     pub fn position(&self) -> usize {

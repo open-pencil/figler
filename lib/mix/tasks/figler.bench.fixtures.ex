@@ -55,7 +55,7 @@ defmodule Mix.Tasks.Figler.Bench.Fixtures do
 
     Enum.each(fixtures, fn path ->
       {read_us, fig_binary} = timed(fn -> File.read!(path) end)
-      {payload_us, payload} = timed(fn -> Figler.Scene.payload!(fig_binary) end)
+      {payload_us, payload} = timed(fn -> Figler.Scene.source!(fig_binary) end)
 
       full_decode =
         maybe_benchmark(

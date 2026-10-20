@@ -29,14 +29,12 @@ defmodule Figler.Codegen.Native.Scene do
       scene_message_skip_field_decoder:
         FieldSkip.decoder(definition_map, %FieldSkip.Decoder{
           definition: "Message",
-          function: :skip_fig_message_field,
-          error_name: "scene summary"
+          function: :skip_fig_message_field
         }),
       scene_node_skip_field_decoder:
         FieldSkip.decoder(definition_map, %FieldSkip.Decoder{
           definition: "NodeChange",
-          function: :skip_fig_node_change_field,
-          error_name: "scene node"
+          function: :skip_fig_node_change_field
         }),
       scene_text_data_skip_arms:
         definition_map

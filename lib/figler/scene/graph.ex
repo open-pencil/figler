@@ -25,6 +25,7 @@ defmodule Figler.Scene.Graph do
   alias Figler.Scene.Graph.Options
   alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Index
+  alias Figler.Scene.Input
   alias Figler.Scene.Node
   alias Figler.Scene.Query
   alias Figler.Scene.Summary
@@ -59,7 +60,7 @@ defmodule Figler.Scene.Graph do
   """
   @opaque t :: %__MODULE__{
             resource: reference() | nil,
-            source: Index.t() | binary() | nil,
+            source: Index.t() | Input.source() | nil,
             mode: :projected | :resolved,
             stages: [atom()],
             projection_stages: :all | [atom()],
@@ -107,7 +108,7 @@ defmodule Figler.Scene.Graph do
     * `:resolve_styles` - `false`, `:refs`, or `:known`. Defaults to `false`.
     * `:fields` - optional projected fields hint for future graph materialization.
   """
-  @spec build(binary() | Index.t() | reference() | t(), keyword()) :: t()
+  @spec build(binary() | Input.source() | Index.t() | reference() | t(), keyword()) :: t()
   def build(input, opts \\ [])
 
   def build(%__MODULE__{} = graph, opts) when is_list(opts) do
@@ -129,25 +130,31 @@ defmodule Figler.Scene.Graph do
     Error.protect(:graph, fn -> build_from_seed(index, resource, opts) end)
   end
 
+  def build({payload, schema} = source, opts)
+      when is_binary(payload) and is_binary(schema) and is_list(opts) do
+    Options.validate_build!(opts)
+    Error.protect(:graph, fn -> build_from_source(source, opts) end)
+  end
+
   def build(binary, opts) when is_binary(binary) and is_list(opts) do
     Options.validate_build!(opts)
-
-    Error.protect(:graph, fn ->
-      payload = Scene.payload!(binary)
-      opts = maybe_pre_focused_opts(opts)
-
-      if focused?(opts) do
-        seed_nodes = seed_nodes_from_payload(payload, opts)
-        build_focused_from_seed(payload, opts, seed_nodes)
-      else
-        build_with_native_records(payload, opts)
-      end
-    end)
+    Error.protect(:graph, fn -> binary |> Input.source!() |> build_from_source(opts) end)
   end
 
   def build(resource, opts) when is_reference(resource) and is_list(opts) do
     Options.validate_build!(opts)
     Error.protect(:graph, fn -> build_from_seed(nil, resource, opts) end)
+  end
+
+  defp build_from_source(source, opts) do
+    opts = maybe_pre_focused_opts(opts)
+
+    if focused?(opts) do
+      seed_nodes = seed_nodes_from_payload(source, opts)
+      build_focused_from_seed(source, opts, seed_nodes)
+    else
+      build_with_native_records(source, opts)
+    end
   end
 
   @doc """
@@ -156,7 +163,7 @@ defmodule Figler.Scene.Graph do
   Returns the final graph, total build time, initial seed/materialization time,
   and per-stage timings. Options are the same as `build/2`.
   """
-  @spec profile(binary() | Index.t() | reference() | t(), keyword()) :: map()
+  @spec profile(binary() | Input.source() | Index.t() | reference() | t(), keyword()) :: map()
   def profile(input, opts \\ []) when is_list(opts) do
     Options.validate_build!(opts)
     selected_stages = stages(opts)
@@ -208,7 +215,7 @@ defmodule Figler.Scene.Graph do
 
     Error.protect(:graph_seed_nodes, fn ->
       binary
-      |> Scene.payload!()
+      |> Input.source!()
       |> seed_nodes_from_payload(opts)
     end)
   end
@@ -427,6 +434,7 @@ defmodule Figler.Scene.Graph do
       native_seed_nodes(payload, opts)
     else
       payload
+      |> Input.to_source()
       |> Figler.decode_message()
       |> SeedNode.from_message(opts)
     end

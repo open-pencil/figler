@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Fixed
+
+- Read files saved by current Figma releases. Their embedded schema adds message
+  fields Figler's vendored schema lacks, and every decoder used to reject them
+  as an invalid document. Native and Elixir decoders now skip such fields using
+  the schema embedded in the file.
+
+### Added
+
+- `Figler.Scene.source!/1` returns a payload together with its embedded schema;
+  native entrypoints, `Figler.Scene.graph/2`, and `Figler.decode_message/1`
+  accept it.
+
 ## 0.1.0-beta.1 - 2026-07-22
 
 ### Added

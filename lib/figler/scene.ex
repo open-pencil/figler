@@ -34,7 +34,7 @@ defmodule Figler.Scene do
   @spec summary(binary()) :: Summary.t()
   def summary(binary) when is_binary(binary) do
     binary
-    |> payload!()
+    |> Input.source!()
     |> NativeScene.decode_summary()
     |> Summary.from_map()
   end
@@ -46,7 +46,7 @@ defmodule Figler.Scene do
   """
   @spec index(binary()) :: Index.t()
   def index(binary) when is_binary(binary) do
-    resource = binary |> payload!() |> NativeScene.build_index()
+    resource = binary |> Input.source!() |> NativeScene.build_index()
     %Index{resource: resource}
   end
 
@@ -83,11 +83,11 @@ defmodule Figler.Scene do
   def query(binary, xpath, opts) when is_binary(binary) and is_binary(xpath) and is_list(opts) do
     Options.validate_query!(opts)
     fields = Query.query_fields(opts)
-    payload = payload!(binary)
+    source = Input.source!(binary)
 
     case fields do
-      :all -> NativeScene.query_xpath(payload, xpath)
-      fields -> NativeScene.query_xpath_fields(payload, xpath, fields)
+      :all -> NativeScene.query_xpath(source, xpath)
+      fields -> NativeScene.query_xpath_fields(source, xpath, fields)
     end
     |> Query.nodes_from_maps()
   end
@@ -469,6 +469,16 @@ defmodule Figler.Scene do
   """
   @spec payload!(binary()) :: binary()
   defdelegate payload!(binary), to: Input
+
+  @doc """
+  Extracts the raw Figma Kiwi `Message` binary and the schema it was written
+  with from any supported scene input.
+
+  Pass the result to `graph/2` instead of a payload when decoding repeatedly,
+  so fields added by newer Figma versions can still be skipped.
+  """
+  @spec source!(binary()) :: Input.source()
+  defdelegate source!(binary), to: Input
 
   defp parse_guid!(operation, guid) do
     GUID.parse(guid) || raise Error.invalid_guid(operation, guid)

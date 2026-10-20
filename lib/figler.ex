@@ -13,7 +13,9 @@ defmodule Figler do
   alias Figler.Document
   alias Figler.Error
   alias Figler.Native.CodecNifs
+  alias Figler.Scene.Input
   alias Figler.Schema.Message
+  alias KiwiCodec.Schema.Binary, as: SchemaBinary
 
   @schema_path :figler |> :code.priv_dir() |> Path.join("schema/fig.kiwi")
   @external_resource @schema_path
@@ -88,12 +90,24 @@ defmodule Figler do
   end
 
   @doc """
-  Decodes a Figma `Message` payload into generated schema structs.
+  Decodes a Figma `Message` into generated schema structs.
+
+  Accepts a `.fig` archive, a `fig-kiwi` container, a raw `Message` payload, or
+  a `t:Figler.Scene.Input.source/0`. Fields that newer Figma versions add are
+  skipped using the schema embedded in the file.
   """
-  @spec decode_message(binary()) :: Figler.Schema.Message.t()
-  def decode_message(binary) when is_binary(binary) do
-    Error.protect(:decode_message, fn -> KiwiCodec.decode(binary, Figler.Schema.Message) end)
+  @spec decode_message(binary() | Input.source()) :: Message.t()
+  def decode_message(input) when is_binary(input) or is_tuple(input) do
+    Error.protect(:decode_message, fn ->
+      {payload, schema} =
+        if is_tuple(input), do: input, else: Input.source!(input)
+
+      KiwiCodec.decode(payload, Message, written_schema(schema))
+    end)
   end
+
+  defp written_schema(<<>>), do: []
+  defp written_schema(schema), do: [schema: SchemaBinary.decode(schema)]
 
   @doc """
   Decodes a Figma `Message` payload into sparse schema-backed maps.
@@ -103,7 +117,9 @@ defmodule Figler do
   """
   @spec decode_sparse_message(binary()) :: map()
   def decode_sparse_message(binary) when is_binary(binary) do
-    Error.protect(:decode_sparse_message, fn -> CodecNifs.decode_sparse_message(binary) end)
+    Error.protect(:decode_sparse_message, fn ->
+      binary |> Input.source!() |> CodecNifs.decode_sparse_message()
+    end)
   end
 
   @doc """

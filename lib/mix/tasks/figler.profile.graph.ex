@@ -48,7 +48,7 @@ defmodule Mix.Tasks.Figler.Profile.Graph do
     until_stage = option(opts, :until, "FIGLER_PROFILE_UNTIL") || "stack_layout"
 
     {payload_us, payload} =
-      :timer.tc(fn -> fixture |> File.read!() |> Scene.payload!() end)
+      :timer.tc(fn -> fixture |> File.read!() |> Scene.source!() end)
 
     profile_opts = [root: roots, until: stage_atom(until_stage)]
     profile = Graph.profile(payload, profile_opts)

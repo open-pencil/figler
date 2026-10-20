@@ -4,8 +4,9 @@ defmodule Figler.Mix.KiwiCodegen do
   def load! do
     unless Code.ensure_loaded?(KiwiCodec.RustlerGenerator) do
       files =
-        Mix.Project.deps_path()
-        |> Path.join("kiwi_codec/codegen/**/*.ex")
+        Mix.Project.deps_paths()
+        |> Map.fetch!(:kiwi_codec)
+        |> Path.join("codegen/**/*.ex")
         |> Path.wildcard()
 
       case Kernel.ParallelCompiler.compile(files, return_diagnostics: true) do

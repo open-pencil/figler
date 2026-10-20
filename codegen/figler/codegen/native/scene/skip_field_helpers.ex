@@ -3,7 +3,10 @@ Figler.Mix.KiwiCodegen.load!()
 defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
   use RustQ.Meta,
     rust_sources: ["native/src/templates/kiwi_skip_helpers.rs"],
-    callable_modules: [KiwiCodec.RustlerGenerator.SkipValueHelpers]
+    callable_modules: [
+      KiwiCodec.RustlerGenerator.SkipValueHelpers,
+      KiwiCodec.RustlerGenerator.UnknownFields
+    ]
 
   @moduledoc """
   RustQ-authored scene skip-field descriptor helpers.
@@ -74,16 +77,15 @@ defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
           R.str(),
           R.slice(R.path(:FigSceneSkipField))
         ) :: R.nif_result(R.unit())
-  defrust fig_scene_skip_field(decoder, field_id, _definition_name, fields) do
+  defrust fig_scene_skip_field(decoder, field_id, definition_name, fields) do
     case fields.binary_search_by_key(field_id, fn field -> field.id end) do
       {:ok, index} ->
         field = fields.get(index).unwrap()
         kind = kiwi_skip_descriptor_kind(field.repeated, field.bytes, field.skip)
         kiwi_skip_kind(decoder, kind)
-        :ok
 
       {:error, _index} ->
-        {:error, badarg()}
+        kiwi_unknown_field(decoder, definition_name, field_id)
     end
   end
 end

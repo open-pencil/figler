@@ -27,6 +27,17 @@ defmodule Figler.Container do
   end
 
   @doc """
+  Parses a `fig-kiwi` container and inflates its data chunk and binary schema.
+
+  The schema is returned in Kiwi's binary format, as native decoders read it.
+  """
+  @spec source(binary()) :: {data :: binary(), schema :: binary()}
+  def source(binary) when is_binary(binary) do
+    %{chunks: [schema_chunk, data_chunk | _rest]} = parse(binary)
+    {inflate(data_chunk), inflate(schema_chunk)}
+  end
+
+  @doc """
   Parses a `fig-kiwi` container and inflates only its data chunk.
   """
   @spec data(binary()) :: binary()

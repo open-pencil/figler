@@ -21,12 +21,7 @@ struct GraphFocusSymbolData {
 fn graph_focus_skip_symbol_data_field(decoder: &mut Decoder<'_>, field: u32) -> NifResult<()> {
     match field {
         __rq_symbol_skip_field_arms => unreachable!(),
-        field => {
-            return Err(Error::Term(Box::new(format!(
-                "unknown field {} while indexing SymbolData",
-                field
-            ))));
-        }
+        field => kiwi_unknown_field(decoder, "SymbolData", field)?,
     }
     Ok(())
 }
@@ -37,12 +32,7 @@ fn graph_focus_skip_component_prop_assignment_field(
 ) -> NifResult<()> {
     match field {
         __rq_prop_assignment_skip_field_arms => unreachable!(),
-        field => {
-            return Err(Error::Term(Box::new(format!(
-                "unknown field {} while indexing ComponentPropAssignment",
-                field
-            ))));
-        }
+        field => kiwi_unknown_field(decoder, "ComponentPropAssignment", field)?,
     }
     Ok(())
 }
@@ -53,12 +43,7 @@ fn graph_focus_skip_component_prop_value_field(
 ) -> NifResult<()> {
     match field {
         __rq_prop_value_skip_field_arms => unreachable!(),
-        field => {
-            return Err(Error::Term(Box::new(format!(
-                "unknown field {} while indexing ComponentPropValue",
-                field
-            ))));
-        }
+        field => kiwi_unknown_field(decoder, "ComponentPropValue", field)?,
     }
     Ok(())
 }
@@ -289,6 +274,7 @@ fn graph_focus_wanted(
 fn graph_focus_sparse_message_from_slices<'a>(
     env: Env<'a>,
     bytes: &[u8],
+    schema: Option<&KiwiRuntimeSchema>,
     metas: &[GraphFocusMeta],
     wanted: &std::collections::HashSet<GraphFocusGuid>,
 ) -> NifResult<Term<'a>> {
@@ -302,7 +288,7 @@ fn graph_focus_sparse_message_from_slices<'a>(
             .map(|guid| wanted.contains(&guid))
             .unwrap_or(false);
         if keep {
-            let mut decoder = Decoder::new(&bytes[meta.byte_start..meta.byte_end]);
+            let mut decoder = Decoder::with_schema(&bytes[meta.byte_start..meta.byte_end], schema);
             node_changes.push(decode_sparse_node_change_from_decoder(env, &mut decoder)?);
             decoder.finish()?;
         }

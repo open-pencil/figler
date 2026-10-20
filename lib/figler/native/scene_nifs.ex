@@ -2,12 +2,15 @@ defmodule Figler.Native.SceneNifs do
   @moduledoc """
   Thin Elixir wrapper around native scene index and query entrypoints.
 
+  Entrypoints that decode take a payload binary or a `t:Figler.Scene.Input.source/0`.
+
   `Figler.Scene` builds on these delegates to normalize inputs and project
   native maps into documented scene structs.
   """
 
   alias Figler.Error
   alias Figler.Native.Module
+  alias Figler.Scene.Input
 
   @operations %{
     decode_summary: :summary,
@@ -67,9 +70,25 @@ defmodule Figler.Native.SceneNifs do
     args = Enum.map(arg_names, &Macro.var(&1, nil))
     operation = Map.fetch!(@operations, name)
 
+    nif_args =
+      Enum.flat_map(arg_names, fn
+        :binary -> [Macro.var(:payload, nil), Macro.var(:schema, nil)]
+        arg -> [Macro.var(arg, nil)]
+      end)
+
+    source =
+      if :binary in arg_names do
+        quote do
+          {unquote(Macro.var(:payload, nil)), unquote(Macro.var(:schema, nil))} =
+            Input.to_source(unquote(Macro.var(:binary, nil)))
+        end
+      end
+
     def unquote(name)(unquote_splicing(args)) do
+      unquote(source)
+
       Error.protect(unquote(operation), fn ->
-        Module.unquote(nif_name)(unquote_splicing(args))
+        Module.unquote(nif_name)(unquote_splicing(nif_args))
       end)
     end
   end

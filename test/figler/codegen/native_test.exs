@@ -69,7 +69,7 @@ defmodule Figler.Codegen.NativeTest do
 
     assert skip_source =~ "kiwi_skip_kind(decoder, &matched_field.kind)?;"
     refute skip_source =~ "kiwi_skip_kind(decoder, matched_field.kind)?;"
-    assert scene_source =~ "kiwi_skip_kind(decoder, &kind)?;"
+    assert scene_source =~ "kiwi_skip_kind(decoder, &kind)"
     refute scene_source =~ "kiwi_skip_kind(decoder, kind)?;"
   end
 

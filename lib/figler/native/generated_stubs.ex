@@ -2,43 +2,43 @@ defmodule Figler.Native.GeneratedStubs do
   @moduledoc false
   defmacro __using__(_opts) do
     quote do
-      def decode_sparse_message(_bytes) do
+      def decode_sparse_message(_bytes, _schema) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def decode_graph_seed_records(_bytes, _stage_flags) do
+      def decode_graph_seed_records(_bytes, _schema, _stage_flags) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def decode_graph_focused_sparse_message(_bytes, _focus) do
+      def decode_graph_focused_sparse_message(_bytes, _schema, _focus) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def decode_document_metadata(_bytes) do
+      def decode_document_metadata(_bytes, _schema) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def decode_render_source_nodes(_bytes, _focus) do
+      def decode_render_source_nodes(_bytes, _schema, _focus) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def decode_scene_summary(_bytes) do
+      def decode_scene_summary(_bytes, _schema) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def build_scene_index(_bytes) do
+      def build_scene_index(_bytes, _schema) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def build_scene_index_with_summary(_bytes) do
+      def build_scene_index_with_summary(_bytes, _schema) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def query_scene_xpath(_bytes, _xpath) do
+      def query_scene_xpath(_bytes, _schema, _xpath) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def query_scene_xpath_fields(_bytes, _xpath, _fields) do
+      def query_scene_xpath_fields(_bytes, _schema, _xpath, _fields) do
         :erlang.nif_error(:nif_not_loaded)
       end
 

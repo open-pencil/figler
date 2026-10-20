@@ -113,8 +113,10 @@ fn kiwi_skip_struct_field(
     let skip = field.skip;
     if field.bytes {
         kiwi_skip_bytes_value(decoder)
+    } else if field.repeated {
+        kiwi_skip_repeated(decoder, skip)
     } else {
-        if field.repeated { kiwi_skip_repeated(decoder, skip) } else { skip(decoder) }
+        skip(decoder)
     }
 }
 
@@ -136,7 +138,7 @@ fn kiwi_skip_struct_fields(
 
 fn kiwi_skip_message_fields(
     decoder: &mut Decoder<'_>,
-    _definition_name: &str,
+    definition_name: &str,
     fields: &[KiwiSkipField],
 ) -> NifResult<()> {
     match decoder.read_var_uint()? {
@@ -146,10 +148,12 @@ fn kiwi_skip_message_fields(
                 Ok(index) => {
                     let matched_field = fields.get(index).unwrap();
                     kiwi_skip_kind(decoder, &matched_field.kind)?;
-                    kiwi_skip_message_fields(decoder, _definition_name, fields)
                 }
-                Err(_index) => Err(rustler::Error::BadArg),
-            }
+                Err(_index) => {
+                    kiwi_unknown_field(decoder, definition_name, field_id)?;
+                }
+            };
+            kiwi_skip_message_fields(decoder, definition_name, fields)
         }
     }
 }
@@ -430,7 +434,7 @@ fn kiwi_sparse_message_fields<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
     module_name: &str,
-    _definition_name: &str,
+    definition_name: &str,
     capacity: usize,
     fields: &[KiwiSparseField],
 ) -> NifResult<Term<'a>> {
@@ -440,7 +444,14 @@ fn kiwi_sparse_message_fields<'a>(
     let mut values = Vec::with_capacity(capacity);
     keys.push(module_key_atom.encode(env));
     values.push(module_atom.encode(env));
-    kiwi_sparse_message_fields_remaining(env, decoder, fields, &mut keys, &mut values)?;
+    kiwi_sparse_message_fields_remaining(
+        env,
+        decoder,
+        definition_name,
+        fields,
+        &mut keys,
+        &mut values,
+    )?;
     Term::map_from_term_arrays(env, &keys, &values)
 }
 
@@ -448,6 +459,7 @@ fn kiwi_sparse_message_fields<'a>(
 fn kiwi_sparse_message_fields_remaining<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
+    definition_name: &str,
     fields: &[KiwiSparseField],
     keys: &mut Vec<Term<'a>>,
     values: &mut Vec<Term<'a>>,
@@ -461,13 +473,187 @@ fn kiwi_sparse_message_fields_remaining<'a>(
                 let field = fields.get(index).unwrap();
                 keys.push(Atom::from_str(env, field.name).unwrap().encode(env));
                 values.push(kiwi_sparse_field_value(env, decoder, field)?);
-                kiwi_sparse_message_fields_remaining(env, decoder, fields, keys, values)
             }
-            Err(_index) => Err(rustler::Error::BadArg),
+            Err(_index) => {
+                kiwi_unknown_field(decoder, definition_name, field_id)?;
+            }
+        };
+        kiwi_sparse_message_fields_remaining(
+            env,
+            decoder,
+            definition_name,
+            fields,
+            keys,
+            values,
+        )
+    }
+}
+
+
+/// A binary Kiwi schema read at runtime.
+///
+/// Encoded Kiwi data is not self-describing, so a decoder compiled from one schema
+/// cannot step over a message field added by a newer one. Files usually carry the
+/// schema they were written with; this keeps the types it declares so compiled
+/// decoders can skip fields they do not know instead of rejecting the data.
+pub struct KiwiRuntimeSchema {
+    definitions: Vec<KiwiRuntimeDefinition>,
+    by_name: std::collections::HashMap<String, usize>,
+}
+
+struct KiwiRuntimeDefinition {
+    kind: u8,
+    /// Struct fields in wire order; message fields sorted by id.
+    fields: Vec<KiwiRuntimeField>,
+}
+
+#[derive(Clone, Copy)]
+struct KiwiRuntimeField {
+    id: u32,
+    /// Bitwise-negated primitive index when negative, otherwise a definition index.
+    type_index: i32,
+    array: bool,
+}
+
+const KIWI_RUNTIME_ENUM: u8 = 0;
+const KIWI_RUNTIME_STRUCT: u8 = 1;
+const KIWI_RUNTIME_MESSAGE: u8 = 2;
+const KIWI_RUNTIME_PRIMITIVES: i32 = 8;
+const KIWI_RUNTIME_BYTE: i32 = !1;
+const KIWI_RUNTIME_MAX_DEPTH: usize = 512;
+
+impl KiwiRuntimeSchema {
+    /// Reads a schema in Kiwi's compact binary format.
+    pub fn decode(bytes: &[u8]) -> NifResult<Self> {
+        let mut decoder = Decoder::new(bytes);
+        let count = decoder.read_var_uint()? as usize;
+        let mut definitions = Vec::with_capacity(count.min(bytes.len()));
+        let mut by_name = std::collections::HashMap::with_capacity(count.min(bytes.len()));
+
+        for index in 0..count {
+            let name = decoder.read_string_value()?;
+            let kind = decoder.read_byte()?;
+            if kind > KIWI_RUNTIME_MESSAGE {
+                return Err(Error::BadArg);
+            }
+
+            let field_count = decoder.read_var_uint()? as usize;
+            let mut fields = Vec::with_capacity(field_count.min(bytes.len()));
+            for _ in 0..field_count {
+                decoder.skip_string()?;
+                let type_index = decoder.read_var_int()?;
+                let array = decoder.read_byte()? != 0;
+                let id = decoder.read_var_uint()?;
+                fields.push(KiwiRuntimeField { id, type_index, array });
+            }
+
+            if kind == KIWI_RUNTIME_MESSAGE {
+                fields.sort_by_key(|field| field.id);
+            }
+
+            definitions.push(KiwiRuntimeDefinition { kind, fields });
+            by_name.insert(name, index);
+        }
+
+        decoder.finish()?;
+
+        let valid_type = |type_index: i32| {
+            (type_index < 0 && !type_index < KIWI_RUNTIME_PRIMITIVES)
+                || (type_index >= 0 && (type_index as usize) < definitions.len())
+        };
+
+        let valid = definitions
+            .iter()
+            .filter(|definition| definition.kind != KIWI_RUNTIME_ENUM)
+            .flat_map(|definition| definition.fields.iter())
+            .all(|field| valid_type(field.type_index));
+
+        if valid {
+            Ok(Self { definitions, by_name })
+        } else {
+            Err(Error::BadArg)
+        }
+    }
+
+    /// Skips the value of `field` in the message named `definition`.
+    pub fn skip_field(&self, decoder: &mut Decoder<'_>, definition: &str, field: u32) -> NifResult<()> {
+        let index = *self.by_name.get(definition).ok_or(Error::BadArg)?;
+        let field = self.message_field(index, field)?;
+        self.skip_value(decoder, field, 0)
+    }
+
+    fn message_field(&self, definition: usize, id: u32) -> NifResult<KiwiRuntimeField> {
+        let fields = &self.definitions[definition].fields;
+        fields
+            .binary_search_by_key(&id, |field| field.id)
+            .map(|index| fields[index])
+            .map_err(|_| Error::BadArg)
+    }
+
+    fn skip_value(&self, decoder: &mut Decoder<'_>, field: KiwiRuntimeField, depth: usize) -> NifResult<()> {
+        if !field.array {
+            return self.skip_one(decoder, field.type_index, depth);
+        }
+
+        if field.type_index == KIWI_RUNTIME_BYTE {
+            return decoder.skip_byte_array();
+        }
+
+        let count = decoder.read_var_uint()?;
+        for _ in 0..count {
+            self.skip_one(decoder, field.type_index, depth)?;
+        }
+        Ok(())
+    }
+
+    fn skip_one(&self, decoder: &mut Decoder<'_>, type_index: i32, depth: usize) -> NifResult<()> {
+        if depth > KIWI_RUNTIME_MAX_DEPTH {
+            return Err(Error::BadArg);
+        }
+
+        if type_index < 0 {
+            return match !type_index {
+                0 => decoder.read_bool().map(|_| ()),
+                1 => decoder.read_byte().map(|_| ()),
+                2 => decoder.read_var_int().map(|_| ()),
+                3 => decoder.read_var_uint().map(|_| ()),
+                4 => decoder.read_var_float_value().map(|_| ()),
+                5 => decoder.skip_string(),
+                6 => decoder.read_var_int64().map(|_| ()),
+                _ => decoder.read_var_uint64().map(|_| ()),
+            };
+        }
+
+        let index = type_index as usize;
+        match self.definitions[index].kind {
+            KIWI_RUNTIME_ENUM => decoder.read_var_uint().map(|_| ()),
+            KIWI_RUNTIME_STRUCT => {
+                for field in &self.definitions[index].fields {
+                    self.skip_value(decoder, *field, depth + 1)?;
+                }
+                Ok(())
+            }
+            _ => loop {
+                match decoder.read_var_uint()? {
+                    0 => return Ok(()),
+                    id => {
+                        let field = self.message_field(index, id)?;
+                        self.skip_value(decoder, field, depth + 1)?;
+                    }
+                }
+            },
         }
     }
 }
 
+/// Skips a message field the compiled schema does not define, using the schema the
+/// decoder was given for the data. Without one, the field is rejected.
+fn kiwi_unknown_field(decoder: &mut Decoder<'_>, definition: &str, field: u32) -> NifResult<()> {
+    match decoder.runtime_schema() {
+        Some(schema) => schema.skip_field(decoder, definition, field),
+        None => Err(Error::BadArg),
+    }
+}
 
 fn cached_atom(env: Env, cell: &OnceLock<Atom>, name: &str) -> Atom {
     *cell.get_or_init(|| Atom::from_str(env, name).unwrap())
@@ -10292,15 +10478,7 @@ fn graph_focus_skip_symbol_data_field(
         1 => skip_guid_from_decoder(decoder)?,
         2 => kiwi_skip_repeated(decoder, skip_node_change_from_decoder)?,
         3 => kiwi_skip_float_value(decoder)?,
-        field => {
-            return Err(
-                Error::Term(
-                    Box::new(
-                        format!("unknown field {} while indexing SymbolData", field),
-                    ),
-                ),
-            );
-        }
+        field => kiwi_unknown_field(decoder, "SymbolData", field)?,
     }
     Ok(())
 }
@@ -10313,18 +10491,7 @@ fn graph_focus_skip_component_prop_assignment_field(
         2 => skip_component_prop_value_from_decoder(decoder)?,
         3 => skip_variable_data_from_decoder(decoder)?,
         4 => skip_derived_text_data_from_decoder(decoder)?,
-        field => {
-            return Err(
-                Error::Term(
-                    Box::new(
-                        format!(
-                            "unknown field {} while indexing ComponentPropAssignment",
-                            field
-                        ),
-                    ),
-                ),
-            );
-        }
+        field => kiwi_unknown_field(decoder, "ComponentPropAssignment", field)?,
     }
     Ok(())
 }
@@ -10345,17 +10512,7 @@ fn graph_focus_skip_component_prop_value_field(
         10 => skip_circle_point_from_decoder(decoder)?,
         11 => skip_gradient_from_decoder(decoder)?,
         12 => skip_color_point_from_decoder(decoder)?,
-        field => {
-            return Err(
-                Error::Term(
-                    Box::new(
-                        format!(
-                            "unknown field {} while indexing ComponentPropValue", field
-                        ),
-                    ),
-                ),
-            );
-        }
+        field => kiwi_unknown_field(decoder, "ComponentPropValue", field)?,
     }
     Ok(())
 }
@@ -10591,6 +10748,7 @@ fn graph_focus_wanted(
 fn graph_focus_sparse_message_from_slices<'a>(
     env: Env<'a>,
     bytes: &[u8],
+    schema: Option<&KiwiRuntimeSchema>,
     metas: &[GraphFocusMeta],
     wanted: &std::collections::HashSet<GraphFocusGuid>,
 ) -> NifResult<Term<'a>> {
@@ -10600,7 +10758,10 @@ fn graph_focus_sparse_message_from_slices<'a>(
     for meta in metas {
         let keep = meta.guid.map(|guid| wanted.contains(&guid)).unwrap_or(false);
         if keep {
-            let mut decoder = Decoder::new(&bytes[meta.byte_start..meta.byte_end]);
+            let mut decoder = Decoder::with_schema(
+                &bytes[meta.byte_start..meta.byte_end],
+                schema,
+            );
             node_changes
                 .push(decode_sparse_node_change_from_decoder(env, &mut decoder)?);
             decoder.finish()?;
@@ -10656,6 +10817,7 @@ fn graph_seed_repeated_terms<'a>(
 }
 fn graph_seed_skip_entries_message(
     decoder: &mut Decoder<'_>,
+    definition: &str,
     skip_entry: fn(&mut Decoder<'_>) -> NifResult<()>,
 ) -> NifResult<bool> {
     let mut has_entries = false;
@@ -10669,7 +10831,7 @@ fn graph_seed_skip_entries_message(
                     skip_entry(decoder)?;
                 }
             }
-            _field => return Err(Error::BadArg),
+            field => kiwi_unknown_field(decoder, definition, field)?,
         }
     }
     Ok(has_entries)
@@ -10911,6 +11073,7 @@ fn graph_seed_node_record<'a>(
                 } else {
                     retain_clone_seed = graph_seed_skip_entries_message(
                         decoder,
+                        "VariableDataMap",
                         skip_variable_data_map_entry_from_decoder,
                     )? || retain_clone_seed;
                 }
@@ -10924,6 +11087,7 @@ fn graph_seed_node_record<'a>(
                 } else {
                     retain_clone_seed = graph_seed_skip_entries_message(
                         decoder,
+                        "VariableDataValues",
                         skip_variable_data_values_entry_from_decoder,
                     )? || retain_clone_seed;
                 }
@@ -11047,7 +11211,7 @@ fn render_vector_data_from_decoder<'a>(
                     skip_node_change_from_decoder(decoder)?;
                 }
             }
-            _field => return Err(rustler::Error::BadArg),
+            field => kiwi_unknown_field(decoder, "VectorData", field)?,
         }
     }
     Ok(rustler::types::tuple::make_tuple(env, &[blob_index, normalized_size]))
@@ -11355,6 +11519,7 @@ fn document_metadata_from_decoder<'a>(
 fn render_projection_nodes_from_slices<'a>(
     env: Env<'a>,
     bytes: &[u8],
+    schema: Option<&KiwiRuntimeSchema>,
     metas: &[GraphFocusMeta],
     wanted: Option<&std::collections::HashSet<GraphFocusGuid>>,
 ) -> NifResult<Term<'a>> {
@@ -11365,7 +11530,10 @@ fn render_projection_nodes_from_slices<'a>(
             None => meta.guid.is_some(),
         };
         if keep {
-            let mut decoder = Decoder::new(&bytes[meta.byte_start..meta.byte_end]);
+            let mut decoder = Decoder::with_schema(
+                &bytes[meta.byte_start..meta.byte_end],
+                schema,
+            );
             records.push(render_projection_node_from_decoder(env, &mut decoder)?);
             decoder.finish()?;
         }
@@ -12498,12 +12666,10 @@ mod scene_xpath_runtime {
     ) -> Option<(&'static str, String)> {
         if index == 0 {
             Some(("guid", record.guid.to_string()))
+        } else if index == 1 {
+            Some(("type", record.node_type.to_string()))
         } else {
-            if index == 1 {
-                Some(("type", record.node_type.to_string()))
-            } else {
-                scene_node_record_optional_attr_0(record, index - 2)
-            }
+            scene_node_record_optional_attr_0(record, index - 2)
         }
     }
     fn scene_node_record_attr_count(record: &SceneNodeRecord) -> usize {
@@ -12702,17 +12868,7 @@ mod scene_xpath_runtime {
                         skip_derived_text_line_data_from_decoder,
                     )?
                 }
-                field => {
-                    return Err(
-                        Error::Term(
-                            Box::new(
-                                format!(
-                                    "unknown field {} while decoding scene text data", field
-                                ),
-                            ),
-                        ),
-                    );
-                }
+                field => kiwi_unknown_field(decoder, "TextData", field)?,
             }
         }
         Ok(text)
@@ -12726,17 +12882,7 @@ mod scene_xpath_runtime {
                 0 => break,
                 1 => guid = Some(read_guid_value(decoder)?.to_string()),
                 2 => skip_asset_ref_from_decoder(decoder)?,
-                field => {
-                    return Err(
-                        Error::Term(
-                            Box::new(
-                                format!(
-                                    "unknown field {} while decoding scene style id", field
-                                ),
-                            ),
-                        ),
-                    );
-                }
+                field => kiwi_unknown_field(decoder, "StyleId", field)?,
             }
         }
         Ok(guid)
@@ -12746,8 +12892,9 @@ mod scene_xpath_runtime {
     }
     pub fn build_scene_index_value(
         bytes: Binary<'_>,
+        schema: Option<&KiwiRuntimeSchema>,
     ) -> NifResult<ResourceArc<SceneIndexResource>> {
-        let mut decoder = Decoder::new(bytes.as_slice());
+        let mut decoder = Decoder::with_schema(bytes.as_slice(), schema);
         let mut nodes = Vec::new();
         decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
         decoder.finish()?;
@@ -12755,8 +12902,9 @@ mod scene_xpath_runtime {
     }
     pub fn build_scene_index_with_summary_value(
         bytes: Binary<'_>,
+        schema: Option<&KiwiRuntimeSchema>,
     ) -> NifResult<(ResourceArc<SceneIndexResource>, SceneSummary)> {
-        let mut decoder = Decoder::new(bytes.as_slice());
+        let mut decoder = Decoder::with_schema(bytes.as_slice(), schema);
         let mut nodes = Vec::new();
         decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
         decoder.finish()?;
@@ -12791,18 +12939,20 @@ mod scene_xpath_runtime {
     pub fn query_scene_xpath_value<'a>(
         env: Env<'a>,
         bytes: Binary<'a>,
+        schema: Option<&KiwiRuntimeSchema>,
         xpath: String,
     ) -> NifResult<Term<'a>> {
-        let resource = build_scene_index_value(bytes)?;
+        let resource = build_scene_index_value(bytes, schema)?;
         query_scene_index_value(env, resource, xpath)
     }
     pub fn query_scene_xpath_fields_value<'a>(
         env: Env<'a>,
         bytes: Binary<'a>,
+        schema: Option<&KiwiRuntimeSchema>,
         xpath: String,
         fields: Vec<String>,
     ) -> NifResult<Term<'a>> {
-        let resource = build_scene_index_value(bytes)?;
+        let resource = build_scene_index_value(bytes, schema)?;
         query_scene_index_fields_value(env, resource, xpath, fields)
     }
     fn evaluate_scene_xpath(
@@ -13299,7 +13449,7 @@ macro_rules! fig_scene_skip_field_decoder {
 fn fig_scene_skip_field(
     decoder: &mut Decoder<'_>,
     field_id: u32,
-    _definition_name: &str,
+    definition_name: &str,
     fields: &[FigSceneSkipField],
 ) -> NifResult<()> {
     match fields.binary_search_by_key(&field_id, |field| field.id) {
@@ -13310,14 +13460,13 @@ fn fig_scene_skip_field(
                 field.bytes,
                 field.skip,
             );
-            kiwi_skip_kind(decoder, &kind)?;
-            Ok(())
+            kiwi_skip_kind(decoder, &kind)
         }
-        Err(_index) => Err(rustler::Error::BadArg),
+        Err(_index) => kiwi_unknown_field(decoder, definition_name, field_id),
     }
 }
 fig_scene_skip_field_decoder! {
-    fn skip_fig_message_field; decoder decoder; field field; definition "scene summary";
+    fn skip_fig_message_field; decoder decoder; field field; definition "Message";
     skip_fields[1 => false false kiwi_skip_uint_value; 2 => false false
     kiwi_skip_uint_value; 3 => false false kiwi_skip_uint_value; 4 => true false
     skip_node_change_from_decoder; 5 => true false skip_user_change_from_decoder; 6 =>
@@ -13347,7 +13496,7 @@ fig_scene_skip_field_decoder! {
     skip_buzz_approval_change_from_decoder; 45 => false false kiwi_skip_uint_value;]
 }
 fig_scene_skip_field_decoder! {
-    fn skip_fig_node_change_field; decoder decoder; field field; definition "scene node";
+    fn skip_fig_node_change_field; decoder decoder; field field; definition "NodeChange";
     skip_fields[1 => false false skip_guid_from_decoder; 2 => false false
     kiwi_skip_uint_value; 3 => false false skip_parent_index_from_decoder; 4 => false
     false kiwi_skip_uint_value; 5 => false false kiwi_skip_string_value; 6 => false false
@@ -13764,11 +13913,14 @@ fn decode_scene_node_change_from_decoder(
     }
     Ok(())
 }
+use crate::runtime::runtime_schema;
 pub fn decode_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
     let value = decode_sparse_message_from_decoder(env, &mut decoder)?;
     decoder.finish()?;
     Ok(value)
@@ -13776,9 +13928,11 @@ pub fn decode_sparse_message_impl<'a>(
 pub fn decode_graph_seed_records_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     stage_flags: u8,
 ) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
     let value = graph_seed_records_from_decoder(env, &mut decoder, stage_flags)?;
     decoder.finish()?;
     Ok(value)
@@ -13786,31 +13940,35 @@ pub fn decode_graph_seed_records_impl<'a>(
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     focus: Vec<String>,
 ) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
     if focus.is_empty() {
-        let mut decoder = Decoder::new(bytes.as_slice());
+        let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
         let value = decode_sparse_message_from_decoder(env, &mut decoder)?;
         decoder.finish()?;
         return Ok(value);
     }
-    let mut index_decoder = Decoder::new(bytes.as_slice());
+    let mut index_decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
     let metas = graph_focus_index_message(&mut index_decoder)?;
     index_decoder.finish()?;
     let wanted = graph_focus_wanted(&metas, &focus);
-    let value = graph_focus_sparse_message_from_slices(
+    graph_focus_sparse_message_from_slices(
         env,
         bytes.as_slice(),
+        schema.as_ref(),
         &metas,
         &wanted,
-    )?;
-    Ok(value)
+    )
 }
 pub fn decode_document_metadata_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
     let value = document_metadata_from_decoder(env, &mut decoder)?;
     decoder.finish()?;
     Ok(value)
@@ -13818,16 +13976,30 @@ pub fn decode_document_metadata_impl<'a>(
 pub fn decode_render_source_nodes_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     focus: Vec<String>,
 ) -> NifResult<Term<'a>> {
-    let mut index_decoder = Decoder::new(bytes.as_slice());
+    let schema = runtime_schema(&schema)?;
+    let mut index_decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
     let metas = graph_focus_index_message(&mut index_decoder)?;
     index_decoder.finish()?;
     if focus.is_empty() {
-        return render_projection_nodes_from_slices(env, bytes.as_slice(), &metas, None);
+        return render_projection_nodes_from_slices(
+            env,
+            bytes.as_slice(),
+            schema.as_ref(),
+            &metas,
+            None,
+        );
     }
     let wanted = graph_focus_wanted(&metas, &focus);
-    render_projection_nodes_from_slices(env, bytes.as_slice(), &metas, Some(&wanted))
+    render_projection_nodes_from_slices(
+        env,
+        bytes.as_slice(),
+        schema.as_ref(),
+        &metas,
+        Some(&wanted),
+    )
 }
 pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
     env.register::<scene_xpath_runtime::SceneIndexResource>().is_ok()
@@ -13835,8 +14007,10 @@ pub fn load(env: Env<'_>, _term: Term<'_>) -> bool {
 pub fn decode_scene_summary_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<Term<'a>> {
-    let mut decoder = Decoder::new(bytes.as_slice());
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
     let mut node_count: usize = 0;
     let mut parented_count: usize = 0;
     let mut type_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
@@ -13860,32 +14034,46 @@ pub fn decode_scene_summary_impl<'a>(
             .encode(env),
     )
 }
-pub fn build_scene_index_impl(
-    bytes: Binary<'_>,
+pub fn build_scene_index_impl<'a>(
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>> {
-    scene_xpath_runtime::build_scene_index_value(bytes)
+    let schema = runtime_schema(&schema)?;
+    scene_xpath_runtime::build_scene_index_value(bytes, schema.as_ref())
 }
-pub fn build_scene_index_with_summary_impl(
-    bytes: Binary<'_>,
+pub fn build_scene_index_with_summary_impl<'a>(
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<
     (rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>, SceneSummary),
 > {
-    scene_xpath_runtime::build_scene_index_with_summary_value(bytes)
+    let schema = runtime_schema(&schema)?;
+    scene_xpath_runtime::build_scene_index_with_summary_value(bytes, schema.as_ref())
 }
 pub fn query_scene_xpath_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     xpath: String,
 ) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::query_scene_xpath_value(env, bytes, xpath)
+    let schema = runtime_schema(&schema)?;
+    scene_xpath_runtime::query_scene_xpath_value(env, bytes, schema.as_ref(), xpath)
 }
 pub fn query_scene_xpath_fields_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     xpath: String,
     fields: Vec<String>,
 ) -> NifResult<Term<'a>> {
-    scene_xpath_runtime::query_scene_xpath_fields_value(env, bytes, xpath, fields)
+    let schema = runtime_schema(&schema)?;
+    scene_xpath_runtime::query_scene_xpath_fields_value(
+        env,
+        bytes,
+        schema.as_ref(),
+        xpath,
+        fields,
+    )
 }
 pub fn query_scene_index_impl<'a>(
     env: Env<'a>,
@@ -13906,74 +14094,87 @@ pub fn query_scene_index_fields_impl<'a>(
 pub fn decode_sparse_message<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<Term<'a>> {
-    decode_sparse_message_impl(env, bytes)
+    decode_sparse_message_impl(env, bytes, schema)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_graph_seed_records<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     stage_flags: u8,
 ) -> NifResult<Term<'a>> {
-    decode_graph_seed_records_impl(env, bytes, stage_flags)
+    decode_graph_seed_records_impl(env, bytes, schema, stage_flags)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_graph_focused_sparse_message<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     focus: Vec<String>,
 ) -> NifResult<Term<'a>> {
-    decode_graph_focused_sparse_message_impl(env, bytes, focus)
+    decode_graph_focused_sparse_message_impl(env, bytes, schema, focus)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_document_metadata<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<Term<'a>> {
-    decode_document_metadata_impl(env, bytes)
+    decode_document_metadata_impl(env, bytes, schema)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_render_source_nodes<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     focus: Vec<String>,
 ) -> NifResult<Term<'a>> {
-    decode_render_source_nodes_impl(env, bytes, focus)
+    decode_render_source_nodes_impl(env, bytes, schema, focus)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn decode_scene_summary<'a>(env: Env<'a>, bytes: Binary<'a>) -> NifResult<Term<'a>> {
-    decode_scene_summary_impl(env, bytes)
+pub fn decode_scene_summary<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    decode_scene_summary_impl(env, bytes, schema)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn build_scene_index(
-    bytes: Binary<'_>,
+pub fn build_scene_index<'a>(
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>> {
-    build_scene_index_impl(bytes)
+    build_scene_index_impl(bytes, schema)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
-pub fn build_scene_index_with_summary(
-    bytes: Binary<'_>,
+pub fn build_scene_index_with_summary<'a>(
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
 ) -> NifResult<
     (rustler::ResourceArc<scene_xpath_runtime::SceneIndexResource>, SceneSummary),
 > {
-    build_scene_index_with_summary_impl(bytes)
+    build_scene_index_with_summary_impl(bytes, schema)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_xpath<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     xpath: String,
 ) -> NifResult<Term<'a>> {
-    query_scene_xpath_impl(env, bytes, xpath)
+    query_scene_xpath_impl(env, bytes, schema, xpath)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_xpath_fields<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
+    schema: Binary<'a>,
     xpath: String,
     fields: Vec<String>,
 ) -> NifResult<Term<'a>> {
-    query_scene_xpath_fields_impl(env, bytes, xpath, fields)
+    query_scene_xpath_fields_impl(env, bytes, schema, xpath, fields)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn query_scene_index<'a>(

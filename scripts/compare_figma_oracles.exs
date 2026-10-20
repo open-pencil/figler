@@ -13,7 +13,7 @@ manifest_path =
 
 base_dir = Path.dirname(Path.expand(manifest_path))
 entries = Figler.Scene.Graph.Oracle.entries!(manifest_path)
-fixture_payload = fixture |> File.read!() |> Figler.Scene.payload!()
+fixture_payload = fixture |> File.read!() |> Figler.Scene.source!()
 shared_graph? = System.get_env("FIGLER_ORACLE_SHARED_GRAPH") in ["1", "true", "TRUE"]
 
 {build_us, compare_us, results} =

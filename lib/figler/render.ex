@@ -76,11 +76,11 @@ defmodule Figler.Render do
 
   defp prepare_document(document, opts) do
     graph_opts = Keyword.get(opts, :graph, [])
-    graph = Graph.build(document.payload, graph_opts)
+    graph = Graph.build({document.payload, document.schema}, graph_opts)
 
     with {:ok, root} <- Selection.root(graph, document.pages, opts) do
       source_nodes =
-        document.payload
+        {document.payload, document.schema}
         |> CodecNifs.decode_render_source_nodes([projection_root(graph, root) |> GUID.format()])
         |> Map.new(fn record ->
           source = SourceNode.from_native(record)
