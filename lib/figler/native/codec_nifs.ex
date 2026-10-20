@@ -11,7 +11,6 @@ defmodule Figler.Native.CodecNifs do
   """
 
   alias Figler.Native.Module
-  alias Figler.Scene.Graph.Seed.Projection
   alias Figler.Scene.Input
 
   def decode_sparse_message(source) do
@@ -24,12 +23,6 @@ defmodule Figler.Native.CodecNifs do
     Module.decode_document_metadata(payload, schema)
   end
 
-  def decode_graph_seed_records(source),
-    do: decode_graph_seed_records_mask(source, Projection.native_all_stage_mask())
-
-  def decode_graph_seed_records(source, stages) when is_list(stages),
-    do: decode_graph_seed_records_mask(source, Projection.native_stage_mask(stages))
-
   def decode_graph_focused_sparse_message(source, focus) do
     {payload, schema} = Input.to_source(source)
     Module.decode_graph_focused_sparse_message(payload, schema, focus)
@@ -38,10 +31,5 @@ defmodule Figler.Native.CodecNifs do
   def decode_render_source_nodes(source, focus) do
     {payload, schema} = Input.to_source(source)
     Module.decode_render_source_nodes(payload, schema, focus)
-  end
-
-  defp decode_graph_seed_records_mask(source, mask) do
-    {payload, schema} = Input.to_source(source)
-    Module.decode_graph_seed_records(payload, schema, mask)
   end
 end

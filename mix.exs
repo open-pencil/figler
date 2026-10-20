@@ -277,7 +277,7 @@ defmodule Figler.MixProject do
       "Scene graph": [~r/^Figler\.Scene\.Graph(\.Options)?$/],
       "Scene graph diagnostics": [~r/^Figler\.Scene\.Graph\.(Oracle|Profile)(\.|$)/],
       "Scene graph internals": [
-        ~r/^Figler\.Scene\.Graph\.(Diff|GUID|Materialize|Occurrence|OpenPencilOracle|Seed)(\.|$)/
+        ~r/^Figler\.Scene\.Graph\.(Diff|GUID|Materialize|Occurrence|OpenPencilOracle|Variables)(\.|$)/
       ],
       Documents: [Figler.Document, Figler.Document.Page],
       "Scene queries": [~r/^Figler\.Scene(\.|$)/],

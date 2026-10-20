@@ -13,19 +13,6 @@ pub fn decode_sparse_message_impl<'a>(
     Ok(value)
 }
 
-pub fn decode_graph_seed_records_impl<'a>(
-    env: Env<'a>,
-    bytes: Binary<'a>,
-    schema: Binary<'a>,
-    stage_flags: u8,
-) -> NifResult<Term<'a>> {
-    let schema = runtime_schema(&schema)?;
-    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
-    let value = graph_seed_records_from_decoder(env, &mut decoder, stage_flags)?;
-    decoder.finish()?;
-    Ok(value)
-}
-
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,

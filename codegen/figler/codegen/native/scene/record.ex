@@ -6,7 +6,6 @@ defmodule Figler.Codegen.Native.Scene.Record do
   their shape depends on the projection schema rather than handwritten Rust.
   """
 
-  alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
   alias RustQ.Rust.AST
@@ -46,13 +45,6 @@ defmodule Figler.Codegen.Native.Scene.Record do
   @spec record_build_fields([map()]) :: [RustQ.Rust.Fragment.t()]
   def record_build_fields(fields \\ optional_fields()) do
     fields |> Enum.map(& &1.name) |> Schema.shorthand_fields()
-  end
-
-  @spec seed_record_expr() :: RustQ.Rust.AST.VecLiteral.t()
-  def seed_record_expr do
-    SeedProjection.native_record_fields()
-    |> Enum.map(&A.var/1)
-    |> A.vec()
   end
 
   defp query_node_fields do

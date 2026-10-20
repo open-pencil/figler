@@ -7,7 +7,6 @@ defmodule Figler.Native.Entrypoints do
 
   @template_names [
     :decode_sparse_message,
-    :decode_graph_seed_records,
     :decode_graph_focused_sparse_message,
     :decode_document_metadata,
     :decode_render_source_nodes,

@@ -26,19 +26,16 @@ defmodule Figler.Codegen.Native do
   end
 
   def source(%Schema{} = schema) do
-    {graph_seed_record, splices} =
+    {render_projection_record, splices} =
       schema
       |> render_splices()
-      |> Keyword.pop!(:graph_seed_record)
-
-    {render_projection_record, splices} = Keyword.pop!(splices, :render_projection_record)
+      |> Keyword.pop!(:render_projection_record)
 
     RustQ.render!(
       """
       __rq_include!("templates/scene_types.rs");
       __rq_graph_focus_helpers!();
       __rq_graph_focus_decoders!();
-      __rq_include!("templates/graph_seed_decoders.rs");
       __rq_include!("templates/render_projection_decoders.rs");
       __rq_include!("templates/scene_xpath_runtime.rs");
       __rq_include!("templates/scene_summary_decoders.rs");
@@ -47,7 +44,6 @@ defmodule Figler.Codegen.Native do
       "native/src/generated.scene.rs",
       include_dir: "native/src",
       bind: [
-        graph_seed_record: {:expr, Rust.render(graph_seed_record)},
         render_projection_record: {:expr, Rust.render(render_projection_record)}
       ],
       splice: splices
