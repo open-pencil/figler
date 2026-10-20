@@ -10,6 +10,8 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
 
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
+  alias Figler.Scene.Graph.Occurrence
+  alias Figler.Scene.Graph.Occurrence.GUID, as: OccurrenceGUID
 
   @fields ["source_id", "type", "name", "visible", "main_component_id", "size", "position"] ++
             ["opacity", "characters"]
@@ -46,10 +48,19 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
   Compares every page in `expected` against `graph`.
   """
   @spec compare(Graph.t(), map()) :: %{pages: [map()], diffs: [diff()], by_field: map()}
-  def compare(%Graph{} = graph, %{"pages" => pages}) do
+  def compare(%Graph{} = graph, expected),
+    do: compare_projected(expected, &project(graph, Figler.Scene.node(graph, &1)))
+
+  @doc """
+  Compares every page in `expected` against trees already in the oracle's
+  shape, which `actual` returns for a page GUID string.
+  """
+  @spec compare_projected(map(), (String.t() -> map() | nil)) ::
+          %{pages: [map()], diffs: [diff()], by_field: map()}
+  def compare_projected(%{"pages" => pages}, actual) do
     page_results =
       Enum.map(pages, fn %{"id" => id, "name" => name, "tree" => tree} ->
-        diffs = compare_node(tree, project(graph, Figler.Scene.node(graph, id)), name)
+        diffs = compare_node(tree, actual.(id), name)
         %{id: id, name: name, diff_count: length(diffs), diffs: diffs}
       end)
 
@@ -77,6 +88,31 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
       "characters" => if(type == "TEXT", do: node.text || ""),
       "main_component_id" => main_component_id(graph, type, node.guid),
       "children" => graph |> Figler.Scene.children(node.guid) |> Enum.map(&project(graph, &1))
+    }
+  end
+
+  @doc """
+  Projects an interpreted occurrence tree into the oracle's shape.
+  """
+  @spec project_occurrence(Occurrence.t()) :: map()
+  def project_occurrence(%Occurrence{properties: properties} = occurrence) do
+    type = properties |> Map.get(:type) |> to_string() |> String.upcase()
+    size = occurrence.derived_size || Map.get(properties, :size)
+    transform = Map.get(properties, :transform)
+    opacity = Map.get(properties, :opacity)
+
+    %{
+      "source_id" => OccurrenceGUID.format(occurrence.source_id),
+      "type" => type,
+      "name" => Map.get(properties, :name),
+      "visible" => Map.get(properties, :visible, true),
+      "size" => size && [size.x, size.y],
+      "position" => transform && [transform.m02, transform.m12],
+      "opacity" => if(opacity not in [nil, 1, 1.0], do: opacity),
+      "characters" => if(type == "TEXT", do: get_in(properties, [:text_data, :characters]) || ""),
+      "main_component_id" =>
+        if(type == "INSTANCE", do: OccurrenceGUID.format(occurrence.main_component_id)),
+      "children" => Enum.map(occurrence.children, &project_occurrence/1)
     }
   end
 
