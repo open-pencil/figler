@@ -9,7 +9,6 @@ defmodule Figler.Codegen.Native.Scene.Record do
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
   alias RustQ.Rust.AST
-  alias RustQ.Rust.AST.Builder, as: A
   alias RustQ.Rust.AST.TypeBuilder, as: T
   alias RustQ.Rustler.Schema
 
