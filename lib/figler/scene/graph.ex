@@ -142,6 +142,29 @@ defmodule Figler.Scene.Graph do
 
   defp interpret(source, opts) do
     opts = normalize_options(opts)
+    with_heap_for(source, opts, fn -> interpret_sized(source, opts) end)
+  end
+
+  # A whole document's records and graph take about two words per payload byte. Starting the
+  # heap near that size spares the many collections a growing heap would run, each copying the
+  # whole source index; the caller's own minimum is restored afterwards.
+  @heap_words_per_payload_byte 2
+
+  defp with_heap_for({payload, _schema}, opts, fun) do
+    if Keyword.get(opts, :focus) do
+      fun.()
+    else
+      previous = Process.flag(:min_heap_size, @heap_words_per_payload_byte * byte_size(payload))
+
+      try do
+        fun.()
+      after
+        Process.flag(:min_heap_size, previous)
+      end
+    end
+  end
+
+  defp interpret_sized(source, opts) do
     {decode_us, message} = :timer.tc(fn -> decode(source, opts) end)
     styles? = opts[:resolve_styles] == :known
 
