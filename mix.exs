@@ -190,8 +190,15 @@ defmodule Figler.MixProject do
   # RUSTQ_PATH points RustQ at a local checkout.
   defp rustq_dep do
     case System.get_env("RUSTQ_PATH") do
-      nil -> {:rustq, "~> 1.0.0-rc.11", only: [:dev, :test], runtime: false}
-      path -> {:rustq, path: path, only: [:dev, :test], runtime: false, override: true}
+      nil ->
+        {:rustq,
+         git: "https://github.com/elixir-crab/rustq.git",
+         branch: "lowering-gaps-from-figler",
+         only: [:dev, :test],
+         runtime: false}
+
+      path ->
+        {:rustq, path: path, only: [:dev, :test], runtime: false, override: true}
     end
   end
 
