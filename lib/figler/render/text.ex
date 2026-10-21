@@ -2,6 +2,7 @@ defmodule Figler.Render.Text do
   @moduledoc "Rendering-neutral text content, style runs, and requested fonts."
 
   alias Figler.Render.Font
+  alias Figler.Render.Text.Glyphs
   alias Figler.Render.Text.Measurement
   alias Figler.Render.Text.Run
   alias Figler.Render.Text.Source
@@ -33,6 +34,8 @@ defmodule Figler.Render.Text do
     :truncation,
     :max_lines,
     runs: [],
+    glyphs: [],
+    decorations: [],
     fallback_fonts: [],
     issues: []
   ]
@@ -47,6 +50,8 @@ defmodule Figler.Render.Text do
           truncation: atom() | nil,
           max_lines: non_neg_integer() | nil,
           runs: [Run.t()],
+          glyphs: [Figler.Render.Text.Glyph.t()],
+          decorations: [map()],
           fallback_fonts: [Font.t()],
           issues: [issue()]
         }
@@ -62,11 +67,13 @@ defmodule Figler.Render.Text do
           Source.t() | nil,
           [Figler.Render.Paint.t()]
         ) :: t() | nil
-  def from_effective(node, :text, source, fill_paints) when is_map(node) do
+  def from_effective(node, type, source, fill_paints)
+      when type in [:text, :text_path] and is_map(node) do
     content = content(Map.get(node, :text))
     font = Font.from_effective(node)
     base_style = base_style(node)
     {runs, issues} = runs(content, font, fill_paints, source, base_style)
+    {glyphs, decorations} = Glyphs.from_derived(Map.get(node, :derived_text_data), content)
 
     %__MODULE__{
       content: content,
@@ -77,6 +84,8 @@ defmodule Figler.Render.Text do
       truncation: Map.get(node, :text_truncation),
       max_lines: Map.get(node, :max_lines),
       runs: runs,
+      glyphs: glyphs,
+      decorations: decorations,
       fallback_fonts: if(source, do: source.fallback_fonts, else: []),
       issues: issues
     }

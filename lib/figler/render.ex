@@ -107,14 +107,15 @@ defmodule Figler.Render do
   defp effective_render_nodes(graph, source_nodes) do
     Map.new(graph.nodes, fn {guid, node} ->
       source_guid = Graph.provenance(graph, guid).source_guid
+      record = Map.get(graph.records, guid, %{})
 
       source =
         case Map.get(source_nodes, source_guid) do
           nil -> nil
-          source -> SourceNode.apply_overrides(source, Map.get(graph.records, guid, %{}))
+          source -> SourceNode.apply_overrides(source, record)
         end
 
-      {guid, RenderNode.from_effective(node, source_guid, source)}
+      {guid, RenderNode.from_effective(node, source_guid, source, record)}
     end)
   end
 

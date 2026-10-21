@@ -10,12 +10,14 @@ defmodule Figler.Render.Skia.Shape do
   alias Figler.Render.Shape.Star
   alias Figler.Render.Skia.Paint
   alias Figler.Render.Stroke
+  alias Figler.Render.Text.Glyphs
 
   @rectangular_types [:frame, :instance, :rectangle, :rounded_rectangle, :section, :symbol]
   @primitive_path_types [:regular_polygon, :star]
   @stroke_alignment_types @rectangular_types ++
                             @primitive_path_types ++ [:boolean_operation, :ellipse, :vector]
-  @effect_shape_types @stroke_alignment_types ++ [:text]
+  @text_types [:text, :text_path]
+  @effect_shape_types @stroke_alignment_types ++ @text_types
   @supported_types @effect_shape_types ++ [:line]
 
   @spec supported_type?(Figler.Schema.NodeType.t() | :unknown) :: boolean()
@@ -37,8 +39,17 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   @spec draw_node(Skia.Document.t(), Node.t(), map()) :: Skia.Document.t()
-  def draw_node(document, node, assets) do
-    document = Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
+  # Path text draws its stroke outlines first, under the glyphs they surround.
+  def draw_node(document, %Node{node_type: :text_path} = node, assets),
+    do: document |> draw_strokes(node, assets) |> draw_fills(node, assets)
+
+  def draw_node(document, node, assets),
+    do: document |> draw_fills(node, assets) |> draw_strokes(node, assets)
+
+  defp draw_fills(document, node, assets),
+    do: Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
+
+  defp draw_strokes(document, node, assets) do
     stroke = node.stroke || %Stroke{}
     Enum.reduce(node.stroke_paints || [], document, &draw_stroke(&2, node, &1, stroke, assets))
   end
@@ -174,6 +185,16 @@ defmodule Figler.Render.Skia.Shape do
 
       Skia.path(rendered, geometry.path, path_opts)
     end)
+  end
+
+  def draw_silhouette(document, %Node{node_type: type} = node, assets, opts, _effect_opts)
+      when type in @text_types and is_map_key(assets.text_glyphs, node.guid) do
+    path_opts = [
+      fill: Keyword.get(opts, :fill, :white),
+      blend_mode: Keyword.get(opts, :blend_mode, :src_over)
+    ]
+
+    draw_saved_text(document, node, assets, path_opts, false)
   end
 
   def draw_silhouette(
@@ -353,6 +374,24 @@ defmodule Figler.Render.Skia.Shape do
       )
 
     Skia.line(document, line_opts)
+  end
+
+  defp draw_shape(document, %Node{node_type: type} = node, :fill, opts, assets)
+       when type in @text_types and is_map_key(assets.text_glyphs, node.guid),
+       do: draw_saved_text(document, node, assets, [fill: Keyword.fetch!(opts, :fill)], true)
+
+  # Path text keeps its stroke as saved outline geometry, painted like a fill. Its vector data
+  # is the path it follows, not an outline to paint.
+  defp draw_shape(document, %Node{node_type: :text_path} = node, :stroke, opts, assets) do
+    assets.geometries
+    |> Map.get(node.guid, %{})
+    |> Map.get(:stroke, [])
+    |> Enum.reduce(document, fn geometry, rendered ->
+      Skia.path(rendered, geometry.path,
+        fill: Keyword.fetch!(opts, :stroke),
+        fill_rule: geometry.fill_rule
+      )
+    end)
   end
 
   defp draw_shape(
@@ -632,6 +671,77 @@ defmodule Figler.Render.Skia.Shape do
 
     Skia.TextSpan.new(span.content, span_opts)
   end
+
+  # Saved glyph outlines, each run of them in its style run's colours when it has its own.
+  defp draw_saved_text(document, node, assets, path_opts, run_fills?) do
+    document =
+      Enum.reduce(assets.text_glyphs[node.guid], document, fn {run, path}, drawn ->
+        node
+        |> glyph_fills(run, assets, path_opts, run_fills?)
+        |> Enum.reduce(drawn, &Skia.path(&2, path, Keyword.put(path_opts, :fill, &1)))
+      end)
+
+    node.text
+    |> Glyphs.decorations()
+    |> Enum.reduce(document, &draw_decoration(&2, &1, node, assets, path_opts, run_fills?))
+  end
+
+  defp glyph_fills(node, run, assets, _path_opts, true) when not is_nil(run),
+    do: run.fill_paints |> Enum.map(&solid_fill(&1, node, assets)) |> Enum.reject(&is_nil/1)
+
+  defp glyph_fills(_node, _run, _assets, path_opts, _run_fills?),
+    do: [Keyword.fetch!(path_opts, :fill)]
+
+  defp solid_fill(%{visible: false}, _node, _assets), do: nil
+
+  defp solid_fill(%{type: :solid} = paint, node, assets) do
+    {:ok, resolved} = Paint.resolve(paint, node.size, assets.images)
+    resolved.paint
+  end
+
+  defp solid_fill(_paint, _node, _assets), do: nil
+
+  defp draw_decoration(document, decoration, node, assets, path_opts, run_fills?) do
+    own =
+      if run_fills?,
+        do: Enum.find_value(decoration.fill_paints, &solid_fill(&1, node, assets))
+
+    opts = if own, do: Keyword.put(path_opts, :fill, own), else: path_opts
+    draw_decoration_rect(document, decoration.style, decoration.rect, opts)
+  end
+
+  # Dots one thickness wide, two apart, as Figma draws a dotted underline.
+  defp draw_decoration_rect(document, :dotted, {x, y, width, height}, opts) when height > 0 do
+    count = floor((width - height) / (height * 2)) + 1
+
+    Enum.reduce(0..(count - 1)//1, document, fn index, drawn ->
+      oval = [x: x + index * height * 2, y: y, width: height, height: height]
+      Skia.oval(drawn, Keyword.merge(oval, opts))
+    end)
+  end
+
+  # A cosine through the rect's middle, starting in a trough.
+  defp draw_decoration_rect(document, :wavy, {x, y, width, height}, opts) do
+    amplitude = height / 2
+    period = height * 3.5
+    middle = y + amplitude
+    step = max(0.25, period / 32)
+    wave_y = fn at -> middle + amplitude * :math.cos((at - x) / period * :math.pi() * 2) end
+
+    path =
+      Stream.iterate(x + step, &(&1 + step))
+      |> Enum.take_while(&(&1 < x + width))
+      |> Enum.concat([x + width])
+      |> Enum.reduce(Skia.Path.move_to(Skia.Path.new(), x, middle + amplitude), fn at, wave ->
+        Skia.Path.line_to(wave, at, wave_y.(at))
+      end)
+
+    {fill, opts} = Keyword.pop!(opts, :fill)
+    Skia.path(document, path, Keyword.merge(opts, stroke: fill, stroke_width: height * 2 / 3))
+  end
+
+  defp draw_decoration_rect(document, _style, {x, y, width, height}, opts),
+    do: Skia.rect(document, Keyword.merge([x: x, y: y, width: width, height: height], opts))
 
   defp text_size(%Node{text: text}), do: text.font.size || 14
 
