@@ -99,22 +99,84 @@ defmodule Figler.Scene.Graph.Occurrence do
   """
   @spec resolve_path(t(), [GUID.t()]) ::
           {:ok, [non_neg_integer()]} | {:error, GUID.t(), non_neg_integer()}
-  def resolve_path(%__MODULE__{} = owner, [first | rest] = path) do
-    if root_guid?(owner, first),
-      do: resolve_segments(owner, rest, []),
-      else: resolve_segments(owner, path, [])
+  def resolve_path(%__MODULE__{} = owner, path) do
+    {result, _tables} = resolve_path(owner, path, %{})
+    result
   end
 
-  def resolve_path(%__MODULE__{}, []), do: {:ok, []}
+  @doc """
+  Resolves a path like `resolve_path/2`, reusing and extending `tables`: the segment lookups of
+  occurrences already searched under `owner`. They stay valid while the subtree's shape does,
+  so a run of claims or derived entries on one owner searches each level once.
+  """
+  @spec resolve_path(t(), [GUID.t()], map()) ::
+          {{:ok, [non_neg_integer()]} | {:error, GUID.t(), non_neg_integer()}, map()}
+  def resolve_path(%__MODULE__{} = owner, [first | rest] = path, tables) do
+    if root_guid?(owner, first),
+      do: resolve_segments(owner, [], rest, [], tables),
+      else: resolve_segments(owner, [], path, [], tables)
+  end
+
+  def resolve_path(%__MODULE__{}, [], tables), do: {{:ok, []}, tables}
 
   # Index paths of matched segments are collected in reverse, then joined.
-  defp resolve_segments(_current, [], segments),
-    do: {:ok, segments |> Enum.reverse() |> Enum.concat()}
+  defp resolve_segments(_current, _at, [], segments, tables),
+    do: {{:ok, segments |> Enum.reverse() |> Enum.concat()}, tables}
 
-  defp resolve_segments(current, [guid | rest], segments) do
-    case find_segment(current, guid) do
-      {:ok, indexes} -> resolve_segments(get_at(current, indexes), rest, [indexes | segments])
-      {:error, count} -> {:error, guid, count}
+  defp resolve_segments(current, at, [guid | rest], segments, tables) do
+    {table, tables} = segment_table(current, at, tables)
+
+    case Map.get(table, guid, []) do
+      [indexes] ->
+        next = get_at(current, indexes)
+        resolve_segments(next, at ++ indexes, rest, [indexes | segments], tables)
+
+      found ->
+        {{:error, guid, length(found)}, tables}
+    end
+  end
+
+  defp segment_table(current, at, tables) do
+    case Map.fetch(tables, at) do
+      {:ok, table} ->
+        {table, tables}
+
+      :error ->
+        table = segment_lookup(current)
+        {table, Map.put(tables, at, table)}
+    end
+  end
+
+  # Every GUID and override key under `root` with the index paths of its matches, as
+  # `find_segment/2` finds them: never inside an instance, nor below an ancestor that already
+  # matched the same key.
+  defp segment_lookup(root) do
+    root.children
+    |> Enum.with_index()
+    |> Enum.reduce(%{}, fn {child, index}, table ->
+      collect_segments(child, [index], MapSet.new(), table)
+    end)
+    |> Map.new(fn {key, paths} -> {key, Enum.reverse(paths)} end)
+  end
+
+  defp collect_segments(node, path, matched, table) do
+    keys = Enum.uniq(for key <- [node.override_key, node.source_id], key != nil, do: key)
+    new_keys = Enum.reject(keys, &MapSet.member?(matched, &1))
+    found = Enum.reverse(path)
+
+    table =
+      Enum.reduce(new_keys, table, &Map.update(&2, &1, [found], fn paths -> [found | paths] end))
+
+    if instance?(node) do
+      table
+    else
+      matched = Enum.reduce(new_keys, matched, &MapSet.put(&2, &1))
+
+      node.children
+      |> Enum.with_index()
+      |> Enum.reduce(table, fn {child, index}, table ->
+        collect_segments(child, [index | path], matched, table)
+      end)
     end
   end
 

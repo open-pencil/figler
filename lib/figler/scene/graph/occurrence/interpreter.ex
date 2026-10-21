@@ -492,14 +492,15 @@ defmodule Figler.Scene.Graph.Occurrence.Interpreter do
 
   # Applies this owner's property layers, then placed geometry and saved caches.
   defp finish_occurrence(occurrence, subtree, source, claims, rank, state) do
-    {occurrence, state} =
-      Enum.reduce(claims, {occurrence, state}, fn claim, {occurrence, state} ->
-        case resolve_claim_target(occurrence, claim.path, state) do
-          {:ok, target_path, state} ->
-            {apply_property_claim(occurrence, rank, target_path, claim), state}
+    # Claims change properties, never the subtree's shape, so its path lookups are shared.
+    {occurrence, state, _tables} =
+      Enum.reduce(claims, {occurrence, state, %{}}, fn claim, {occurrence, state, tables} ->
+        case resolve_claim_target(occurrence, claim.path, state, tables) do
+          {:ok, target_path, state, tables} ->
+            {apply_property_claim(occurrence, rank, target_path, claim), state, tables}
 
-          {:skip, state} ->
-            {occurrence, state}
+          {:skip, state, tables} ->
+            {occurrence, state, tables}
         end
       end)
 
@@ -536,18 +537,18 @@ defmodule Figler.Scene.Graph.Occurrence.Interpreter do
     end
   end
 
-  defp resolve_claim_target(owner, path, state) do
-    case Occurrence.resolve_path(owner, path) do
-      {:ok, target_path} ->
-        {:ok, target_path, state}
+  defp resolve_claim_target(owner, path, state, tables) do
+    case Occurrence.resolve_path(owner, path, tables) do
+      {{:ok, target_path}, tables} ->
+        {:ok, target_path, state, tables}
 
-      {:error, _segment, 0} ->
+      {{:error, _segment, 0}, tables} ->
         if removed_target?(owner, path, state.index),
-          do: {:skip, state},
-          else: {:skip, diagnose(state, unresolved_property(owner, path, 0))}
+          do: {:skip, state, tables},
+          else: {:skip, diagnose(state, unresolved_property(owner, path, 0)), tables}
 
-      {:error, _segment, count} ->
-        {:skip, diagnose(state, unresolved_property(owner, path, count))}
+      {{:error, _segment, count}, tables} ->
+        {:skip, diagnose(state, unresolved_property(owner, path, count)), tables}
     end
   end
 
@@ -593,25 +594,27 @@ defmodule Figler.Scene.Graph.Occurrence.Interpreter do
     source
     |> Map.get(:derived_symbol_data)
     |> List.wrap()
-    |> Enum.reduce({owner, state}, fn entry, {owner, state} ->
+    |> Enum.reduce({owner, state, %{}}, fn entry, {owner, state, tables} ->
       case entry |> get_in([:guid_path, :guids]) |> List.wrap() |> Enum.map(&GUID.key/1) do
-        [] -> {owner, state}
-        path -> apply_derived_entry(owner, path, entry, state)
+        [] -> {owner, state, tables}
+        path -> apply_derived_entry(owner, path, entry, state, tables)
       end
     end)
+    |> then(fn {owner, state, _tables} -> {owner, state} end)
   end
 
-  defp apply_derived_entry(owner, path, entry, state) do
-    case resolve_claim_target(owner, path, state) do
-      {:ok, [], state} ->
-        {owner, state}
+  # Derived entries change properties, never the subtree's shape.
+  defp apply_derived_entry(owner, path, entry, state, tables) do
+    case resolve_claim_target(owner, path, state, tables) do
+      {:ok, [], state, tables} ->
+        {owner, state, tables}
 
-      {:ok, target_path, state} ->
-        {Occurrence.update_at(owner, target_path, &Geometry.apply_derived_entry(&1, entry)),
-         state}
+      {:ok, target_path, state, tables} ->
+        owner = Occurrence.update_at(owner, target_path, &Geometry.apply_derived_entry(&1, entry))
+        {owner, state, tables}
 
-      {:skip, state} ->
-        {owner, state}
+      {:skip, state, tables} ->
+        {owner, state, tables}
     end
   end
 
