@@ -2,12 +2,13 @@ defmodule Figler.Render.Geometry.Path do
   @moduledoc "A decoded Figma geometry path and its winding rule."
 
   @enforce_keys [:path, :fill_rule, :closed?]
-  defstruct [:path, :fill_rule, :closed?]
+  defstruct [:path, :fill_rule, :closed?, :fills]
 
   @type t :: %__MODULE__{
           path: Skia.Path.t(),
           fill_rule: :winding | :even_odd,
-          closed?: boolean()
+          closed?: boolean(),
+          fills: [Figler.Render.Paint.t()] | nil
         }
 end
 

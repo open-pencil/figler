@@ -63,8 +63,39 @@ defmodule Figler.Render.Skia.Shape do
 
   defp draw_emoji(document, _node, _assets), do: document
 
+  # A vector whose paths have fills of their own draws each path in them, and the rest in its
+  # own fills.
+  defp draw_fills(document, %Node{node_type: :vector} = node, assets) do
+    paths = geometry_paths(assets, node, :fill)
+
+    if Enum.any?(paths, & &1.fills),
+      do: Enum.reduce(paths, document, &draw_path_fills(&2, node, &1, assets)),
+      else: Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
+  end
+
   defp draw_fills(document, node, assets),
     do: Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
+
+  defp draw_path_fills(document, node, geometry, assets) do
+    Enum.reduce(geometry.fills || node.fill_paints || [], document, fn paint, drawn ->
+      draw_path_fill(drawn, node, geometry, paint, assets)
+    end)
+  end
+
+  defp draw_path_fill(document, node, geometry, paint, assets) do
+    case Paint.resolve(paint, node.size, assets.images) do
+      {:ok, resolved} ->
+        path_opts = [fill: resolved.paint, fill_rule: geometry.fill_rule]
+        draw = &Skia.path(&1, geometry.path, path_opts)
+
+        if is_number(resolved.opacity) and resolved.opacity < 1,
+          do: Skia.layer(document, [opacity: resolved.opacity], draw),
+          else: draw.(document)
+
+      {:error, _reason} ->
+        document
+    end
+  end
 
   defp draw_strokes(document, node, assets) do
     stroke = node.stroke || %Stroke{}
@@ -82,7 +113,7 @@ defmodule Figler.Render.Skia.Shape do
   @spec stroke_alignment_supported?(Node.t(), map()) :: boolean()
   def stroke_alignment_supported?(%Node{node_type: type} = node, assets)
       when type in [:vector, :boolean_operation],
-      do: alignment_silhouette_paths(assets, node) != []
+      do: baked_stroke?(node, assets) or alignment_silhouette_paths(assets, node) != []
 
   def stroke_alignment_supported?(node, _assets), do: stroke_alignment_supported?(node)
 
@@ -314,7 +345,67 @@ defmodule Figler.Render.Skia.Shape do
   defp draw_resolved(document, node, kind, opts, _resolved, assets),
     do: draw_shape(document, node, kind, opts, assets)
 
-  defp draw_resolved_stroke(document, node, opts, resolved, assets, stroke)
+  # Figma saves a vector's stroke as an outline already offset for its alignment, which is
+  # painted like a fill; only a centred stroke of an unfilled vector follows its network.
+  defp draw_resolved_stroke(
+         document,
+         %Node{node_type: type} = node,
+         opts,
+         resolved,
+         assets,
+         stroke
+       )
+       when type in [:vector, :boolean_operation] and is_map_key(assets.geometries, node.guid) do
+    case Map.get(assets.geometries[node.guid], :stroke, []) do
+      [_ | _] = outlines ->
+        if network_centerline?(node, stroke),
+          do: draw_resolved(document, node, :stroke, opts, resolved, assets),
+          else: draw_stroke_outlines(document, node, outlines, opts, resolved, assets, stroke)
+
+      [] ->
+        draw_unbaked_stroke(document, node, opts, resolved, assets, stroke)
+    end
+  end
+
+  defp draw_resolved_stroke(document, node, opts, resolved, assets, stroke),
+    do: draw_unbaked_stroke(document, node, opts, resolved, assets, stroke)
+
+  # A saved stroke outline is already offset for its alignment.
+  defp baked_stroke?(node, assets),
+    do: match?(%{stroke: [_ | _]}, Map.get(assets.geometries, node.guid))
+
+  defp network_centerline?(node, stroke) do
+    stroke.align in [nil, :center] and node.corner_radius in [nil, 0, 0.0] and
+      not is_nil(node.vector_network) and
+      not Enum.any?(node.fill_paints || [], &(&1.visible != false))
+  end
+
+  defp draw_stroke_outlines(document, node, outlines, opts, resolved, assets, stroke) do
+    paint_opts = [fill: Keyword.fetch!(opts, :stroke)]
+
+    draw = fn canvas ->
+      Enum.reduce(outlines, canvas, fn geometry, drawn ->
+        Skia.path(drawn, geometry.path, Keyword.put(paint_opts, :fill_rule, geometry.fill_rule))
+      end)
+    end
+
+    draw =
+      if stroke.align == :inside,
+        do: fn canvas -> Skia.group(canvas, [], &draw.(clip_to_fill(&1, node, assets))) end,
+        else: draw
+
+    if is_number(resolved.opacity) and resolved.opacity < 1,
+      do: Skia.layer(document, [opacity: resolved.opacity], draw),
+      else: draw.(document)
+  end
+
+  defp clip_to_fill(document, node, assets) do
+    assets
+    |> geometry_paths(node, :fill)
+    |> Enum.reduce(document, &Skia.clip_path(&2, &1.path))
+  end
+
+  defp draw_unbaked_stroke(document, node, opts, resolved, assets, stroke)
        when stroke.align in [:inside, :outside] do
     if stroke_alignment_supported?(node, assets) do
       draw_aligned_stroke(document, node, opts, resolved, assets, stroke)
@@ -323,7 +414,7 @@ defmodule Figler.Render.Skia.Shape do
     end
   end
 
-  defp draw_resolved_stroke(document, node, opts, resolved, assets, _stroke),
+  defp draw_unbaked_stroke(document, node, opts, resolved, assets, _stroke),
     do: draw_resolved(document, node, :stroke, opts, resolved, assets)
 
   defp draw_aligned_stroke(document, node, opts, resolved, assets, stroke) do
@@ -870,10 +961,15 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   defp geometry_paths(assets, %{vector_network: reference} = node, kind)
-       when not is_nil(reference) do
-    assets.vector_geometries
-    |> Map.get(node.guid, %{})
-    |> Map.get(kind, [])
+       when not is_nil(reference) and is_map_key(assets.vector_geometries, node.guid),
+       do: Map.get(assets.vector_geometries[node.guid], kind, [])
+
+  # Without a network or a saved stroke outline, a stroke follows the saved fill outline.
+  defp geometry_paths(assets, node, :stroke) do
+    case Map.get(assets.geometries, node.guid, %{}) do
+      %{stroke: [_ | _] = outlines} -> outlines
+      geometries -> Map.get(geometries, :fill, [])
+    end
   end
 
   defp geometry_paths(assets, node, kind) do

@@ -770,6 +770,30 @@ defmodule Figler.RenderTest do
     assert <<229, 51, 26, 255, _rest::binary>> = data
   end
 
+  test "fills each vector region in its style's fills, with its winding rule from the low bit" do
+    # Style 1, non-zero winding.
+    blob = editable_square_blob(1 * 2 + 1)
+    styles = [struct(Figler.Schema.NodeChange, style_id: 1, fill_paints: [solid_paint(0, 0, 1)])]
+
+    assert {:ok, scene} = editable_vector_payload(blob, styles) |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene)
+
+    assert [%{opts: opts}] = Enum.filter(Skia.commands(document), &(&1.op == :path))
+    assert opts[:fill_rule] == :winding
+
+    assert {:ok, %{data: <<0, 0, 255, 255, _rest::binary>>}} = Skia.to_raw(document)
+  end
+
+  test "paints a vector's saved stroke outline like a fill" do
+    assert {:ok, scene} = baked_stroke_payload() |> Render.prepare()
+    assert {:ok, %{warnings: [], document: document}} = SkiaBackend.compile(scene, strict: true)
+
+    paths = Enum.filter(Skia.commands(document), &(&1.op == :path))
+    assert [_fill, %{opts: stroke_opts}] = paths
+    refute Keyword.has_key?(stroke_opts, :stroke)
+    refute Keyword.has_key?(stroke_opts, :stroke_width)
+  end
+
   test "renders inside and outside strokes with bounded shape masks" do
     for {alignment, expected_bounds, mask_blend} <- [
           {:inside, %Bounds{min_x: 0.0, min_y: 0.0, max_x: 20.0, max_y: 20.0}, :dst_in},
@@ -1545,7 +1569,7 @@ defmodule Figler.RenderTest do
           {compound_closed_geometry_blob(), [geometry], [solid_paint(0.2, 0.4, 0.8)]}
 
         :open ->
-          {open_geometry_blob(), [], []}
+          {open_geometry_blob(), [geometry], []}
       end
 
     [
@@ -1563,8 +1587,7 @@ defmodule Figler.RenderTest do
         stroke_join: :miter,
         miter_limit: 4.0,
         dash_pattern: [6.0, 3.0],
-        fill_geometry: fill_geometry,
-        stroke_geometry: [geometry]
+        fill_geometry: fill_geometry
       )
     ]
     |> encode_nodes([struct(Figler.Schema.Blob, bytes: blob)])
@@ -1691,8 +1714,7 @@ defmodule Figler.RenderTest do
         stroke_join: :bevel,
         miter_limit: 6.0,
         dash_pattern: [8.0, 4.0],
-        fill_geometry: [geometry],
-        stroke_geometry: [geometry]
+        fill_geometry: [geometry]
       ),
       node(guid(1, 2), :boolean_operation, "Boolean", canvas_guid,
         size: vector(40, 40),
@@ -1717,7 +1739,10 @@ defmodule Figler.RenderTest do
     encode_nodes(nodes, [struct(Figler.Schema.Blob, bytes: blob)])
   end
 
-  defp editable_vector_payload(blob \\ editable_square_blob()) do
+  defp editable_vector_payload(
+         blob \\ editable_square_blob(),
+         style_override_table \\ [struct(Figler.Schema.NodeChange, style_id: 1)]
+       ) do
     document_guid = guid(0, 0)
     canvas_guid = guid(0, 1)
 
@@ -1725,7 +1750,7 @@ defmodule Figler.RenderTest do
       struct(Figler.Schema.VectorData,
         vector_network_blob: 0,
         normalized_size: vector(100, 100),
-        style_override_table: [struct(Figler.Schema.NodeChange, style_id: 1)]
+        style_override_table: style_override_table
       )
 
     nodes = [
@@ -1743,7 +1768,7 @@ defmodule Figler.RenderTest do
     encode_nodes(nodes, [struct(Figler.Schema.Blob, bytes: blob)])
   end
 
-  defp editable_square_blob do
+  defp editable_square_blob(region_winding \\ 0) do
     vertices = [{0.0, 0.0}, {100.0, 0.0}, {100.0, 100.0}, {0.0, 100.0}]
     segments = [{0, 1}, {1, 2}, {2, 3}, {3, 0}]
 
@@ -1756,9 +1781,46 @@ defmodule Figler.RenderTest do
           0.0::little-float-32, finish::little-unsigned-32, 0.0::little-float-32,
           0.0::little-float-32>>
       end) <>
-      <<0::little-unsigned-32, 1::little-unsigned-32, 4::little-unsigned-32,
+      <<region_winding::little-unsigned-32, 1::little-unsigned-32, 4::little-unsigned-32,
         0::little-unsigned-32, 1::little-unsigned-32, 2::little-unsigned-32,
         3::little-unsigned-32>>
+  end
+
+  defp baked_stroke_payload do
+    document_guid = guid(0, 0)
+    canvas_guid = guid(0, 1)
+    fill = struct(Figler.Schema.Path, winding_rule: :nonzero, commands_blob: 0)
+    outline = struct(Figler.Schema.Path, winding_rule: :nonzero, commands_blob: 1)
+
+    [
+      node(document_guid, :document, "Document"),
+      node(canvas_guid, :canvas, "Page 1", document_guid),
+      node(guid(1, 1), :vector, "Outlined", canvas_guid,
+        size: vector(20, 20),
+        transform: matrix(0, 0),
+        visible: true,
+        fill_paints: [solid_paint(1, 0, 0)],
+        stroke_paints: [solid_paint(0, 0, 1)],
+        stroke_weight: 2.0,
+        stroke_align: :outside,
+        fill_geometry: [fill],
+        stroke_geometry: [outline]
+      )
+    ]
+    |> encode_nodes([
+      struct(Figler.Schema.Blob, bytes: rect_commands(0, 0, 20, 20)),
+      struct(Figler.Schema.Blob,
+        bytes: rect_commands(-2, -2, 24, 24) <> rect_commands(0, 0, 20, 20)
+      )
+    ])
+  end
+
+  defp rect_commands(x, y, width, height) do
+    [{1, x, y}, {2, x + width, y}, {2, x + width, y + height}, {2, x, y + height}]
+    |> Enum.map_join(fn {command, px, py} ->
+      <<command, px * 1.0::little-float-32, py * 1.0::little-float-32>>
+    end)
+    |> Kernel.<>(<<0>>)
   end
 
   defp instance_paint_override_payload do

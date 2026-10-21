@@ -34,6 +34,24 @@ defmodule Figler.Render.VectorNetworkTest do
            ]
   end
 
+  test "reads a region's winding rule from the low bit and its style ID from the rest" do
+    blob =
+      network_blob(
+        [{0.0, 0.0}, {100.0, 0.0}, {100.0, 100.0}],
+        [
+          {0, {0.0, 0.0}, 1, {0.0, 0.0}},
+          {1, {0.0, 0.0}, 2, {0.0, 0.0}},
+          {2, {0.0, 0.0}, 0, {0.0, 0.0}}
+        ],
+        [{3 * 2 + 1, [[0, 1, 2]]}, {2 * 2, [[0, 1, 2]]}]
+      )
+
+    assert {:ok, network} = VectorNetwork.decode(blob, nil, nil)
+
+    assert [%{winding_rule: :winding, style_id: 3}, %{winding_rule: :even_odd, style_id: 2}] =
+             network.regions
+  end
+
   test "preserves relative cubic tangent handles" do
     blob =
       network_blob(

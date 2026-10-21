@@ -290,7 +290,9 @@ defmodule Figler.Render.Skia.Diagnostics do
   end
 
   defp geometry_references(node, :fill), do: node.fill_geometry || []
-  defp geometry_references(node, :stroke), do: node.stroke_geometry || []
+  # A stroke without a saved outline follows the fill outline.
+  defp geometry_references(node, :stroke),
+    do: (node.stroke_geometry || []) ++ (node.fill_geometry || [])
 
   defp warning(guid, kind, value),
     do: Warning.new(GUID.format(guid), kind, value)

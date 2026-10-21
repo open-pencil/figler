@@ -155,19 +155,56 @@ defmodule Figler.Render.Skia.Assets do
 
   defp load_vector_network_asset(assets, node, blobs) do
     reference = node.vector_network
+    baked = assets.geometries |> Map.get(node.guid, %{}) |> Map.get(:fill, [])
 
     with index when is_integer(index) <- reference.blob_index,
          blob when is_binary(blob) <- Enum.at(blobs, index),
          {:ok, network} <- VectorNetwork.decode(blob, reference.normalized_size, node.size),
          {:ok, paths} <- SkiaVectorNetwork.paths(network) do
+      fill = vector_fill_paths(node, baked, network.regions, paths.fill)
+
       assets
       |> put_in([Access.key(:vector_networks), node.guid], network)
-      |> put_in([Access.key(:vector_geometries), node.guid], paths)
+      |> put_in([Access.key(:vector_geometries), node.guid], %{paths | fill: fill})
     else
       nil -> put_vector_network_error(assets, node.guid, :missing_vector_network_blob)
       {:error, reason} -> put_vector_network_error(assets, node.guid, reason)
     end
   end
+
+  # Figma's saved fill outlines are drawn over the network's own, each in its style's fills; the
+  # network's regions give them their winding rules, which the outlines do not keep reliably.
+  defp vector_fill_paths(node, [], regions, network_paths) do
+    regions
+    |> Enum.zip(network_paths)
+    |> Enum.map(fn {region, path} -> with_style_fills(path, node, region.style_id) end)
+    |> case do
+      [] -> network_paths
+      paths -> paths
+    end
+  end
+
+  defp vector_fill_paths(node, baked, regions, _network_paths) do
+    baked
+    |> Enum.zip(node.fill_geometry)
+    |> Enum.map(fn {path, reference} -> with_style_fills(path, node, reference.style_id) end)
+    |> align_winding_rules(regions)
+  end
+
+  defp with_style_fills(path, node, style_id),
+    do: %{path | fills: Map.get(node.vector_network.style_fills, style_id)}
+
+  defp align_winding_rules(paths, regions) when length(paths) == length(regions) do
+    Enum.zip_with(paths, regions, &%{&1 | fill_rule: &2.winding_rule})
+  end
+
+  defp align_winding_rules([path], [%{winding_rule: rule} | _] = regions) do
+    if Enum.all?(regions, &(&1.winding_rule == rule)),
+      do: [%{path | fill_rule: rule}],
+      else: [path]
+  end
+
+  defp align_winding_rules(paths, _regions), do: paths
 
   defp load_text_glyph_assets(assets, nodes, blobs) do
     blobs = List.to_tuple(blobs)
