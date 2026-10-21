@@ -19,6 +19,8 @@ defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
   alias RustQ.Meta.AST, as: MetaAST
   alias RustQ.Type, as: R
 
+  # A function pointer: raw, because RustQ would derive a term decoder for an
+  # alias of one (rc.11).
   @type fig_scene_skip_field :: %{
           required(:id) => R.u32(),
           required(:repeated) => R.bool(),

@@ -15,7 +15,6 @@ defmodule Figler.Codegen.Native.Scene do
   alias Figler.Codegen.Native.Scene.FieldSkip
   alias Figler.Codegen.Native.Scene.Record
   alias Figler.Codegen.Native.Scene.SkipFieldHelpers
-  alias Figler.Native.Entrypoints
   alias Figler.Render.Projection, as: RenderSourceProjection
   alias Figler.Scene.Projection
   alias KiwiCodec.RustlerGenerator.Skip
@@ -63,14 +62,27 @@ defmodule Figler.Codegen.Native.Scene do
     ]
   end
 
+  @nif_template "native/src/templates/scene_nifs.rs"
+
   def scene_nif_wrappers do
-    Nif.wrappers_from_source(
-      "native/src/templates/scene_nifs.rs",
-      Entrypoints.template_nifs(),
-      schedule: :dirty_cpu,
-      vis: :pub
-    )
+    Nif.wrappers_from_source(@nif_template, template_nifs(), schedule: :dirty_cpu, vis: :pub)
   end
+
+  @doc """
+  The NIFs the template implements: every public `name_impl` function becomes
+  NIF `name`, its signature read from the source.
+  """
+  @spec template_nifs() :: [{atom(), keyword()}]
+  def template_nifs do
+    for %RustQ.Syn.Function{name: name, visibility: :public} <-
+          RustQ.Syn.parse!(File.read!(@nif_template)).items,
+        String.ends_with?(name, "_impl"),
+        do: {name |> String.trim_trailing("_impl") |> String.to_atom(), []}
+  end
+
+  @doc "Metadata for the template NIFs, for generating their Elixir stubs."
+  @spec template_nif_functions() :: [{atom(), RustQ.Syn.Function.t()}]
+  def template_nif_functions, do: Nif.functions_from_source(@nif_template, template_nifs())
 
   def render_template(template, bindings) do
     path = Path.join(["native", "src", "templates", template])

@@ -71,8 +71,8 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
     value = xpath_value(attr.value)
 
     quote do
-      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.raw(:SceneNodeRecord)), RustQ.Type.usize()) ::
-              RustQ.Type.raw(:"Option<(&'static str, String)>")
+      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.path(:SceneNodeRecord)), RustQ.Type.usize()) ::
+              RustQ.Type.option(RustQ.Type.path(:RecordAttribute))
       defrust unquote(name)(record, index) do
         case unquote(accessor) do
           {:some, value} ->
@@ -91,8 +91,8 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
 
   defp optional_attr_base_function(name) do
     quote do
-      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.raw(:SceneNodeRecord)), RustQ.Type.usize()) ::
-              RustQ.Type.raw(:"Option<(&'static str, String)>")
+      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.path(:SceneNodeRecord)), RustQ.Type.usize()) ::
+              RustQ.Type.option(RustQ.Type.path(:RecordAttribute))
       defrust unquote(name)(_record, _index) do
         nil
       end
@@ -103,7 +103,7 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
     accessor = xpath_accessor(attr)
 
     quote do
-      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.raw(:SceneNodeRecord))) ::
+      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.path(:SceneNodeRecord))) ::
               RustQ.Type.usize()
       defrust unquote(name)(record) do
         case unquote(accessor) do
@@ -116,7 +116,7 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
 
   defp optional_attr_count_base_function(name) do
     quote do
-      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.raw(:SceneNodeRecord))) :: RustQ.Type.usize()
+      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.path(:SceneNodeRecord))) :: RustQ.Type.usize()
       defrust unquote(name)(_record) do
         0
       end
@@ -377,8 +377,8 @@ defmodule Figler.Codegen.Native.SupportFunction do
     2
   end
 
-  @spec scene_node_record_attr(R.ref(R.raw(:SceneNodeRecord)), R.usize()) ::
-          R.raw(:"Option<(&'static str, String)>")
+  @spec scene_node_record_attr(R.ref(R.path(:SceneNodeRecord)), R.usize()) ::
+          R.option(R.path(:RecordAttribute))
   defrust scene_node_record_attr(record, index) do
     if index == 0 do
       some({"guid", record.guid.to_string()})
@@ -391,12 +391,12 @@ defmodule Figler.Codegen.Native.SupportFunction do
     end
   end
 
-  @spec scene_node_record_attr_count(R.ref(R.raw(:SceneNodeRecord))) :: R.usize()
+  @spec scene_node_record_attr_count(R.ref(R.path(:SceneNodeRecord))) :: R.usize()
   defrust scene_node_record_attr_count(record) do
     scene_node_record_base_attr_count() + scene_node_record_optional_attr_count_0(record)
   end
 
-  @spec scene_query_node(R.ref(R.raw(:SceneIndex)), R.usize()) :: scene_query_node()
+  @spec scene_query_node(R.ref(R.path(:SceneIndex)), R.usize()) :: scene_query_node()
   defrust scene_query_node(scene, node_index) do
     node = ref(index(scene.nodes, node_index))
     scene_query_node_struct_literal()
@@ -404,7 +404,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   @spec scene_query_node_term(
           R.path(:Env, R.lifetime(:a)),
-          R.ref(R.raw(:SceneIndex)),
+          R.ref(R.path(:SceneIndex)),
           R.usize(),
           R.slice(R.path(:String))
         ) :: R.nif_result(term())
@@ -646,8 +646,8 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   @spec graph_focus_push_guid_ref(
-          R.mut_ref(R.raw(:"Decoder<'_>")),
-          R.mut_ref(R.option(R.vec(R.raw(:GraphFocusGuid))))
+          R.mut_ref(R.path(:Decoder, R.lifetime(:_))),
+          R.mut_ref(R.option(R.vec(R.path(:GraphFocusGuid))))
         ) :: R.nif_result(R.unit())
   defrust graph_focus_push_guid_ref(decoder, refs) do
     graph_focus_push_ref(refs, graph_focus_read_guid(decoder))
@@ -655,9 +655,9 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   @spec graph_focus_extend_symbol_refs(
-          R.raw(:GraphFocusSymbolData),
-          R.mut_ref(R.option(R.vec(R.raw(:GraphFocusGuid))))
-        ) :: R.nif_result(R.option(R.raw(:GraphFocusGuid)))
+          R.path(:GraphFocusSymbolData),
+          R.mut_ref(R.option(R.vec(R.path(:GraphFocusGuid))))
+        ) :: R.nif_result(R.option(R.path(:GraphFocusGuid)))
   defrust graph_focus_extend_symbol_refs(data, refs) do
     symbol_id = data.symbol_id
     graph_focus_extend_refs(refs, data.refs)
@@ -665,8 +665,8 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   @spec graph_focus_extend_component_prop_assignments(
-          R.mut_ref(R.raw(:"Decoder<'_>")),
-          R.mut_ref(R.option(R.vec(R.raw(:GraphFocusGuid))))
+          R.mut_ref(R.path(:Decoder, R.lifetime(:_))),
+          R.mut_ref(R.option(R.vec(R.path(:GraphFocusGuid))))
         ) :: R.nif_result(R.unit())
   defrust graph_focus_extend_component_prop_assignments(decoder, refs) do
     remaining = decoder.read_var_uint()
@@ -674,8 +674,8 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   @spec graph_focus_extend_component_prop_assignments_remaining(
-          R.mut_ref(R.raw(:"Decoder<'_>")),
-          R.mut_ref(R.option(R.vec(R.raw(:GraphFocusGuid)))),
+          R.mut_ref(R.path(:Decoder, R.lifetime(:_))),
+          R.mut_ref(R.option(R.vec(R.path(:GraphFocusGuid)))),
           R.u32()
         ) :: R.nif_result(R.unit())
   defrust graph_focus_extend_component_prop_assignments_remaining(decoder, refs, remaining) do
@@ -689,8 +689,8 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   @spec graph_focus_extend_component_prop_value(
-          R.mut_ref(R.raw(:"Decoder<'_>")),
-          R.mut_ref(R.option(R.vec(R.raw(:GraphFocusGuid))))
+          R.mut_ref(R.path(:Decoder, R.lifetime(:_))),
+          R.mut_ref(R.option(R.vec(R.path(:GraphFocusGuid))))
         ) :: R.nif_result(R.unit())
   defrust graph_focus_extend_component_prop_value(decoder, refs) do
     next = graph_focus_read_component_prop_value(decoder)

@@ -21,7 +21,7 @@ defmodule Figler.PackageTest do
     filter = Mix.Project.config() |> Keyword.fetch!(:docs) |> Keyword.fetch!(:filter_modules)
 
     for module <- [
-          Figler.Native,
+          Figler.Native.SceneNifs,
           Figler.Render.Projection,
           Figler.Render.Skia,
           Figler.Scene.Projection,

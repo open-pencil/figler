@@ -11255,6 +11255,8 @@ mod scene_xpath_runtime {
         parent: Option<usize>,
         children: Vec<usize>,
     }
+    /// A record attribute XPath reads: its name and its value as text.
+    type RecordAttribute = (&'static str, String);
     #[derive(Clone, Debug)]
     struct SceneIndex {
         nodes: Vec<SceneNodeRecord>,
@@ -11328,7 +11330,7 @@ mod scene_xpath_runtime {
     static FILL_COUNT_ATOM: OnceLock<Atom> = OnceLock::new();
     static STROKE_COUNT_ATOM: OnceLock<Atom> = OnceLock::new();
     impl SceneNodeRecord {
-        fn attr(&self, index: usize) -> Option<(&'static str, String)> {
+        fn attr(&self, index: usize) -> Option<RecordAttribute> {
             scene_node_record_attr(self, index)
         }
         fn attr_count(&self) -> usize {
@@ -11746,7 +11748,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_0(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.name.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11761,7 +11763,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_1(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.parent_guid.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11776,7 +11778,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_2(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.position.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11791,7 +11793,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_3(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.size.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11806,7 +11808,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_4(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.size.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11821,7 +11823,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_5(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.size.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11836,7 +11838,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_6(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.size.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11851,7 +11853,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_7(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.transform.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11872,7 +11874,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_8(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.visible {
             Some(value) => {
                 if index == 0 {
@@ -11887,7 +11889,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_9(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.locked {
             Some(value) => {
                 if index == 0 {
@@ -11902,7 +11904,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_10(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.opacity {
             Some(value) => {
                 if index == 0 {
@@ -11917,7 +11919,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_11(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.text.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11932,7 +11934,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_12(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.font_family.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11947,7 +11949,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_13(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.font_style.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11962,7 +11964,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_14(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.font_postscript.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -11977,7 +11979,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_15(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.font_size {
             Some(value) => {
                 if index == 0 {
@@ -11992,7 +11994,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_16(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.text_style_guid.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -12007,7 +12009,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_17(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.component_key.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -12022,7 +12024,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_18(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.origin_component_key.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -12037,7 +12039,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_19(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.fill_style_guid.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -12052,7 +12054,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_20(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.stroke_style_guid.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -12067,7 +12069,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_21(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.effect_style_guid.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -12082,7 +12084,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_22(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.grid_style_guid.as_ref() {
             Some(value) => {
                 if index == 0 {
@@ -12097,7 +12099,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_23(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.fill_count {
             Some(value) => {
                 if index == 0 {
@@ -12112,7 +12114,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_24(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         match record.stroke_count {
             Some(value) => {
                 if index == 0 {
@@ -12127,7 +12129,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_optional_attr_25(
         _record: &SceneNodeRecord,
         _index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         None
     }
     fn scene_node_record_optional_attr_count_0(record: &SceneNodeRecord) -> usize {
@@ -12320,7 +12322,7 @@ mod scene_xpath_runtime {
     fn scene_node_record_attr(
         record: &SceneNodeRecord,
         index: usize,
-    ) -> Option<(&'static str, String)> {
+    ) -> Option<RecordAttribute> {
         if index == 0 {
             Some(("guid", record.guid.to_string()))
         } else if index == 1 {

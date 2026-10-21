@@ -22,7 +22,7 @@ defmodule Figler.Codegen.Native.AtomCache do
 
     static_types =
       Enum.map(fields, fn field ->
-        {static_name(field), quote(do: RustQ.Type.raw(:"OnceLock<Atom>"))}
+        {static_name(field), quote(do: OnceLock.t(Atom.t()))}
       end)
 
     opts = Keyword.put(opts, :static_types, static_types)

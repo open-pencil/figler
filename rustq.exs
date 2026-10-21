@@ -19,10 +19,6 @@ unless Code.ensure_loaded?(Figler.Scene.Projection.Native) do
   Code.require_file("codegen/figler/scene/projection/native.ex")
 end
 
-unless Code.ensure_loaded?(Figler.Native.Entrypoints) do
-  Code.require_file("lib/figler/native/entrypoints.ex")
-end
-
 unless Code.ensure_loaded?(Figler.Codegen.Native.AtomCache) do
   Code.require_file("codegen/figler/codegen/native/atom_cache.ex")
 end
@@ -67,11 +63,7 @@ unless Code.ensure_loaded?(Figler.Codegen.Native) do
   Code.require_file("codegen/figler/codegen/native.ex")
 end
 
-template_nif_functions =
-  Nif.functions_from_source(
-    "native/src/templates/scene_nifs.rs",
-    Figler.Native.Entrypoints.template_nifs()
-  )
+template_nif_functions = Figler.Codegen.Native.Scene.template_nif_functions()
 
 navigation_nif_functions = Figler.Codegen.Native.SupportFunction.scene_navigation_nif_items()
 

@@ -29,6 +29,9 @@ mod scene_xpath_runtime {
     }
 
     __rq_scene_node_record!();
+
+    /// A record attribute XPath reads: its name and its value as text.
+    type RecordAttribute = (&'static str, String);
     #[derive(Clone, Debug)]
     struct SceneIndex {
         nodes: Vec<SceneNodeRecord>,
@@ -81,7 +84,7 @@ mod scene_xpath_runtime {
     __rq_scene_query_atom_statics!();
 
     impl SceneNodeRecord {
-        fn attr(&self, index: usize) -> Option<(&'static str, String)> {
+        fn attr(&self, index: usize) -> Option<RecordAttribute> {
             scene_node_record_attr(self, index)
         }
         fn attr_count(&self) -> usize {
