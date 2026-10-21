@@ -2,7 +2,6 @@
 // Generated from Rusty-Elixir: `with ... else` fallbacks lower to single-arm matches, closures
 // pass functions their arguments, references stay explicit, and list literals become vectors.
 #[allow(
-    clippy::match_single_binding,
     clippy::redundant_closure,
     clippy::needless_borrow,
     clippy::manual_map,

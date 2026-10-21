@@ -9,7 +9,8 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   use RustQ.Meta,
     rust_sources: [
       "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ]
+    ],
+    callable_modules: [Figler.Codegen.Native.Graph.Records, Figler.Codegen.Native.Graph.Prepare]
 
   alias RustQ.Type, as: R
 
@@ -17,73 +18,61 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
   defrustmod NodePhase, as: [:kiwi_records, :node_phase]
 
-  @type sources :: HashMap.t(GuidKey.t(), KiwiRecord.t())
-  @type children :: HashMap.t(GuidKey.t(), R.vec(GuidKey.t()))
-
-  @type source_index :: %{required(:sources) => sources(), required(:children) => children()}
+  @typep sources :: HashMap.t(GuidKey.t(), KiwiRecord.t())
+  @typep children :: HashMap.t(GuidKey.t(), R.vec(GuidKey.t()))
+  @typep source_index :: %{required(:sources) => sources(), required(:children) => children()}
 
   @doc false
   @spec items() :: [term()]
   def items do
-    # The index never crosses the NIF boundary, so its types need no term decoders.
-    Enum.reject(__rustq_type_items__(), &match?(%RustQ.Rust.AST.Function{}, &1)) ++
+    __rustq_type_items__() ++
       RustQ.Meta.AST.functions!(__MODULE__, [
-        :live_record,
         :source_index,
-        :duplicate_ids,
-        :sources,
-        :children,
+        :live?,
         :live_records,
+        :duplicate_ids?,
         :record_ids,
         :id_set,
-        :no_children,
+        :sources,
+        :children,
         :child_pairs,
-        :push_child,
         :record_refs
       ])
   end
-
-  @spec live_record(R.ref(R.path(:KiwiRecord))) :: R.bool()
-  defrust live_record(record), do: not enum_is(record, NodeChange.PHASE, NodePhase.REMOVED)
 
   @spec source_index(R.ref(KiwiRecord.t()), R.bool()) :: R.nif_result(source_index())
   defrust source_index(message, styles) do
     live = live_records(message)
 
-    if duplicate_ids(ref(live)) do
+    if duplicate_ids?(live) do
       err(badarg())
     else
-      case prepare(live.into_iter().cloned().collect(), styles) do
-        {:ok, prepared} ->
-          ok(
-            struct_literal(SourceIndex,
-              sources: sources(ref(prepared)),
-              children: children(ref(prepared))
-            )
+      with {:ok, prepared} <- prepare(live.into_iter().cloned().collect(), styles) do
+        ok(
+          struct_literal(SourceIndex,
+            sources: sources(prepared),
+            children: children(prepared)
           )
-
-        {:error, error} ->
-          err(error)
+        )
       end
     end
   end
 
-  @spec live_records(R.ref(R.path(:KiwiRecord))) :: R.vec(R.ref(R.path(:KiwiRecord)))
+  @spec live?(R.ref(KiwiRecord.t())) :: R.bool()
+  defrust live?(record), do: record.enum_value(NodeChange.PHASE) != some(NodePhase.REMOVED)
+
+  @spec live_records(R.ref(KiwiRecord.t())) :: R.vec(R.ref(KiwiRecord.t()))
   defrust live_records(message) do
-    message
-    |> records(Message.NODE_CHANGES)
-    |> into_iter()
-    |> filter(fn record -> live_record(record) end)
-    |> collect()
+    for record <- message.records(Message.NODE_CHANGES), live?(record), do: record
   end
 
-  @spec duplicate_ids(R.slice(R.ref(R.path(:KiwiRecord)))) :: R.bool()
-  defrust duplicate_ids(records) do
+  @spec duplicate_ids?(R.slice(R.ref(KiwiRecord.t()))) :: R.bool()
+  defrust duplicate_ids?(records) do
     ids = record_ids(records)
-    ids.len() != id_set(ids).len()
+    ids.len() != id_set(ref(ids)).len()
   end
 
-  @spec record_ids(R.slice(R.ref(R.path(:KiwiRecord)))) :: R.vec(GuidKey.t())
+  @spec record_ids(R.slice(R.ref(KiwiRecord.t()))) :: R.vec(GuidKey.t())
   defrust record_ids(records) do
     records |> iter() |> filter_map(fn record -> record_id(record) end) |> collect()
   end
@@ -101,23 +90,14 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
 
   @spec children(R.slice(KiwiRecord.t())) :: children()
   defrust children(records) do
-    children = no_children()
+    children = HashMap.new()
 
     for {parent, id} <- child_pairs(records) do
-      push_child(mut_ref(children), parent, id)
+      children.entry(parent).or_default().push(id)
     end
 
     children
   end
-
-  @spec push_child(R.mut_ref(children()), GuidKey.t(), GuidKey.t()) :: R.unit()
-  defrust push_child(children, parent, id), do: children.entry(parent).or_default().push(id)
-
-  @spec record_refs(R.slice(KiwiRecord.t())) :: R.vec(R.ref(KiwiRecord.t()))
-  defrust record_refs(records), do: records |> iter() |> collect()
-
-  @spec no_children() :: children()
-  defrust no_children(), do: HashMap.new()
 
   # Each parent and child, in the children's saved order.
   @spec child_pairs(R.slice(KiwiRecord.t())) :: R.vec({GuidKey.t(), GuidKey.t()})
@@ -137,4 +117,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
     end)
     |> collect()
   end
+
+  @spec record_refs(R.slice(KiwiRecord.t())) :: R.vec(R.ref(KiwiRecord.t()))
+  defrust record_refs(records), do: records |> iter() |> collect()
 end

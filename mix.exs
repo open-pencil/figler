@@ -187,8 +187,12 @@ defmodule Figler.MixProject do
     end
   end
 
+  # RUSTQ_PATH points RustQ at a local checkout.
   defp rustq_dep do
-    {:rustq, "~> 1.0.0-rc.11", only: [:dev, :test], runtime: false}
+    case System.get_env("RUSTQ_PATH") do
+      nil -> {:rustq, "~> 1.0.0-rc.11", only: [:dev, :test], runtime: false}
+      path -> {:rustq, path: path, only: [:dev, :test], runtime: false, override: true}
+    end
   end
 
   defp json_codec_dep do

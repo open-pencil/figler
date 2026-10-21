@@ -42,15 +42,14 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrustmod NodeType, as: [:kiwi_records, :node_type]
   defrustmod Definitions, as: [:kiwi_record_definitions]
 
-  @type resolved :: HashMap.t(GuidKey.t(), KiwiRecord.t())
-  @type styles :: HashMap.t(GuidKey.t(), KiwiRecord.t())
-  @type style_keys :: HashMap.t(String.t(), GuidKey.t())
+  @typep resolved :: HashMap.t(GuidKey.t(), KiwiRecord.t())
+  @typep styles :: HashMap.t(GuidKey.t(), KiwiRecord.t())
+  @typep style_keys :: HashMap.t(String.t(), GuidKey.t())
 
   @doc false
   @spec items() :: [term()]
   def items do
-    # Records never cross the NIF boundary here, so these types need no term decoders.
-    Enum.reject(__rustq_type_items__(), &match?(%RustQ.Rust.AST.Function{}, &1)) ++
+    __rustq_type_items__() ++
       RustQ.Meta.AST.functions!(__MODULE__, [
         :prepare,
         :normalize,
@@ -75,18 +74,14 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
         :text_style,
         :referenced_style,
         :asset_style,
-        :put_style_key,
         :records_by_id,
-        :no_records,
         :inherit_definitions,
         :definitions_named,
         :with_text_style,
-        :same_node_field,
         :cached,
-        :no_style_keys,
-        :put_versioned_key,
         :unversioned_style,
-        :style_by_id
+        :style_by_id,
+        :style_names
       ])
   end
 
@@ -100,12 +95,10 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   # Applies to a record, its override and derived records, and its text ranges.
   @spec normalize(R.ref(KiwiRecord.t())) :: KiwiRecord.t()
   defrust normalize(record) do
-    defaults =
-      record.map_records(NodeChange.COMPONENT_PROP_DEFS, fn definition ->
-        normalize_default(definition)
-      end)
-
-    put_prop_refs(defaults)
+    record.map_records(NodeChange.COMPONENT_PROP_DEFS, fn definition ->
+      normalize_default(definition)
+    end)
+    |> put_prop_refs()
     |> map_record(NodeChange.SYMBOL_DATA, fn data ->
       data.map_records(SymbolData.SYMBOL_OVERRIDES, fn layer -> normalize(layer) end)
     end)
@@ -178,20 +171,17 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
          {:some, variable} <- entry.record(VariableDataMapEntry.VARIABLE_DATA),
          {:some, value} <- variable.record(VariableData.VALUE),
          {:some, reference} <- value.record(VariableAnyValue.PROP_REF_VALUE),
-         {:some, def_id} <- reference.record(PropRefValue.DEF_ID) do
-      if enum_is(variable, VariableData.DATA_TYPE, VariableDataType.PROP_REF) do
-        some(
-          KiwiRecord.new(Definitions.COMPONENT_PROP_REF)
-          |> put_record(ComponentPropRef.DEF_ID, def_id.clone())
-          |> put_enum(
-            ComponentPropRef.COMPONENT_PROP_NODE_FIELD,
-            field,
-            Definitions.COMPONENT_PROP_NODE_FIELD
-          )
+         {:some, def_id} <- reference.record(PropRefValue.DEF_ID),
+         true <- variable.enum_value(VariableData.DATA_TYPE) == some(VariableDataType.PROP_REF) do
+      some(
+        KiwiRecord.new(Definitions.COMPONENT_PROP_REF)
+        |> put_record(ComponentPropRef.DEF_ID, def_id.clone())
+        |> put_enum(
+          ComponentPropRef.COMPONENT_PROP_NODE_FIELD,
+          field,
+          Definitions.COMPONENT_PROP_NODE_FIELD
         )
-      else
-        nil
-      end
+      )
     else
       _ -> nil
     end
@@ -200,28 +190,25 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   # The fields a property binds, from the variable field naming them to the property field.
   @spec node_field(R.u32()) :: R.option(R.u32())
   defrust node_field(field) do
-    cond do
-      field == VariableField.VISIBLE ->
-        some(ComponentPropNodeField.VISIBLE)
-
-      field == VariableField.TEXT_DATA ->
-        some(ComponentPropNodeField.TEXT_DATA)
-
-      field == VariableField.OVERRIDDEN_SYMBOL_ID ->
-        some(ComponentPropNodeField.OVERRIDDEN_SYMBOL_ID)
-
-      field == VariableField.SLOT_CONTENT_ID ->
-        some(ComponentPropNodeField.SLOT_CONTENT_ID)
-
-      true ->
-        nil
+    case field do
+      VariableField.VISIBLE -> some(ComponentPropNodeField.VISIBLE)
+      VariableField.TEXT_DATA -> some(ComponentPropNodeField.TEXT_DATA)
+      VariableField.OVERRIDDEN_SYMBOL_ID -> some(ComponentPropNodeField.OVERRIDDEN_SYMBOL_ID)
+      VariableField.SLOT_CONTENT_ID -> some(ComponentPropNodeField.SLOT_CONTENT_ID)
+      _ -> nil
     end
   end
 
   # Replaces the last saved ref for the same field, or adds the ref after the others.
   @spec upsert_ref(R.vec(KiwiRecord.t()), KiwiRecord.t()) :: R.vec(KiwiRecord.t())
   defrust upsert_ref(refs, prop_ref) do
-    case refs |> iter() |> rposition(fn saved -> same_node_field(saved, ref(prop_ref)) end) do
+    field = prop_ref.enum_value(ComponentPropRef.COMPONENT_PROP_NODE_FIELD)
+
+    case refs
+         |> iter()
+         |> rposition(fn saved ->
+           saved.enum_value(ComponentPropRef.COMPONENT_PROP_NODE_FIELD) == field
+         end) do
       {:some, index} ->
         refs.remove(index)
         refs.insert(index, prop_ref)
@@ -233,18 +220,12 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec same_node_field(R.ref(KiwiRecord.t()), R.ref(KiwiRecord.t())) :: R.bool()
-  defrust same_node_field(saved, prop_ref) do
-    saved.enum_value(ComponentPropRef.COMPONENT_PROP_NODE_FIELD) ==
-      prop_ref.enum_value(ComponentPropRef.COMPONENT_PROP_NODE_FIELD)
-  end
-
   # Completes definitions that name a parent from the nearest ancestor holding it.
   @spec inherit_property_definitions(R.vec(KiwiRecord.t())) :: R.nif_result(R.vec(KiwiRecord.t()))
   defrust inherit_property_definitions(records) do
     if records.iter().any(fn record -> linked_definitions(record) end) do
       by_id = records_by_id(ref(records))
-      resolved = no_records()
+      resolved = HashMap.new()
 
       records
       |> iter()
@@ -262,9 +243,6 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     |> filter_map(fn record -> record_id(record).map(fn id -> {id, record} end) end)
     |> collect()
   end
-
-  @spec no_records() :: resolved()
-  defrust no_records(), do: HashMap.new()
 
   @spec linked_definitions(R.ref(KiwiRecord.t())) :: R.bool()
   defrust linked_definitions(record) do
@@ -384,7 +362,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
         ok(KiwiRecord.new(Definitions.COMPONENT_PROP_DEF))
 
       {:some, definitions} ->
-        if definitions.len() == 1, do: ok(index(definitions, 0).clone()), else: err(badarg())
+        if definitions.len() == 1, do: ok(definitions[0].clone()), else: err(badarg())
     end
   end
 
@@ -393,7 +371,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     ancestor
     |> records(NodeChange.COMPONENT_PROP_DEFS)
     |> into_iter()
-    |> filter(fn definition -> has_guid(definition, ComponentPropDef.ID, id) end)
+    |> filter(fn definition -> guid_key(definition.record(ComponentPropDef.ID)) == some(id) end)
     |> collect()
   end
 
@@ -425,38 +403,20 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   # Library styles are named by key, and by key and version.
   @spec style_keys(R.slice(KiwiRecord.t())) :: style_keys()
   defrust style_keys(records) do
-    keys = no_style_keys()
-
-    for record <- records do
-      put_style_key(mut_ref(keys), record)
-    end
-
-    keys
+    records |> iter() |> flat_map(fn record -> style_names(record) end) |> collect()
   end
 
-  @spec no_style_keys() :: style_keys()
-  defrust no_style_keys(), do: HashMap.new()
-
-  @spec put_style_key(R.mut_ref(style_keys()), R.ref(KiwiRecord.t())) :: R.unit()
-  defrust put_style_key(keys, record) do
-    for key <- record.str(NodeChange.KEY).into_iter() do
-      put_versioned_key(keys, key, record)
-    end
-
-    :ok
-  end
-
-  @spec put_versioned_key(R.mut_ref(style_keys()), R.str(), R.ref(KiwiRecord.t())) :: R.unit()
-  defrust put_versioned_key(keys, key, record) do
-    for id <- record_id(record).into_iter() do
-      keys.insert(key.to_string(), id)
-
-      for version <- record.str(NodeChange.VERSION).into_iter() do
-        keys.insert(format!("{key}@{version}"), id)
+  @spec style_names(R.ref(KiwiRecord.t())) :: R.vec({String.t(), GuidKey.t()})
+  defrust style_names(record) do
+    with {:some, key} <- record.str(NodeChange.KEY),
+         {:some, id} <- record_id(record) do
+      case record.str(NodeChange.VERSION) do
+        {:some, version} -> [{key.to_string(), id}, {format!("{key}@{version}"), id}]
+        :none -> [{key.to_string(), id}]
       end
+    else
+      _ -> []
     end
-
-    :ok
   end
 
   @spec apply_style_refs(R.ref(KiwiRecord.t()), R.ref(styles()), R.ref(style_keys())) ::
@@ -526,7 +486,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrust style_field(record, field, style_type, source, target, styles, keys) do
     with {:some, style} <- referenced_style(ref(record), field, styles, keys),
          {:some, value} <- style.get(source) do
-      if enum_is(style, NodeChange.STYLE_TYPE, style_type),
+      if style.enum_value(NodeChange.STYLE_TYPE) == some(style_type),
         do: record.put(target, value.clone()),
         else: record
     else
@@ -539,8 +499,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrust text_style(record, styles, keys) do
     case referenced_style(ref(record), NodeChange.STYLE_ID_FOR_TEXT, styles, keys) do
       {:some, style} ->
-        if enum_is(style, NodeChange.TYPE, NodeType.TEXT) and
-             enum_is(style, NodeChange.STYLE_TYPE, StyleType.TEXT) do
+        if style.enum_value(NodeChange.TYPE) == some(NodeType.TEXT) and
+             style.enum_value(NodeChange.STYLE_TYPE) == some(StyleType.TEXT) do
           with_text_style(record, ref(style))
         else
           record

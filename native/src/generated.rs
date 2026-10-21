@@ -43625,7 +43625,6 @@ fn decode_scene_node_change_from_decoder(
 }
 /// The native occurrence interpreter: source records and the effective graph built from them.
 #[allow(
-    clippy::match_single_binding,
     clippy::redundant_closure,
     clippy::needless_borrow,
     clippy::manual_map,
@@ -43642,25 +43641,13 @@ pub mod graph {
                     Some(session) => {
                         match guid.uint(kiwi_records::guid::LOCAL_ID) {
                             Some(local) => Some((session, local)),
-                            __rustq_with_value => {
-                                match __rustq_with_value {
-                                    _ => None,
-                                }
-                            }
-                        }
-                    }
-                    __rustq_with_value => {
-                        match __rustq_with_value {
                             _ => None,
                         }
                     }
-                }
-            }
-            __rustq_with_value => {
-                match __rustq_with_value {
                     _ => None,
                 }
             }
+            _ => None,
         }
     }
     fn record_id(record: &KiwiRecord) -> Option<GuidKey> {
@@ -43680,12 +43667,6 @@ pub mod graph {
             None => "",
         }
     }
-    fn enum_is(record: &KiwiRecord, field: u32, value: u32) -> bool {
-        record.enum_value(field) == Some(value)
-    }
-    fn has_guid(record: &KiwiRecord, field: u32, id: GuidKey) -> bool {
-        guid_key(record.record(field)) == Some(id)
-    }
     pub type Resolved = HashMap<GuidKey, KiwiRecord>;
     pub type StyleKeys = HashMap<String, GuidKey>;
     pub type Styles = HashMap<GuidKey, KiwiRecord>;
@@ -43695,12 +43676,13 @@ pub mod graph {
         if styles { Ok(apply_styles(inherited)) } else { Ok(inherited) }
     }
     fn normalize(record: &KiwiRecord) -> KiwiRecord {
-        let defaults = record
-            .map_records(
-                kiwi_records::node_change::COMPONENT_PROP_DEFS,
-                |definition| normalize_default(definition),
-            );
-        put_prop_refs(defaults)
+        put_prop_refs(
+                record
+                    .map_records(
+                        kiwi_records::node_change::COMPONENT_PROP_DEFS,
+                        |definition| normalize_default(definition),
+                    ),
+            )
             .map_record(
                 kiwi_records::node_change::SYMBOL_DATA,
                 |data| {
@@ -43765,18 +43747,10 @@ pub mod graph {
                             None => Some(value.clone()),
                         }
                     }
-                    __rustq_with_value => {
-                        match __rustq_with_value {
-                            _ => None,
-                        }
-                    }
-                }
-            }
-            __rustq_with_value => {
-                match __rustq_with_value {
                     _ => None,
                 }
             }
+            _ => None,
         }
     }
     fn put_prop_refs(record: KiwiRecord) -> KiwiRecord {
@@ -43819,84 +43793,74 @@ pub mod graph {
                                                 match reference.record(kiwi_records::prop_ref_value::DEF_ID)
                                                 {
                                                     Some(def_id) => {
-                                                        if enum_is(
-                                                            variable,
-                                                            kiwi_records::variable_data::DATA_TYPE,
-                                                            kiwi_records::variable_data_type::PROP_REF,
-                                                        ) {
-                                                            Some(
-                                                                KiwiRecord::new(kiwi_record_definitions::COMPONENT_PROP_REF)
-                                                                    .put_record(
-                                                                        kiwi_records::component_prop_ref::DEF_ID,
-                                                                        def_id.clone(),
-                                                                    )
-                                                                    .put_enum(
-                                                                        kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD,
-                                                                        field,
-                                                                        kiwi_record_definitions::COMPONENT_PROP_NODE_FIELD,
-                                                                    ),
-                                                            )
-                                                        } else {
-                                                            None
-                                                        }
-                                                    }
-                                                    __rustq_with_value => {
-                                                        match __rustq_with_value {
+                                                        match variable
+                                                            .enum_value(kiwi_records::variable_data::DATA_TYPE)
+                                                            == Some(kiwi_records::variable_data_type::PROP_REF)
+                                                        {
+                                                            true => {
+                                                                Some(
+                                                                    KiwiRecord::new(kiwi_record_definitions::COMPONENT_PROP_REF)
+                                                                        .put_record(
+                                                                            kiwi_records::component_prop_ref::DEF_ID,
+                                                                            def_id.clone(),
+                                                                        )
+                                                                        .put_enum(
+                                                                            kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD,
+                                                                            field,
+                                                                            kiwi_record_definitions::COMPONENT_PROP_NODE_FIELD,
+                                                                        ),
+                                                                )
+                                                            }
                                                             _ => None,
                                                         }
                                                     }
-                                                }
-                                            }
-                                            __rustq_with_value => {
-                                                match __rustq_with_value {
                                                     _ => None,
                                                 }
                                             }
-                                        }
-                                    }
-                                    __rustq_with_value => {
-                                        match __rustq_with_value {
                                             _ => None,
                                         }
                                     }
-                                }
-                            }
-                            __rustq_with_value => {
-                                match __rustq_with_value {
                                     _ => None,
                                 }
                             }
-                        }
-                    }
-                    __rustq_with_value => {
-                        match __rustq_with_value {
                             _ => None,
                         }
                     }
-                }
-            }
-            __rustq_with_value => {
-                match __rustq_with_value {
                     _ => None,
                 }
             }
+            _ => None,
         }
     }
     fn node_field(field: u32) -> Option<u32> {
-        if field == kiwi_records::variable_field::VISIBLE {
-            Some(kiwi_records::component_prop_node_field::VISIBLE)
-        } else if field == kiwi_records::variable_field::TEXT_DATA {
-            Some(kiwi_records::component_prop_node_field::TEXT_DATA)
-        } else if field == kiwi_records::variable_field::OVERRIDDEN_SYMBOL_ID {
-            Some(kiwi_records::component_prop_node_field::OVERRIDDEN_SYMBOL_ID)
-        } else if field == kiwi_records::variable_field::SLOT_CONTENT_ID {
-            Some(kiwi_records::component_prop_node_field::SLOT_CONTENT_ID)
-        } else {
-            None
+        match field {
+            kiwi_records::variable_field::VISIBLE => {
+                Some(kiwi_records::component_prop_node_field::VISIBLE)
+            }
+            kiwi_records::variable_field::TEXT_DATA => {
+                Some(kiwi_records::component_prop_node_field::TEXT_DATA)
+            }
+            kiwi_records::variable_field::OVERRIDDEN_SYMBOL_ID => {
+                Some(kiwi_records::component_prop_node_field::OVERRIDDEN_SYMBOL_ID)
+            }
+            kiwi_records::variable_field::SLOT_CONTENT_ID => {
+                Some(kiwi_records::component_prop_node_field::SLOT_CONTENT_ID)
+            }
+            _ => None,
         }
     }
     fn upsert_ref(mut refs: Vec<KiwiRecord>, prop_ref: KiwiRecord) -> Vec<KiwiRecord> {
-        match refs.iter().rposition(|saved| same_node_field(saved, &prop_ref)) {
+        let field = prop_ref
+            .enum_value(kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD);
+        match refs
+            .iter()
+            .rposition(|saved| {
+                saved
+                    .enum_value(
+                        kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD,
+                    ) == field
+            })
+        {
             Some(index) => {
                 refs.remove(index);
                 refs.insert(index, prop_ref);
@@ -43913,7 +43877,7 @@ pub mod graph {
     ) -> NifResult<Vec<KiwiRecord>> {
         if records.iter().any(|record| linked_definitions(record)) {
             let by_id = records_by_id(&&records);
-            let mut resolved = no_records();
+            let mut resolved = HashMap::new();
             records
                 .iter()
                 .map(|record| resolve(record, &by_id, &mut resolved, &HashSet::new()))
@@ -44055,11 +44019,7 @@ pub mod graph {
             .collect()
     }
     fn style_keys(records: &[KiwiRecord]) -> StyleKeys {
-        let mut keys = no_style_keys();
-        for record in records {
-            put_style_key(&mut keys, &record);
-        }
-        keys
+        records.iter().flat_map(|record| style_names(record)).collect()
     }
     fn apply_style_refs(
         record: &KiwiRecord,
@@ -44126,28 +44086,18 @@ pub mod graph {
             Some(style) => {
                 match style.get(source) {
                     Some(value) => {
-                        if enum_is(
-                            &style,
-                            kiwi_records::node_change::STYLE_TYPE,
-                            style_type,
-                        ) {
+                        if style.enum_value(kiwi_records::node_change::STYLE_TYPE)
+                            == Some(style_type)
+                        {
                             record.put(target, value.clone())
                         } else {
                             record
                         }
                     }
-                    __rustq_with_value => {
-                        match __rustq_with_value {
-                            _ => record,
-                        }
-                    }
-                }
-            }
-            __rustq_with_value => {
-                match __rustq_with_value {
                     _ => record,
                 }
             }
+            _ => record,
         }
     }
     fn text_style(record: KiwiRecord, styles: &Styles, keys: &StyleKeys) -> KiwiRecord {
@@ -44158,16 +44108,10 @@ pub mod graph {
             keys,
         ) {
             Some(style) => {
-                if enum_is(
-                    &style,
-                    kiwi_records::node_change::TYPE,
-                    kiwi_records::node_type::TEXT,
-                )
-                    && enum_is(
-                        &style,
-                        kiwi_records::node_change::STYLE_TYPE,
-                        kiwi_records::style_type::TEXT,
-                    )
+                if style.enum_value(kiwi_records::node_change::TYPE)
+                    == Some(kiwi_records::node_type::TEXT)
+                    && style.enum_value(kiwi_records::node_change::STYLE_TYPE)
+                        == Some(kiwi_records::style_type::TEXT)
                 {
                     with_text_style(record, &style)
                 } else {
@@ -44218,19 +44162,11 @@ pub mod graph {
             }
         }
     }
-    fn put_style_key(keys: &mut StyleKeys, record: &KiwiRecord) {
-        for key in record.str(kiwi_records::node_change::KEY).into_iter() {
-            put_versioned_key(keys, key, record);
-        }
-    }
     fn records_by_id(records: &[KiwiRecord]) -> HashMap<GuidKey, &KiwiRecord> {
         records
             .iter()
             .filter_map(|record| record_id(record).map(|id| (id, record)))
             .collect()
-    }
-    fn no_records() -> Resolved {
-        HashMap::new()
     }
     fn inherit_definitions(
         record: &KiwiRecord,
@@ -44246,11 +44182,10 @@ pub mod graph {
         ancestor
             .records(kiwi_records::node_change::COMPONENT_PROP_DEFS)
             .into_iter()
-            .filter(|definition| has_guid(
-                definition,
-                kiwi_records::component_prop_def::ID,
-                id,
-            ))
+            .filter(|definition| {
+                guid_key(definition.record(kiwi_records::component_prop_def::ID))
+                    == Some(id)
+            })
             .collect()
     }
     fn with_text_style(record: KiwiRecord, style: &KiwiRecord) -> KiwiRecord {
@@ -44273,26 +44208,10 @@ pub mod graph {
             None => merged.delete(kiwi_records::node_change::TEXT_DECORATION),
         }
     }
-    fn same_node_field(saved: &KiwiRecord, prop_ref: &KiwiRecord) -> bool {
-        saved.enum_value(kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD)
-            == prop_ref
-                .enum_value(kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD)
-    }
     fn cached(resolved: &Resolved, id: GuidKey) -> NifResult<KiwiRecord> {
         match resolved.get(&id) {
             Some(record) => Ok(record.clone()),
             None => Err(rustler::Error::BadArg),
-        }
-    }
-    fn no_style_keys() -> StyleKeys {
-        HashMap::new()
-    }
-    fn put_versioned_key(keys: &mut StyleKeys, key: &str, record: &KiwiRecord) {
-        for id in record_id(record).into_iter() {
-            keys.insert(key.to_string(), id);
-            for version in record.str(kiwi_records::node_change::VERSION).into_iter() {
-                keys.insert(format!("{key}@{version}"), id);
-            }
         }
     }
     fn unversioned_style(
@@ -44311,6 +44230,26 @@ pub mod graph {
             None => None,
         }
     }
+    fn style_names(record: &KiwiRecord) -> Vec<(String, GuidKey)> {
+        match record.str(kiwi_records::node_change::KEY) {
+            Some(key) => {
+                match record_id(record) {
+                    Some(id) => {
+                        match record.str(kiwi_records::node_change::VERSION) {
+                            Some(version) => {
+                                vec![
+                                    (key.to_string(), id), (format!("{key}@{version}"), id)
+                                ]
+                            }
+                            None => vec![(key.to_string(), id)],
+                        }
+                    }
+                    _ => vec![],
+                }
+            }
+            _ => vec![],
+        }
+    }
     pub type Children = HashMap<GuidKey, Vec<GuidKey>>;
     #[derive(Clone, Debug)]
     pub struct SourceIndex {
@@ -44318,16 +44257,9 @@ pub mod graph {
         pub children: Children,
     }
     pub type Sources = HashMap<GuidKey, KiwiRecord>;
-    fn live_record(record: &KiwiRecord) -> bool {
-        !enum_is(
-            record,
-            kiwi_records::node_change::PHASE,
-            kiwi_records::node_phase::REMOVED,
-        )
-    }
     fn source_index(message: &KiwiRecord, styles: bool) -> NifResult<SourceIndex> {
         let live = live_records(message);
-        if duplicate_ids(&&live) {
+        if duplicate_ids(&live) {
             Err(rustler::Error::BadArg)
         } else {
             match prepare(live.into_iter().cloned().collect(), styles) {
@@ -44341,9 +44273,29 @@ pub mod graph {
             }
         }
     }
+    fn live(record: &KiwiRecord) -> bool {
+        record.enum_value(kiwi_records::node_change::PHASE)
+            != Some(kiwi_records::node_phase::REMOVED)
+    }
+    fn live_records(message: &KiwiRecord) -> Vec<&KiwiRecord> {
+        message
+            .records(kiwi_records::message::NODE_CHANGES)
+            .into_iter()
+            .filter_map(|item| match item {
+                record if live(record) => Some(record),
+                _ => None,
+            })
+            .collect()
+    }
     fn duplicate_ids(records: &[&KiwiRecord]) -> bool {
         let ids = record_ids(records);
-        ids.len() != id_set(&ids).len()
+        ids.len() != id_set(&&ids).len()
+    }
+    fn record_ids(records: &[&KiwiRecord]) -> Vec<GuidKey> {
+        records.iter().filter_map(|record| record_id(record)).collect()
+    }
+    fn id_set(ids: &[GuidKey]) -> HashSet<GuidKey> {
+        ids.iter().copied().collect()
     }
     fn sources(records: &[KiwiRecord]) -> Sources {
         records
@@ -44352,27 +44304,11 @@ pub mod graph {
             .collect()
     }
     fn children(records: &[KiwiRecord]) -> Children {
-        let mut children = no_children();
+        let mut children: Children = HashMap::new();
         for (parent, id) in child_pairs(records) {
-            push_child(&mut children, parent, id);
+            children.entry(parent).or_default().push(id);
         }
         children
-    }
-    fn live_records(message: &KiwiRecord) -> Vec<&KiwiRecord> {
-        message
-            .records(kiwi_records::message::NODE_CHANGES)
-            .into_iter()
-            .filter(|record| live_record(record))
-            .collect()
-    }
-    fn record_ids(records: &[&KiwiRecord]) -> Vec<GuidKey> {
-        records.iter().filter_map(|record| record_id(record)).collect()
-    }
-    fn id_set(ids: &[GuidKey]) -> HashSet<GuidKey> {
-        ids.iter().copied().collect()
-    }
-    fn no_children() -> Children {
-        HashMap::new()
     }
     fn child_pairs(records: &[KiwiRecord]) -> Vec<(GuidKey, GuidKey)> {
         let mut ordered = record_refs(records);
@@ -44383,23 +44319,12 @@ pub mod graph {
                 Some(id) => {
                     match parent_id(record) {
                         Some(parent) => Some((parent, id)),
-                        __rustq_with_value => {
-                            match __rustq_with_value {
-                                _ => None,
-                            }
-                        }
-                    }
-                }
-                __rustq_with_value => {
-                    match __rustq_with_value {
                         _ => None,
                     }
                 }
+                _ => None,
             })
             .collect()
-    }
-    fn push_child(children: &mut Children, parent: GuidKey, id: GuidKey) {
-        children.entry(parent).or_default().push(id)
     }
     fn record_refs(records: &[KiwiRecord]) -> Vec<&KiwiRecord> {
         records.iter().collect()
