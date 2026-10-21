@@ -49,30 +49,36 @@ defmodule Figler.Render.Shape do
   @doc false
   @spec from_source(atom(), map()) :: t()
   def from_source(:regular_polygon, source) do
-    %Polygon{point_count: Map.get(source, :count) || 5}
+    %Polygon{point_count: point_count(Map.get(source, :count) || 5)}
   end
 
   def from_source(:star, source) do
     %Star{
-      point_count: Map.get(source, :count) || 5,
-      inner_scale: Map.get(source, :star_inner_scale) || 0.38
+      point_count: point_count(Map.get(source, :count) || 5),
+      inner_scale: inner_scale(Map.get(source, :star_inner_scale) || 0.38)
     }
   end
 
   def from_source(:ellipse, %{arc_data: %Arc{} = arc}), do: arc
   def from_source(_node_type, _source), do: nil
 
+  # Figma keeps a polygon's sides or a star's points from 3 to 60, and a star's inner ratio
+  # within 0 to 1; the file format allows more.
+  defp point_count(count) when is_integer(count), do: count |> max(3) |> min(60)
+  defp point_count(count), do: count
+
+  defp inner_scale(scale) when is_number(scale), do: scale |> max(0.0) |> min(1.0)
+  defp inner_scale(scale), do: scale
+
   @doc false
   @spec issues(t()) :: [map()]
-  def issues(%Polygon{point_count: count})
-      when not is_integer(count) or count < 3 or count > 10_000,
-      do: [%{code: :polygon_point_count_invalid, point_count: count}]
+  def issues(%Polygon{point_count: count}) when not is_integer(count),
+    do: [%{code: :polygon_point_count_invalid, point_count: count}]
 
-  def issues(%Star{point_count: count})
-      when not is_integer(count) or count < 3 or count > 10_000,
-      do: [%{code: :star_point_count_invalid, point_count: count}]
+  def issues(%Star{point_count: count}) when not is_integer(count),
+    do: [%{code: :star_point_count_invalid, point_count: count}]
 
-  def issues(%Star{inner_scale: scale}) when not is_number(scale) or scale <= 0 or scale >= 1,
+  def issues(%Star{inner_scale: scale}) when not is_number(scale),
     do: [%{code: :star_inner_scale_invalid, inner_scale: scale}]
 
   def issues(%Arc{} = arc) do

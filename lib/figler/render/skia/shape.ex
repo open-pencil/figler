@@ -6,6 +6,7 @@ defmodule Figler.Render.Skia.Shape do
   alias Figler.Render.Node
   alias Figler.Render.Shape, as: PrimitiveShape
   alias Figler.Render.Shape.Arc
+  alias Figler.Render.Shape.Outline
   alias Figler.Render.Shape.Polygon
   alias Figler.Render.Shape.Star
   alias Figler.Render.Skia.Paint
@@ -25,6 +26,13 @@ defmodule Figler.Render.Skia.Shape do
 
   @doc false
   @spec issues(Node.t()) :: [map()]
+  # Polygon and star outlines draw corner smoothing exactly.
+  def issues(%Node{node_type: type, shape: shape, corners: %CornerRadii{} = corners})
+      when type in @primitive_path_types do
+    PrimitiveShape.issues(shape) ++
+      Enum.reject(CornerRadii.warnings(corners), &(&1.code == :corner_smoothing_approximated))
+  end
+
   def issues(%Node{shape: shape, corners: %CornerRadii{} = corners}) do
     PrimitiveShape.issues(shape) ++ CornerRadii.warnings(corners)
   end
@@ -644,43 +652,47 @@ defmodule Figler.Render.Skia.Shape do
     end
   end
 
-  defp primitive_path(%Node{shape: shape, size: size}, inset)
+  defp primitive_path(%Node{shape: shape, size: size} = node, inset)
        when is_map(size) and is_number(inset) do
     if PrimitiveShape.valid?(shape) do
-      shape_path(shape, size, inset)
+      shape_path(shape, size, inset, node_corners(node))
     end
   end
 
   defp primitive_path(_node, _inset), do: nil
 
-  defp shape_path(%Polygon{point_count: count}, size, inset),
-    do: polygon_path(size, inset, count, 1.0)
+  defp shape_path(%Polygon{point_count: count}, size, inset, corners),
+    do: polygon_path(size, inset, count, 1.0, corners)
 
-  defp shape_path(%Star{point_count: count, inner_scale: scale}, size, inset),
-    do: polygon_path(size, inset, count * 2, scale)
+  defp shape_path(%Star{point_count: count, inner_scale: scale}, size, inset, corners),
+    do: polygon_path(size, inset, count * 2, scale, corners)
 
-  defp shape_path(%Arc{} = arc, size, inset), do: arc_path(size, inset, arc)
+  defp shape_path(%Arc{} = arc, size, inset, _corners), do: arc_path(size, inset, arc)
 
-  defp polygon_path(size, inset, total_points, inner_scale) do
+  defp polygon_path(size, inset, total_points, inner_scale, corners) do
     {x, y, width, height} = inset_rect(size, inset)
-    center_x = x + width / 2
-    center_y = y + height / 2
-    radius_x = width / 2
-    radius_y = height / 2
 
-    0..(total_points - 1)
-    |> Enum.reduce(Skia.Path.new(), fn index, path ->
-      angle = -:math.pi() / 2 + 2 * :math.pi() * index / total_points
-      radius = if total_points > 0 and rem(index, 2) == 1, do: inner_scale, else: 1.0
-      point_x = center_x + radius_x * radius * :math.cos(angle)
-      point_y = center_y + radius_y * radius * :math.sin(angle)
+    vertices =
+      for index <- 0..(total_points - 1) do
+        angle = -:math.pi() / 2 + 2 * :math.pi() * index / total_points
+        radius = if rem(index, 2) == 1, do: inner_scale, else: 1.0
 
-      if index == 0,
-        do: Skia.Path.move_to(path, point_x, point_y),
-        else: Skia.Path.line_to(path, point_x, point_y)
-    end)
-    |> Skia.Path.close()
+        {x + width / 2 * (1 + radius * :math.cos(angle)),
+         y + height / 2 * (1 + radius * :math.sin(angle))}
+      end
+
+    vertices
+    |> Outline.polygon(corners.top_left || 0.0, corners.smoothing || 0.0)
+    |> Enum.reduce(Skia.Path.new(), &outline_command/2)
   end
+
+  defp outline_command({:move_to, x, y}, path), do: Skia.Path.move_to(path, x, y)
+  defp outline_command({:line_to, x, y}, path), do: Skia.Path.line_to(path, x, y)
+
+  defp outline_command({:cubic_to, x1, y1, x2, y2, x, y}, path),
+    do: Skia.Path.cubic_to(path, x1, y1, x2, y2, x, y)
+
+  defp outline_command(:close, path), do: Skia.Path.close(path)
 
   defp arc_path(size, inset, arc) do
     {x, y, width, height} = inset_rect(size, inset)

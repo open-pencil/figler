@@ -735,17 +735,17 @@ defmodule Figler.RenderTest do
     assert {:ok,
             %{
               warnings: [
-                %Warning{code: :star_inner_scale_invalid, severity: :invalid, context: context}
+                %Warning{code: :arc_inner_radius_invalid, severity: :invalid, context: context}
               ],
               document: document
             }} = SkiaBackend.compile(scene)
 
-    assert context == %{inner_scale: 1.5}
+    assert context == %{inner_radius: 1.5}
     refute Enum.any?(Skia.commands(document), &(&1.op == :path))
 
     assert {:error,
             {:unsupported_render_features,
-             [%Warning{code: :star_inner_scale_invalid, severity: :invalid}]}} =
+             [%Warning{code: :arc_inner_radius_invalid, severity: :invalid}]}} =
              SkiaBackend.compile(scene, strict: true)
   end
 
@@ -1270,12 +1270,12 @@ defmodule Figler.RenderTest do
     [
       node(document_guid, :document, "Document"),
       node(canvas_guid, :canvas, "Page 1", document_guid),
-      node(guid(1, 1), :star, "Invalid Star", canvas_guid,
+      node(guid(1, 1), :ellipse, "Invalid Arc", canvas_guid,
         size: vector(100, 80),
         transform: matrix(0, 0),
         visible: true,
-        count: 5,
-        star_inner_scale: 1.5,
+        arc_data:
+          struct(Figler.Schema.ArcData, starting_angle: 0.0, ending_angle: 3.0, inner_radius: 1.5),
         fill_paints: [solid_paint(1.0, 0.0, 0.0)]
       )
     ]

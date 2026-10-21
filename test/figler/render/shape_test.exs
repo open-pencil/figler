@@ -20,13 +20,14 @@ defmodule Figler.Render.ShapeTest do
            }) == %Arc{start_angle: 0.25, end_angle: 2.5, inner_radius: 0.4}
   end
 
-  test "reports bounded polygon and star validation issues" do
-    assert Shape.issues(%Polygon{point_count: 2}) == [
-             %{code: :polygon_point_count_invalid, point_count: 2}
-           ]
+  test "keeps point counts and star ratios within Figma's ranges" do
+    assert Shape.from_source(:regular_polygon, %{count: 2}) == %Polygon{point_count: 3}
 
-    assert Shape.issues(%Star{point_count: 10_001, inner_scale: 0.4}) == [
-             %{code: :star_point_count_invalid, point_count: 10_001}
+    assert Shape.from_source(:star, %{count: 10_001, star_inner_scale: 1.5}) ==
+             %Star{point_count: 60, inner_scale: 1.0}
+
+    assert Shape.issues(%Polygon{point_count: nil}) == [
+             %{code: :polygon_point_count_invalid, point_count: nil}
            ]
   end
 
