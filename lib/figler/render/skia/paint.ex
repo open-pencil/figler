@@ -181,101 +181,82 @@ defmodule Figler.Render.Skia.Paint do
     end
   end
 
+  # Kiwi's STRETCH is Figma's crop, which places the image by its transform. Fill, Fit, and Tile
+  # ignore the transform, as Figma does, and turn the image by its rotation first; a crop saved
+  # without a transform fills.
   defp image_matrix(paint, %{x: width, y: height}, image)
        when width > 0 and height > 0 and image.width > 0 and image.height > 0 do
     mode = Map.get(paint, :image_scale_mode) || :fill
 
-    with {:ok, matrix, tile} <- image_mode_matrix(paint, mode, width, height, image),
-         {:ok, matrix} <- rotate_image_matrix(matrix, Map.get(paint, :rotation), width, height) do
-      {:ok, matrix, tile}
+    case {mode, Map.get(paint, :transform)} do
+      {:stretch, transform} when is_map(transform) ->
+        cropped_image_matrix(transform, width, height, image)
+
+      {mode, _transform} when mode in [:fill, :fit, :tile, :stretch] ->
+        with {:ok, turned} <- turned_image_matrix(Map.get(paint, :rotation), image) do
+          placed_image_matrix(mode, paint, width, height, turned)
+        end
+
+      {mode, _transform} ->
+        {:error, {:unsupported_image_scale_mode, mode}}
     end
   end
 
   defp image_matrix(_paint, _size, _image), do: {:error, :invalid_image_geometry}
 
-  defp image_mode_matrix(paint, :tile, width, height, image) do
-    case Map.get(paint, :transform) do
-      nil ->
-        tile_image_matrix(Map.get(paint, :scale), image)
-
-      transform ->
-        with {:ok, scale} <- image_scale(Map.get(paint, :scale)) do
-          transformed_image_matrix(transform, width, height, image, :repeat, scale)
-        end
-    end
-  end
-
-  defp image_mode_matrix(paint, :stretch, width, height, image) do
-    case Map.get(paint, :transform) do
-      nil -> {:ok, {width / image.width, 0.0, 0.0, 0.0, height / image.height, 0.0}, :clamp}
-      transform -> transformed_image_matrix(transform, width, height, image, :clamp)
-    end
-  end
-
-  defp image_mode_matrix(_paint, mode, width, height, image) when mode in [:fill, :fit],
-    do: fitted_image_matrix(mode, width, height, image)
-
-  defp image_mode_matrix(_paint, mode, _width, _height, _image),
-    do: {:error, {:unsupported_image_scale_mode, mode}}
-
-  defp tile_image_matrix(scale, _image) do
-    with {:ok, scale} <- image_scale(scale) do
-      {:ok, {scale, 0.0, 0.0, 0.0, scale, 0.0}, :repeat}
-    end
-  end
-
-  defp image_scale(nil), do: {:ok, 1.0}
-  defp image_scale(scale) when is_number(scale) and scale > 0, do: {:ok, scale / 1}
-  defp image_scale(_scale), do: {:error, :invalid_image_scale}
-
-  defp transformed_image_matrix(transform, width, height, image, tile, scale \\ 1.0) do
+  defp cropped_image_matrix(transform, width, height, image) do
     with {:ok, inverse} <- transform |> matrix() |> invert() do
       local_matrix =
         {width, 0.0, 0.0, 0.0, height, 0.0}
         |> Affine.multiply(inverse)
-        |> Affine.multiply({scale / image.width, 0.0, 0.0, 0.0, scale / image.height, 0.0})
+        |> Affine.multiply({1.0 / image.width, 0.0, 0.0, 0.0, 1.0 / image.height, 0.0})
 
-      {:ok, local_matrix, tile}
+      {:ok, local_matrix, :clamp}
     end
   end
 
-  defp fitted_image_matrix(mode, width, height, image) do
-    scale =
-      if mode == :fit,
-        do: min(width / image.width, height / image.height),
-        else: max(width / image.width, height / image.height)
+  # The image turned about its centre, moved so its turned bounds start at the origin.
+  defp turned_image_matrix(rotation, image) when rotation in [nil, 0, 0.0],
+    do: {:ok, {Affine.identity(), image.width / 1, image.height / 1}}
 
-    source_width = width / scale
-    source_height = height / scale
-    source_x = (image.width - source_width) / 2
-    source_y = (image.height - source_height) / 2
+  defp turned_image_matrix(rotation, image) when is_number(rotation) do
+    radians = rotation * :math.pi() / 180.0
+    {cos, sin} = {:math.cos(radians), :math.sin(radians)}
+    turned_width = image.width * abs(cos) + image.height * abs(sin)
+    turned_height = image.width * abs(sin) + image.height * abs(cos)
 
     matrix =
-      {width / source_width, 0.0, 0.0, 0.0, height / source_height, 0.0}
-      |> Affine.multiply({1.0, 0.0, -source_x, 0.0, 1.0, -source_y})
+      {1.0, 0.0, turned_width / 2, 0.0, 1.0, turned_height / 2}
+      |> Affine.multiply({cos, -sin, 0.0, sin, cos, 0.0})
+      |> Affine.multiply({1.0, 0.0, -image.width / 2, 0.0, 1.0, -image.height / 2})
 
-    {:ok, matrix, :clamp}
+    {:ok, {matrix, turned_width, turned_height}}
   end
 
-  defp rotate_image_matrix(matrix, rotation, _width, _height) when rotation in [nil, 0, 0.0],
-    do: {:ok, matrix}
+  defp turned_image_matrix(_rotation, _image), do: {:error, :invalid_image_rotation}
 
-  defp rotate_image_matrix(matrix, rotation, width, height) when is_number(rotation) do
-    radians = rotation * :math.pi() / 180.0
-    cosine = :math.cos(radians)
-    sine = :math.sin(radians)
-    center_x = width / 2
-    center_y = height / 2
+  defp placed_image_matrix(:tile, paint, _width, _height, {turned, _turned_width, _turned_height}) do
+    scale =
+      case Map.get(paint, :scale) do
+        scale when is_number(scale) and scale > 0 -> scale / 1
+        _unscaled -> 1.0
+      end
 
-    rotation_matrix =
-      {cosine, -sine, center_x - cosine * center_x + sine * center_y, sine, cosine,
-       center_y - sine * center_x - cosine * center_y}
-
-    {:ok, Affine.multiply(rotation_matrix, matrix)}
+    {:ok, Affine.multiply({scale, 0.0, 0.0, 0.0, scale, 0.0}, turned), :repeat}
   end
 
-  defp rotate_image_matrix(_matrix, _rotation, _width, _height),
-    do: {:error, :invalid_image_rotation}
+  # Fit shows the whole image and leaves the rest of the layer clear; Fill covers the layer.
+  defp placed_image_matrix(mode, _paint, width, height, {turned, turned_width, turned_height}) do
+    {pick, tile} = if mode == :fit, do: {&min/2, :decal}, else: {&max/2, :clamp}
+    scale = pick.(width / turned_width, height / turned_height)
+
+    matrix =
+      {scale, 0.0, (width - turned_width * scale) / 2, 0.0, scale,
+       (height - turned_height * scale) / 2}
+      |> Affine.multiply(turned)
+
+    {:ok, matrix, tile}
+  end
 
   defp common_warnings(paint) do
     case Map.get(paint, :blend_mode) do
