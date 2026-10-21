@@ -13,6 +13,20 @@ pub fn decode_sparse_message_impl<'a>(
     Ok(value)
 }
 
+/// Decodes the message into native records, then encodes them as `decode_sparse_message_impl`
+/// returns it.
+pub fn decode_record_message_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let record = kiwi_decode_record(&mut decoder, kiwi_records::message::DEFINITION)?;
+    decoder.finish()?;
+    kiwi_encode_record(env, &record)
+}
+
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,

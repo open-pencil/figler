@@ -18,6 +18,15 @@ defmodule Figler.Native.CodecNifs do
     Module.decode_sparse_message(payload, schema)
   end
 
+  @doc """
+  Decodes the message into native records and encodes them as `decode_sparse_message/1`
+  returns it.
+  """
+  def decode_record_message(source) do
+    {payload, schema} = Input.to_source(source)
+    Module.decode_record_message(payload, schema)
+  end
+
   def decode_document_metadata(source) do
     {payload, schema} = Input.to_source(source)
     Module.decode_document_metadata(payload, schema)

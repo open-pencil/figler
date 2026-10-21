@@ -10350,6 +10350,28276 @@ kiwi_skip_struct_decoder! {
         false false skip_guid_from_decoder;
         false false kiwi_skip_uint_value;
     ] }
+
+/// A decoded Kiwi value. Strings, byte arrays, records, and arrays are shared, so cloning a
+/// value never copies its contents.
+#[derive(Clone, Debug, PartialEq)]
+pub enum KiwiValue {
+    Bool(bool),
+    Byte(u8),
+    Int(i32),
+    Uint(u32),
+    Float(f32),
+    String(std::sync::Arc<str>),
+    Int64(i64),
+    Uint64(u64),
+    /// An enum value and the index of the enum's definition.
+    Enum(u32, u32),
+    Bytes(std::sync::Arc<[u8]>),
+    Record(KiwiRecord),
+    Array(std::sync::Arc<[KiwiValue]>),
+}
+
+/// A decoded Kiwi message or struct: its definition and the fields it sets, sorted by field
+/// id. Records are immutable; changing one returns a new record sharing the unchanged values,
+/// as an Elixir map does.
+#[derive(Clone, Debug, PartialEq)]
+pub struct KiwiRecord {
+    definition: u32,
+    fields: std::sync::Arc<[(u32, KiwiValue)]>,
+}
+
+/// A schema definition as generated record code describes it.
+pub struct KiwiRecordDefinition {
+    pub kind: u8,
+    /// The definition's name in the schema.
+    pub name: &'static str,
+    /// The Elixir module named in a decoded map's `__kiwi_module__`.
+    pub module: &'static str,
+    /// Fields sorted by id; a struct's ids follow its wire order.
+    pub fields: &'static [KiwiRecordField],
+    /// Enum variants sorted by value.
+    pub variants: &'static [KiwiRecordVariant],
+}
+
+pub struct KiwiRecordField {
+    pub id: u32,
+    /// The field's key in a decoded map.
+    pub name: &'static str,
+    /// A bitwise-negated primitive index when negative, otherwise a definition index.
+    pub type_index: i32,
+    pub array: bool,
+}
+
+pub struct KiwiRecordVariant {
+    pub value: u32,
+    /// The variant's atom in a decoded map.
+    pub name: &'static str,
+}
+
+const KIWI_RECORD_ENUM: u8 = 0;
+const KIWI_RECORD_STRUCT: u8 = 1;
+const KIWI_RECORD_BYTE: i32 = !1;
+const KIWI_RECORD_MAX_DEPTH: usize = 512;
+
+impl KiwiRecord {
+    /// A record of `definition` that sets no fields.
+    pub fn new(definition: u32) -> Self {
+        Self { definition, fields: std::sync::Arc::from([]) }
+    }
+
+    pub fn definition(&self) -> u32 {
+        self.definition
+    }
+
+    pub fn len(&self) -> usize {
+        self.fields.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
+    }
+
+    /// The fields the record sets, by id.
+    pub fn fields(&self) -> impl Iterator<Item = (u32, &KiwiValue)> {
+        self.fields.iter().map(|(id, value)| (*id, value))
+    }
+
+    pub fn get(&self, field: u32) -> Option<&KiwiValue> {
+        self.position(field).ok().map(|index| &self.fields[index].1)
+    }
+
+    pub fn has(&self, field: u32) -> bool {
+        self.position(field).is_ok()
+    }
+
+    /// The record with `field` set to `value`.
+    pub fn put(&self, field: u32, value: KiwiValue) -> Self {
+        let mut fields = self.fields.to_vec();
+        match self.position(field) {
+            Ok(index) => fields[index].1 = value,
+            Err(index) => fields.insert(index, (field, value)),
+        }
+        self.with_fields(fields)
+    }
+
+    /// The record without `field`.
+    pub fn delete(&self, field: u32) -> Self {
+        match self.position(field) {
+            Ok(index) => {
+                let mut fields = self.fields.to_vec();
+                fields.remove(index);
+                self.with_fields(fields)
+            }
+            Err(_) => self.clone(),
+        }
+    }
+
+    /// The record with every field `other` sets taken from `other`.
+    pub fn merge(&self, other: &Self) -> Self {
+        if other.is_empty() {
+            return self.clone();
+        }
+        if self.is_empty() {
+            return Self { definition: self.definition, fields: other.fields.clone() };
+        }
+
+        let mut fields = Vec::with_capacity(self.len() + other.len());
+        let (mut left, mut right) = (self.fields.iter().peekable(), other.fields.iter().peekable());
+        loop {
+            match (left.peek(), right.peek()) {
+                (Some((a, _)), Some((b, _))) if a < b => fields.push(left.next().unwrap().clone()),
+                (Some((a, _)), Some((b, _))) if a == b => {
+                    left.next();
+                    fields.push(right.next().unwrap().clone());
+                }
+                (_, Some(_)) => fields.push(right.next().unwrap().clone()),
+                (Some(_), None) => fields.push(left.next().unwrap().clone()),
+                (None, None) => break,
+            }
+        }
+        self.with_fields(fields)
+    }
+
+    /// The record keeping only `fields`.
+    pub fn take(&self, fields: &[u32]) -> Self {
+        self.with_fields(self.fields.iter().filter(|(id, _)| fields.contains(id)).cloned().collect())
+    }
+
+    /// The record without `fields`.
+    pub fn drop(&self, fields: &[u32]) -> Self {
+        if !self.fields.iter().any(|(id, _)| fields.contains(id)) {
+            return self.clone();
+        }
+        self.with_fields(self.fields.iter().filter(|(id, _)| !fields.contains(id)).cloned().collect())
+    }
+
+    fn position(&self, field: u32) -> Result<usize, usize> {
+        self.fields.binary_search_by_key(&field, |(id, _)| *id)
+    }
+
+    fn with_fields(&self, fields: Vec<(u32, KiwiValue)>) -> Self {
+        Self { definition: self.definition, fields: fields.into() }
+    }
+}
+
+/// The id of the field named `name` (its decoded-map key) in `definition`.
+pub fn kiwi_record_field(definition: u32, name: &str) -> Option<u32> {
+    KIWI_RECORD_DEFINITIONS
+        .get(definition as usize)?
+        .fields
+        .iter()
+        .find(|field| field.name == name)
+        .map(|field| field.id)
+}
+
+/// Decodes a record of `definition`. Message fields the schema does not define are skipped
+/// through the decoder's runtime schema, as generated decoders skip them.
+pub fn kiwi_decode_record(decoder: &mut Decoder<'_>, definition: u32) -> NifResult<KiwiRecord> {
+    kiwi_decode_record_at(decoder, definition, 0)
+}
+
+fn kiwi_decode_record_at(decoder: &mut Decoder<'_>, index: u32, depth: usize) -> NifResult<KiwiRecord> {
+    if depth > KIWI_RECORD_MAX_DEPTH {
+        return Err(Error::BadArg);
+    }
+
+    let definition = &KIWI_RECORD_DEFINITIONS[index as usize];
+    let mut fields = Vec::new();
+
+    if definition.kind == KIWI_RECORD_STRUCT {
+        fields.reserve_exact(definition.fields.len());
+        for field in definition.fields {
+            fields.push((field.id, kiwi_decode_field(decoder, field, depth)?));
+        }
+    } else {
+        loop {
+            let id = decoder.read_var_uint()?;
+            if id == 0 {
+                break;
+            }
+            match definition.fields.binary_search_by_key(&id, |field| field.id) {
+                Ok(position) => {
+                    let value = kiwi_decode_field(decoder, &definition.fields[position], depth)?;
+                    fields.push((id, value));
+                }
+                Err(_) => kiwi_unknown_field(decoder, definition.name, id)?,
+            }
+        }
+        fields.sort_by_key(|(id, _)| *id);
+    }
+
+    Ok(KiwiRecord { definition: index, fields: fields.into() })
+}
+
+fn kiwi_decode_field(decoder: &mut Decoder<'_>, field: &KiwiRecordField, depth: usize) -> NifResult<KiwiValue> {
+    if !field.array {
+        return kiwi_decode_value(decoder, field.type_index, depth);
+    }
+
+    if field.type_index == KIWI_RECORD_BYTE {
+        return Ok(KiwiValue::Bytes(decoder.read_byte_array_value()?.into()));
+    }
+
+    let count = decoder.read_var_uint()? as usize;
+    let mut values = Vec::with_capacity(count.min(decoder.remaining()));
+    for _ in 0..count {
+        values.push(kiwi_decode_value(decoder, field.type_index, depth)?);
+    }
+    Ok(KiwiValue::Array(values.into()))
+}
+
+fn kiwi_decode_value(decoder: &mut Decoder<'_>, type_index: i32, depth: usize) -> NifResult<KiwiValue> {
+    if type_index < 0 {
+        return Ok(match !type_index {
+            0 => KiwiValue::Bool(decoder.read_bool()?),
+            1 => KiwiValue::Byte(decoder.read_byte()?),
+            2 => KiwiValue::Int(decoder.read_var_int()?),
+            3 => KiwiValue::Uint(decoder.read_var_uint()?),
+            4 => KiwiValue::Float(decoder.read_var_float_value()?),
+            5 => KiwiValue::String(decoder.read_string_str()?.into()),
+            6 => KiwiValue::Int64(decoder.read_var_int64()?),
+            _ => KiwiValue::Uint64(decoder.read_var_uint64()?),
+        });
+    }
+
+    let index = type_index as u32;
+    if KIWI_RECORD_DEFINITIONS[index as usize].kind == KIWI_RECORD_ENUM {
+        Ok(KiwiValue::Enum(decoder.read_var_uint()?, index))
+    } else {
+        kiwi_decode_record_at(decoder, index, depth + 1).map(KiwiValue::Record)
+    }
+}
+
+/// Encodes a record as the sparse map generated decoders return.
+pub fn kiwi_encode_record<'a>(env: Env<'a>, record: &KiwiRecord) -> NifResult<Term<'a>> {
+    kiwi_encode_record_fields(env, record, None)
+}
+
+/// Encodes a record as a sparse map holding only `only` of its fields, when given.
+pub fn kiwi_encode_record_fields<'a>(
+    env: Env<'a>,
+    record: &KiwiRecord,
+    only: Option<&[u32]>,
+) -> NifResult<Term<'a>> {
+    let definition = &KIWI_RECORD_DEFINITIONS[record.definition as usize];
+    let mut keys = Vec::with_capacity(record.len() + 1);
+    let mut values = Vec::with_capacity(record.len() + 1);
+    keys.push(kiwi_atom(env, "__kiwi_module__").encode(env));
+    values.push(kiwi_atom(env, definition.module).encode(env));
+
+    for (id, value) in record.fields() {
+        if only.is_some_and(|only| !only.contains(&id)) {
+            continue;
+        }
+        let position = definition
+            .fields
+            .binary_search_by_key(&id, |field| field.id)
+            .map_err(|_| Error::BadArg)?;
+        keys.push(kiwi_atom(env, definition.fields[position].name).encode(env));
+        values.push(kiwi_encode_value(env, value)?);
+    }
+
+    Term::map_from_term_arrays(env, &keys, &values)
+}
+
+fn kiwi_encode_value<'a>(env: Env<'a>, value: &KiwiValue) -> NifResult<Term<'a>> {
+    Ok(match value {
+        KiwiValue::Bool(value) => value.encode(env),
+        KiwiValue::Byte(value) => value.encode(env),
+        KiwiValue::Int(value) => value.encode(env),
+        KiwiValue::Uint(value) => value.encode(env),
+        KiwiValue::Float(value) => kiwi_encode_float(env, *value),
+        KiwiValue::String(value) => value.as_ref().encode(env),
+        KiwiValue::Int64(value) => value.encode(env),
+        KiwiValue::Uint64(value) => value.encode(env),
+        KiwiValue::Enum(value, definition) => {
+            let variants = KIWI_RECORD_DEFINITIONS[*definition as usize].variants;
+            match variants.binary_search_by_key(value, |variant| variant.value) {
+                Ok(index) => kiwi_atom(env, variants[index].name).encode(env),
+                Err(_) => value.encode(env),
+            }
+        }
+        KiwiValue::Bytes(bytes) => {
+            let mut binary = rustler::NewBinary::new(env, bytes.len());
+            binary.as_mut_slice().copy_from_slice(bytes);
+            Term::from(binary)
+        }
+        KiwiValue::Record(record) => kiwi_encode_record(env, record)?,
+        KiwiValue::Array(values) => values
+            .iter()
+            .map(|value| kiwi_encode_value(env, value))
+            .collect::<NifResult<Vec<_>>>()?
+            .encode(env),
+    })
+}
+
+/// Non-finite floats encode as the atoms Kiwi's Elixir decoder uses for them.
+fn kiwi_encode_float<'a>(env: Env<'a>, value: f32) -> Term<'a> {
+    if value.is_nan() {
+        kiwi_atom(env, "nan").encode(env)
+    } else if value == f32::INFINITY {
+        kiwi_atom(env, "infinity").encode(env)
+    } else if value == f32::NEG_INFINITY {
+        kiwi_atom(env, "negative_infinity").encode(env)
+    } else {
+        (value as f64).encode(env)
+    }
+}
+
+static KIWI_RECORD_DEFINITIONS: &[KiwiRecordDefinition] = &[
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "MessageType",
+        module: "Elixir.Figler.Schema.MessageType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "join_start",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "node_changes",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "user_changes",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "join_end",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "signal",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "style",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "style_set",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "join_start_skip_reload",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "notify_should_upgrade",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "upgrade_done",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "upgrade_refresh",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "scene_graph_query",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "scene_graph_reply",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "diff",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "client_broadcast",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "join_start_journaled",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "stream_start",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "stream_end",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "interactive_slide_change",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "reconnect_scene_graph_query",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "reconnect_scene_graph_reply",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "join_end_incremental_reconnect",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "node_status_change",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "client_rendered",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "buzz_approval_change",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "Axis",
+        module: "Elixir.Figler.Schema.Axis",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "x",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "y",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "Access",
+        module: "Elixir.Figler.Schema.Access",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "read_only",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "read_write",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "NodePhase",
+        module: "Elixir.Figler.Schema.NodePhase",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "created",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "removed",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "WindingRule",
+        module: "Elixir.Figler.Schema.WindingRule",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "nonzero",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "odd",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "NodeType",
+        module: "Elixir.Figler.Schema.NodeType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "document",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "canvas",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "group",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "frame",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "boolean_operation",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "vector",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "star",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "line",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "ellipse",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "rectangle",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "regular_polygon",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "rounded_rectangle",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "text",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "slice",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "symbol",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "instance",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "sticky",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "shape_with_text",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "connector",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "code_block",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "widget",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "stamp",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "media",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "highlight",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "section",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "section_overlay",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "washi_tape",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "variable",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "table",
+            },
+            KiwiRecordVariant {
+                value: 30,
+                name: "table_cell",
+            },
+            KiwiRecordVariant {
+                value: 31,
+                name: "variable_set",
+            },
+            KiwiRecordVariant {
+                value: 32,
+                name: "slide",
+            },
+            KiwiRecordVariant {
+                value: 33,
+                name: "assisted_layout",
+            },
+            KiwiRecordVariant {
+                value: 34,
+                name: "interactive_slide_element",
+            },
+            KiwiRecordVariant {
+                value: 35,
+                name: "variable_override",
+            },
+            KiwiRecordVariant {
+                value: 36,
+                name: "module",
+            },
+            KiwiRecordVariant {
+                value: 37,
+                name: "slide_grid",
+            },
+            KiwiRecordVariant {
+                value: 38,
+                name: "slide_row",
+            },
+            KiwiRecordVariant {
+                value: 39,
+                name: "responsive_set",
+            },
+            KiwiRecordVariant {
+                value: 40,
+                name: "code_component",
+            },
+            KiwiRecordVariant {
+                value: 41,
+                name: "text_path",
+            },
+            KiwiRecordVariant {
+                value: 42,
+                name: "code_instance",
+            },
+            KiwiRecordVariant {
+                value: 43,
+                name: "code_library",
+            },
+            KiwiRecordVariant {
+                value: 44,
+                name: "code_file",
+            },
+            KiwiRecordVariant {
+                value: 45,
+                name: "code_layer",
+            },
+            KiwiRecordVariant {
+                value: 46,
+                name: "brush",
+            },
+            KiwiRecordVariant {
+                value: 47,
+                name: "managed_string",
+            },
+            KiwiRecordVariant {
+                value: 48,
+                name: "transform",
+            },
+            KiwiRecordVariant {
+                value: 49,
+                name: "cms_rich_text",
+            },
+            KiwiRecordVariant {
+                value: 50,
+                name: "repeater",
+            },
+            KiwiRecordVariant {
+                value: 51,
+                name: "jsx",
+            },
+            KiwiRecordVariant {
+                value: 52,
+                name: "embedded_prototype",
+            },
+            KiwiRecordVariant {
+                value: 53,
+                name: "react_fiber",
+            },
+            KiwiRecordVariant {
+                value: 54,
+                name: "responsive_node_set",
+            },
+            KiwiRecordVariant {
+                value: 55,
+                name: "webpage",
+            },
+            KiwiRecordVariant {
+                value: 56,
+                name: "keyframe",
+            },
+            KiwiRecordVariant {
+                value: 57,
+                name: "keyframe_track",
+            },
+            KiwiRecordVariant {
+                value: 58,
+                name: "animation_preset_instance",
+            },
+            KiwiRecordVariant {
+                value: 59,
+                name: "code_embed",
+            },
+            KiwiRecordVariant {
+                value: 60,
+                name: "binary_file",
+            },
+            KiwiRecordVariant {
+                value: 61,
+                name: "spec_block",
+            },
+            KiwiRecordVariant {
+                value: 62,
+                name: "tool_instance",
+            },
+            KiwiRecordVariant {
+                value: 63,
+                name: "custom_effect_instance",
+            },
+            KiwiRecordVariant {
+                value: 64,
+                name: "native_code_layer_instance",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ShapeWithTextType",
+        module: "Elixir.Figler.Schema.ShapeWithTextType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "square",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "ellipse",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "diamond",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "triangle_up",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "triangle_down",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "rounded_rectangle",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "parallelogram_right",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "parallelogram_left",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "eng_database",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "eng_queue",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "eng_file",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "eng_folder",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "trapezoid",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "predefined_process",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "shield",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "document_single",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "document_multiple",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "manual_input",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "hexagon",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "chevron",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "pentagon",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "octagon",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "star",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "plus",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "arrow_left",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "arrow_right",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "summing_junction",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "or",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "speech_bubble",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "internal_storage",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "BlendMode",
+        module: "Elixir.Figler.Schema.BlendMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "pass_through",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "darken",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "multiply",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "linear_burn",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "color_burn",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "lighten",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "screen",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "linear_dodge",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "color_dodge",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "overlay",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "soft_light",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "hard_light",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "difference",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "exclusion",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "hue",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "saturation",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "color",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "luminosity",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PaintType",
+        module: "Elixir.Figler.Schema.PaintType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "solid",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "gradient_linear",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "gradient_radial",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "gradient_angular",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "gradient_diamond",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "image",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "emoji",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "video",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "pattern",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "noise",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "custom",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ImageScaleMode",
+        module: "Elixir.Figler.Schema.ImageScaleMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "stretch",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "fit",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "fill",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "tile",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "EffectType",
+        module: "Elixir.Figler.Schema.EffectType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "inner_shadow",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "drop_shadow",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "foreground_blur",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "background_blur",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "repeat",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "symmetry",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "grain",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "noise",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "glass",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "custom",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TextCase",
+        module: "Elixir.Figler.Schema.TextCase",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "original",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "upper",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "lower",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "title",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "small_caps",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "small_caps_forced",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TextDecoration",
+        module: "Elixir.Figler.Schema.TextDecoration",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "underline",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "strikethrough",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TextDecorationStyle",
+        module: "Elixir.Figler.Schema.TextDecorationStyle",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "solid",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "dotted",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "wavy",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "LeadingTrim",
+        module: "Elixir.Figler.Schema.LeadingTrim",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "cap_height",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "NumberUnits",
+        module: "Elixir.Figler.Schema.NumberUnits",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "raw",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "pixels",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "percent",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ConstraintType",
+        module: "Elixir.Figler.Schema.ConstraintType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "min",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "max",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "stretch",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "scale",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "fixed_min",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "fixed_max",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StrokeAlign",
+        module: "Elixir.Figler.Schema.StrokeAlign",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "inside",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "outside",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "offset",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StrokeCap",
+        module: "Elixir.Figler.Schema.StrokeCap",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "round",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "square",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "arrow_lines",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "arrow_equilateral",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "diamond_filled",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "triangle_filled",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "highlight",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "washi_tape_1",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "washi_tape_2",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "washi_tape_3",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "washi_tape_4",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "washi_tape_5",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "washi_tape_6",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "circle_filled",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "erd_zero_or_one",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "erd_exactly_one",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "erd_zero_or_more",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "erd_one_or_more",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "erd_one",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "erd_many",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StrokeJoin",
+        module: "Elixir.Figler.Schema.StrokeJoin",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "miter",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "bevel",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "round",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "BooleanOperation",
+        module: "Elixir.Figler.Schema.BooleanOperation",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "union",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "intersect",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "subtract",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "xor",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TextAlignHorizontal",
+        module: "Elixir.Figler.Schema.TextAlignHorizontal",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "left",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "right",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "justified",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TextAlignVertical",
+        module: "Elixir.Figler.Schema.TextAlignVertical",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "top",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "bottom",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "MouseCursor",
+        module: "Elixir.Figler.Schema.MouseCursor",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "default",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "crosshair",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "eyedropper",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "hand",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "paint_bucket",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "pen",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "pencil",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "marker",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "eraser",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "highlighter",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "lasso",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "VectorMirror",
+        module: "Elixir.Figler.Schema.VectorMirror",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "angle",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "angle_and_length",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ImageType",
+        module: "Elixir.Figler.Schema.ImageType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "png",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "jpeg",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "svg",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "pdf",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "mp4",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "gif",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ExportConstraintType",
+        module: "Elixir.Figler.Schema.ExportConstraintType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "content_scale",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "content_width",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "content_height",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "LayoutGridType",
+        module: "Elixir.Figler.Schema.LayoutGridType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "min",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "stretch",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "max",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "LayoutGridPattern",
+        module: "Elixir.Figler.Schema.LayoutGridPattern",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "stripes",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "grid",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TextAutoResize",
+        module: "Elixir.Figler.Schema.TextAutoResize",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "width_and_height",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "height",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TextTruncation",
+        module: "Elixir.Figler.Schema.TextTruncation",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "disabled",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "ending",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StyleSetType",
+        module: "Elixir.Figler.Schema.StyleSetType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "personal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "team",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "custom",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "frequency",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "temporary",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StyleSetContentType",
+        module: "Elixir.Figler.Schema.StyleSetContentType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "solid",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "gradient",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "image",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StackMode",
+        module: "Elixir.Figler.Schema.StackMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "horizontal",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "vertical",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "grid",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StackAlign",
+        module: "Elixir.Figler.Schema.StackAlign",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "min",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "max",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "baseline",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StackCounterAlign",
+        module: "Elixir.Figler.Schema.StackCounterAlign",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "min",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "max",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "stretch",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "auto",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "baseline",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StackJustify",
+        module: "Elixir.Figler.Schema.StackJustify",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "min",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "max",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "space_evenly",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "space_between",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "GridChildAlign",
+        module: "Elixir.Figler.Schema.GridChildAlign",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "auto",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "min",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "max",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "GridAutoTracks",
+        module: "Elixir.Figler.Schema.GridAutoTracks",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "rows",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StackSize",
+        module: "Elixir.Figler.Schema.StackSize",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "fixed",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "resize_to_fit",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "resize_to_fit_with_implicit_size",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StackPositioning",
+        module: "Elixir.Figler.Schema.StackPositioning",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "auto",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "absolute",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StackWrap",
+        module: "Elixir.Figler.Schema.StackWrap",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "no_wrap",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "wrap",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StackCounterAlignContent",
+        module: "Elixir.Figler.Schema.StackCounterAlignContent",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "auto",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "space_between",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ConnectionType",
+        module: "Elixir.Figler.Schema.ConnectionType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "internal_node",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "url",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "back",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "close",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "set_variable",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "update_media_runtime",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "conditional",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "set_variable_mode",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "object_animation",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "update_animation_timeline_state",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "InteractionType",
+        module: "Elixir.Figler.Schema.InteractionType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "on_click",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "after_timeout",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "mouse_in",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "mouse_out",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "on_hover",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "mouse_down",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "mouse_up",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "on_press",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "drag",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "on_key_down",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "on_voice",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "on_media_hit",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "on_media_end",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "mouse_enter",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "mouse_leave",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TransitionType",
+        module: "Elixir.Figler.Schema.TransitionType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "instant_transition",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "dissolve",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "fade",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "slide_from_left",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "slide_from_right",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "slide_from_top",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "slide_from_bottom",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "push_from_left",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "push_from_right",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "push_from_top",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "push_from_bottom",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "move_from_left",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "move_from_right",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "move_from_top",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "move_from_bottom",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "slide_out_to_left",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "slide_out_to_right",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "slide_out_to_top",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "slide_out_to_bottom",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "move_out_to_left",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "move_out_to_right",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "move_out_to_top",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "move_out_to_bottom",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "magic_move",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "smart_animate",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "scroll_animate",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "EasingType",
+        module: "Elixir.Figler.Schema.EasingType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "in_cubic",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "out_cubic",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "inout_cubic",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "linear",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "in_back_cubic",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "out_back_cubic",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "inout_back_cubic",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "custom_cubic",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "spring",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "gentle_spring",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "custom_spring",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "spring_preset_one",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "spring_preset_two",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "spring_preset_three",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "hold",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ScrollDirection",
+        module: "Elixir.Figler.Schema.ScrollDirection",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "horizontal",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "vertical",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "both",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ScrollContractedState",
+        module: "Elixir.Figler.Schema.ScrollContractedState",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "expanded",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "contracted",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "GUID",
+        module: "Elixir.Figler.Schema.GUID",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "local_id",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "Color",
+        module: "Elixir.Figler.Schema.Color",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "r",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "g",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "b",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "a",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "Vector",
+        module: "Elixir.Figler.Schema.Vector",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "x",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "y",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "Rect",
+        module: "Elixir.Figler.Schema.Rect",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "x",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "y",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "w",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "h",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "ColorStop",
+        module: "Elixir.Figler.Schema.ColorStop",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ColorStopVar",
+        module: "Elixir.Figler.Schema.ColorStopVar",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "color_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "position",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "Matrix",
+        module: "Elixir.Figler.Schema.Matrix",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "m00",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "m01",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "m02",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "m10",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "m11",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "m12",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "ParentIndex",
+        module: "Elixir.Figler.Schema.ParentIndex",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "Number",
+        module: "Elixir.Figler.Schema.Number",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "value",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "units",
+                type_index: 15,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "FontName",
+        module: "Elixir.Figler.Schema.FontName",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "family",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "style",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "postscript",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FontVariantNumericFigure",
+        module: "Elixir.Figler.Schema.FontVariantNumericFigure",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "lining",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "oldstyle",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FontVariantNumericSpacing",
+        module: "Elixir.Figler.Schema.FontVariantNumericSpacing",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "proportional",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "tabular",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FontVariantNumericFraction",
+        module: "Elixir.Figler.Schema.FontVariantNumericFraction",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "diagonal",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "stacked",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FontVariantCaps",
+        module: "Elixir.Figler.Schema.FontVariantCaps",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "small",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "all_small",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "petite",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "all_petite",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "unicase",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "titling",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FontVariantPosition",
+        module: "Elixir.Figler.Schema.FontVariantPosition",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "sub",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "super",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FontStyle",
+        module: "Elixir.Figler.Schema.FontStyle",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "italic",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SemanticWeight",
+        module: "Elixir.Figler.Schema.SemanticWeight",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "bold",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SemanticItalic",
+        module: "Elixir.Figler.Schema.SemanticItalic",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "italic",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CodeSnapshotState",
+        module: "Elixir.Figler.Schema.CodeSnapshotState",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "initial",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "snapshotting",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "ok",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "snapshot_error",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "llm_in_progress",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SnapshotCaptureMode",
+        module: "Elixir.Figler.Schema.SnapshotCaptureMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "full",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "partial",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeSourceInfo",
+        module: "Elixir.Figler.Schema.CodeSourceInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "origin_reference_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "origin_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "linked_snapshot_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "capture_mode",
+                type_index: 68,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "source_blob_ref",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "source_element_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CodeObjectType",
+        module: "Elixir.Figler.Schema.CodeObjectType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "web_layer",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "web_interaction",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "native_layer",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "animation_preset",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "tool",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "custom_effect",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "plugin",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "web_layer_generic",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "custom_fill",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CustomToolArtifactRef",
+        module: "Elixir.Figler.Schema.CustomToolArtifactRef",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "custom_tool_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "custom_tool_version",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "published_custom_tool_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "published_custom_tool_version_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "LockMode",
+        module: "Elixir.Figler.Schema.LockMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "all",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "background_only",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "OpenTypeFeature",
+        module: "Elixir.Figler.Schema.OpenTypeFeature",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "pcap",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "c2_pc",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "case",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "cpsp",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "titl",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "unic",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "zero",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "sinf",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "ordn",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "afrc",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "dnom",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "numr",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "liga",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "clig",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "dlig",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "hlig",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "rlig",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "aalt",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "calt",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "rclt",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "salt",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "rvrn",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "vert",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "swsh",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "cswh",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "nalt",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "ccmp",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "stch",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "hist",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "size",
+            },
+            KiwiRecordVariant {
+                value: 30,
+                name: "ornm",
+            },
+            KiwiRecordVariant {
+                value: 31,
+                name: "ital",
+            },
+            KiwiRecordVariant {
+                value: 32,
+                name: "rand",
+            },
+            KiwiRecordVariant {
+                value: 33,
+                name: "dtls",
+            },
+            KiwiRecordVariant {
+                value: 34,
+                name: "flac",
+            },
+            KiwiRecordVariant {
+                value: 35,
+                name: "mgrk",
+            },
+            KiwiRecordVariant {
+                value: 36,
+                name: "ssty",
+            },
+            KiwiRecordVariant {
+                value: 37,
+                name: "kern",
+            },
+            KiwiRecordVariant {
+                value: 38,
+                name: "fwid",
+            },
+            KiwiRecordVariant {
+                value: 39,
+                name: "hwid",
+            },
+            KiwiRecordVariant {
+                value: 40,
+                name: "halt",
+            },
+            KiwiRecordVariant {
+                value: 41,
+                name: "twid",
+            },
+            KiwiRecordVariant {
+                value: 42,
+                name: "qwid",
+            },
+            KiwiRecordVariant {
+                value: 43,
+                name: "pwid",
+            },
+            KiwiRecordVariant {
+                value: 44,
+                name: "just",
+            },
+            KiwiRecordVariant {
+                value: 45,
+                name: "lfbd",
+            },
+            KiwiRecordVariant {
+                value: 46,
+                name: "opbd",
+            },
+            KiwiRecordVariant {
+                value: 47,
+                name: "rtbd",
+            },
+            KiwiRecordVariant {
+                value: 48,
+                name: "palt",
+            },
+            KiwiRecordVariant {
+                value: 49,
+                name: "pkna",
+            },
+            KiwiRecordVariant {
+                value: 50,
+                name: "ltra",
+            },
+            KiwiRecordVariant {
+                value: 51,
+                name: "ltrm",
+            },
+            KiwiRecordVariant {
+                value: 52,
+                name: "rtla",
+            },
+            KiwiRecordVariant {
+                value: 53,
+                name: "rtlm",
+            },
+            KiwiRecordVariant {
+                value: 54,
+                name: "abrv",
+            },
+            KiwiRecordVariant {
+                value: 55,
+                name: "abvm",
+            },
+            KiwiRecordVariant {
+                value: 56,
+                name: "abvs",
+            },
+            KiwiRecordVariant {
+                value: 57,
+                name: "valt",
+            },
+            KiwiRecordVariant {
+                value: 58,
+                name: "vhal",
+            },
+            KiwiRecordVariant {
+                value: 59,
+                name: "blwf",
+            },
+            KiwiRecordVariant {
+                value: 60,
+                name: "blwm",
+            },
+            KiwiRecordVariant {
+                value: 61,
+                name: "blws",
+            },
+            KiwiRecordVariant {
+                value: 62,
+                name: "akhn",
+            },
+            KiwiRecordVariant {
+                value: 63,
+                name: "cjct",
+            },
+            KiwiRecordVariant {
+                value: 64,
+                name: "cfar",
+            },
+            KiwiRecordVariant {
+                value: 65,
+                name: "cpct",
+            },
+            KiwiRecordVariant {
+                value: 66,
+                name: "curs",
+            },
+            KiwiRecordVariant {
+                value: 67,
+                name: "dist",
+            },
+            KiwiRecordVariant {
+                value: 68,
+                name: "expt",
+            },
+            KiwiRecordVariant {
+                value: 69,
+                name: "falt",
+            },
+            KiwiRecordVariant {
+                value: 70,
+                name: "fina",
+            },
+            KiwiRecordVariant {
+                value: 71,
+                name: "fin2",
+            },
+            KiwiRecordVariant {
+                value: 72,
+                name: "fin3",
+            },
+            KiwiRecordVariant {
+                value: 73,
+                name: "half",
+            },
+            KiwiRecordVariant {
+                value: 74,
+                name: "haln",
+            },
+            KiwiRecordVariant {
+                value: 75,
+                name: "hkna",
+            },
+            KiwiRecordVariant {
+                value: 76,
+                name: "hngl",
+            },
+            KiwiRecordVariant {
+                value: 77,
+                name: "hojo",
+            },
+            KiwiRecordVariant {
+                value: 78,
+                name: "init",
+            },
+            KiwiRecordVariant {
+                value: 79,
+                name: "isol",
+            },
+            KiwiRecordVariant {
+                value: 80,
+                name: "jp78",
+            },
+            KiwiRecordVariant {
+                value: 81,
+                name: "jp83",
+            },
+            KiwiRecordVariant {
+                value: 82,
+                name: "jp90",
+            },
+            KiwiRecordVariant {
+                value: 83,
+                name: "jp04",
+            },
+            KiwiRecordVariant {
+                value: 84,
+                name: "ljmo",
+            },
+            KiwiRecordVariant {
+                value: 85,
+                name: "locl",
+            },
+            KiwiRecordVariant {
+                value: 86,
+                name: "mark",
+            },
+            KiwiRecordVariant {
+                value: 87,
+                name: "medi",
+            },
+            KiwiRecordVariant {
+                value: 88,
+                name: "med2",
+            },
+            KiwiRecordVariant {
+                value: 89,
+                name: "mkmk",
+            },
+            KiwiRecordVariant {
+                value: 90,
+                name: "nlck",
+            },
+            KiwiRecordVariant {
+                value: 91,
+                name: "nukt",
+            },
+            KiwiRecordVariant {
+                value: 92,
+                name: "pref",
+            },
+            KiwiRecordVariant {
+                value: 93,
+                name: "pres",
+            },
+            KiwiRecordVariant {
+                value: 94,
+                name: "vpal",
+            },
+            KiwiRecordVariant {
+                value: 95,
+                name: "pstf",
+            },
+            KiwiRecordVariant {
+                value: 96,
+                name: "psts",
+            },
+            KiwiRecordVariant {
+                value: 97,
+                name: "rkrf",
+            },
+            KiwiRecordVariant {
+                value: 98,
+                name: "rphf",
+            },
+            KiwiRecordVariant {
+                value: 99,
+                name: "ruby",
+            },
+            KiwiRecordVariant {
+                value: 100,
+                name: "smpl",
+            },
+            KiwiRecordVariant {
+                value: 101,
+                name: "tjmo",
+            },
+            KiwiRecordVariant {
+                value: 102,
+                name: "tnam",
+            },
+            KiwiRecordVariant {
+                value: 103,
+                name: "trad",
+            },
+            KiwiRecordVariant {
+                value: 104,
+                name: "vatu",
+            },
+            KiwiRecordVariant {
+                value: 105,
+                name: "vjmo",
+            },
+            KiwiRecordVariant {
+                value: 106,
+                name: "vkna",
+            },
+            KiwiRecordVariant {
+                value: 107,
+                name: "vkrn",
+            },
+            KiwiRecordVariant {
+                value: 108,
+                name: "vrtr",
+            },
+            KiwiRecordVariant {
+                value: 109,
+                name: "vrt2",
+            },
+            KiwiRecordVariant {
+                value: 110,
+                name: "ss01",
+            },
+            KiwiRecordVariant {
+                value: 111,
+                name: "ss02",
+            },
+            KiwiRecordVariant {
+                value: 112,
+                name: "ss03",
+            },
+            KiwiRecordVariant {
+                value: 113,
+                name: "ss04",
+            },
+            KiwiRecordVariant {
+                value: 114,
+                name: "ss05",
+            },
+            KiwiRecordVariant {
+                value: 115,
+                name: "ss06",
+            },
+            KiwiRecordVariant {
+                value: 116,
+                name: "ss07",
+            },
+            KiwiRecordVariant {
+                value: 117,
+                name: "ss08",
+            },
+            KiwiRecordVariant {
+                value: 118,
+                name: "ss09",
+            },
+            KiwiRecordVariant {
+                value: 119,
+                name: "ss10",
+            },
+            KiwiRecordVariant {
+                value: 120,
+                name: "ss11",
+            },
+            KiwiRecordVariant {
+                value: 121,
+                name: "ss12",
+            },
+            KiwiRecordVariant {
+                value: 122,
+                name: "ss13",
+            },
+            KiwiRecordVariant {
+                value: 123,
+                name: "ss14",
+            },
+            KiwiRecordVariant {
+                value: 124,
+                name: "ss15",
+            },
+            KiwiRecordVariant {
+                value: 125,
+                name: "ss16",
+            },
+            KiwiRecordVariant {
+                value: 126,
+                name: "ss17",
+            },
+            KiwiRecordVariant {
+                value: 127,
+                name: "ss18",
+            },
+            KiwiRecordVariant {
+                value: 128,
+                name: "ss19",
+            },
+            KiwiRecordVariant {
+                value: 129,
+                name: "ss20",
+            },
+            KiwiRecordVariant {
+                value: 130,
+                name: "cv01",
+            },
+            KiwiRecordVariant {
+                value: 131,
+                name: "cv02",
+            },
+            KiwiRecordVariant {
+                value: 132,
+                name: "cv03",
+            },
+            KiwiRecordVariant {
+                value: 133,
+                name: "cv04",
+            },
+            KiwiRecordVariant {
+                value: 134,
+                name: "cv05",
+            },
+            KiwiRecordVariant {
+                value: 135,
+                name: "cv06",
+            },
+            KiwiRecordVariant {
+                value: 136,
+                name: "cv07",
+            },
+            KiwiRecordVariant {
+                value: 137,
+                name: "cv08",
+            },
+            KiwiRecordVariant {
+                value: 138,
+                name: "cv09",
+            },
+            KiwiRecordVariant {
+                value: 139,
+                name: "cv10",
+            },
+            KiwiRecordVariant {
+                value: 140,
+                name: "cv11",
+            },
+            KiwiRecordVariant {
+                value: 141,
+                name: "cv12",
+            },
+            KiwiRecordVariant {
+                value: 142,
+                name: "cv13",
+            },
+            KiwiRecordVariant {
+                value: 143,
+                name: "cv14",
+            },
+            KiwiRecordVariant {
+                value: 144,
+                name: "cv15",
+            },
+            KiwiRecordVariant {
+                value: 145,
+                name: "cv16",
+            },
+            KiwiRecordVariant {
+                value: 146,
+                name: "cv17",
+            },
+            KiwiRecordVariant {
+                value: 147,
+                name: "cv18",
+            },
+            KiwiRecordVariant {
+                value: 148,
+                name: "cv19",
+            },
+            KiwiRecordVariant {
+                value: 149,
+                name: "cv20",
+            },
+            KiwiRecordVariant {
+                value: 150,
+                name: "cv21",
+            },
+            KiwiRecordVariant {
+                value: 151,
+                name: "cv22",
+            },
+            KiwiRecordVariant {
+                value: 152,
+                name: "cv23",
+            },
+            KiwiRecordVariant {
+                value: 153,
+                name: "cv24",
+            },
+            KiwiRecordVariant {
+                value: 154,
+                name: "cv25",
+            },
+            KiwiRecordVariant {
+                value: 155,
+                name: "cv26",
+            },
+            KiwiRecordVariant {
+                value: 156,
+                name: "cv27",
+            },
+            KiwiRecordVariant {
+                value: 157,
+                name: "cv28",
+            },
+            KiwiRecordVariant {
+                value: 158,
+                name: "cv29",
+            },
+            KiwiRecordVariant {
+                value: 159,
+                name: "cv30",
+            },
+            KiwiRecordVariant {
+                value: 160,
+                name: "cv31",
+            },
+            KiwiRecordVariant {
+                value: 161,
+                name: "cv32",
+            },
+            KiwiRecordVariant {
+                value: 162,
+                name: "cv33",
+            },
+            KiwiRecordVariant {
+                value: 163,
+                name: "cv34",
+            },
+            KiwiRecordVariant {
+                value: 164,
+                name: "cv35",
+            },
+            KiwiRecordVariant {
+                value: 165,
+                name: "cv36",
+            },
+            KiwiRecordVariant {
+                value: 166,
+                name: "cv37",
+            },
+            KiwiRecordVariant {
+                value: 167,
+                name: "cv38",
+            },
+            KiwiRecordVariant {
+                value: 168,
+                name: "cv39",
+            },
+            KiwiRecordVariant {
+                value: 169,
+                name: "cv40",
+            },
+            KiwiRecordVariant {
+                value: 170,
+                name: "cv41",
+            },
+            KiwiRecordVariant {
+                value: 171,
+                name: "cv42",
+            },
+            KiwiRecordVariant {
+                value: 172,
+                name: "cv43",
+            },
+            KiwiRecordVariant {
+                value: 173,
+                name: "cv44",
+            },
+            KiwiRecordVariant {
+                value: 174,
+                name: "cv45",
+            },
+            KiwiRecordVariant {
+                value: 175,
+                name: "cv46",
+            },
+            KiwiRecordVariant {
+                value: 176,
+                name: "cv47",
+            },
+            KiwiRecordVariant {
+                value: 177,
+                name: "cv48",
+            },
+            KiwiRecordVariant {
+                value: 178,
+                name: "cv49",
+            },
+            KiwiRecordVariant {
+                value: 179,
+                name: "cv50",
+            },
+            KiwiRecordVariant {
+                value: 180,
+                name: "cv51",
+            },
+            KiwiRecordVariant {
+                value: 181,
+                name: "cv52",
+            },
+            KiwiRecordVariant {
+                value: 182,
+                name: "cv53",
+            },
+            KiwiRecordVariant {
+                value: 183,
+                name: "cv54",
+            },
+            KiwiRecordVariant {
+                value: 184,
+                name: "cv55",
+            },
+            KiwiRecordVariant {
+                value: 185,
+                name: "cv56",
+            },
+            KiwiRecordVariant {
+                value: 186,
+                name: "cv57",
+            },
+            KiwiRecordVariant {
+                value: 187,
+                name: "cv58",
+            },
+            KiwiRecordVariant {
+                value: 188,
+                name: "cv59",
+            },
+            KiwiRecordVariant {
+                value: 189,
+                name: "cv60",
+            },
+            KiwiRecordVariant {
+                value: 190,
+                name: "cv61",
+            },
+            KiwiRecordVariant {
+                value: 191,
+                name: "cv62",
+            },
+            KiwiRecordVariant {
+                value: 192,
+                name: "cv63",
+            },
+            KiwiRecordVariant {
+                value: 193,
+                name: "cv64",
+            },
+            KiwiRecordVariant {
+                value: 194,
+                name: "cv65",
+            },
+            KiwiRecordVariant {
+                value: 195,
+                name: "cv66",
+            },
+            KiwiRecordVariant {
+                value: 196,
+                name: "cv67",
+            },
+            KiwiRecordVariant {
+                value: 197,
+                name: "cv68",
+            },
+            KiwiRecordVariant {
+                value: 198,
+                name: "cv69",
+            },
+            KiwiRecordVariant {
+                value: 199,
+                name: "cv70",
+            },
+            KiwiRecordVariant {
+                value: 200,
+                name: "cv71",
+            },
+            KiwiRecordVariant {
+                value: 201,
+                name: "cv72",
+            },
+            KiwiRecordVariant {
+                value: 202,
+                name: "cv73",
+            },
+            KiwiRecordVariant {
+                value: 203,
+                name: "cv74",
+            },
+            KiwiRecordVariant {
+                value: 204,
+                name: "cv75",
+            },
+            KiwiRecordVariant {
+                value: 205,
+                name: "cv76",
+            },
+            KiwiRecordVariant {
+                value: 206,
+                name: "cv77",
+            },
+            KiwiRecordVariant {
+                value: 207,
+                name: "cv78",
+            },
+            KiwiRecordVariant {
+                value: 208,
+                name: "cv79",
+            },
+            KiwiRecordVariant {
+                value: 209,
+                name: "cv80",
+            },
+            KiwiRecordVariant {
+                value: 210,
+                name: "cv81",
+            },
+            KiwiRecordVariant {
+                value: 211,
+                name: "cv82",
+            },
+            KiwiRecordVariant {
+                value: 212,
+                name: "cv83",
+            },
+            KiwiRecordVariant {
+                value: 213,
+                name: "cv84",
+            },
+            KiwiRecordVariant {
+                value: 214,
+                name: "cv85",
+            },
+            KiwiRecordVariant {
+                value: 215,
+                name: "cv86",
+            },
+            KiwiRecordVariant {
+                value: 216,
+                name: "cv87",
+            },
+            KiwiRecordVariant {
+                value: 217,
+                name: "cv88",
+            },
+            KiwiRecordVariant {
+                value: 218,
+                name: "cv89",
+            },
+            KiwiRecordVariant {
+                value: 219,
+                name: "cv90",
+            },
+            KiwiRecordVariant {
+                value: 220,
+                name: "cv91",
+            },
+            KiwiRecordVariant {
+                value: 221,
+                name: "cv92",
+            },
+            KiwiRecordVariant {
+                value: 222,
+                name: "cv93",
+            },
+            KiwiRecordVariant {
+                value: 223,
+                name: "cv94",
+            },
+            KiwiRecordVariant {
+                value: 224,
+                name: "cv95",
+            },
+            KiwiRecordVariant {
+                value: 225,
+                name: "cv96",
+            },
+            KiwiRecordVariant {
+                value: 226,
+                name: "cv97",
+            },
+            KiwiRecordVariant {
+                value: 227,
+                name: "cv98",
+            },
+            KiwiRecordVariant {
+                value: 228,
+                name: "cv99",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "ExportConstraint",
+        module: "Elixir.Figler.Schema.ExportConstraint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 26,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "GUIDMapping",
+        module: "Elixir.Figler.Schema.GUIDMapping",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "from",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "to",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "Blob",
+        module: "Elixir.Figler.Schema.Blob",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "bytes",
+                type_index: -2,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Image",
+        module: "Elixir.Figler.Schema.Image",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "hash",
+                type_index: -2,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "data_blob",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Video",
+        module: "Elixir.Figler.Schema.Video",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "hash",
+                type_index: -2,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "s3_url",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PasteSource",
+        module: "Elixir.Figler.Schema.PasteSource",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "src_file",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "src_node",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "FilterColorAdjust",
+        module: "Elixir.Figler.Schema.FilterColorAdjust",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "tint",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "shadows",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "highlights",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "detail",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "exposure",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "vignette",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "temperature",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "vibrance",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PaintFilterMessage",
+        module: "Elixir.Figler.Schema.PaintFilterMessage",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "tint",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "shadows",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "highlights",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "detail",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "exposure",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "vignette",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "temperature",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "vibrance",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "contrast",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "brightness",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Paint",
+        module: "Elixir.Figler.Schema.Paint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "opacity",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "visible",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "blend_mode",
+                type_index: 7,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "stops",
+                type_index: 53,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "transform",
+                type_index: 55,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "image",
+                type_index: 77,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "image_thumbnail",
+                type_index: 77,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "image_scale_mode",
+                type_index: 9,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "rotation",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "scale",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "filter_color_adjust",
+                type_index: 80,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "paint_filter",
+                type_index: 81,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "emoji_code_points",
+                type_index: -4,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "animated_image",
+                type_index: 77,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "animation_frame",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "video",
+                type_index: 78,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "original_image_width",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 20,
+                name: "original_image_height",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 21,
+                name: "color_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 22,
+                name: "image_should_color_manage",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 23,
+                name: "stops_var",
+                type_index: 54,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 24,
+                name: "thumb_hash_base64",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 25,
+                name: "thumb_hash",
+                type_index: -2,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 26,
+                name: "source_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 27,
+                name: "spacing",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 28,
+                name: "pattern_tile_type",
+                type_index: 84,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 29,
+                name: "vertical_alignment",
+                type_index: 85,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 30,
+                name: "horizontal_alignment",
+                type_index: 85,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 31,
+                name: "image_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 32,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 33,
+                name: "alt_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 34,
+                name: "noise_type",
+                type_index: 83,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 35,
+                name: "density",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 36,
+                name: "noise_size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 37,
+                name: "pattern_spacing",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 38,
+                name: "opacity_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 39,
+                name: "custom_effect_id",
+                type_index: 121,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 40,
+                name: "component_prop_assignments",
+                type_index: 322,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 41,
+                name: "interpolation_color_space",
+                type_index: 86,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 42,
+                name: "interpolation_hue_method",
+                type_index: 87,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "NoiseType",
+        module: "Elixir.Figler.Schema.NoiseType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "multitone",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "monotone",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "duotone",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PatternTileType",
+        module: "Elixir.Figler.Schema.PatternTileType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "rectangular",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "horizontal_hexagonal",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "vertical_hexagonal",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PatternAlignment",
+        module: "Elixir.Figler.Schema.PatternAlignment",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "start",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "end",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "InterpolationColorSpace",
+        module: "Elixir.Figler.Schema.InterpolationColorSpace",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "default",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "oklab",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "oklch",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "hsl",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "srgb_linear",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "InterpolationHueMethod",
+        module: "Elixir.Figler.Schema.InterpolationHueMethod",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "shorter",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "longer",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "increasing",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "decreasing",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "FontMetaData",
+        module: "Elixir.Figler.Schema.FontMetaData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: 58,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "font_line_height",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "font_digest",
+                type_index: -2,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "font_style",
+                type_index: 64,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "font_weight",
+                type_index: -3,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "FontVariation",
+        module: "Elixir.Figler.Schema.FontVariation",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "axis_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "axis_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "value",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TextData",
+        module: "Elixir.Figler.Schema.TextData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "characters",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "character_style_i_ds",
+                type_index: -4,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "style_override_table",
+                type_index: 228,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "layout_size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "baselines",
+                type_index: 94,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "glyphs",
+                type_index: 95,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "decorations",
+                type_index: 96,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "layout_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "font_meta_data",
+                type_index: 88,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "fallback_fonts",
+                type_index: 58,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "hyperlink_boxes",
+                type_index: 92,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "lines",
+                type_index: 377,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "truncation_start_index",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "truncated_height",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "logical_index_to_character_offset_map",
+                type_index: -5,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "blockquotes",
+                type_index: 97,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "min_content_height",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "mention_boxes",
+                type_index: 93,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "derived_lines",
+                type_index: 378,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "DerivedTextData",
+        module: "Elixir.Figler.Schema.DerivedTextData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "layout_size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "baselines",
+                type_index: 94,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "glyphs",
+                type_index: 95,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "decorations",
+                type_index: 96,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "blockquotes",
+                type_index: 97,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "font_meta_data",
+                type_index: 88,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "hyperlink_boxes",
+                type_index: 92,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "truncation_start_index",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "truncated_height",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "logical_index_to_character_offset_map",
+                type_index: -5,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "mention_boxes",
+                type_index: 93,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "derived_lines",
+                type_index: 378,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "HyperlinkBox",
+        module: "Elixir.Figler.Schema.HyperlinkBox",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "bounds",
+                type_index: 52,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "hyperlink_id",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "cms_target",
+                type_index: 395,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "open_in_new_tab",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "MentionBox",
+        module: "Elixir.Figler.Schema.MentionBox",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "bounds",
+                type_index: 52,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "start_index",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "end_index",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "is_valid",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "mention_key",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Baseline",
+        module: "Elixir.Figler.Schema.Baseline",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "position",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "width",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "line_y",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "line_height",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "first_character",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "end_character",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "line_ascent",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "ignore_leading_trim",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Glyph",
+        module: "Elixir.Figler.Schema.Glyph",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "commands_blob",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "style_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "font_size",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "first_character",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "advance",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "emoji_code_points",
+                type_index: -4,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "emoji_image_set",
+                type_index: 532,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "rotation",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Decoration",
+        module: "Elixir.Figler.Schema.Decoration",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "rects",
+                type_index: 52,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "style_id",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Blockquote",
+        module: "Elixir.Figler.Schema.Blockquote",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "vertical_bar",
+                type_index: 52,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "quote_mark_bounds",
+                type_index: 52,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "style_id",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VectorData",
+        module: "Elixir.Figler.Schema.VectorData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "vector_network_blob",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "normalized_size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "style_override_table",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TextPathStart",
+        module: "Elixir.Figler.Schema.TextPathStart",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "t_value",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "forward",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GUIDPath",
+        module: "Elixir.Figler.Schema.GUIDPath",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guids",
+                type_index: 49,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SymbolData",
+        module: "Elixir.Figler.Schema.SymbolData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "symbol_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "symbol_overrides",
+                type_index: 228,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "uniform_scale_factor",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GUIDPathMapping",
+        module: "Elixir.Figler.Schema.GUIDPathMapping",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "path",
+                type_index: 100,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "DerivedBreakpointData",
+        module: "Elixir.Figler.Schema.DerivedBreakpointData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeGenerationData",
+        module: "Elixir.Figler.Schema.NodeGenerationData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "use_fine_grained_syncing",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "diff_only_removals",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "DerivedImmutableFrameData",
+        module: "Elixir.Figler.Schema.DerivedImmutableFrameData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "version",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "JsxData",
+        module: "Elixir.Figler.Schema.JsxData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "DerivedJsxData",
+        module: "Elixir.Figler.Schema.DerivedJsxData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AssetIdMap",
+        module: "Elixir.Figler.Schema.AssetIdMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 109,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AssetIdEntry",
+        module: "Elixir.Figler.Schema.AssetIdEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "asset_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_id",
+                type_index: 111,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AssetRef",
+        module: "Elixir.Figler.Schema.AssetRef",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "version",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AssetId",
+        module: "Elixir.Figler.Schema.AssetId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "state_group_id",
+                type_index: 112,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "style_id",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "symbol_id",
+                type_index: 114,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "variable_id",
+                type_index: 115,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "variable_set_id",
+                type_index: 117,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StateGroupId",
+        module: "Elixir.Figler.Schema.StateGroupId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StyleId",
+        module: "Elixir.Figler.Schema.StyleId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SymbolId",
+        module: "Elixir.Figler.Schema.SymbolId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableID",
+        module: "Elixir.Figler.Schema.VariableID",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableOverrideId",
+        module: "Elixir.Figler.Schema.VariableOverrideId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableSetID",
+        module: "Elixir.Figler.Schema.VariableSetID",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ThemeID",
+        module: "Elixir.Figler.Schema.ThemeID",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeLibraryId",
+        module: "Elixir.Figler.Schema.CodeLibraryId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeFileId",
+        module: "Elixir.Figler.Schema.CodeFileId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeComponentId",
+        module: "Elixir.Figler.Schema.CodeComponentId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CanvasNodeId",
+        module: "Elixir.Figler.Schema.CanvasNodeId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "symbol_id",
+                type_index: 114,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "state_group_id",
+                type_index: 112,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "IndexRange",
+        module: "Elixir.Figler.Schema.IndexRange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "start_index",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "end_index_exclusive",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "CollaborativeTextOpID",
+        module: "Elixir.Figler.Schema.CollaborativeTextOpID",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "counter_id",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CollaborativeTextOpType",
+        module: "Elixir.Figler.Schema.CollaborativeTextOpType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "insert",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "delete",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CollaborativeTextStrippedOpRunWithIDs",
+        module: "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithIDs",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "first_id",
+                type_index: 124,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "run_length",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "parent_ids",
+                type_index: 124,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "rebased_on_op_ids",
+                type_index: 124,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CollaborativeTextStrippedOpRunWithLoc",
+        module: "Elixir.Figler.Schema.CollaborativeTextStrippedOpRunWithLoc",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 125,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "range",
+                type_index: 123,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "range_should_be_iterated_in_reverse",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "content_bytes_in_buffer",
+                type_index: 123,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "rebased_range",
+                type_index: 123,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CollaborativeTextOpRun",
+        module: "Elixir.Figler.Schema.CollaborativeTextOpRun",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 124,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "parent_ids",
+                type_index: 124,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "type",
+                type_index: 125,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "range",
+                type_index: 123,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "range_should_be_iterated_in_reverse",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "content",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "rebased_on_op_ids",
+                type_index: 124,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "rebased_range",
+                type_index: 123,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CollaborativePlainText",
+        module: "Elixir.Figler.Schema.CollaborativePlainText",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "history_ops_with_ids",
+                type_index: 126,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "history_ops_with_loc",
+                type_index: 127,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "history_string_content_buffer",
+                type_index: -2,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "changes_to_append",
+                type_index: 128,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CollaborativeTextSelection",
+        module: "Elixir.Figler.Schema.CollaborativeTextSelection",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "field",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "selected_range",
+                type_index: 123,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "caret_at_front",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "text_version",
+                type_index: 124,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ResponsiveTextStyleVariant",
+        module: "Elixir.Figler.Schema.ResponsiveTextStyleVariant",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "min_width",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "fields",
+                type_index: 228,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "variable_font_size",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "variable_line_height",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "variable_letter_spacing",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "variable_paragraph_spacing",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FlappType",
+        module: "Elixir.Figler.Schema.FlappType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "poll",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "embed",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "facepile",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "alignment",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "youtube",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SlideThemeProps",
+        module: "Elixir.Figler.Schema.SlideThemeProps",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "theme_version",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "variable_set_id",
+                type_index: 117,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "text_style_ids",
+                type_index: 113,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "is_text_color_manually_selected",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "is_border_color_manually_selected",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "subscribed_theme_ref",
+                type_index: 110,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "schema_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "is_generated_from_design",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SlideThemeMap",
+        module: "Elixir.Figler.Schema.SlideThemeMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 135,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SlideThemeMapEntry",
+        module: "Elixir.Figler.Schema.SlideThemeMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "theme_id",
+                type_index: 118,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "theme_props",
+                type_index: 133,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SharedSymbolReference",
+        module: "Elixir.Figler.Schema.SharedSymbolReference",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "file_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "symbol_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "version_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "guid_path_mappings",
+                type_index: 102,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "bytes",
+                type_index: -2,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "library_guid_to_subscribing_guid",
+                type_index: 75,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "component_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "unflattening_mappings",
+                type_index: 102,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "is_unflattened",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SharedComponentMasterData",
+        module: "Elixir.Figler.Schema.SharedComponentMasterData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "component_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "publishing_guid_path_to_team_library_guid",
+                type_index: 102,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_unflattened",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InstanceOverrideStash",
+        module: "Elixir.Figler.Schema.InstanceOverrideStash",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "override_path_of_swapped_instance",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "component_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InstanceOverrideStashV2",
+        module: "Elixir.Figler.Schema.InstanceOverrideStashV2",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "override_path_of_swapped_instance",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "local_symbol_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ImportedCodeFileEntry",
+        module: "Elixir.Figler.Schema.ImportedCodeFileEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "code_file_id",
+                type_index: 120,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ImportedCodeFiles",
+        module: "Elixir.Figler.Schema.ImportedCodeFiles",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 140,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "BlurOpType",
+        module: "Elixir.Figler.Schema.BlurOpType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "normal",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "progressive",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "RepeatType",
+        module: "Elixir.Figler.Schema.RepeatType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "linear",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "radial",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "UnitType",
+        module: "Elixir.Figler.Schema.UnitType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "pixels",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "relative",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "RepeatOrder",
+        module: "Elixir.Figler.Schema.RepeatOrder",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "forward",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "reverse",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "EffectAxis",
+        module: "Elixir.Figler.Schema.EffectAxis",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "x",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "y",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "x_and_y",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Effect",
+        module: "Elixir.Figler.Schema.Effect",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 10,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "visible",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "blend_mode",
+                type_index: 7,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "spread",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "show_shadow_behind_node",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "radius_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "color_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "spread_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "x_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "y_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "count",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "repeat_type",
+                type_index: 143,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "axis",
+                type_index: 146,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "unit_type",
+                type_index: 144,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "order",
+                type_index: 145,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "blur_op_type",
+                type_index: 142,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 20,
+                name: "start_offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 21,
+                name: "start_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 22,
+                name: "noise_size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 23,
+                name: "clip_to_shape",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 24,
+                name: "secondary_color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 25,
+                name: "density",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 26,
+                name: "noise_type",
+                type_index: 83,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 27,
+                name: "opacity",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 28,
+                name: "end_offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 29,
+                name: "seed",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 30,
+                name: "refraction_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 31,
+                name: "specular_angle",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 32,
+                name: "specular_intensity",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 33,
+                name: "bevel_size",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 34,
+                name: "chromatic_aberration",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 35,
+                name: "reflection_distance",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 36,
+                name: "refraction_intensity",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 37,
+                name: "refraction_radius_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 38,
+                name: "specular_angle_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 39,
+                name: "specular_intensity_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 40,
+                name: "chromatic_aberration_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 41,
+                name: "splay_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 42,
+                name: "refraction_intensity_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 43,
+                name: "custom_effect_id",
+                type_index: 121,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 44,
+                name: "component_prop_assignments",
+                type_index: 322,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 45,
+                name: "start_radius_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 46,
+                name: "start_offset_x_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 47,
+                name: "start_offset_y_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 48,
+                name: "end_offset_x_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 49,
+                name: "end_offset_y_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 50,
+                name: "noise_size_x_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 51,
+                name: "noise_size_y_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 52,
+                name: "density_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 53,
+                name: "effect_opacity_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 54,
+                name: "secondary_color_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 55,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TransformModifierType",
+        module: "Elixir.Figler.Schema.TransformModifierType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "repeat",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "symmetry",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "skew",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransformModifier",
+        module: "Elixir.Figler.Schema.TransformModifier",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 148,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "visible",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "count",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "repeat_type",
+                type_index: 143,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "axis",
+                type_index: 146,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "unit_type",
+                type_index: 144,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "order",
+                type_index: 145,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "skew_x",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "skew_y",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TransformSchemaType",
+        module: "Elixir.Figler.Schema.TransformSchemaType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "fixed_order",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "freeform",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "Matrix4f",
+        module: "Elixir.Figler.Schema.Matrix4f",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "m00",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "m01",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "m02",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "m03",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "m10",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "m11",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "m12",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "m13",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "m20",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "m21",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "m22",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "m23",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "m30",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "m31",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "m32",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "m33",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "FixedOrderTransform3d",
+        module: "Elixir.Figler.Schema.FixedOrderTransform3d",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "perspective",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "translate_z",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "rotate_x",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "rotate_y",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "rotate_z",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TransformFnType",
+        module: "Elixir.Figler.Schema.TransformFnType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "matrix_3_d",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "perspective",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "translate_z",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "rotate_x",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "rotate_y",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "rotate_z",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransformFnValue",
+        module: "Elixir.Figler.Schema.TransformFnValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "matrix3d",
+                type_index: 151,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "perspective",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "rotate_angle",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "translate_value",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransformFn",
+        module: "Elixir.Figler.Schema.TransformFn",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 153,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 154,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransformSchemaValue",
+        module: "Elixir.Figler.Schema.TransformSchemaValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "fixed_order_transform3d",
+                type_index: 152,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "transform_functions",
+                type_index: 155,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Transform3d",
+        module: "Elixir.Figler.Schema.Transform3d",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 150,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 156,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "backface_hidden",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "NumberVector2D",
+        module: "Elixir.Figler.Schema.NumberVector2D",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "x",
+                type_index: 57,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "y",
+                type_index: 57,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Scene3d",
+        module: "Elixir.Figler.Schema.Scene3d",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "perspective",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "perspective_origin",
+                type_index: 158,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "preserve3d",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransformOrigin",
+        module: "Elixir.Figler.Schema.TransformOrigin",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "x",
+                type_index: 57,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "y",
+                type_index: 57,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransitionInfo",
+        module: "Elixir.Figler.Schema.TransitionInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 45,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "duration",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PrototypeDeviceType",
+        module: "Elixir.Figler.Schema.PrototypeDeviceType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "preset",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "custom",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "presentation",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "DeviceRotation",
+        module: "Elixir.Figler.Schema.DeviceRotation",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "ccw_90",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PrototypeDevice",
+        module: "Elixir.Figler.Schema.PrototypeDevice",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 162,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "preset_identifier",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "rotation",
+                type_index: 163,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "OverlayPositionType",
+        module: "Elixir.Figler.Schema.OverlayPositionType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "top_left",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "top_center",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "top_right",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "bottom_left",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "bottom_center",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "bottom_right",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "manual",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "OverlayBackgroundInteraction",
+        module: "Elixir.Figler.Schema.OverlayBackgroundInteraction",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "close_on_click_outside",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "OverlayBackgroundType",
+        module: "Elixir.Figler.Schema.OverlayBackgroundType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "solid_color",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "OverlayBackgroundAppearance",
+        module: "Elixir.Figler.Schema.OverlayBackgroundAppearance",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "background_type",
+                type_index: 167,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "background_color",
+                type_index: 50,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "NavigationType",
+        module: "Elixir.Figler.Schema.NavigationType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "navigate",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "overlay",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "swap",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "swap_state",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "scroll_to",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ExportColorProfile",
+        module: "Elixir.Figler.Schema.ExportColorProfile",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "document",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "srgb",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "display_p3_v4",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "cmyk",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ExportBackgroundType",
+        module: "Elixir.Figler.Schema.ExportBackgroundType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "solid",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "transparent",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "grid",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ExportSettings",
+        module: "Elixir.Figler.Schema.ExportSettings",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "suffix",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "image_type",
+                type_index: 25,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "constraint",
+                type_index: 74,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "svg_data_name",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "svg_id_mode",
+                type_index: 173,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "svg_outline_text",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "contents_only",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "svg_force_stroke_masks",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "use_absolute_bounds",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "color_profile",
+                type_index: 170,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "quality",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "use_bicubic_sampler",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "frame_rate",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "loop_count",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "background_type",
+                type_index: 171,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ExportSVGIDMode",
+        module: "Elixir.Figler.Schema.ExportSVGIDMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "if_needed",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "always",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "LayoutGrid",
+        module: "Elixir.Figler.Schema.LayoutGrid",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 27,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "axis",
+                type_index: 1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "visible",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "num_sections",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "offset",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "section_size",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "gutter_size",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "pattern",
+                type_index: 28,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "num_sections_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "offset_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "section_size_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "gutter_size_var",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Guide",
+        module: "Elixir.Figler.Schema.Guide",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "axis",
+                type_index: 1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "offset",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Path",
+        module: "Elixir.Figler.Schema.Path",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "winding_rule",
+                type_index: 4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "commands_blob",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "style_id",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "StyleType",
+        module: "Elixir.Figler.Schema.StyleType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "fill",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "stroke",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "text",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "effect",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "export",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "grid",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "animation",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "BrushOrientation",
+        module: "Elixir.Figler.Schema.BrushOrientation",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "forward",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "reverse",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "BrushType",
+        module: "Elixir.Figler.Schema.BrushType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "stretch",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "scatter",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "DynamicStrokeSettings",
+        module: "Elixir.Figler.Schema.DynamicStrokeSettings",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "frequency",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "wiggle",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "smoothen",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ScatterStrokeSettings",
+        module: "Elixir.Figler.Schema.ScatterStrokeSettings",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "gap",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "wiggle",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "angular_jitter",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "rotation",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "size_jitter",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StretchStrokeSettings",
+        module: "Elixir.Figler.Schema.StretchStrokeSettings",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "orientation",
+                type_index: 178,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StrokeData",
+        module: "Elixir.Figler.Schema.StrokeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "strokes",
+                type_index: 184,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "version",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Stroke",
+        module: "Elixir.Figler.Schema.Stroke",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "stroke_id",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "stroke_weight",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "stroke_weight_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "stroke_paint",
+                type_index: 82,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "style_id_for_stroke_fill",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "stroke_align",
+                type_index: 17,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "stroke_cap",
+                type_index: 18,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "stroke_cap_size",
+                type_index: 57,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "stroke_join",
+                type_index: 19,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "miter_limit",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "dash_pattern",
+                type_index: -5,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "path_trim",
+                type_index: 512,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "stroke_offset",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableWidthPoint",
+        module: "Elixir.Figler.Schema.VariableWidthPoint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "position",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "ascent",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "descent",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "segment_id",
+                type_index: -3,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SharedStyleReference",
+        module: "Elixir.Figler.Schema.SharedStyleReference",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "style_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "version_hash",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SharedStyleMasterData",
+        module: "Elixir.Figler.Schema.SharedStyleMasterData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "style_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "sort_position",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "file_key",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ScrollBehavior",
+        module: "Elixir.Figler.Schema.ScrollBehavior",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "scrolls",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "fixed_when_child_of_scrolling_frame",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "sticky_scrolls",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ArcData",
+        module: "Elixir.Figler.Schema.ArcData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "starting_angle",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "ending_angle",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "inner_radius",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SymbolLink",
+        module: "Elixir.Figler.Schema.SymbolLink",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "uri",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "display_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "display_text",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PluginData",
+        module: "Elixir.Figler.Schema.PluginData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "plugin_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PluginRelaunchData",
+        module: "Elixir.Figler.Schema.PluginRelaunchData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "plugin_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "message",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "command",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "custom_tool_id",
+                type_index: 121,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "MultiplayerFieldVersion",
+        module: "Elixir.Figler.Schema.MultiplayerFieldVersion",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "counter",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ConnectorMagnet",
+        module: "Elixir.Figler.Schema.ConnectorMagnet",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "auto",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "top",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "left",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "bottom",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "right",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "auto_horizontal",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "edge",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "absolute",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ConnectorEndpoint",
+        module: "Elixir.Figler.Schema.ConnectorEndpoint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "endpoint_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "magnet",
+                type_index: 194,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "relative_position",
+                type_index: 51,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ConnectorControlPoint",
+        module: "Elixir.Figler.Schema.ConnectorControlPoint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "position",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "axis",
+                type_index: 51,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ConnectorTextSection",
+        module: "Elixir.Figler.Schema.ConnectorTextSection",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "middle_to_start",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "middle_to_end",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ConnectorOffAxisOffset",
+        module: "Elixir.Figler.Schema.ConnectorOffAxisOffset",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "above",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "below",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ConnectorTextMidpoint",
+        module: "Elixir.Figler.Schema.ConnectorTextMidpoint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "section",
+                type_index: 197,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "offset",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "off_axis_offset",
+                type_index: 198,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ConnectorLineStyle",
+        module: "Elixir.Figler.Schema.ConnectorLineStyle",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "elbowed",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "straight",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "curved",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ConnectorType",
+        module: "Elixir.Figler.Schema.ConnectorType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "manual",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "diagram",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AnnotationPropertyType",
+        module: "Elixir.Figler.Schema.AnnotationPropertyType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "fill",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "stroke",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "width",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "height",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "min_width",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "min_height",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "max_width",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "max_height",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "stroke_width",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "corner_radius",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "effect",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "text_style",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "text_align_horizontal",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "font_family",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "font_size",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "font_weight",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "line_height",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "letter_spacing",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "stack_spacing",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "stack_padding",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "stack_mode",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "stack_alignment",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "opacity",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "component",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "font_style",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "grid_row_gap",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "grid_column_gap",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "grid_row_count",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "grid_column_count",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "grid_row_anchor_index",
+            },
+            KiwiRecordVariant {
+                value: 30,
+                name: "grid_column_anchor_index",
+            },
+            KiwiRecordVariant {
+                value: 31,
+                name: "grid_row_span",
+            },
+            KiwiRecordVariant {
+                value: 32,
+                name: "grid_column_span",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnnotationProperty",
+        module: "Elixir.Figler.Schema.AnnotationProperty",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 202,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AnnotationCategoryPreset",
+        module: "Elixir.Figler.Schema.AnnotationCategoryPreset",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "accessibility",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "behavior",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "content",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "development",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "interaction",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AnnotationCategoryColor",
+        module: "Elixir.Figler.Schema.AnnotationCategoryColor",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "yellow",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "orange",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "red",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "pink",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "violet",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "blue",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "teal",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "green",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnnotationCategoryCustom",
+        module: "Elixir.Figler.Schema.AnnotationCategoryCustom",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "color",
+                type_index: 205,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "custom_color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "label",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnnotationCategory",
+        module: "Elixir.Figler.Schema.AnnotationCategory",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "preset",
+                type_index: 204,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "custom",
+                type_index: 206,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnnotationCategories",
+        module: "Elixir.Figler.Schema.AnnotationCategories",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "items",
+                type_index: 207,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Annotation",
+        module: "Elixir.Figler.Schema.Annotation",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "label",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "properties",
+                type_index: 203,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "label_v2",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "category_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AnnotationMeasurementNodeSide",
+        module: "Elixir.Figler.Schema.AnnotationMeasurementNodeSide",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "top",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "bottom",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "left",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "right",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnnotationMeasurement",
+        module: "Elixir.Figler.Schema.AnnotationMeasurement",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "from_node",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "to_node",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "from_node_side",
+                type_index: 210,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "to_same_side",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "inner_offset_relative",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "outer_offset_fixed",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "to_node_stable_path",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "free_text",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "LibraryMoveInfo",
+        module: "Elixir.Figler.Schema.LibraryMoveInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "old_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "paste_file_key",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "LibraryMoveHistoryItem",
+        module: "Elixir.Figler.Schema.LibraryMoveHistoryItem",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "source_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "source_component_key",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "DeveloperRelatedLink",
+        module: "Elixir.Figler.Schema.DeveloperRelatedLink",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "file_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "link_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "link_url",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "WidgetPointer",
+        module: "Elixir.Figler.Schema.WidgetPointer",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EditInfo",
+        module: "Elixir.Figler.Schema.EditInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "timestamp_iso8601",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "last_edited_at",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "created_at",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "EditorType",
+        module: "Elixir.Figler.Schema.EditorType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "design",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "whiteboard",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "slides",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "dev_handoff",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "sites",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "cooper",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "illustration",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "figmake",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "figspec",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "MaskType",
+        module: "Elixir.Figler.Schema.MaskType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "alpha",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "outline",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "luminance",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ModuleType",
+        module: "Elixir.Figler.Schema.ModuleType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "single_node",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "multi_node",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SectionStatus",
+        module: "Elixir.Figler.Schema.SectionStatus",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "build",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "completed",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SectionStatusInfo",
+        module: "Elixir.Figler.Schema.SectionStatusInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "status",
+                type_index: 220,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "last_update_unix_timestamp",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "prev_status",
+                type_index: 220,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "BuzzApprovalRequestInfo",
+        module: "Elixir.Figler.Schema.BuzzApprovalRequestInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "request_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "requester_user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "requested_at",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "reviewer_user_ids",
+                type_index: -6,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "title",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "note",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "assets_in_request",
+                type_index: 49,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "BuzzApprovalRequests",
+        module: "Elixir.Figler.Schema.BuzzApprovalRequests",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "requests",
+                type_index: 222,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "BuzzApprovalNodeStatus",
+        module: "Elixir.Figler.Schema.BuzzApprovalNodeStatus",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "in_review",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "approved",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "changes_requested",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "BuzzApprovalNodeStatusInfo",
+        module: "Elixir.Figler.Schema.BuzzApprovalNodeStatusInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "current_status",
+                type_index: 224,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "was_previously_approved",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "approval_revoked_at_history",
+                type_index: -4,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeEmbedInfo",
+        module: "Elixir.Figler.Schema.CodeEmbedInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "src_url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "title",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "thumbnail_image_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "is_published_site",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "VariableTimingDisplayUnit",
+        module: "Elixir.Figler.Schema.VariableTimingDisplayUnit",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "milliseconds",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "seconds",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeChange",
+        module: "Elixir.Figler.Schema.NodeChange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "phase",
+                type_index: 3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "parent_index",
+                type_index: 56,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "type",
+                type_index: 5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "visible",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "locked",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "opacity",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "blend_mode",
+                type_index: 7,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "count",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "transform",
+                type_index: 55,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "dash_pattern",
+                type_index: -5,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "auto_rename",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "background_enabled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "mask",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "export_contents_only",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "mask_is_outline",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "background_opacity",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 20,
+                name: "corner_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 21,
+                name: "font_size",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 22,
+                name: "paragraph_indent",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 23,
+                name: "paragraph_spacing",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 24,
+                name: "star_inner_scale",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 25,
+                name: "miter_limit",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 26,
+                name: "stroke_weight",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 27,
+                name: "text_tracking",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 28,
+                name: "horizontal_constraint",
+                type_index: 16,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 29,
+                name: "stroke_align",
+                type_index: 17,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 30,
+                name: "stroke_cap",
+                type_index: 18,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 31,
+                name: "stroke_join",
+                type_index: 19,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 32,
+                name: "text_align_horizontal",
+                type_index: 21,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 33,
+                name: "text_align_vertical",
+                type_index: 22,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 34,
+                name: "text_case",
+                type_index: 11,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 35,
+                name: "text_decoration",
+                type_index: 12,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 36,
+                name: "boolean_operation",
+                type_index: 20,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 37,
+                name: "vertical_constraint",
+                type_index: 16,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 38,
+                name: "fill_paints",
+                type_index: 82,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 39,
+                name: "stroke_paints",
+                type_index: 82,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 40,
+                name: "line_height",
+                type_index: 57,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 41,
+                name: "font_name",
+                type_index: 58,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 42,
+                name: "text_data",
+                type_index: 90,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 43,
+                name: "effects",
+                type_index: 147,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 44,
+                name: "handle_mirroring",
+                type_index: 24,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 45,
+                name: "export_settings",
+                type_index: 172,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 46,
+                name: "text_auto_resize",
+                type_index: 29,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 47,
+                name: "layout_grids",
+                type_index: 174,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 48,
+                name: "vector_data",
+                type_index: 98,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 49,
+                name: "style_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 50,
+                name: "background_color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 51,
+                name: "fill_geometry",
+                type_index: 176,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 52,
+                name: "stroke_geometry",
+                type_index: 176,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 53,
+                name: "guid_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 54,
+                name: "phase_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 55,
+                name: "parent_index_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 56,
+                name: "type_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 57,
+                name: "name_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 58,
+                name: "visible_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 59,
+                name: "locked_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 60,
+                name: "opacity_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 61,
+                name: "blend_mode_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 62,
+                name: "count_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 63,
+                name: "size_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 64,
+                name: "transform_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 65,
+                name: "dash_pattern_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 66,
+                name: "auto_rename_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 67,
+                name: "background_enabled_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 68,
+                name: "mask_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 69,
+                name: "export_contents_only_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 70,
+                name: "mask_is_outline_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 71,
+                name: "background_opacity_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 72,
+                name: "corner_radius_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 73,
+                name: "font_size_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 74,
+                name: "paragraph_indent_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 75,
+                name: "paragraph_spacing_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 76,
+                name: "star_inner_scale_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 77,
+                name: "miter_limit_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 78,
+                name: "stroke_weight_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 79,
+                name: "text_tracking_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 80,
+                name: "horizontal_constraint_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 81,
+                name: "stroke_align_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 82,
+                name: "stroke_cap_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 83,
+                name: "stroke_join_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 84,
+                name: "text_align_horizontal_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 85,
+                name: "text_align_vertical_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 86,
+                name: "text_case_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 87,
+                name: "text_decoration_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 88,
+                name: "boolean_operation_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 89,
+                name: "vertical_constraint_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 90,
+                name: "fill_paints_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 91,
+                name: "stroke_paints_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 92,
+                name: "line_height_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 93,
+                name: "font_name_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 94,
+                name: "text_data_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 95,
+                name: "effects_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 96,
+                name: "handle_mirroring_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 97,
+                name: "export_settings_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 98,
+                name: "text_auto_resize_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 99,
+                name: "layout_grids_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 100,
+                name: "vector_data_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 101,
+                name: "style_id_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 102,
+                name: "background_color_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 103,
+                name: "fill_geometry_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 104,
+                name: "stroke_geometry_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 105,
+                name: "stack_mode",
+                type_index: 33,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 106,
+                name: "stack_mode_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 107,
+                name: "stack_spacing",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 108,
+                name: "stack_spacing_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 109,
+                name: "stack_padding",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 110,
+                name: "stack_padding_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 111,
+                name: "guid_path",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 112,
+                name: "guid_path_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 113,
+                name: "symbol_data",
+                type_index: 101,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 114,
+                name: "symbol_data_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 115,
+                name: "frame_mask_disabled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 116,
+                name: "frame_mask_disabled_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 117,
+                name: "resize_to_fit",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 118,
+                name: "resize_to_fit_tag",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 119,
+                name: "export_background_disabled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 120,
+                name: "stack_counter_align",
+                type_index: 35,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 121,
+                name: "stack_justify",
+                type_index: 36,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 122,
+                name: "shared_symbol_reference",
+                type_index: 136,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 123,
+                name: "is_symbol_publishable",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 124,
+                name: "shared_symbol_mappings",
+                type_index: 102,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 125,
+                name: "derived_symbol_data",
+                type_index: 228,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 126,
+                name: "shared_symbol_version",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 127,
+                name: "font_variant_common_ligatures",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 128,
+                name: "font_variant_contextual_ligatures",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 129,
+                name: "font_variant_discretionary_ligatures",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 130,
+                name: "font_variant_historical_ligatures",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 131,
+                name: "font_variant_ordinal",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 132,
+                name: "font_variant_slashed_zero",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 133,
+                name: "font_variant_numeric_figure",
+                type_index: 59,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 134,
+                name: "font_variant_numeric_spacing",
+                type_index: 60,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 135,
+                name: "font_variant_numeric_fraction",
+                type_index: 61,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 136,
+                name: "font_variant_caps",
+                type_index: 62,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 137,
+                name: "font_variant_position",
+                type_index: 63,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 138,
+                name: "guides",
+                type_index: 175,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 139,
+                name: "transition_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 140,
+                name: "prototype_start_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 141,
+                name: "prototype_background_color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 142,
+                name: "internal_only",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 143,
+                name: "overridden_symbol_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 144,
+                name: "symbol_description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 145,
+                name: "rectangle_top_left_corner_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 146,
+                name: "rectangle_top_right_corner_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 147,
+                name: "rectangle_bottom_left_corner_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 148,
+                name: "rectangle_bottom_right_corner_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 149,
+                name: "rectangle_corner_radii_independent",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 150,
+                name: "rectangle_corner_tool_independent",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 151,
+                name: "proportions_constrained",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 152,
+                name: "shared_component_master_data",
+                type_index: 137,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 153,
+                name: "transition_info",
+                type_index: 161,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 154,
+                name: "transition_type",
+                type_index: 45,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 155,
+                name: "transition_duration",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 156,
+                name: "easing_type",
+                type_index: 46,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 157,
+                name: "is_fill_style",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 158,
+                name: "inherit_fill_style_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 159,
+                name: "scroll_direction",
+                type_index: 47,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 160,
+                name: "corner_smoothing",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 161,
+                name: "is_stroke_style",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 162,
+                name: "inherit_stroke_style_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 163,
+                name: "style_type",
+                type_index: 177,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 164,
+                name: "unflattening_mappings",
+                type_index: 102,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 165,
+                name: "letter_spacing",
+                type_index: 57,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 166,
+                name: "scroll_offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 167,
+                name: "inherit_text_style_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 168,
+                name: "inherit_export_style_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 169,
+                name: "inherit_effect_style_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 170,
+                name: "inherit_grid_style_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 171,
+                name: "version",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 172,
+                name: "shared_style_master_data",
+                type_index: 187,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 173,
+                name: "shared_style_reference",
+                type_index: 186,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 174,
+                name: "is_publishable",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 175,
+                name: "export_text_as_svg_text",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 176,
+                name: "is_soft_deleted_style",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 177,
+                name: "is_non_updateable",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 178,
+                name: "scroll_contracted_state",
+                type_index: 48,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 179,
+                name: "contracted_size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 180,
+                name: "fixed_children_divider",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 181,
+                name: "transition_preserve_scroll",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 182,
+                name: "connection_type",
+                type_index: 43,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 183,
+                name: "connection_url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 184,
+                name: "prototype_device",
+                type_index: 164,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 185,
+                name: "inherit_fill_style_id_for_stroke",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 186,
+                name: "scroll_behavior",
+                type_index: 188,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 187,
+                name: "interaction_type",
+                type_index: 44,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 188,
+                name: "transition_timeout",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 189,
+                name: "interaction_maintained",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 190,
+                name: "interaction_duration",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 191,
+                name: "style_description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 192,
+                name: "destination_is_overlay",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 193,
+                name: "background_paints",
+                type_index: 82,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 194,
+                name: "inherit_fill_style_id_for_background",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 195,
+                name: "arc_data",
+                type_index: 189,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 196,
+                name: "derived_symbol_data_layout_version",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 197,
+                name: "navigation_type",
+                type_index: 169,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 198,
+                name: "overlay_position_type",
+                type_index: 165,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 199,
+                name: "overlay_relative_position",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 200,
+                name: "overlay_background_interaction",
+                type_index: 166,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 201,
+                name: "overlay_background_appearance",
+                type_index: 168,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 202,
+                name: "font_version",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 203,
+                name: "text_user_layout_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 204,
+                name: "plugin_data",
+                type_index: 191,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 205,
+                name: "toggled_on_ot_features",
+                type_index: 73,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 206,
+                name: "toggled_off_ot_features",
+                type_index: 73,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 207,
+                name: "transition_should_smart_animate",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 208,
+                name: "stack_align",
+                type_index: 34,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 209,
+                name: "stack_horizontal_padding",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 210,
+                name: "stack_vertical_padding",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 211,
+                name: "stack_width",
+                type_index: 39,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 212,
+                name: "stack_height",
+                type_index: 39,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 213,
+                name: "override_key",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 214,
+                name: "publish_file",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 215,
+                name: "publish_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 216,
+                name: "component_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 217,
+                name: "is_c2",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 218,
+                name: "published_version",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 219,
+                name: "plugin_relaunch_data",
+                type_index: 192,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 220,
+                name: "container_supports_fill_stroke_and_corners",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 221,
+                name: "stack_counter_sizing",
+                type_index: 39,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 222,
+                name: "containers_support_fill_stroke_and_corners",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 223,
+                name: "hyperlink",
+                type_index: 394,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 224,
+                name: "key_trigger",
+                type_index: 393,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 225,
+                name: "is_state_group",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 226,
+                name: "prototype_interactions",
+                type_index: 383,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 227,
+                name: "voice_event_phrase",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 228,
+                name: "force_unflattening_mappings",
+                type_index: 102,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 229,
+                name: "stack_primary_sizing",
+                type_index: 39,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 230,
+                name: "stack_primary_align_items",
+                type_index: 36,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 231,
+                name: "stack_counter_align_items",
+                type_index: 34,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 232,
+                name: "stack_child_primary_grow",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 233,
+                name: "stack_padding_right",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 234,
+                name: "stack_padding_bottom",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 235,
+                name: "ancestor_path_before_deletion",
+                type_index: 49,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 236,
+                name: "stack_child_align_self",
+                type_index: 35,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 237,
+                name: "symbol_links",
+                type_index: 190,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 238,
+                name: "state_group_property_value_orders",
+                type_index: 371,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 239,
+                name: "text_list_data",
+                type_index: 375,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 240,
+                name: "node_generation_data",
+                type_index: 104,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 241,
+                name: "shape_with_text_type",
+                type_index: 6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 242,
+                name: "connector_start",
+                type_index: 195,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 243,
+                name: "connector_end",
+                type_index: 195,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 244,
+                name: "connector_line_style",
+                type_index: 200,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 245,
+                name: "connector_start_cap",
+                type_index: 18,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 246,
+                name: "connector_end_cap",
+                type_index: 18,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 247,
+                name: "shape_user_height",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 248,
+                name: "override_stash",
+                type_index: 138,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 249,
+                name: "prototype_starting_point",
+                type_index: 391,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 250,
+                name: "override_stash_v2",
+                type_index: 139,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 251,
+                name: "internal_enum_for_test",
+                type_index: 369,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 252,
+                name: "origin_component_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 253,
+                name: "connector_control_points",
+                type_index: 196,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 254,
+                name: "derived_immutable_frame_data",
+                type_index: 105,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 255,
+                name: "connector_text_midpoint",
+                type_index: 199,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 256,
+                name: "library_move_info",
+                type_index: 212,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 257,
+                name: "internal_data_for_test",
+                type_index: 370,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 258,
+                name: "use_absolute_bounds",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 259,
+                name: "code_block_language",
+                type_index: 366,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 260,
+                name: "font_variations",
+                type_index: 89,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 261,
+                name: "detach_optical_size_from_font_size",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 262,
+                name: "widget_metadata",
+                type_index: 361,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 263,
+                name: "widget_events",
+                type_index: 359,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 264,
+                name: "list_spacing",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 265,
+                name: "widget_property_menu_items",
+                type_index: 365,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 266,
+                name: "component_prop_defs",
+                type_index: 323,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 267,
+                name: "component_prop_refs",
+                type_index: 320,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 268,
+                name: "component_prop_assignments",
+                type_index: 322,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 269,
+                name: "stack_positioning",
+                type_index: 40,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 270,
+                name: "embed_data",
+                type_index: 398,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 271,
+                name: "stack_reverse_z_index",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 272,
+                name: "rich_media_data",
+                type_index: 450,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 273,
+                name: "widget_synced_state",
+                type_index: 284,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 274,
+                name: "widget_sync_cursor",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 275,
+                name: "widget_derived_subtree_cursor",
+                type_index: 283,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 276,
+                name: "widget_cached_ancestor",
+                type_index: 215,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 277,
+                name: "rendered_synced_state",
+                type_index: 284,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 278,
+                name: "link_preview_data",
+                type_index: 400,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 279,
+                name: "text_bidi_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 280,
+                name: "text_truncation",
+                type_index: 30,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 281,
+                name: "library_move_history",
+                type_index: 213,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 282,
+                name: "shape_truncates",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 283,
+                name: "section_contents_hidden",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 284,
+                name: "simplify_instance_panels",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 285,
+                name: "widget_input_behavior",
+                type_index: 360,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 286,
+                name: "widget_tooltip",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 287,
+                name: "border_top_hidden",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 288,
+                name: "border_bottom_hidden",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 289,
+                name: "border_left_hidden",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 290,
+                name: "border_right_hidden",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 291,
+                name: "widget_hover_style",
+                type_index: 282,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 292,
+                name: "has_had_rtl_text",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 293,
+                name: "is_widget_stickable",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 294,
+                name: "borders_take_space",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 295,
+                name: "border_top_weight",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 296,
+                name: "border_bottom_weight",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 297,
+                name: "border_left_weight",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 298,
+                name: "border_right_weight",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 299,
+                name: "border_stroke_weights_independent",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 300,
+                name: "video_playback",
+                type_index: 279,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 301,
+                name: "stamp_data",
+                type_index: 399,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 302,
+                name: "accessible_html_tag",
+                type_index: 513,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 303,
+                name: "aria_role",
+                type_index: 514,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 304,
+                name: "accessible_label",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 305,
+                name: "props_are_bubbled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 306,
+                name: "variable_data",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 307,
+                name: "variable_consumption_map",
+                type_index: 286,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 308,
+                name: "table_row_positions",
+                type_index: 295,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 309,
+                name: "table_column_positions",
+                type_index: 295,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 310,
+                name: "table_row_heights",
+                type_index: 306,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 311,
+                name: "table_column_widths",
+                type_index: 306,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 312,
+                name: "variable_set_modes",
+                type_index: 478,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 313,
+                name: "variable_set_id",
+                type_index: 117,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 314,
+                name: "variable_resolved_type",
+                type_index: 452,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 315,
+                name: "variable_data_values",
+                type_index: 479,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 316,
+                name: "variable_mode_by_set_map",
+                type_index: 289,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 317,
+                name: "mask_type",
+                type_index: 218,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 318,
+                name: "description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 319,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 320,
+                name: "sort_position",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 321,
+                name: "override_level",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 322,
+                name: "leading_trim",
+                type_index: 14,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 323,
+                name: "stack_wrap",
+                type_index: 41,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 324,
+                name: "stack_counter_spacing",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 325,
+                name: "min_size",
+                type_index: 512,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 326,
+                name: "max_size",
+                type_index: 512,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 327,
+                name: "agenda_position_map",
+                type_index: 308,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 328,
+                name: "agenda_metadata_map",
+                type_index: 311,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 329,
+                name: "migration_status",
+                type_index: 515,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 330,
+                name: "is_soft_deleted",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 331,
+                name: "edit_info",
+                type_index: 216,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 332,
+                name: "style_id_for_fill",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 333,
+                name: "style_id_for_stroke_fill",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 334,
+                name: "style_id_for_text",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 335,
+                name: "style_id_for_effect",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 336,
+                name: "style_id_for_grid",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 337,
+                name: "hanging_punctuation",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 338,
+                name: "derived_immutable_frame_data_version",
+                type_index: 193,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 339,
+                name: "hanging_list",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 340,
+                name: "mention",
+                type_index: 397,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 341,
+                name: "color_profile",
+                type_index: 516,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 342,
+                name: "detached_symbol_id",
+                type_index: 114,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 343,
+                name: "stack_counter_align_content",
+                type_index: 42,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 344,
+                name: "is_snake_game_board",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 345,
+                name: "ojans_super_secret_node_field",
+                type_index: 187,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 346,
+                name: "child_reading_direction",
+                type_index: 518,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 347,
+                name: "reading_index",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 348,
+                name: "sev_moonlit_lily_data",
+                type_index: 187,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 349,
+                name: "document_color_profile",
+                type_index: 517,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 350,
+                name: "variable_token_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 351,
+                name: "max_lines",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 352,
+                name: "section_status",
+                type_index: 220,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 353,
+                name: "variable_scopes",
+                type_index: 481,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 354,
+                name: "developer_related_links",
+                type_index: 214,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 355,
+                name: "section_status_info",
+                type_index: 221,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 356,
+                name: "slide_active_theme_lib_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 357,
+                name: "aria_attributes",
+                type_index: 522,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 358,
+                name: "code_syntax",
+                type_index: 291,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 359,
+                name: "derived_text_data",
+                type_index: 91,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 360,
+                name: "should_hide_cursors_on_widget_hover",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 361,
+                name: "handoff_status_map",
+                type_index: 525,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 362,
+                name: "layout_root",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 363,
+                name: "diagram_parent_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 364,
+                name: "layout_position",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 365,
+                name: "edit_scope_info",
+                type_index: 526,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 366,
+                name: "diagram_layout_rule_type",
+                type_index: 317,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 367,
+                name: "diagram_parent_index",
+                type_index: 318,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 368,
+                name: "diagram_layout_paused",
+                type_index: 319,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 369,
+                name: "annotations",
+                type_index: 209,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 370,
+                name: "section_preset_info",
+                type_index: 534,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 371,
+                name: "interactive_slide_config_data",
+                type_index: 284,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 372,
+                name: "interactive_slide_participant_data",
+                type_index: 284,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 373,
+                name: "connector_type",
+                type_index: 201,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 374,
+                name: "semantic_weight",
+                type_index: 65,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 375,
+                name: "semantic_italic",
+                type_index: 66,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 376,
+                name: "is_override_over_text_style",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 377,
+                name: "backing_variable_set_id",
+                type_index: 117,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 378,
+                name: "backing_variable_id",
+                type_index: 562,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 379,
+                name: "theme_id",
+                type_index: 118,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 380,
+                name: "is_page_divider",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 381,
+                name: "slide_theme_data",
+                type_index: 563,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 382,
+                name: "module_type",
+                type_index: 219,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 383,
+                name: "file_asset_ids",
+                type_index: 108,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 384,
+                name: "measurements",
+                type_index: 211,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 385,
+                name: "is_collection_extendable",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 386,
+                name: "root_variable_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 387,
+                name: "is_responsive_set",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 388,
+                name: "paste_source",
+                type_index: 79,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 389,
+                name: "slide_speaker_notes",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 390,
+                name: "slide_theme_map",
+                type_index: 134,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 391,
+                name: "emoji_image_set",
+                type_index: 532,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 392,
+                name: "slide_thumbnail_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 393,
+                name: "slide_template_file_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 394,
+                name: "nested_instance_resize_enabled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 395,
+                name: "source_library_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 396,
+                name: "text_explicit_layout_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 397,
+                name: "page_type",
+                type_index: 217,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 398,
+                name: "default_responsive_set_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 399,
+                name: "user_facing_version",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 400,
+                name: "responsive_set_settings",
+                type_index: 244,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 401,
+                name: "widget_input_text_node_type",
+                type_index: 364,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 402,
+                name: "flapp_type",
+                type_index: 132,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 403,
+                name: "are_slides_manually_indented",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 404,
+                name: "behaviors",
+                type_index: 545,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 405,
+                name: "ai_edited_node_change_field_numbers",
+                type_index: -4,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 406,
+                name: "sorted_moving_child_indices",
+                type_index: -3,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 407,
+                name: "first_draft_data",
+                type_index: 538,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 408,
+                name: "ai_edit_scope_label",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 409,
+                name: "platform_shape_definition",
+                type_index: 544,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 410,
+                name: "is_skipped_slide",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 411,
+                name: "text_decoration_fill_paints",
+                type_index: 82,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 412,
+                name: "text_decoration_skip_ink",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 413,
+                name: "text_underline_offset",
+                type_index: 57,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 414,
+                name: "source_code",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 415,
+                name: "text_decoration_thickness",
+                type_index: 57,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 416,
+                name: "text_decoration_style",
+                type_index: 13,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 417,
+                name: "responsive_text_style_variants",
+                type_index: 131,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 418,
+                name: "first_draft_kit_element_data",
+                type_index: 540,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 419,
+                name: "cms_selector",
+                type_index: 246,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 420,
+                name: "cms_consumption_map",
+                type_index: 253,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 421,
+                name: "cooper_revert_data",
+                type_index: 278,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 422,
+                name: "hub_file_attribution",
+                type_index: 266,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 423,
+                name: "target_aspect_ratio",
+                type_index: 512,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 424,
+                name: "rotation_origin",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 425,
+                name: "vector_operation_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 426,
+                name: "object_animations",
+                type_index: 383,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 427,
+                name: "belongs_to_code_library_id",
+                type_index: 119,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 428,
+                name: "exported_from_code_file_id",
+                type_index: 120,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 429,
+                name: "backing_code_component_id",
+                type_index: 121,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 430,
+                name: "code_export_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 431,
+                name: "code_snapshot_state",
+                type_index: 67,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 432,
+                name: "text_path_start",
+                type_index: 99,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 433,
+                name: "code_block_theme",
+                type_index: 367,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 434,
+                name: "lock_mode",
+                type_index: 72,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 435,
+                name: "grid_rows",
+                type_index: 297,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 436,
+                name: "grid_columns",
+                type_index: 297,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 437,
+                name: "grid_row_gap",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 438,
+                name: "grid_column_gap",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 439,
+                name: "grid_row_anchor",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 440,
+                name: "grid_column_anchor",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 441,
+                name: "grid_row_span",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 442,
+                name: "grid_column_span",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 443,
+                name: "slide_number",
+                type_index: 564,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 444,
+                name: "collaborative_source_code",
+                type_index: 129,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 445,
+                name: "parameter_consumption_map",
+                type_index: 286,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 446,
+                name: "stroke_brush_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 447,
+                name: "variable_width_points",
+                type_index: 185,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 448,
+                name: "dynamic_stroke_settings",
+                type_index: 180,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 449,
+                name: "scatter_stroke_settings",
+                type_index: 181,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 450,
+                name: "stretch_stroke_settings",
+                type_index: 182,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 451,
+                name: "chat_messages",
+                type_index: 566,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 452,
+                name: "brush_type",
+                type_index: 179,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 453,
+                name: "annotation_categories",
+                type_index: 208,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 454,
+                name: "managed_string_data",
+                type_index: 267,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 455,
+                name: "transform_modifiers",
+                type_index: 149,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 456,
+                name: "slide_number_separator",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 457,
+                name: "primary_responsive_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 458,
+                name: "is_primary_breakpoint",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 459,
+                name: "code_snapshot",
+                type_index: 232,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 460,
+                name: "cms_rich_text_style_map",
+                type_index: 256,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 461,
+                name: "cooper_template_data",
+                type_index: 579,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 462,
+                name: "multi_edit_glue_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 463,
+                name: "is_slot",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 464,
+                name: "overridden_variable_id",
+                type_index: 115,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 465,
+                name: "is_code_behavior",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 466,
+                name: "thumbnail_info",
+                type_index: 461,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 467,
+                name: "imported_code_files",
+                type_index: 141,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 468,
+                name: "code_file_canvas_node_id",
+                type_index: 122,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 469,
+                name: "auto_fork_code",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 470,
+                name: "has_been_manually_renamed",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 471,
+                name: "code_created_from_design",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 472,
+                name: "code_file_path",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 473,
+                name: "image_imports",
+                type_index: 580,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 474,
+                name: "grid_columns_sizing",
+                type_index: 299,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 475,
+                name: "grid_rows_sizing",
+                type_index: 299,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 476,
+                name: "grid_child_vertical_align",
+                type_index: 37,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 477,
+                name: "grid_child_horizontal_align",
+                type_index: 37,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 478,
+                name: "code_behavior_data",
+                type_index: 235,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 479,
+                name: "connector_bezier_control_points",
+                type_index: 196,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 480,
+                name: "code_snapshot_invalidated_at",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 481,
+                name: "code_created_from_design_node_id",
+                type_index: 122,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 482,
+                name: "stroke_seed",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 483,
+                name: "variant_prop_specs",
+                type_index: 374,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 484,
+                name: "code_chat_messages_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 485,
+                name: "chat_compression_state",
+                type_index: 570,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 486,
+                name: "is_embedded_prototype",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 487,
+                name: "is_main_code_component",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 488,
+                name: "scatter_brush_transforms",
+                type_index: 55,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 489,
+                name: "jsx_props",
+                type_index: 284,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 490,
+                name: "is_decorative_image",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 491,
+                name: "jsx_data",
+                type_index: 106,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 492,
+                name: "derived_jsx_data",
+                type_index: 107,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 493,
+                name: "stable_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 494,
+                name: "ai_canvas_prompt",
+                type_index: 462,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 495,
+                name: "is_slot_content",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 496,
+                name: "ai_chat_thread",
+                type_index: 577,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 497,
+                name: "stroke_cap_size",
+                type_index: 57,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 498,
+                name: "is_entrypoint_code_file",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 499,
+                name: "backing_node_id",
+                type_index: 122,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 500,
+                name: "derived_breakpoint_data",
+                type_index: 103,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 501,
+                name: "breakpoint_min_width",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 502,
+                name: "component_or_state_group_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 503,
+                name: "component_or_state_group_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 504,
+                name: "source_code_library_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 505,
+                name: "interpolation_type",
+                type_index: 582,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 506,
+                name: "timeline_position",
+                type_index: -7,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 507,
+                name: "keyframe_value",
+                type_index: 484,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 508,
+                name: "bezier_handles",
+                type_index: 583,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 509,
+                name: "keyframe_operation",
+                type_index: 584,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 510,
+                name: "timeline_position_type",
+                type_index: 585,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 511,
+                name: "clip_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 512,
+                name: "timeline_duration",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 513,
+                name: "timeline_offset",
+                type_index: -7,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 514,
+                name: "playback_style",
+                type_index: 586,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 515,
+                name: "source_code_library_keys",
+                type_index: -6,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 516,
+                name: "code_object_type",
+                type_index: 70,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 517,
+                name: "inherited_variable_ids",
+                type_index: 264,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 518,
+                name: "make_library_component_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 519,
+                name: "code_library_format",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 520,
+                name: "should_hide_preview_for_make_kit_creation",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 521,
+                name: "animation_presets",
+                type_index: 491,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 522,
+                name: "is_breakpoint_in_focus",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 523,
+                name: "motion_transform",
+                type_index: 476,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 524,
+                name: "used_make_libraries",
+                type_index: 237,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 525,
+                name: "code_examples",
+                type_index: 236,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 526,
+                name: "transition_overrides",
+                type_index: 503,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 527,
+                name: "is_code_preview_playing_on_canvas",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 528,
+                name: "buzz_approval_requests",
+                type_index: 223,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 529,
+                name: "buzz_approval_node_status_info",
+                type_index: 225,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 530,
+                name: "is_stroke_paint_derived",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 531,
+                name: "code_preview_settings",
+                type_index: 164,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 532,
+                name: "code_embed_info",
+                type_index: 226,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 533,
+                name: "connector_version",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 534,
+                name: "source_code_collaborative_text_version",
+                type_index: 124,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 535,
+                name: "easing_data",
+                type_index: 501,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 536,
+                name: "mime_type",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 537,
+                name: "blob_ref",
+                type_index: -2,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 538,
+                name: "table_merged_cells",
+                type_index: 293,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 539,
+                name: "repeater_symbol_id",
+                type_index: 114,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 540,
+                name: "repeater_cms_override_data",
+                type_index: 260,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 541,
+                name: "repeater_override_data",
+                type_index: 261,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 542,
+                name: "path_trim",
+                type_index: 512,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 543,
+                name: "timeline_disabled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 544,
+                name: "use_legacy_smart_animate",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 545,
+                name: "is_clip",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 546,
+                name: "is_embed_code_layer",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 547,
+                name: "code_component_description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 548,
+                name: "page_status",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 549,
+                name: "repeater_symbol_override_data",
+                type_index: 262,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 550,
+                name: "fallback_glyphs",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 551,
+                name: "is_make_kit",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 552,
+                name: "timeline_definitions",
+                type_index: 326,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 553,
+                name: "timeline_assignments",
+                type_index: 330,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 554,
+                name: "stroke_offset",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 555,
+                name: "grid_auto_tracks",
+                type_index: 38,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 556,
+                name: "grid_reflow_enabled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 557,
+                name: "source_control_config",
+                type_index: 231,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 558,
+                name: "code_source_info",
+                type_index: 69,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 559,
+                name: "spec_block_type",
+                type_index: 368,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 560,
+                name: "spec_block_content",
+                type_index: 129,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 561,
+                name: "spec_code_block_language",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 562,
+                name: "spec_block_table_alignment",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 563,
+                name: "spec_block_indent_level",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 564,
+                name: "offset_fill_mask_geometry",
+                type_index: 176,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 565,
+                name: "placeholder",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 566,
+                name: "timing_display_unit",
+                type_index: 227,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 567,
+                name: "disable_jit_dst",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 568,
+                name: "tools",
+                type_index: 495,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 569,
+                name: "custom_effects",
+                type_index: 497,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 570,
+                name: "transform3d",
+                type_index: 157,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 571,
+                name: "stroke_data",
+                type_index: 183,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 572,
+                name: "scene3d",
+                type_index: 159,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 573,
+                name: "presentation_outlines",
+                type_index: 284,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 574,
+                name: "stack_layout_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 575,
+                name: "spec_image_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 576,
+                name: "spec_width",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 577,
+                name: "spec_height",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 578,
+                name: "spec_block_table_row_heights",
+                type_index: 306,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 579,
+                name: "spec_block_table_column_widths",
+                type_index: 306,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 580,
+                name: "style_animations",
+                type_index: 493,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 581,
+                name: "partial_paste_annotation",
+                type_index: 373,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 582,
+                name: "style_ids_for_animation",
+                type_index: 494,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 583,
+                name: "backing_animation_preset_id",
+                type_index: 473,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 584,
+                name: "placeholder_client_lifecycle_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 585,
+                name: "placeholder_invalidate_at",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 586,
+                name: "keyframe_value_ref",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 587,
+                name: "transform_origin",
+                type_index: 160,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 588,
+                name: "custom_tool_artifact_ref",
+                type_index: 71,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 589,
+                name: "code_snapshot_layers",
+                type_index: 234,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 590,
+                name: "spec_embed_url",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "GitRepoRefProvider",
+        module: "Elixir.Figler.Schema.GitRepoRefProvider",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "ugit",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "github",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "other",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GitRepoRef",
+        module: "Elixir.Figler.Schema.GitRepoRef",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "provider",
+                type_index: 229,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "git_repo",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "git_ref",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SourceControlConfig",
+        module: "Elixir.Figler.Schema.SourceControlConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "origin",
+                type_index: 230,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "upstream",
+                type_index: 230,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeSnapshot",
+        module: "Elixir.Figler.Schema.CodeSnapshot",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "paints",
+                type_index: 82,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "layout_size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "device_pixel_ratio",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "canvas_size",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "state",
+                type_index: 67,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "invalidated_at",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeOutputLayer",
+        module: "Elixir.Figler.Schema.CodeOutputLayer",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node",
+                type_index: 228,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeSnapshotLayers",
+        module: "Elixir.Figler.Schema.CodeSnapshotLayers",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "state",
+                type_index: 67,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "invalidated_at",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "layers",
+                type_index: 233,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeBehaviorData",
+        module: "Elixir.Figler.Schema.CodeBehaviorData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "icon",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "node_types",
+                type_index: -6,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "category",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "api_version",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeExample",
+        module: "Elixir.Figler.Schema.CodeExample",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "example_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "code_export_name",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "UsedMakeLibrary",
+        module: "Elixir.Figler.Schema.UsedMakeLibrary",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "make_library_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CookieBannerText",
+        module: "Elixir.Figler.Schema.CookieBannerText",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "banner_header",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "banner_disclaimer_explicit",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "banner_disclaimer_implicit",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "policy_label",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "accept_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "acknowledge_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "manage_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "reject_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "necessary_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "necessary_description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "analytics_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "analytics_description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "preferences_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "preferences_description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "marketing_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "marketing_description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "save_label",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "trigger_label",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CookieBannerSettings",
+        module: "Elixir.Figler.Schema.CookieBannerSettings",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "enabled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "component_type",
+                type_index: 240,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "x_alignment",
+                type_index: 242,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "y_alignment",
+                type_index: 243,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "trigger_x_alignment",
+                type_index: 242,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "trigger_y_alignment",
+                type_index: 243,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "trigger_component_type",
+                type_index: 241,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "policy_url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "text",
+                type_index: 238,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "policy_link",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "locale",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CookieBannerComponentType",
+        module: "Elixir.Figler.Schema.CookieBannerComponentType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "banner",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "modal",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TriggerComponentType",
+        module: "Elixir.Figler.Schema.TriggerComponentType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "banner",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "tag",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CookieXAlignment",
+        module: "Elixir.Figler.Schema.CookieXAlignment",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "left",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "right",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CookieYAlignment",
+        module: "Elixir.Figler.Schema.CookieYAlignment",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "top",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "center",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "bottom",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ResponsiveSetSettings",
+        module: "Elixir.Figler.Schema.ResponsiveSetSettings",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "title",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "scaling_mode",
+                type_index: 245,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "scaling_min_font_size",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "scaling_max_font_size",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "scaling_min_layout_width",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "scaling_max_layout_width",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "lang",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "favicon_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "social_image_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "google_analytics_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "block_search_indexing",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "custom_code_head_start",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "custom_code_head_end",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "custom_code_body_start",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "custom_code_body_end",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "favicon_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "social_image_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "add_bypass_links",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 20,
+                name: "ignore_reduced_motion",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 21,
+                name: "cookie_banner",
+                type_index: 239,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ResponsiveScalingMode",
+        module: "Elixir.Figler.Schema.ResponsiveScalingMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "reflow",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "scale",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSSelector",
+        module: "Elixir.Figler.Schema.CMSSelector",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "cms_collection_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "filter_criteria",
+                type_index: 247,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "sorts",
+                type_index: 251,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "limit",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSFilterCritera",
+        module: "Elixir.Figler.Schema.CMSFilterCritera",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "match_type",
+                type_index: 248,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "filters",
+                type_index: 249,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CMSFilterCriteriaMatchType",
+        module: "Elixir.Figler.Schema.CMSFilterCriteriaMatchType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "match_all",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "match_any",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSSelectorFilter",
+        module: "Elixir.Figler.Schema.CMSSelectorFilter",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "cms_field_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "op",
+                type_index: 250,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "comparison_value",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CMSSelectorFilterOperator",
+        module: "Elixir.Figler.Schema.CMSSelectorFilterOperator",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "equals",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSSelectorSort",
+        module: "Elixir.Figler.Schema.CMSSelectorSort",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "cms_field_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "order_by",
+                type_index: 252,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CMSFieldOrderBy",
+        module: "Elixir.Figler.Schema.CMSFieldOrderBy",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "ascending",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "descending",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSConsumptionMap",
+        module: "Elixir.Figler.Schema.CMSConsumptionMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 254,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSConsumptionMapEntry",
+        module: "Elixir.Figler.Schema.CMSConsumptionMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "consumption_field",
+                type_index: 255,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "cms_field_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CMSConsumptionField",
+        module: "Elixir.Figler.Schema.CMSConsumptionField",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "missing",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "text_data",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSRichTextStyleMap",
+        module: "Elixir.Figler.Schema.CMSRichTextStyleMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 257,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSRichTextStyleEntry",
+        module: "Elixir.Figler.Schema.CMSRichTextStyleEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "style_class",
+                type_index: 258,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "text_descriptor",
+                type_index: 259,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CMSRichTextStyleClass",
+        module: "Elixir.Figler.Schema.CMSRichTextStyleClass",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "heading1",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "heading2",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "heading3",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "heading4",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "heading5",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "heading6",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "paragraph",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "link",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "blockquote",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSRichTextDescriptor",
+        module: "Elixir.Figler.Schema.CMSRichTextDescriptor",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "text_style_id",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "font_name_variants",
+                type_index: 58,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "RepeaterCmsOverrideData",
+        module: "Elixir.Figler.Schema.RepeaterCmsOverrideData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "RepeaterOverrideData",
+        module: "Elixir.Figler.Schema.RepeaterOverrideData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "parent_index_overrides",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "RepeaterSymbolOverrideData",
+        module: "Elixir.Figler.Schema.RepeaterSymbolOverrideData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overrides_by_position",
+                type_index: 263,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "RepeaterPositionOverrides",
+        module: "Elixir.Figler.Schema.RepeaterPositionOverrides",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "position",
+                type_index: 56,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "overrides",
+                type_index: 228,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InheritedVariablesData",
+        module: "Elixir.Figler.Schema.InheritedVariablesData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "variable_ids",
+                type_index: 265,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InheritedVariableEntry",
+        module: "Elixir.Figler.Schema.InheritedVariableEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "variable_id",
+                type_index: 115,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "HubFileAttribution",
+        module: "Elixir.Figler.Schema.HubFileAttribution",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "hub_file_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "hub_file_name",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringData",
+        module: "Elixir.Figler.Schema.ManagedStringData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "context",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "locale",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "content",
+                type_index: 270,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "content_schema",
+                type_index: 268,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ManagedStringContentSchema",
+        module: "Elixir.Figler.Schema.ManagedStringContentSchema",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "v0",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ManagedStringNodeType",
+        module: "Elixir.Figler.Schema.ManagedStringNodeType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "text",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "concatenate",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "plural",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "placeholder",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringNode",
+        module: "Elixir.Figler.Schema.ManagedStringNode",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 269,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "text_node_data",
+                type_index: 271,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "concatenate_node_data",
+                type_index: 272,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "plural_node_data",
+                type_index: 274,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "placeholder_node_data",
+                type_index: 277,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringTextNodeData",
+        module: "Elixir.Figler.Schema.ManagedStringTextNodeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "value",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringConcatenateAstNodeData",
+        module: "Elixir.Figler.Schema.ManagedStringConcatenateAstNodeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "values",
+                type_index: 270,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ManagedStringPluralType",
+        module: "Elixir.Figler.Schema.ManagedStringPluralType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "zero",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "one",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "two",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "few",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "many",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "other",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringPluralAstNodeData",
+        module: "Elixir.Figler.Schema.ManagedStringPluralAstNodeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "identifier",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "conditions",
+                type_index: 275,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringPluralTypeMapEntry",
+        module: "Elixir.Figler.Schema.ManagedStringPluralTypeMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: 273,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 270,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ManagedStringFormatType",
+        module: "Elixir.Figler.Schema.ManagedStringFormatType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "text",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "date",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "time",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "number",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringPlaceholderAstNodeData",
+        module: "Elixir.Figler.Schema.ManagedStringPlaceholderAstNodeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "identifier",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "format_type",
+                type_index: 276,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "format_pattern",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CooperRevertData",
+        module: "Elixir.Figler.Schema.CooperRevertData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "original_values",
+                type_index: 228,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VideoPlayback",
+        module: "Elixir.Figler.Schema.VideoPlayback",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "autoplay",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "media_loop",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "muted",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "show_controls",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "start_time_ms",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "end_time_ms",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "MediaAction",
+        module: "Elixir.Figler.Schema.MediaAction",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "play",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "pause",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "toggle_play_pause",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "mute",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "unmute",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "toggle_mute_unmute",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "skip_forward",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "skip_backward",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "skip_to",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "set_playback_rate",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AnimationTimelineAction",
+        module: "Elixir.Figler.Schema.AnimationTimelineAction",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "play",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "pause",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "toggle_play_pause",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "set_playhead",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "WidgetHoverStyle",
+        module: "Elixir.Figler.Schema.WidgetHoverStyle",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "fill_paints",
+                type_index: 82,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "stroke_paints",
+                type_index: 82,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "opacity",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "are_fill_paints_set",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "are_stroke_paints_set",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "is_opacity_set",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "WidgetDerivedSubtreeCursor",
+        module: "Elixir.Figler.Schema.WidgetDerivedSubtreeCursor",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "counter",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "MultiplayerMap",
+        module: "Elixir.Figler.Schema.MultiplayerMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 285,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "MultiplayerMapEntry",
+        module: "Elixir.Figler.Schema.MultiplayerMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableDataMap",
+        module: "Elixir.Figler.Schema.VariableDataMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 287,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableDataMapEntry",
+        module: "Elixir.Figler.Schema.VariableDataMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_field",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "variable_data",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "variable_field",
+                type_index: 288,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "VariableField",
+        module: "Elixir.Figler.Schema.VariableField",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "missing",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "corner_radius",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "paragraph_spacing",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "paragraph_indent",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "stroke_weight",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "stack_spacing",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "stack_padding_left",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "stack_padding_top",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "stack_padding_right",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "stack_padding_bottom",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "visible",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "text_data",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "width",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "height",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "rectangle_top_left_corner_radius",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "rectangle_top_right_corner_radius",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "rectangle_bottom_left_corner_radius",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "rectangle_bottom_right_corner_radius",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "border_top_weight",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "border_bottom_weight",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "border_left_weight",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "border_right_weight",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "variant_properties",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "stack_counter_spacing",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "min_width",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "max_width",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "min_height",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "max_height",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "font_family",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "font_style",
+            },
+            KiwiRecordVariant {
+                value: 30,
+                name: "font_variations",
+            },
+            KiwiRecordVariant {
+                value: 31,
+                name: "opacity",
+            },
+            KiwiRecordVariant {
+                value: 32,
+                name: "font_size",
+            },
+            KiwiRecordVariant {
+                value: 34,
+                name: "letter_spacing",
+            },
+            KiwiRecordVariant {
+                value: 36,
+                name: "line_height",
+            },
+            KiwiRecordVariant {
+                value: 37,
+                name: "overridden_symbol_id",
+            },
+            KiwiRecordVariant {
+                value: 38,
+                name: "hyperlink",
+            },
+            KiwiRecordVariant {
+                value: 39,
+                name: "cms_serialized_rich_text_data",
+            },
+            KiwiRecordVariant {
+                value: 40,
+                name: "slot_content_id",
+            },
+            KiwiRecordVariant {
+                value: 41,
+                name: "grid_row_gap",
+            },
+            KiwiRecordVariant {
+                value: 42,
+                name: "grid_column_gap",
+            },
+            KiwiRecordVariant {
+                value: 43,
+                name: "x_position",
+            },
+            KiwiRecordVariant {
+                value: 44,
+                name: "y_position",
+            },
+            KiwiRecordVariant {
+                value: 45,
+                name: "rotation",
+            },
+            KiwiRecordVariant {
+                value: 46,
+                name: "motion_translation_x",
+            },
+            KiwiRecordVariant {
+                value: 47,
+                name: "motion_translation_y",
+            },
+            KiwiRecordVariant {
+                value: 48,
+                name: "motion_rotation",
+            },
+            KiwiRecordVariant {
+                value: 49,
+                name: "motion_scale_x",
+            },
+            KiwiRecordVariant {
+                value: 50,
+                name: "motion_scale_y",
+            },
+            KiwiRecordVariant {
+                value: 51,
+                name: "motion_shear",
+            },
+            KiwiRecordVariant {
+                value: 52,
+                name: "scroll_offset_x",
+            },
+            KiwiRecordVariant {
+                value: 53,
+                name: "scroll_offset_y",
+            },
+            KiwiRecordVariant {
+                value: 54,
+                name: "path_trim_start",
+            },
+            KiwiRecordVariant {
+                value: 55,
+                name: "path_trim_end",
+            },
+            KiwiRecordVariant {
+                value: 56,
+                name: "dissolve_progress",
+            },
+            KiwiRecordVariant {
+                value: 57,
+                name: "easing_data",
+            },
+            KiwiRecordVariant {
+                value: 58,
+                name: "media_current_time",
+            },
+            KiwiRecordVariant {
+                value: 59,
+                name: "transform_3_d_perspective",
+            },
+            KiwiRecordVariant {
+                value: 60,
+                name: "transform_3_d_translation_z",
+            },
+            KiwiRecordVariant {
+                value: 61,
+                name: "transform_3_d_rotation_x",
+            },
+            KiwiRecordVariant {
+                value: 62,
+                name: "transform_3_d_rotation_y",
+            },
+            KiwiRecordVariant {
+                value: 63,
+                name: "transform_3_d_rotation_z",
+            },
+            KiwiRecordVariant {
+                value: 64,
+                name: "polygon_count",
+            },
+            KiwiRecordVariant {
+                value: 65,
+                name: "arc_data_starting_angle",
+            },
+            KiwiRecordVariant {
+                value: 66,
+                name: "arc_data_ending_angle",
+            },
+            KiwiRecordVariant {
+                value: 67,
+                name: "arc_data_inner_radius",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableModeBySetMap",
+        module: "Elixir.Figler.Schema.VariableModeBySetMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 290,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableModeBySetMapEntry",
+        module: "Elixir.Figler.Schema.VariableModeBySetMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "variable_set_id",
+                type_index: 117,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "variable_mode_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "variable_set_extension_id",
+                type_index: 117,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeSyntaxMap",
+        module: "Elixir.Figler.Schema.CodeSyntaxMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 292,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeSyntaxMapEntry",
+        module: "Elixir.Figler.Schema.CodeSyntaxMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "platform",
+                type_index: 511,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TableMergedCellMap",
+        module: "Elixir.Figler.Schema.TableMergedCellMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 294,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TableMergedCellMapEntry",
+        module: "Elixir.Figler.Schema.TableMergedCellMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "row_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "col_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "row_span",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "col_span",
+                type_index: -3,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TableRowColumnPositionMap",
+        module: "Elixir.Figler.Schema.TableRowColumnPositionMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 296,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TableRowColumnPositionMapEntry",
+        module: "Elixir.Figler.Schema.TableRowColumnPositionMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GUIDPositionMap",
+        module: "Elixir.Figler.Schema.GUIDPositionMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 298,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GUIDPositionMapEntry",
+        module: "Elixir.Figler.Schema.GUIDPositionMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GUIDGridTrackSizeMap",
+        module: "Elixir.Figler.Schema.GUIDGridTrackSizeMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 300,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GUIDGridTrackSizeMapEntry",
+        module: "Elixir.Figler.Schema.GUIDGridTrackSizeMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "track_size",
+                type_index: 303,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ObjectAnimationList",
+        module: "Elixir.Figler.Schema.ObjectAnimationList",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 302,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ObjectAnimationListItem",
+        module: "Elixir.Figler.Schema.ObjectAnimationListItem",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "target_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "animation",
+                type_index: 387,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GridTrackSize",
+        module: "Elixir.Figler.Schema.GridTrackSize",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "min_sizing",
+                type_index: 304,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "max_sizing",
+                type_index: 304,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GridTrackSizingFunction",
+        module: "Elixir.Figler.Schema.GridTrackSizingFunction",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 305,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "GridTrackSizingType",
+        module: "Elixir.Figler.Schema.GridTrackSizingType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "flex",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "fixed",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "hug",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TableRowColumnSizeMap",
+        module: "Elixir.Figler.Schema.TableRowColumnSizeMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 307,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TableRowColumnSizeMapEntry",
+        module: "Elixir.Figler.Schema.TableRowColumnSizeMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "size",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgendaPositionMap",
+        module: "Elixir.Figler.Schema.AgendaPositionMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 309,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgendaPositionMapEntry",
+        module: "Elixir.Figler.Schema.AgendaPositionMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AgendaItemType",
+        module: "Elixir.Figler.Schema.AgendaItemType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "node",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "block",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgendaMetadataMap",
+        module: "Elixir.Figler.Schema.AgendaMetadataMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 312,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgendaMetadataMapEntry",
+        module: "Elixir.Figler.Schema.AgendaMetadataMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "data",
+                type_index: 313,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgendaMetadata",
+        module: "Elixir.Figler.Schema.AgendaMetadata",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "type",
+                type_index: 310,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "target_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "timer_info",
+                type_index: 314,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "vote_info",
+                type_index: 315,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "music_info",
+                type_index: 316,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgendaTimerInfo",
+        module: "Elixir.Figler.Schema.AgendaTimerInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "timer_length",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgendaVoteInfo",
+        module: "Elixir.Figler.Schema.AgendaVoteInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "vote_count",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgendaMusicInfo",
+        module: "Elixir.Figler.Schema.AgendaMusicInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "song_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "start_time_ms",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "DiagramLayoutRuleType",
+        module: "Elixir.Figler.Schema.DiagramLayoutRuleType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "tree",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "DiagramParentIndex",
+        module: "Elixir.Figler.Schema.DiagramParentIndex",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "DiagramLayoutPaused",
+        module: "Elixir.Figler.Schema.DiagramLayoutPaused",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "no",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "yes",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ComponentPropRef",
+        module: "Elixir.Figler.Schema.ComponentPropRef",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_field",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "def_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "zombie_fallback_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "component_prop_node_field",
+                type_index: 321,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ComponentPropNodeField",
+        module: "Elixir.Figler.Schema.ComponentPropNodeField",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "visible",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "text_data",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "overridden_symbol_id",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "inherit_fill_style_id",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "slot_content_id",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ComponentPropAssignment",
+        module: "Elixir.Figler.Schema.ComponentPropAssignment",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "def_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 324,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "var_value",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "legacy_derived_text_data",
+                type_index: 91,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ComponentPropDef",
+        module: "Elixir.Figler.Schema.ComponentPropDef",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "initial_value",
+                type_index: 324,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "sort_position",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "parent_prop_def_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "type",
+                type_index: 332,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "preferred_values",
+                type_index: 333,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "var_value",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "parameter_config",
+                type_index: 334,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "slot_prop_config",
+                type_index: 355,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "color_array_config",
+                type_index: 354,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ComponentPropValue",
+        module: "Elixir.Figler.Schema.ComponentPropValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "bool_value",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "text_value",
+                type_index: 90,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "guid_value",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "float_value",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "easing_data",
+                type_index: 501,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "vector_value",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "line_value",
+                type_index: 340,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "circle_value",
+                type_index: 342,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "rotation3_d_value",
+                type_index: 344,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "circle_point_value",
+                type_index: 346,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "gradient_value",
+                type_index: 350,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "color_point_value",
+                type_index: 348,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TimelineData",
+        module: "Elixir.Figler.Schema.TimelineData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "duration_us",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "default_timeline",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "parent_timeline_def_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "playback_style",
+                type_index: 586,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TimelineDefinitionsMap",
+        module: "Elixir.Figler.Schema.TimelineDefinitionsMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 327,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TimelineDefinitionsMapEntry",
+        module: "Elixir.Figler.Schema.TimelineDefinitionsMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "data",
+                type_index: 325,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TimelineAssignmentKey",
+        module: "Elixir.Figler.Schema.TimelineAssignmentKey",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "assigned_timeline_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "containing_timeline_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TimelineBindingData",
+        module: "Elixir.Figler.Schema.TimelineBindingData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "offset_us",
+                type_index: -7,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "disabled",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TimelineAssignmentsMap",
+        module: "Elixir.Figler.Schema.TimelineAssignmentsMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 331,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TimelineAssignmentsMapEntry",
+        module: "Elixir.Figler.Schema.TimelineAssignmentsMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: 328,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 329,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ComponentPropType",
+        module: "Elixir.Figler.Schema.ComponentPropType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "bool",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "text",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "color",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "instance_swap",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "variant",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "number",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "image",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "slot",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "easing",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "color_array",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "vector",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "line",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "circle",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "rotation_3_d",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "circle_point",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "gradient",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "color_point",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ComponentPropPreferredValues",
+        module: "Elixir.Figler.Schema.ComponentPropPreferredValues",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "string_values",
+                type_index: -6,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "instance_swap_values",
+                type_index: 357,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ParameterConfig",
+        module: "Elixir.Figler.Schema.ParameterConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "number_prop_config",
+                type_index: 356,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "control",
+                type_index: 335,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "slider_config",
+                type_index: 337,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "label",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "input_config",
+                type_index: 336,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "select_config",
+                type_index: 353,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "point_config",
+                type_index: 339,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "line_config",
+                type_index: 341,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "point_radius_config",
+                type_index: 343,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "rotation3_d_config",
+                type_index: 345,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "circle_point_config",
+                type_index: 347,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "color_point_config",
+                type_index: 349,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "show_divider_above",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ParameterConfigControl",
+        module: "Elixir.Figler.Schema.ParameterConfigControl",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "default",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "slider",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "input",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "select",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InputConfig",
+        module: "Elixir.Figler.Schema.InputConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "unit",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "min",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "max",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SliderConfig",
+        module: "Elixir.Figler.Schema.SliderConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "min",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "max",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "step",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "unit",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PointMode",
+        module: "Elixir.Figler.Schema.PointMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "canvas_and_ui",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "canvas",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "ui",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PointConfig",
+        module: "Elixir.Figler.Schema.PointConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "mode",
+                type_index: 338,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "unit",
+                type_index: 15,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Line",
+        module: "Elixir.Figler.Schema.Line",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "a",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "b",
+                type_index: 51,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "LineConfig",
+        module: "Elixir.Figler.Schema.LineConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "mode",
+                type_index: 338,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "unit",
+                type_index: 15,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Circle",
+        module: "Elixir.Figler.Schema.Circle",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "center",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "radius",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PointRadiusConfig",
+        module: "Elixir.Figler.Schema.PointRadiusConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "mode",
+                type_index: 338,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position_unit",
+                type_index: 15,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "radius_unit",
+                type_index: 15,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "min_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "max_radius",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Rotation3D",
+        module: "Elixir.Figler.Schema.Rotation3D",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "x",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "y",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "z",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "translate_z",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Rotation3DConfig",
+        module: "Elixir.Figler.Schema.Rotation3DConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "mode",
+                type_index: 338,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CirclePoint",
+        module: "Elixir.Figler.Schema.CirclePoint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "center",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "angle",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CirclePointConfig",
+        module: "Elixir.Figler.Schema.CirclePointConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "mode",
+                type_index: 338,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "position_unit",
+                type_index: 15,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "radius_unit",
+                type_index: 15,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "min_radius",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "max_radius",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ColorPoint",
+        module: "Elixir.Figler.Schema.ColorPoint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "point",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "color",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ColorPointConfig",
+        module: "Elixir.Figler.Schema.ColorPointConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "mode",
+                type_index: 338,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "unit",
+                type_index: 15,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Gradient",
+        module: "Elixir.Figler.Schema.Gradient",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "stops",
+                type_index: 351,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "GradientStop",
+        module: "Elixir.Figler.Schema.GradientStop",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "position",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "color",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SelectOption",
+        module: "Elixir.Figler.Schema.SelectOption",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "value",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "label",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SelectConfig",
+        module: "Elixir.Figler.Schema.SelectConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "options",
+                type_index: 352,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ColorArrayConfig",
+        module: "Elixir.Figler.Schema.ColorArrayConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "min_length",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "max_length",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SlotPropConfig",
+        module: "Elixir.Figler.Schema.SlotPropConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "stretch_child_on_insert",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "display_by_default",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "min_children",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "max_children",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "allow_preferred_values_only",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NumberPropConfig",
+        module: "Elixir.Figler.Schema.NumberPropConfig",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "control",
+                type_index: 335,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "min",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "max",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "step",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InstanceSwapPreferredValue",
+        module: "Elixir.Figler.Schema.InstanceSwapPreferredValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 358,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "InstanceSwapPreferredValueType",
+        module: "Elixir.Figler.Schema.InstanceSwapPreferredValueType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "component",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "state_group",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "WidgetEvent",
+        module: "Elixir.Figler.Schema.WidgetEvent",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "mouse_down",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "click",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "text_edit_end",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "attached_stickables_changed",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "stuck_status_changed",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "WidgetInputBehavior",
+        module: "Elixir.Figler.Schema.WidgetInputBehavior",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "wrap",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "truncate",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "multiline",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "WidgetMetadata",
+        module: "Elixir.Figler.Schema.WidgetMetadata",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "plugin_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "plugin_version_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "widget_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "is_resizable",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "is_rotatable",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "WidgetPropertyMenuItemType",
+        module: "Elixir.Figler.Schema.WidgetPropertyMenuItemType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "action",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "separator",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "color",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "dropdown",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "color_selector",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "toggle",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "link",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "WidgetPropertyMenuSelectorOption",
+        module: "Elixir.Figler.Schema.WidgetPropertyMenuSelectorOption",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "option",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "tooltip",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "WidgetInputTextNodeType",
+        module: "Elixir.Figler.Schema.WidgetInputTextNodeType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "widget_controlled",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "rich_text",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "WidgetPropertyMenuItem",
+        module: "Elixir.Figler.Schema.WidgetPropertyMenuItem",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "property_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "tooltip",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "item_type",
+                type_index: 362,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "icon",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "options",
+                type_index: 363,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "selected_option",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "is_toggled",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "href",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "allow_custom_color",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CodeBlockLanguage",
+        module: "Elixir.Figler.Schema.CodeBlockLanguage",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "typescript",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "cpp",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "ruby",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "css",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "javascript",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "html",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "json",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "graphql",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "python",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "go",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "sql",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "swift",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "kotlin",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "rust",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "bash",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "plaintext",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "markdown",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CodeBlockTheme",
+        module: "Elixir.Figler.Schema.CodeBlockTheme",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "figjam_dark",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "dracula",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "duotone_sea",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "duotone_space",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "duotone_earth",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "duotone_forest",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "duotone_light",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SpecBlockType",
+        module: "Elixir.Figler.Schema.SpecBlockType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "default",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "paragraph",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "heading_1",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "heading_2",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "heading_3",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "heading_4",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "heading_5",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "heading_6",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "code_block",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "block_quote",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "horizontal_rule",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "ordered_list_item",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "unordered_list_item",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "document",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "table",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "table_row",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "table_cell",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "todo_list_item_unchecked",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "todo_list_item_checked",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "image",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "embed",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "InternalEnumForTest",
+        module: "Elixir.Figler.Schema.InternalEnumForTest",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 1,
+                name: "old",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InternalDataForTest",
+        module: "Elixir.Figler.Schema.InternalDataForTest",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "test_field_a",
+                type_index: -3,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StateGroupPropertyValueOrder",
+        module: "Elixir.Figler.Schema.StateGroupPropertyValueOrder",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "property",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "values",
+                type_index: -6,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "BackfillError",
+        module: "Elixir.Figler.Schema.BackfillError",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "transient_retrying",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "permanently_failed",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "paste_failed",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PartialPasteAnnotation",
+        module: "Elixir.Figler.Schema.PartialPasteAnnotation",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "is_partial",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "annotated_at",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "error_state",
+                type_index: 372,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariantPropSpec",
+        module: "Elixir.Figler.Schema.VariantPropSpec",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "prop_def_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TextListData",
+        module: "Elixir.Figler.Schema.TextListData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "list_id",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "bullet_type",
+                type_index: 376,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "indentation_level",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "line_number",
+                type_index: -3,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "BulletType",
+        module: "Elixir.Figler.Schema.BulletType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "ordered",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "unordered",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "indent",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "no_list",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TextLineData",
+        module: "Elixir.Figler.Schema.TextLineData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "line_type",
+                type_index: 379,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "indentation_level",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "directionality",
+                type_index: 381,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "directionality_intent",
+                type_index: 382,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "downgrade_style_id",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "consistency_style_id",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "list_start_offset",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "is_first_line_of_list",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "source_directionality",
+                type_index: 380,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "style_id",
+                type_index: -3,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "DerivedTextLineData",
+        module: "Elixir.Figler.Schema.DerivedTextLineData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "directionality",
+                type_index: 381,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "LineType",
+        module: "Elixir.Figler.Schema.LineType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "plain",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "ordered_list",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "unordered_list",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "blockquote",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "header",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SourceDirectionality",
+        module: "Elixir.Figler.Schema.SourceDirectionality",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "auto",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "ltr",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "rtl",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "Directionality",
+        module: "Elixir.Figler.Schema.Directionality",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "ltr",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "rtl",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "DirectionalityIntent",
+        module: "Elixir.Figler.Schema.DirectionalityIntent",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "implicit",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "explicit",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PrototypeInteraction",
+        module: "Elixir.Figler.Schema.PrototypeInteraction",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "event",
+                type_index: 384,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "actions",
+                type_index: 387,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "state_management_version",
+                type_index: -3,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PrototypeEvent",
+        module: "Elixir.Figler.Schema.PrototypeEvent",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "interaction_type",
+                type_index: 44,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "interaction_maintained",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "interaction_duration",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "key_trigger",
+                type_index: 393,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "voice_event_phrase",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "transition_timeout",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "media_hit_time",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PrototypeVariableTarget",
+        module: "Elixir.Figler.Schema.PrototypeVariableTarget",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 115,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "node_field_alias",
+                type_index: 463,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ConditionalActions",
+        module: "Elixir.Figler.Schema.ConditionalActions",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "actions",
+                type_index: 387,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "condition",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PrototypeAction",
+        module: "Elixir.Figler.Schema.PrototypeAction",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "transition_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "transition_type",
+                type_index: 45,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "transition_duration",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "easing_type",
+                type_index: 46,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "transition_timeout",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "transition_should_smart_animate",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "connection_type",
+                type_index: 43,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "connection_url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "overlay_relative_position",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "navigation_type",
+                type_index: 169,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "transition_preserve_scroll",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "easing_function",
+                type_index: -5,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "extra_scroll_offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "target_variable_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "target_variable_value",
+                type_index: 453,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "media_action",
+                type_index: 280,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "transition_reset_video_position",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "open_url_in_new_tab",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "target_variable",
+                type_index: 385,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 20,
+                name: "target_variable_data",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 21,
+                name: "media_skip_to_time",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 22,
+                name: "media_skip_by_amount",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 23,
+                name: "conditions",
+                type_index: 477,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 24,
+                name: "conditional_actions",
+                type_index: 386,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 25,
+                name: "transition_reset_scroll_position",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 26,
+                name: "transition_reset_interactive_components",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 27,
+                name: "target_variable_set_id",
+                type_index: 117,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 28,
+                name: "target_variable_mode_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 29,
+                name: "target_variable_set_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 30,
+                name: "animation_type",
+                type_index: 389,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 31,
+                name: "animation_target_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 32,
+                name: "animation_phase",
+                type_index: 388,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 33,
+                name: "animation_state",
+                type_index: 390,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 34,
+                name: "link_param",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 35,
+                name: "cms_target",
+                type_index: 395,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 36,
+                name: "media_playback_rate",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 37,
+                name: "simple_link",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 38,
+                name: "variable_set_target_extension_id",
+                type_index: 117,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 39,
+                name: "animation_timeline_action",
+                type_index: 281,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 40,
+                name: "animation_skip_to_time",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 41,
+                name: "animation_timeline_def_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 42,
+                name: "transition_overrides_enabled",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AnimationPhase",
+        module: "Elixir.Figler.Schema.AnimationPhase",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "in",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "out",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AnimationType",
+        module: "Elixir.Figler.Schema.AnimationType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "fade",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "slide_from_left",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "slide_from_right",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "slide_from_top",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "slide_from_bottom",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnimationState",
+        module: "Elixir.Figler.Schema.AnimationState",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "opacity",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "transform",
+                type_index: 55,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PrototypeStartingPoint",
+        module: "Elixir.Figler.Schema.PrototypeStartingPoint",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "position",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TriggerDevice",
+        module: "Elixir.Figler.Schema.TriggerDevice",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "keyboard",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "unknown_controller",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "xbox_one",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "ps4",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "switch_pro",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "KeyTrigger",
+        module: "Elixir.Figler.Schema.KeyTrigger",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key_codes",
+                type_index: -3,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "trigger_device",
+                type_index: 392,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Hyperlink",
+        module: "Elixir.Figler.Schema.Hyperlink",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "open_in_new_tab",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "cms_target",
+                type_index: 395,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSItemPageTarget",
+        module: "Elixir.Figler.Schema.CMSItemPageTarget",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "cms_item_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "field_schema_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "MentionSource",
+        module: "Elixir.Figler.Schema.MentionSource",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "default",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "copy_duplicate",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "silent_insert",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Mention",
+        module: "Elixir.Figler.Schema.Mention",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "mentioned_user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "mentioned_by_user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "file_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "source",
+                type_index: 396,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "mentioned_user_id_int",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "mentioned_by_user_id_int",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "mentioned_user_group_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EmbedData",
+        module: "Elixir.Figler.Schema.EmbedData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "src_url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "title",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "thumbnail_url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "width",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "height",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "embed_type",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "thumbnail_image_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "favicon_image_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "provider",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "original_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "embed_version_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "is_published_site",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StampData",
+        module: "Elixir.Figler.Schema.StampData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "voting_session_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "stamped_by_user_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "LinkPreviewData",
+        module: "Elixir.Figler.Schema.LinkPreviewData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "title",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "provider",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "description",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "thumbnail_image_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "favicon_image_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "thumbnail_image_width",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "thumbnail_image_height",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Viewport",
+        module: "Elixir.Figler.Schema.Viewport",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "canvas_space_bounds",
+                type_index: 52,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "pixel_preview",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "pixel_density",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "canvas_guid",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Mouse",
+        module: "Elixir.Figler.Schema.Mouse",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "cursor",
+                type_index: 23,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "canvas_space_location",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "canvas_space_selection_box",
+                type_index: 52,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "canvas_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "cursor_hidden_reason",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "Click",
+        module: "Elixir.Figler.Schema.Click",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "point",
+                type_index: 51,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "ScrollPosition",
+        module: "Elixir.Figler.Schema.ScrollPosition",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "scroll_offset",
+                type_index: 51,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "TriggeredOverlay",
+        module: "Elixir.Figler.Schema.TriggeredOverlay",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overlay_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "hotspot_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "swap_guid",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TriggeredOverlayData",
+        module: "Elixir.Figler.Schema.TriggeredOverlayData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "overlay_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "hotspot_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "swap_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "prototype_interaction_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "hotspot_blueprint_id",
+                type_index: 100,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TriggeredSetVariableActionData",
+        module: "Elixir.Figler.Schema.TriggeredSetVariableActionData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_for_finding_topmost_screen_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "target_variable_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "target_variable_data",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "resolved_variable_modes",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TriggeredSetVariableModeActionData",
+        module: "Elixir.Figler.Schema.TriggeredSetVariableModeActionData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_for_finding_topmost_screen_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "target_variable_set_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "target_variable_mode_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "target_variable_set_id",
+                type_index: 117,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VideoStateChangeData",
+        module: "Elixir.Figler.Schema.VideoStateChangeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "target_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "is_playing",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_playing_sound",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "current_times",
+                type_index: -4,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "action_taken_timestamp",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EmbeddedPrototypeData",
+        module: "Elixir.Figler.Schema.EmbeddedPrototypeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PresentedState",
+        module: "Elixir.Figler.Schema.PresentedState",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "base_screen_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "overlays",
+                type_index: 406,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TransitionDirection",
+        module: "Elixir.Figler.Schema.TransitionDirection",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "forward",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "reverse",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TopLevelPlaybackChange",
+        module: "Elixir.Figler.Schema.TopLevelPlaybackChange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "old_state",
+                type_index: 411,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "new_state",
+                type_index: 411,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "hotspot_blueprint_id",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "interaction_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "is_hotspot_in_new_presented_state",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "direction",
+                type_index: 412,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "instance_stable_path",
+                type_index: 100,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InstanceStateChange",
+        module: "Elixir.Figler.Schema.InstanceStateChange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "state_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "interaction_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "hotspot_stable_path",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "instance_stable_path",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "phase",
+                type_index: 417,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TextCursor",
+        module: "Elixir.Figler.Schema.TextCursor",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "selection_box",
+                type_index: 52,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "canvas_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "text_node_guid",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TextSelection",
+        module: "Elixir.Figler.Schema.TextSelection",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "selection_boxes",
+                type_index: 52,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "canvas_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "text_node_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "text_selection_range",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "text_node_or_containing_if_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "table_cell_row_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "table_cell_col_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PlaybackChangePhase",
+        module: "Elixir.Figler.Schema.PlaybackChangePhase",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "initiated",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "aborted",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "committed",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PlaybackChangeKeyframe",
+        module: "Elixir.Figler.Schema.PlaybackChangeKeyframe",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "phase",
+                type_index: 417,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "progress",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "timestamp",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StateMapping",
+        module: "Elixir.Figler.Schema.StateMapping",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "stable_path",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "last_top_level_change",
+                type_index: 413,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "last_top_level_change_status",
+                type_index: 418,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "timestamp",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ScrollMapping",
+        module: "Elixir.Figler.Schema.ScrollMapping",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "blueprint_id",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "overlay_index",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "scroll_offset",
+                type_index: 51,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PlaybackUpdate",
+        module: "Elixir.Figler.Schema.PlaybackUpdate",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "last_top_level_change",
+                type_index: 413,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "last_top_level_change_status",
+                type_index: 418,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "scroll_mappings",
+                type_index: 420,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "timestamp",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "pointer_location",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "is_top_level_frame_change",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "state_mappings",
+                type_index: 419,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ChatMessage",
+        module: "Elixir.Figler.Schema.ChatMessage",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "previous_text",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VoiceMetadata",
+        module: "Elixir.Figler.Schema.VoiceMetadata",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "connected_call_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AprilFunCursor",
+        module: "Elixir.Figler.Schema.AprilFunCursor",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "trail_enabled",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AprilFunFigPal",
+        module: "Elixir.Figler.Schema.AprilFunFigPal",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "customization",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "Heartbeat",
+        module: "Elixir.Figler.Schema.Heartbeat",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "foreground",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "background",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SitesViewState",
+        module: "Elixir.Figler.Schema.SitesViewState",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "file",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "code",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "dakota",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "settings",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "insert",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "variables",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "DesignFullPageViewState",
+        module: "Elixir.Figler.Schema.DesignFullPageViewState",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "design_system",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "variables",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AgentInfo",
+        module: "Elixir.Figler.Schema.AgentInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "logo",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "oauth_client_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "UserChange",
+        module: "Elixir.Figler.Schema.UserChange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "connected",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "color",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "image_url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "viewport",
+                type_index: 401,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "mouse",
+                type_index: 402,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "selection",
+                type_index: 49,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "observing",
+                type_index: -4,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "device_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "recent_clicks",
+                type_index: 403,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "scroll_positions",
+                type_index: 404,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "triggered_overlays",
+                type_index: 405,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "last_triggered_hotspot",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "last_triggered_prototype_interaction_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "triggered_overlays_data",
+                type_index: 406,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "playback_updates",
+                type_index: 421,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "chat_message",
+                type_index: 422,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 20,
+                name: "voice_metadata",
+                type_index: 423,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 21,
+                name: "can_write",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 22,
+                name: "high_five_status",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 23,
+                name: "instance_state_changes",
+                type_index: 414,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 24,
+                name: "text_cursor",
+                type_index: 415,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 25,
+                name: "text_selection",
+                type_index: 416,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 26,
+                name: "connected_at_time_s",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 27,
+                name: "focus_on_text_cursor",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 28,
+                name: "heartbeat",
+                type_index: 426,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 29,
+                name: "triggered_set_variable_action_data",
+                type_index: 407,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 30,
+                name: "video_state_change_data",
+                type_index: 409,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 31,
+                name: "client_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 32,
+                name: "focused_slide_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 33,
+                name: "triggered_set_variable_mode_action_data",
+                type_index: 408,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 34,
+                name: "april_fun_cursor",
+                type_index: 424,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 35,
+                name: "embedded_prototype_data",
+                type_index: 410,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 36,
+                name: "active_slides_embeddable_prototype",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 37,
+                name: "active_code_component_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 38,
+                name: "last_triggered_object_animation_index",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 39,
+                name: "april_fun_fig_pal",
+                type_index: 425,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 40,
+                name: "collaborative_text_selection",
+                type_index: 130,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 41,
+                name: "sites_view_state",
+                type_index: 427,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 42,
+                name: "node_chat_exchanges",
+                type_index: 569,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 43,
+                name: "active_embedded_prototypes",
+                type_index: 49,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 44,
+                name: "stable_session_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 45,
+                name: "design_full_page_view_state",
+                type_index: 428,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 46,
+                name: "agent_info",
+                type_index: 429,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "InteractiveSlideElementChange",
+        module: "Elixir.Figler.Schema.InteractiveSlideElementChange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "anonymous_user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "response_data",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeStatusChange",
+        module: "Elixir.Figler.Schema.NodeStatusChange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_ids",
+                type_index: 49,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "status_info",
+                type_index: 221,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "BuzzApprovalAssetEntry",
+        module: "Elixir.Figler.Schema.BuzzApprovalAssetEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "asset_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "approved",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "BuzzApprovalChange",
+        module: "Elixir.Figler.Schema.BuzzApprovalChange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "asset_entries",
+                type_index: 433,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "canvas_grid_node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "request_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SceneGraphQueryBehavior",
+        module: "Elixir.Figler.Schema.SceneGraphQueryBehavior",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "default",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "containing_page",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "plugin",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SceneGraphQueryMode",
+        module: "Elixir.Figler.Schema.SceneGraphQueryMode",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "add",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "set",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SceneGraphQuery",
+        module: "Elixir.Figler.Schema.SceneGraphQuery",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "starting_node",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "depth",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "behavior",
+                type_index: 435,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeChangesMetadata",
+        module: "Elixir.Figler.Schema.NodeChangesMetadata",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "blobs_field_offset",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CursorReaction",
+        module: "Elixir.Figler.Schema.CursorReaction",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "image_url",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TimerInfo",
+        module: "Elixir.Figler.Schema.TimerInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "is_paused",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "time_remaining_ms",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "total_time_ms",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "timer_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "set_by",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "song_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "last_received_song_timestamp_ms",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "song_uuid",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "MusicInfo",
+        module: "Elixir.Figler.Schema.MusicInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "is_paused",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "message_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "song_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "last_received_song_timestamp_ms",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "is_stopped",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PresenterNomination",
+        module: "Elixir.Figler.Schema.PresenterNomination",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "is_cancelled",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PresenterInfo",
+        module: "Elixir.Figler.Schema.PresenterInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "nomination",
+                type_index: 442,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_reconnected",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ClientBroadcast",
+        module: "Elixir.Figler.Schema.ClientBroadcast",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "cursor_reaction",
+                type_index: 439,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "timer",
+                type_index: 440,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "presenter",
+                type_index: 443,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "prototype_presenter",
+                type_index: 443,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "music",
+                type_index: 441,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PasteAssetType",
+        module: "Elixir.Figler.Schema.PasteAssetType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "unknown",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "variable",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "style_properties",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "style_properties_fill",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "style_properties_stroke",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "style_properties_effect",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Message",
+        module: "Elixir.Figler.Schema.Message",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 0,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "session_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "ack_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "node_changes",
+                type_index: 228,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "user_changes",
+                type_index: 430,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "blobs",
+                type_index: 76,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "signal_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "access",
+                type_index: 2,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "style_set_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "style_set_type",
+                type_index: 31,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "style_set_content_type",
+                type_index: 32,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "paste_id",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "paste_offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "paste_file_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "signal_payload",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "scene_graph_queries",
+                type_index: 437,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "node_changes_metadata",
+                type_index: 438,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "file_version",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "paste_is_partially_outside_enclosing_frame",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 20,
+                name: "paste_page_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 21,
+                name: "is_cut",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 22,
+                name: "local_undo_stack",
+                type_index: 446,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 23,
+                name: "local_redo_stack",
+                type_index: 446,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 24,
+                name: "broadcasts",
+                type_index: 444,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 25,
+                name: "reconnect_sequence_number",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 26,
+                name: "paste_branch_source_file_key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 27,
+                name: "paste_editor_type",
+                type_index: 217,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 28,
+                name: "post_sync_actions",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 29,
+                name: "published_asset_guids",
+                type_index: 49,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 30,
+                name: "blob_base_index",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 31,
+                name: "dirty_from_initial_load",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 32,
+                name: "interactive_slide_element_change",
+                type_index: 431,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 33,
+                name: "clipboard_selection_regions",
+                type_index: 535,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 34,
+                name: "encoded_offsets_index",
+                type_index: 447,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 35,
+                name: "has_repeating_content",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 36,
+                name: "node_status_change",
+                type_index: 432,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 37,
+                name: "is_retransmission",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 38,
+                name: "sent_timestamp",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 39,
+                name: "annotation_categories",
+                type_index: 207,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 40,
+                name: "client_rendered_metadata",
+                type_index: 559,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 41,
+                name: "paste_asset_type",
+                type_index: 445,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 42,
+                name: "stable_session_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 43,
+                name: "object_animations",
+                type_index: 301,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 44,
+                name: "buzz_approval_change",
+                type_index: 434,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 45,
+                name: "scene_graph_query_mode",
+                type_index: 436,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EncodedOffsetsIndex",
+        module: "Elixir.Figler.Schema.EncodedOffsetsIndex",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_changes_field_offset",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "node_changes_field_length",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "blobs_field_offset",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "node_change_offsets",
+                type_index: 448,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 1,
+        name: "GUIDAndEncodedOffset",
+        module: "Elixir.Figler.Schema.GUIDAndEncodedOffset",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "offset",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "RichMediaType",
+        module: "Elixir.Figler.Schema.RichMediaType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "animated_image",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "video",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "RichMediaData",
+        module: "Elixir.Figler.Schema.RichMediaData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "media_hash",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "rich_media_type",
+                type_index: 449,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "VariableDataType",
+        module: "Elixir.Figler.Schema.VariableDataType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "boolean",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "float",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "string",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "alias",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "color",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "expression",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "map",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "symbol_id",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "font_style",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "text_data",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "invalid",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "node_field_alias",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "cms_alias",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "prop_ref",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "image",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "managed_string_alias",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "link",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "js_runtime_alias",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "slot_content_id",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "date",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "keyframe_track_id",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "keyframe_track_parameter_data",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "easing",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "timing",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "vector",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "color_array",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "line",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "circle",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "rotation_3_d",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "circle_point",
+            },
+            KiwiRecordVariant {
+                value: 30,
+                name: "gradient",
+            },
+            KiwiRecordVariant {
+                value: 31,
+                name: "color_point",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "VariableResolvedDataType",
+        module: "Elixir.Figler.Schema.VariableResolvedDataType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "boolean",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "float",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "string",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "color",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "map",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "symbol_id",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "font_style",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "text_data",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "image",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "link",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "js_runtime_alias",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "slot_content_id",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "keyframe_track_id",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "keyframe_track_parameter_data",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "easing",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "timing",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "vector",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "color_array",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "line",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "circle",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "rotation_3_d",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "circle_point",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "gradient",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "color_point",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableAnyValue",
+        module: "Elixir.Figler.Schema.VariableAnyValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "bool_value",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "text_value",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "float_value",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "alias",
+                type_index: 115,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "color_value",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "expression_value",
+                type_index: 455,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "map_value",
+                type_index: 457,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "symbol_id_value",
+                type_index: 114,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "font_style_value",
+                type_index: 459,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "text_data_value",
+                type_index: 90,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 11,
+                name: "node_field_alias_value",
+                type_index: 463,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 12,
+                name: "cms_alias_value",
+                type_index: 465,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 13,
+                name: "prop_ref_value",
+                type_index: 467,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 14,
+                name: "image_value",
+                type_index: 460,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 15,
+                name: "managed_string_alias_value",
+                type_index: 471,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 16,
+                name: "link_value",
+                type_index: 394,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 17,
+                name: "js_runtime_alias_value",
+                type_index: 466,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 18,
+                name: "slot_content_id_value",
+                type_index: 470,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 19,
+                name: "keyframe_track_id_value",
+                type_index: 472,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 20,
+                name: "keyframe_track_parameter_value",
+                type_index: 490,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 21,
+                name: "easing_value",
+                type_index: 501,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 22,
+                name: "vector_value",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 23,
+                name: "color_array_value",
+                type_index: 458,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 24,
+                name: "line_value",
+                type_index: 340,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 25,
+                name: "circle_value",
+                type_index: 342,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 26,
+                name: "rotation3_d_value",
+                type_index: 344,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 27,
+                name: "circle_point_value",
+                type_index: 346,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 28,
+                name: "gradient_value",
+                type_index: 350,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 29,
+                name: "color_point_value",
+                type_index: 348,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ExpressionFunction",
+        module: "Elixir.Figler.Schema.ExpressionFunction",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "addition",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "subtraction",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "resolve_variant",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "multiply",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "divide",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "equals",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "not_equal",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "less_than",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "less_than_or_equal",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "greater_than",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "greater_than_or_equal",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "and",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "or",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "not",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "stringify",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "ternary",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "var_mode_lookup",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "negate",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "is_truthy",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "keyframe",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "compose_color",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Expression",
+        module: "Elixir.Figler.Schema.Expression",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "expression_function",
+                type_index: 454,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "expression_arguments",
+                type_index: 477,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableMapValue",
+        module: "Elixir.Figler.Schema.VariableMapValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "guid_key",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableMap",
+        module: "Elixir.Figler.Schema.VariableMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "values",
+                type_index: 456,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ColorArray",
+        module: "Elixir.Figler.Schema.ColorArray",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "colors",
+                type_index: 477,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableFontStyle",
+        module: "Elixir.Figler.Schema.VariableFontStyle",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "as_string",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "as_float",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "as_variations",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ImageParameterValue",
+        module: "Elixir.Figler.Schema.ImageParameterValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "image",
+                type_index: 77,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "image_thumbnail",
+                type_index: 77,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "alt_text",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "original_image_height",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "original_image_width",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "animated_image",
+                type_index: 77,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "animation_frame",
+                type_index: -4,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ThumbnailInfo",
+        module: "Elixir.Figler.Schema.ThumbnailInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "thumbnail_version",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AiCanvasPrompt",
+        module: "Elixir.Figler.Schema.AiCanvasPrompt",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "user_prompt",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "author_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "parent_node_ids",
+                type_index: 49,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeFieldAlias",
+        module: "Elixir.Figler.Schema.NodeFieldAlias",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "stable_path_to_node",
+                type_index: 100,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "node_field",
+                type_index: 464,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "index_or_key",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "NodeFieldAliasType",
+        module: "Elixir.Figler.Schema.NodeFieldAliasType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "missing",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "component_prop_assignments",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CMSAlias",
+        module: "Elixir.Figler.Schema.CMSAlias",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "collection_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "item_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "field_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "type",
+                type_index: 451,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "JsRuntimeAlias",
+        module: "Elixir.Figler.Schema.JsRuntimeAlias",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "lookup_key",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PropRefValue",
+        module: "Elixir.Figler.Schema.PropRefValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "def_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringId",
+        module: "Elixir.Figler.Schema.ManagedStringId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringPlaceholderMapEntry",
+        module: "Elixir.Figler.Schema.ManagedStringPlaceholderMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SlotContentId",
+        module: "Elixir.Figler.Schema.SlotContentId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManagedStringAlias",
+        module: "Elixir.Figler.Schema.ManagedStringAlias",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "managed_string_id",
+                type_index: 468,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "placeholder_values",
+                type_index: 469,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "KeyframeTrackId",
+        module: "Elixir.Figler.Schema.KeyframeTrackId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnimationPresetId",
+        module: "Elixir.Figler.Schema.AnimationPresetId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ToolId",
+        module: "Elixir.Figler.Schema.ToolId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CustomEffectId",
+        module: "Elixir.Figler.Schema.CustomEffectId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "asset_ref",
+                type_index: 110,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TRSSTransform2D",
+        module: "Elixir.Figler.Schema.TRSSTransform2D",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "translation",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "rotation",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "scale",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "shear_x",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableData",
+        module: "Elixir.Figler.Schema.VariableData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "value",
+                type_index: 453,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "data_type",
+                type_index: 451,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "resolved_data_type",
+                type_index: 452,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableSetMode",
+        module: "Elixir.Figler.Schema.VariableSetMode",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "sort_position",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "parent_variable_set_id",
+                type_index: 117,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "parent_mode_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableDataValues",
+        module: "Elixir.Figler.Schema.VariableDataValues",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 480,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableDataValuesEntry",
+        module: "Elixir.Figler.Schema.VariableDataValuesEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "mode_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "variable_data",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "VariableScope",
+        module: "Elixir.Figler.Schema.VariableScope",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "all_scopes",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "text_content",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "corner_radius",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "width_height",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "gap",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "all_fills",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "frame_fill",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "shape_fill",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "text_fill",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "stroke",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "stroke_float",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "effect_float",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "effect_color",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "opacity",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "font_style",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "font_family",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "font_size",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "line_height",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "letter_spacing",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "paragraph_spacing",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "paragraph_indent",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "font_variations",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "transform",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "KeyframeAnyValue",
+        module: "Elixir.Figler.Schema.KeyframeAnyValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "float_value",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "color_value",
+                type_index: 50,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "text_data_value",
+                type_index: 90,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "vector_value",
+                type_index: 51,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "KeyframeValueType",
+        module: "Elixir.Figler.Schema.KeyframeValueType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "float",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "invalid",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "color",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "text_data",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "vector",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "KeyframeValueData",
+        module: "Elixir.Figler.Schema.KeyframeValueData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "value",
+                type_index: 482,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value_type",
+                type_index: 483,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "KeyframeTrackParameterType",
+        module: "Elixir.Figler.Schema.KeyframeTrackParameterType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "invalid",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "manual",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "animation_preset",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ManualKeyframeTrackParameter",
+        module: "Elixir.Figler.Schema.ManualKeyframeTrackParameter",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "keyframe_track_id",
+                type_index: 472,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "timeline_def_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnimationPresetKeyframeTrackParameter",
+        module: "Elixir.Figler.Schema.AnimationPresetKeyframeTrackParameter",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "animation_preset_id",
+                type_index: 473,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "keyframe_track_id",
+                type_index: 472,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "timeline_def_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "KeyframeTrackAnyParameter",
+        module: "Elixir.Figler.Schema.KeyframeTrackAnyParameter",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "manual",
+                type_index: 486,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "animation_preset",
+                type_index: 487,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "animation_style_binding_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "KeyframeTrackParameter",
+        module: "Elixir.Figler.Schema.KeyframeTrackParameter",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "value",
+                type_index: 488,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "type",
+                type_index: 485,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "KeyframeTrackParameterValue",
+        module: "Elixir.Figler.Schema.KeyframeTrackParameterValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "parameters",
+                type_index: 489,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnimationPresets",
+        module: "Elixir.Figler.Schema.AnimationPresets",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "presets",
+                type_index: 492,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AnimationPresetData",
+        module: "Elixir.Figler.Schema.AnimationPresetData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "animation_preset_id",
+                type_index: 473,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "timeline_def_id",
+                type_index: 49,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StyleAnimation",
+        module: "Elixir.Figler.Schema.StyleAnimation",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "animation_preset_id",
+                type_index: 473,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "StyleIdForAnimation",
+        module: "Elixir.Figler.Schema.StyleIdForAnimation",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "timeline_def_id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "animation_style_id",
+                type_index: 113,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "timeline_offset",
+                type_index: -7,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "Tools",
+        module: "Elixir.Figler.Schema.Tools",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "tools",
+                type_index: 496,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ToolData",
+        module: "Elixir.Figler.Schema.ToolData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "tool_id",
+                type_index: 474,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "backing_code_component_id",
+                type_index: 121,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "component_prop_assignments",
+                type_index: 322,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CustomEffects",
+        module: "Elixir.Figler.Schema.CustomEffects",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "custom_effects",
+                type_index: 498,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CustomEffectData",
+        module: "Elixir.Figler.Schema.CustomEffectData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "custom_effect_id",
+                type_index: 475,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SpringParams",
+        module: "Elixir.Figler.Schema.SpringParams",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "stiffness",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "damping",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "mass",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransitionEasingAnyValue",
+        module: "Elixir.Figler.Schema.TransitionEasingAnyValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "spring_easing",
+                type_index: 499,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "bezier_easing",
+                type_index: 583,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EasingData",
+        module: "Elixir.Figler.Schema.EasingData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "easing_type",
+                type_index: 46,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "easing_value",
+                type_index: 500,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransitionOverride",
+        module: "Elixir.Figler.Schema.TransitionOverride",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "duration",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "duration_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "delay",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "delay_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "easing",
+                type_index: 501,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "easing_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "created_at_ms",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "interaction_i_ds",
+                type_index: 49,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "disabled",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransitionOverrideData",
+        module: "Elixir.Figler.Schema.TransitionOverrideData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "all",
+                type_index: 502,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "property_overrides",
+                type_index: 509,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TransitionOverrideProp",
+        module: "Elixir.Figler.Schema.TransitionOverrideProp",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "all",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "opacity",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "translation",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "rotation",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "scale",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TransitionOverrideBindingTopLevelField",
+        module: "Elixir.Figler.Schema.TransitionOverrideBindingTopLevelField",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "missing",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "parameter_consumption_map",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "effect_data",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "fill_paint_data",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "stroke_paint_data",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransitionOverrideBindingLocation",
+        module: "Elixir.Figler.Schema.TransitionOverrideBindingLocation",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "top_level_field",
+                type_index: 505,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "parameter_field_value",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "index",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "effect_parametrized_field_value",
+                type_index: -3,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "KeyframeBindingEffectParametrizedField",
+        module: "Elixir.Figler.Schema.KeyframeBindingEffectParametrizedField",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "missing",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "offset_x",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "offset_y",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "radius",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "spread",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "color",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "refraction_radius",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "specular_angle",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "specular_intensity",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "chromatic_aberration",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "splay",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "refraction_intensity",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "start_radius",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "start_offset_x",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "start_offset_y",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "end_offset_x",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "end_offset_y",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "noise_size_x",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "noise_size_y",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "density",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "effect_opacity",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "secondary_color",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeContentsKeyframeBindingLocation",
+        module: "Elixir.Figler.Schema.NodeContentsKeyframeBindingLocation",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "top_level_field",
+                type_index: 505,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "parameter_field_value",
+                type_index: 288,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "index",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "effect_parametrized_field_value",
+                type_index: 507,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransitionOverridePropMap",
+        module: "Elixir.Figler.Schema.TransitionOverridePropMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 510,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "TransitionOverridePropMapEntry",
+        module: "Elixir.Figler.Schema.TransitionOverridePropMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "prop",
+                type_index: 504,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "overrides",
+                type_index: 502,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "binding_location",
+                type_index: 506,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "node_contents_binding_location",
+                type_index: 508,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CodeSyntaxPlatform",
+        module: "Elixir.Figler.Schema.CodeSyntaxPlatform",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "web",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "android",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "i_os",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "OptionalVector",
+        module: "Elixir.Figler.Schema.OptionalVector",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "value",
+                type_index: 51,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "HTMLTag",
+        module: "Elixir.Figler.Schema.HTMLTag",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "auto",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "article",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "section",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "nav",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "aside",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "h1",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "h2",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "h3",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "h4",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "h5",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "h6",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "hgroup",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "header",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "footer",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "address",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "p",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "hr",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "pre",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "blockquote",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "ol",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "ul",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "menu",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "li",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "dl",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "dt",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "dd",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "figure",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "figcaption",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "main",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "div",
+            },
+            KiwiRecordVariant {
+                value: 30,
+                name: "a",
+            },
+            KiwiRecordVariant {
+                value: 31,
+                name: "em",
+            },
+            KiwiRecordVariant {
+                value: 32,
+                name: "strong",
+            },
+            KiwiRecordVariant {
+                value: 33,
+                name: "small",
+            },
+            KiwiRecordVariant {
+                value: 34,
+                name: "s",
+            },
+            KiwiRecordVariant {
+                value: 35,
+                name: "cite",
+            },
+            KiwiRecordVariant {
+                value: 36,
+                name: "q",
+            },
+            KiwiRecordVariant {
+                value: 37,
+                name: "dfn",
+            },
+            KiwiRecordVariant {
+                value: 38,
+                name: "abbr",
+            },
+            KiwiRecordVariant {
+                value: 39,
+                name: "ruby",
+            },
+            KiwiRecordVariant {
+                value: 40,
+                name: "rt",
+            },
+            KiwiRecordVariant {
+                value: 41,
+                name: "rp",
+            },
+            KiwiRecordVariant {
+                value: 42,
+                name: "data",
+            },
+            KiwiRecordVariant {
+                value: 43,
+                name: "time",
+            },
+            KiwiRecordVariant {
+                value: 44,
+                name: "code",
+            },
+            KiwiRecordVariant {
+                value: 45,
+                name: "var",
+            },
+            KiwiRecordVariant {
+                value: 46,
+                name: "samp",
+            },
+            KiwiRecordVariant {
+                value: 47,
+                name: "kbd",
+            },
+            KiwiRecordVariant {
+                value: 48,
+                name: "sub",
+            },
+            KiwiRecordVariant {
+                value: 49,
+                name: "sup",
+            },
+            KiwiRecordVariant {
+                value: 50,
+                name: "i",
+            },
+            KiwiRecordVariant {
+                value: 51,
+                name: "b",
+            },
+            KiwiRecordVariant {
+                value: 52,
+                name: "u",
+            },
+            KiwiRecordVariant {
+                value: 53,
+                name: "mark",
+            },
+            KiwiRecordVariant {
+                value: 54,
+                name: "bdi",
+            },
+            KiwiRecordVariant {
+                value: 55,
+                name: "bdo",
+            },
+            KiwiRecordVariant {
+                value: 56,
+                name: "span",
+            },
+            KiwiRecordVariant {
+                value: 57,
+                name: "br",
+            },
+            KiwiRecordVariant {
+                value: 58,
+                name: "wbr",
+            },
+            KiwiRecordVariant {
+                value: 59,
+                name: "picture",
+            },
+            KiwiRecordVariant {
+                value: 60,
+                name: "source",
+            },
+            KiwiRecordVariant {
+                value: 61,
+                name: "img",
+            },
+            KiwiRecordVariant {
+                value: 62,
+                name: "form",
+            },
+            KiwiRecordVariant {
+                value: 63,
+                name: "label",
+            },
+            KiwiRecordVariant {
+                value: 64,
+                name: "input",
+            },
+            KiwiRecordVariant {
+                value: 65,
+                name: "button",
+            },
+            KiwiRecordVariant {
+                value: 66,
+                name: "select",
+            },
+            KiwiRecordVariant {
+                value: 67,
+                name: "datalist",
+            },
+            KiwiRecordVariant {
+                value: 68,
+                name: "optgroup",
+            },
+            KiwiRecordVariant {
+                value: 69,
+                name: "option",
+            },
+            KiwiRecordVariant {
+                value: 70,
+                name: "textarea",
+            },
+            KiwiRecordVariant {
+                value: 71,
+                name: "output",
+            },
+            KiwiRecordVariant {
+                value: 72,
+                name: "progress",
+            },
+            KiwiRecordVariant {
+                value: 73,
+                name: "meter",
+            },
+            KiwiRecordVariant {
+                value: 74,
+                name: "fieldset",
+            },
+            KiwiRecordVariant {
+                value: 75,
+                name: "legend",
+            },
+            KiwiRecordVariant {
+                value: 76,
+                name: "video",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ARIARole",
+        module: "Elixir.Figler.Schema.ARIARole",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "auto",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "button",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "checkbox",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "gridcell",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "link",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "menuitem",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "menuitemcheckbox",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "menuitemradio",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "option",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "progressbar",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "radio",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "scrollbar",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "searchbox",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "separator",
+            },
+            KiwiRecordVariant {
+                value: 14,
+                name: "slider",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "spinbutton",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "switch",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "tab",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "tabpanel",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "textbox",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "treeitem",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "combobox",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "grid",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "listbox",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "menu",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "menubar",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "radiogroup",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "tablist",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "tree",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "treegrid",
+            },
+            KiwiRecordVariant {
+                value: 30,
+                name: "application",
+            },
+            KiwiRecordVariant {
+                value: 31,
+                name: "article",
+            },
+            KiwiRecordVariant {
+                value: 32,
+                name: "blockquote",
+            },
+            KiwiRecordVariant {
+                value: 33,
+                name: "caption",
+            },
+            KiwiRecordVariant {
+                value: 34,
+                name: "cell",
+            },
+            KiwiRecordVariant {
+                value: 35,
+                name: "columnheader",
+            },
+            KiwiRecordVariant {
+                value: 36,
+                name: "definition",
+            },
+            KiwiRecordVariant {
+                value: 37,
+                name: "deletion",
+            },
+            KiwiRecordVariant {
+                value: 38,
+                name: "directory",
+            },
+            KiwiRecordVariant {
+                value: 39,
+                name: "document",
+            },
+            KiwiRecordVariant {
+                value: 40,
+                name: "emphasis",
+            },
+            KiwiRecordVariant {
+                value: 41,
+                name: "feed",
+            },
+            KiwiRecordVariant {
+                value: 42,
+                name: "figure",
+            },
+            KiwiRecordVariant {
+                value: 43,
+                name: "generic",
+            },
+            KiwiRecordVariant {
+                value: 44,
+                name: "group",
+            },
+            KiwiRecordVariant {
+                value: 45,
+                name: "heading",
+            },
+            KiwiRecordVariant {
+                value: 46,
+                name: "img",
+            },
+            KiwiRecordVariant {
+                value: 47,
+                name: "insertion",
+            },
+            KiwiRecordVariant {
+                value: 48,
+                name: "list",
+            },
+            KiwiRecordVariant {
+                value: 49,
+                name: "listitem",
+            },
+            KiwiRecordVariant {
+                value: 50,
+                name: "math",
+            },
+            KiwiRecordVariant {
+                value: 51,
+                name: "meter",
+            },
+            KiwiRecordVariant {
+                value: 52,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 53,
+                name: "note",
+            },
+            KiwiRecordVariant {
+                value: 54,
+                name: "paragraph",
+            },
+            KiwiRecordVariant {
+                value: 55,
+                name: "presentation",
+            },
+            KiwiRecordVariant {
+                value: 56,
+                name: "row",
+            },
+            KiwiRecordVariant {
+                value: 57,
+                name: "rowgroup",
+            },
+            KiwiRecordVariant {
+                value: 58,
+                name: "rowheader",
+            },
+            KiwiRecordVariant {
+                value: 59,
+                name: "strong",
+            },
+            KiwiRecordVariant {
+                value: 60,
+                name: "subscript",
+            },
+            KiwiRecordVariant {
+                value: 61,
+                name: "superscript",
+            },
+            KiwiRecordVariant {
+                value: 62,
+                name: "table",
+            },
+            KiwiRecordVariant {
+                value: 63,
+                name: "term",
+            },
+            KiwiRecordVariant {
+                value: 64,
+                name: "time",
+            },
+            KiwiRecordVariant {
+                value: 65,
+                name: "toolbar",
+            },
+            KiwiRecordVariant {
+                value: 66,
+                name: "tooltip",
+            },
+            KiwiRecordVariant {
+                value: 67,
+                name: "banner",
+            },
+            KiwiRecordVariant {
+                value: 68,
+                name: "complementary",
+            },
+            KiwiRecordVariant {
+                value: 69,
+                name: "contentinfo",
+            },
+            KiwiRecordVariant {
+                value: 70,
+                name: "form",
+            },
+            KiwiRecordVariant {
+                value: 71,
+                name: "main",
+            },
+            KiwiRecordVariant {
+                value: 72,
+                name: "navigation",
+            },
+            KiwiRecordVariant {
+                value: 73,
+                name: "region",
+            },
+            KiwiRecordVariant {
+                value: 74,
+                name: "search",
+            },
+            KiwiRecordVariant {
+                value: 75,
+                name: "alert",
+            },
+            KiwiRecordVariant {
+                value: 76,
+                name: "log",
+            },
+            KiwiRecordVariant {
+                value: 77,
+                name: "marquee",
+            },
+            KiwiRecordVariant {
+                value: 78,
+                name: "status",
+            },
+            KiwiRecordVariant {
+                value: 79,
+                name: "timer",
+            },
+            KiwiRecordVariant {
+                value: 80,
+                name: "alertdialog",
+            },
+            KiwiRecordVariant {
+                value: 81,
+                name: "dialog",
+            },
+            KiwiRecordVariant {
+                value: 82,
+                name: "image",
+            },
+            KiwiRecordVariant {
+                value: 83,
+                name: "heading_1",
+            },
+            KiwiRecordVariant {
+                value: 84,
+                name: "heading_2",
+            },
+            KiwiRecordVariant {
+                value: 85,
+                name: "heading_3",
+            },
+            KiwiRecordVariant {
+                value: 86,
+                name: "heading_4",
+            },
+            KiwiRecordVariant {
+                value: 87,
+                name: "heading_5",
+            },
+            KiwiRecordVariant {
+                value: 88,
+                name: "heading_6",
+            },
+            KiwiRecordVariant {
+                value: 89,
+                name: "header",
+            },
+            KiwiRecordVariant {
+                value: 90,
+                name: "footer",
+            },
+            KiwiRecordVariant {
+                value: 91,
+                name: "sidebar",
+            },
+            KiwiRecordVariant {
+                value: 92,
+                name: "section",
+            },
+            KiwiRecordVariant {
+                value: 93,
+                name: "maincontent",
+            },
+            KiwiRecordVariant {
+                value: 94,
+                name: "table_cell",
+            },
+            KiwiRecordVariant {
+                value: 95,
+                name: "widget",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "MigrationStatus",
+        module: "Elixir.Figler.Schema.MigrationStatus",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "dsd_cleanup",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ColorProfile",
+        module: "Elixir.Figler.Schema.ColorProfile",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "srgb",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "display_p3",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "DocumentColorProfile",
+        module: "Elixir.Figler.Schema.DocumentColorProfile",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "legacy",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "srgb",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "display_p3",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ChildReadingDirection",
+        module: "Elixir.Figler.Schema.ChildReadingDirection",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "left_to_right",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "right_to_left",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ARIAAttributeAnyValue",
+        module: "Elixir.Figler.Schema.ARIAAttributeAnyValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "bool_value",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "string_value",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "float_value",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "int_value",
+                type_index: -3,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "string_array_value",
+                type_index: -6,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ARIAAttributeDataType",
+        module: "Elixir.Figler.Schema.ARIAAttributeDataType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "boolean",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "string",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "float",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "int",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "string_list",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ARIAAttributeData",
+        module: "Elixir.Figler.Schema.ARIAAttributeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 520,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 519,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ARIAAttributesMap",
+        module: "Elixir.Figler.Schema.ARIAAttributesMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 523,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ARIAAttributesMapEntry",
+        module: "Elixir.Figler.Schema.ARIAAttributesMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "attribute",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 521,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "HandoffStatusMapEntry",
+        module: "Elixir.Figler.Schema.HandoffStatusMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "handoff_status",
+                type_index: 221,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "HandoffStatusMap",
+        module: "Elixir.Figler.Schema.HandoffStatusMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "entries",
+                type_index: 524,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EditScopeInfo",
+        module: "Elixir.Figler.Schema.EditScopeInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "edit_scope_stacks",
+                type_index: 528,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "snapshots",
+                type_index: 527,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EditScopeSnapshot",
+        module: "Elixir.Figler.Schema.EditScopeSnapshot",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "frames",
+                type_index: 528,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "node_change_field_numbers",
+                type_index: -4,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EditScopeStack",
+        module: "Elixir.Figler.Schema.EditScopeStack",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "stack",
+                type_index: 529,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "EditScope",
+        module: "Elixir.Figler.Schema.EditScope",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 530,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "label",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "editor_type",
+                type_index: 217,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "EditScopeType",
+        module: "Elixir.Figler.Schema.EditScopeType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "invalid",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "test_setup",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "user",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "plugin",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "system",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "rest_api",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "onboarding",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "autosave",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "ai",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SectionPresetState",
+        module: "Elixir.Figler.Schema.SectionPresetState",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "inserted",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "user_edited",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "EmojiImageSet",
+        module: "Elixir.Figler.Schema.EmojiImageSet",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "apple",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "noto",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SelectionRegionFocusType",
+        module: "Elixir.Figler.Schema.SelectionRegionFocusType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "primary",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "secondary",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SectionPresetInfo",
+        module: "Elixir.Figler.Schema.SectionPresetInfo",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "shelf_id",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "template_id",
+                type_index: -8,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "template_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "state",
+                type_index: 531,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ClipboardSelectionRegion",
+        module: "Elixir.Figler.Schema.ClipboardSelectionRegion",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "parent",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "nodes",
+                type_index: 49,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "enclosing_frame_offset",
+                type_index: 51,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "paste_is_partially_outside_enclosing_frame",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "focus_type",
+                type_index: 533,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FirstDraftKitType",
+        module: "Elixir.Figler.Schema.FirstDraftKitType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "local",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "library",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "none",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "FirstDraftKit",
+        module: "Elixir.Figler.Schema.FirstDraftKit",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "key",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "type",
+                type_index: 536,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "FirstDraftData",
+        module: "Elixir.Figler.Schema.FirstDraftData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "generation_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "kit",
+                type_index: 537,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "FirstDraftKitElementType",
+        module: "Elixir.Figler.Schema.FirstDraftKitElementType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "building_block",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "grouped_component",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "FirstDraftKitElementData",
+        module: "Elixir.Figler.Schema.FirstDraftKitElementData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 539,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PlatformShapeProperty",
+        module: "Elixir.Figler.Schema.PlatformShapeProperty",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "fill",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "stroke",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "text",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "stroke_color",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PlatformShapeBehaviorType",
+        module: "Elixir.Figler.Schema.PlatformShapeBehaviorType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "shape",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "container",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "advanced_container",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PlatformShapePropertyMapEntry",
+        module: "Elixir.Figler.Schema.PlatformShapePropertyMapEntry",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "property",
+                type_index: 541,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "node_paths",
+                type_index: 100,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PlatformShapeDefinition",
+        module: "Elixir.Figler.Schema.PlatformShapeDefinition",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "property_map_entries",
+                type_index: 543,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "behavior_type",
+                type_index: 542,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "thumbnail_node",
+                type_index: 100,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeBehaviors",
+        module: "Elixir.Figler.Schema.NodeBehaviors",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "link",
+                type_index: 561,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "appear",
+                type_index: 549,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "hover",
+                type_index: 550,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "press",
+                type_index: 551,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "focus",
+                type_index: 552,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "scroll_parallax",
+                type_index: 553,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "scroll_transform",
+                type_index: 555,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "cursor",
+                type_index: 556,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "marquee",
+                type_index: 557,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "code",
+                type_index: 558,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "BehaviorTransition",
+        module: "Elixir.Figler.Schema.BehaviorTransition",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "easing_type",
+                type_index: 46,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "easing_function",
+                type_index: -5,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "transition_duration",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "delay",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "transition_duration_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "delay_var",
+                type_index: 477,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AppearBehaviorTrigger",
+        module: "Elixir.Figler.Schema.AppearBehaviorTrigger",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 1,
+                name: "page_load",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "this_layer_in_view",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "other_layer_in_view",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "scroll_direction",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "RelativeDirection",
+        module: "Elixir.Figler.Schema.RelativeDirection",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 1,
+                name: "up",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "down",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "left",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "right",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AppearBehavior",
+        module: "Elixir.Figler.Schema.AppearBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "trigger",
+                type_index: 547,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "direction",
+                type_index: 548,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "other_layer",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "enter_transition",
+                type_index: 546,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "enter_state",
+                type_index: 228,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "exit_transition",
+                type_index: 546,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "exit_state",
+                type_index: 228,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "plays_once",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "plays_once_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 10,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "HoverBehavior",
+        module: "Elixir.Figler.Schema.HoverBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "transition",
+                type_index: 546,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "state",
+                type_index: 228,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "PressBehavior",
+        module: "Elixir.Figler.Schema.PressBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "transition",
+                type_index: 546,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "state",
+                type_index: 228,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "FocusBehavior",
+        module: "Elixir.Figler.Schema.FocusBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "transition",
+                type_index: 546,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "state",
+                type_index: 228,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ScrollParallaxBehavior",
+        module: "Elixir.Figler.Schema.ScrollParallaxBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "axis",
+                type_index: 47,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "speed",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "relative_to_page",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "speed_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "ScrollTransformBehaviorTrigger",
+        module: "Elixir.Figler.Schema.ScrollTransformBehaviorTrigger",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 1,
+                name: "page_height",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "this_layer_in_view",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "other_layer_in_view",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ScrollTransformBehavior",
+        module: "Elixir.Figler.Schema.ScrollTransformBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "trigger",
+                type_index: 554,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "other_layer",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "transition",
+                type_index: 546,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "from_state",
+                type_index: 228,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "to_state",
+                type_index: 228,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "plays_once",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "plays_once_var",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "plays_once_var2",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 9,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CursorBehavior",
+        module: "Elixir.Figler.Schema.CursorBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "hotspot_x",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "hotspot_y",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "cursor_guid",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "MarqueeBehavior",
+        module: "Elixir.Figler.Schema.MarqueeBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "direction",
+                type_index: 548,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "speed",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "should_loop_infinitely",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "speed_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "should_loop_infinitely_var",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "pause_on_hover",
+                type_index: 477,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CodeBehavior",
+        module: "Elixir.Figler.Schema.CodeBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "code_component_id",
+                type_index: 121,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "component_prop_assignments",
+                type_index: 322,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ClientRenderedMetadata",
+        module: "Elixir.Figler.Schema.ClientRenderedMetadata",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "load_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "tracking_session_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "tracking_session_sequence_id",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "reconnect_id",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "LinkBehaviorType",
+        module: "Elixir.Figler.Schema.LinkBehaviorType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 1,
+                name: "url",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "page",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "LinkBehavior",
+        module: "Elixir.Figler.Schema.LinkBehavior",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 560,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "url",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "page",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "open_in_new_window",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "VariableIdOrVariableOverrideId",
+        module: "Elixir.Figler.Schema.VariableIdOrVariableOverrideId",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "variable_id",
+                type_index: 115,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "variable_override_id",
+                type_index: 116,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "SlideThemeData",
+        module: "Elixir.Figler.Schema.SlideThemeData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "theme_id",
+                type_index: 118,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "version",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "SlideNumber",
+        module: "Elixir.Figler.Schema.SlideNumber",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "none",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "slide",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "section",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "subsection",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "total_within_deck",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "total_within_section",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "NodeChatMessageType",
+        module: "Elixir.Figler.Schema.NodeChatMessageType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "user_message",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "assistant_message",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "tool_message",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "system_message",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeChatMessage",
+        module: "Elixir.Figler.Schema.NodeChatMessage",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "id",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "type",
+                type_index: 565,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "user_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "text_content",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "sent_at",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 6,
+                name: "tool_calls",
+                type_index: 567,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 7,
+                name: "tool_results",
+                type_index: 568,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 8,
+                name: "sent_at64",
+                type_index: -8,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeChatToolCall",
+        module: "Elixir.Figler.Schema.NodeChatToolCall",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "tool_call_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "tool_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "args_json",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeChatToolResult",
+        module: "Elixir.Figler.Schema.NodeChatToolResult",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "tool_call_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "tool_name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "result_json",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeChatExchange",
+        module: "Elixir.Figler.Schema.NodeChatExchange",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "node",
+                type_index: 49,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "messages",
+                type_index: 566,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_typing",
+                type_index: -1,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "file_updates",
+                type_index: 571,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "NodeChatCompressionState",
+        module: "Elixir.Figler.Schema.NodeChatCompressionState",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "start_index",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "summary",
+                type_index: -6,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "FileUpdate",
+        module: "Elixir.Figler.Schema.FileUpdate",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "contents",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "is_deleted",
+                type_index: -1,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AIChatContentPart",
+        module: "Elixir.Figler.Schema.AIChatContentPart",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 573,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "value",
+                type_index: 574,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AIChatContentPartType",
+        module: "Elixir.Figler.Schema.AIChatContentPartType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "invalid",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "text",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "selected_node_ids",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AIChatContentPartAnyValue",
+        module: "Elixir.Figler.Schema.AIChatContentPartAnyValue",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "text_value",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "selected_node_ids",
+                type_index: -6,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "AIChatMessageRole",
+        module: "Elixir.Figler.Schema.AIChatMessageRole",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "user",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "assistant",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "tool",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "system",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AIChatMessage",
+        module: "Elixir.Figler.Schema.AIChatMessage",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "created_at_ms",
+                type_index: -4,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "role",
+                type_index: 575,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "content",
+                type_index: 572,
+                array: true,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "client_id",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 5,
+                name: "created_at_ms64",
+                type_index: -8,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "AIChatThread",
+        module: "Elixir.Figler.Schema.AIChatThread",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "messages",
+                type_index: 576,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "CooperTemplateType",
+        module: "Elixir.Figler.Schema.CooperTemplateType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "custom",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "twitter_post",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "linkedin_post",
+            },
+            KiwiRecordVariant {
+                value: 3,
+                name: "insta_post_square",
+            },
+            KiwiRecordVariant {
+                value: 4,
+                name: "insta_post_portrait",
+            },
+            KiwiRecordVariant {
+                value: 5,
+                name: "insta_story",
+            },
+            KiwiRecordVariant {
+                value: 6,
+                name: "insta_ad",
+            },
+            KiwiRecordVariant {
+                value: 7,
+                name: "facebook_post",
+            },
+            KiwiRecordVariant {
+                value: 8,
+                name: "facebook_cover_photo",
+            },
+            KiwiRecordVariant {
+                value: 9,
+                name: "facebook_event_cover",
+            },
+            KiwiRecordVariant {
+                value: 10,
+                name: "facebook_ad_portrait",
+            },
+            KiwiRecordVariant {
+                value: 11,
+                name: "facebook_ad_square",
+            },
+            KiwiRecordVariant {
+                value: 12,
+                name: "pinterest_ad_pin",
+            },
+            KiwiRecordVariant {
+                value: 13,
+                name: "twitter_banner",
+            },
+            KiwiRecordVariant {
+                value: 15,
+                name: "linkedin_post_square",
+            },
+            KiwiRecordVariant {
+                value: 16,
+                name: "linkedin_post_portrait",
+            },
+            KiwiRecordVariant {
+                value: 17,
+                name: "linkedin_post_landscape",
+            },
+            KiwiRecordVariant {
+                value: 18,
+                name: "linkedin_profile_banner",
+            },
+            KiwiRecordVariant {
+                value: 19,
+                name: "linkedin_article_banner",
+            },
+            KiwiRecordVariant {
+                value: 20,
+                name: "linkedin_ad_landscape",
+            },
+            KiwiRecordVariant {
+                value: 21,
+                name: "linkedin_ad_square",
+            },
+            KiwiRecordVariant {
+                value: 22,
+                name: "linkedin_ad_vertical",
+            },
+            KiwiRecordVariant {
+                value: 23,
+                name: "youtube_thumbnail",
+            },
+            KiwiRecordVariant {
+                value: 24,
+                name: "youtube_banner",
+            },
+            KiwiRecordVariant {
+                value: 25,
+                name: "youtube_ad",
+            },
+            KiwiRecordVariant {
+                value: 26,
+                name: "twitch_banner",
+            },
+            KiwiRecordVariant {
+                value: 27,
+                name: "google_leaderboard_ad",
+            },
+            KiwiRecordVariant {
+                value: 28,
+                name: "google_large_ad",
+            },
+            KiwiRecordVariant {
+                value: 29,
+                name: "google_med_ad",
+            },
+            KiwiRecordVariant {
+                value: 30,
+                name: "google_mobile_banner_ad",
+            },
+            KiwiRecordVariant {
+                value: 31,
+                name: "google_skyscraper_ad",
+            },
+            KiwiRecordVariant {
+                value: 32,
+                name: "card_horizontal",
+            },
+            KiwiRecordVariant {
+                value: 33,
+                name: "card_vertical",
+            },
+            KiwiRecordVariant {
+                value: 34,
+                name: "print_us_letter",
+            },
+            KiwiRecordVariant {
+                value: 35,
+                name: "poster",
+            },
+            KiwiRecordVariant {
+                value: 36,
+                name: "banner_standard",
+            },
+            KiwiRecordVariant {
+                value: 37,
+                name: "banner_wide",
+            },
+            KiwiRecordVariant {
+                value: 38,
+                name: "banner_ultrawide",
+            },
+            KiwiRecordVariant {
+                value: 39,
+                name: "name_tag_portrait",
+            },
+            KiwiRecordVariant {
+                value: 40,
+                name: "name_tag_landscape",
+            },
+            KiwiRecordVariant {
+                value: 41,
+                name: "insta_reel_cover",
+            },
+            KiwiRecordVariant {
+                value: 42,
+                name: "zoom_background",
+            },
+            KiwiRecordVariant {
+                value: 43,
+                name: "tiktok_post",
+            },
+            KiwiRecordVariant {
+                value: 44,
+                name: "insta_ad_portrait",
+            },
+            KiwiRecordVariant {
+                value: 45,
+                name: "insta_post_tall_portrait",
+            },
+            KiwiRecordVariant {
+                value: 46,
+                name: "twitter_post_square",
+            },
+            KiwiRecordVariant {
+                value: 47,
+                name: "facebook_post_square",
+            },
+            KiwiRecordVariant {
+                value: 48,
+                name: "facebook_post_portrait",
+            },
+            KiwiRecordVariant {
+                value: 49,
+                name: "facebook_story",
+            },
+            KiwiRecordVariant {
+                value: 50,
+                name: "google_square_ad",
+            },
+            KiwiRecordVariant {
+                value: 51,
+                name: "google_small_square_ad",
+            },
+            KiwiRecordVariant {
+                value: 52,
+                name: "google_narrow_skyscraper_ad",
+            },
+            KiwiRecordVariant {
+                value: 53,
+                name: "google_half_page_ad",
+            },
+            KiwiRecordVariant {
+                value: 54,
+                name: "google_large_leaderboard_ad",
+            },
+            KiwiRecordVariant {
+                value: 55,
+                name: "google_billboard_ad",
+            },
+            KiwiRecordVariant {
+                value: 56,
+                name: "google_banner_leaderboard_ad",
+            },
+            KiwiRecordVariant {
+                value: 57,
+                name: "google_top_banner_ad",
+            },
+            KiwiRecordVariant {
+                value: 58,
+                name: "google_mobile_leaderboard_banner_ad",
+            },
+            KiwiRecordVariant {
+                value: 59,
+                name: "google_large_mobile_banner_ad",
+            },
+            KiwiRecordVariant {
+                value: 60,
+                name: "google_mobile_interstitial_ad",
+            },
+            KiwiRecordVariant {
+                value: 61,
+                name: "google_mobile_med_rectangle_ad",
+            },
+            KiwiRecordVariant {
+                value: 62,
+                name: "pinterest_pin_standard",
+            },
+            KiwiRecordVariant {
+                value: 63,
+                name: "pinterest_pin_square",
+            },
+            KiwiRecordVariant {
+                value: 64,
+                name: "pinterest_ad_square",
+            },
+            KiwiRecordVariant {
+                value: 65,
+                name: "print_a4",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "CooperTemplateData",
+        module: "Elixir.Figler.Schema.CooperTemplateData",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "type",
+                type_index: 578,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ImageImportMap",
+        module: "Elixir.Figler.Schema.ImageImportMap",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "imports",
+                type_index: 581,
+                array: true,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "ImageImport",
+        module: "Elixir.Figler.Schema.ImageImport",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "name",
+                type_index: -6,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "image",
+                type_index: 77,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "InterpolationType",
+        module: "Elixir.Figler.Schema.InterpolationType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "hold",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "bezier",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "spring",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 2,
+        name: "BezierHandles",
+        module: "Elixir.Figler.Schema.BezierHandles",
+        fields: &[
+            KiwiRecordField {
+                id: 1,
+                name: "p1x",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 2,
+                name: "p1y",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 3,
+                name: "p2x",
+                type_index: -5,
+                array: false,
+            },
+            KiwiRecordField {
+                id: 4,
+                name: "p2y",
+                type_index: -5,
+                array: false,
+            },
+        ],
+        variants: &[],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "KeyframeOperation",
+        module: "Elixir.Figler.Schema.KeyframeOperation",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "set",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "scale",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "offset",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "TimelinePositionType",
+        module: "Elixir.Figler.Schema.TimelinePositionType",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "absolute",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "relative",
+            },
+        ],
+    },
+    KiwiRecordDefinition {
+        kind: 0,
+        name: "PlaybackStyle",
+        module: "Elixir.Figler.Schema.PlaybackStyle",
+        fields: &[],
+        variants: &[
+            KiwiRecordVariant {
+                value: 0,
+                name: "once",
+            },
+            KiwiRecordVariant {
+                value: 1,
+                name: "loop",
+            },
+            KiwiRecordVariant {
+                value: 2,
+                name: "boomerang",
+            },
+        ],
+    },
+];
+
+
+pub mod kiwi_records {
+    pub mod message_type {
+        pub const DEFINITION: u32 = 0;
+    }
+    pub mod axis {
+        pub const DEFINITION: u32 = 1;
+    }
+    pub mod access {
+        pub const DEFINITION: u32 = 2;
+    }
+    pub mod node_phase {
+        pub const DEFINITION: u32 = 3;
+    }
+    pub mod winding_rule {
+        pub const DEFINITION: u32 = 4;
+    }
+    pub mod node_type {
+        pub const DEFINITION: u32 = 5;
+    }
+    pub mod shape_with_text_type {
+        pub const DEFINITION: u32 = 6;
+    }
+    pub mod blend_mode {
+        pub const DEFINITION: u32 = 7;
+    }
+    pub mod paint_type {
+        pub const DEFINITION: u32 = 8;
+    }
+    pub mod image_scale_mode {
+        pub const DEFINITION: u32 = 9;
+    }
+    pub mod effect_type {
+        pub const DEFINITION: u32 = 10;
+    }
+    pub mod text_case {
+        pub const DEFINITION: u32 = 11;
+    }
+    pub mod text_decoration {
+        pub const DEFINITION: u32 = 12;
+    }
+    pub mod text_decoration_style {
+        pub const DEFINITION: u32 = 13;
+    }
+    pub mod leading_trim {
+        pub const DEFINITION: u32 = 14;
+    }
+    pub mod number_units {
+        pub const DEFINITION: u32 = 15;
+    }
+    pub mod constraint_type {
+        pub const DEFINITION: u32 = 16;
+    }
+    pub mod stroke_align {
+        pub const DEFINITION: u32 = 17;
+    }
+    pub mod stroke_cap {
+        pub const DEFINITION: u32 = 18;
+    }
+    pub mod stroke_join {
+        pub const DEFINITION: u32 = 19;
+    }
+    pub mod boolean_operation {
+        pub const DEFINITION: u32 = 20;
+    }
+    pub mod text_align_horizontal {
+        pub const DEFINITION: u32 = 21;
+    }
+    pub mod text_align_vertical {
+        pub const DEFINITION: u32 = 22;
+    }
+    pub mod mouse_cursor {
+        pub const DEFINITION: u32 = 23;
+    }
+    pub mod vector_mirror {
+        pub const DEFINITION: u32 = 24;
+    }
+    pub mod image_type {
+        pub const DEFINITION: u32 = 25;
+    }
+    pub mod export_constraint_type {
+        pub const DEFINITION: u32 = 26;
+    }
+    pub mod layout_grid_type {
+        pub const DEFINITION: u32 = 27;
+    }
+    pub mod layout_grid_pattern {
+        pub const DEFINITION: u32 = 28;
+    }
+    pub mod text_auto_resize {
+        pub const DEFINITION: u32 = 29;
+    }
+    pub mod text_truncation {
+        pub const DEFINITION: u32 = 30;
+    }
+    pub mod style_set_type {
+        pub const DEFINITION: u32 = 31;
+    }
+    pub mod style_set_content_type {
+        pub const DEFINITION: u32 = 32;
+    }
+    pub mod stack_mode {
+        pub const DEFINITION: u32 = 33;
+    }
+    pub mod stack_align {
+        pub const DEFINITION: u32 = 34;
+    }
+    pub mod stack_counter_align {
+        pub const DEFINITION: u32 = 35;
+    }
+    pub mod stack_justify {
+        pub const DEFINITION: u32 = 36;
+    }
+    pub mod grid_child_align {
+        pub const DEFINITION: u32 = 37;
+    }
+    pub mod grid_auto_tracks {
+        pub const DEFINITION: u32 = 38;
+    }
+    pub mod stack_size {
+        pub const DEFINITION: u32 = 39;
+    }
+    pub mod stack_positioning {
+        pub const DEFINITION: u32 = 40;
+    }
+    pub mod stack_wrap {
+        pub const DEFINITION: u32 = 41;
+    }
+    pub mod stack_counter_align_content {
+        pub const DEFINITION: u32 = 42;
+    }
+    pub mod connection_type {
+        pub const DEFINITION: u32 = 43;
+    }
+    pub mod interaction_type {
+        pub const DEFINITION: u32 = 44;
+    }
+    pub mod transition_type {
+        pub const DEFINITION: u32 = 45;
+    }
+    pub mod easing_type {
+        pub const DEFINITION: u32 = 46;
+    }
+    pub mod scroll_direction {
+        pub const DEFINITION: u32 = 47;
+    }
+    pub mod scroll_contracted_state {
+        pub const DEFINITION: u32 = 48;
+    }
+    pub mod guid {
+        pub const DEFINITION: u32 = 49;
+        pub const SESSION_ID: u32 = 1;
+        pub const LOCAL_ID: u32 = 2;
+    }
+    pub mod color {
+        pub const DEFINITION: u32 = 50;
+        pub const R: u32 = 1;
+        pub const G: u32 = 2;
+        pub const B: u32 = 3;
+        pub const A: u32 = 4;
+    }
+    pub mod vector {
+        pub const DEFINITION: u32 = 51;
+        pub const X: u32 = 1;
+        pub const Y: u32 = 2;
+    }
+    pub mod rect {
+        pub const DEFINITION: u32 = 52;
+        pub const X: u32 = 1;
+        pub const Y: u32 = 2;
+        pub const W: u32 = 3;
+        pub const H: u32 = 4;
+    }
+    pub mod color_stop {
+        pub const DEFINITION: u32 = 53;
+        pub const COLOR: u32 = 1;
+        pub const POSITION: u32 = 2;
+    }
+    pub mod color_stop_var {
+        pub const DEFINITION: u32 = 54;
+        pub const COLOR: u32 = 1;
+        pub const COLOR_VAR: u32 = 2;
+        pub const POSITION: u32 = 3;
+    }
+    pub mod matrix {
+        pub const DEFINITION: u32 = 55;
+        pub const M00: u32 = 1;
+        pub const M01: u32 = 2;
+        pub const M02: u32 = 3;
+        pub const M10: u32 = 4;
+        pub const M11: u32 = 5;
+        pub const M12: u32 = 6;
+    }
+    pub mod parent_index {
+        pub const DEFINITION: u32 = 56;
+        pub const GUID: u32 = 1;
+        pub const POSITION: u32 = 2;
+    }
+    pub mod number {
+        pub const DEFINITION: u32 = 57;
+        pub const VALUE: u32 = 1;
+        pub const UNITS: u32 = 2;
+    }
+    pub mod font_name {
+        pub const DEFINITION: u32 = 58;
+        pub const FAMILY: u32 = 1;
+        pub const STYLE: u32 = 2;
+        pub const POSTSCRIPT: u32 = 3;
+    }
+    pub mod font_variant_numeric_figure {
+        pub const DEFINITION: u32 = 59;
+    }
+    pub mod font_variant_numeric_spacing {
+        pub const DEFINITION: u32 = 60;
+    }
+    pub mod font_variant_numeric_fraction {
+        pub const DEFINITION: u32 = 61;
+    }
+    pub mod font_variant_caps {
+        pub const DEFINITION: u32 = 62;
+    }
+    pub mod font_variant_position {
+        pub const DEFINITION: u32 = 63;
+    }
+    pub mod font_style {
+        pub const DEFINITION: u32 = 64;
+    }
+    pub mod semantic_weight {
+        pub const DEFINITION: u32 = 65;
+    }
+    pub mod semantic_italic {
+        pub const DEFINITION: u32 = 66;
+    }
+    pub mod code_snapshot_state {
+        pub const DEFINITION: u32 = 67;
+    }
+    pub mod snapshot_capture_mode {
+        pub const DEFINITION: u32 = 68;
+    }
+    pub mod code_source_info {
+        pub const DEFINITION: u32 = 69;
+        pub const ORIGIN_REFERENCE_ID: u32 = 1;
+        pub const ORIGIN_NODE_ID: u32 = 2;
+        pub const LINKED_SNAPSHOT_ID: u32 = 3;
+        pub const CAPTURE_MODE: u32 = 4;
+        pub const SOURCE_BLOB_REF: u32 = 5;
+        pub const SOURCE_ELEMENT_ID: u32 = 6;
+    }
+    pub mod code_object_type {
+        pub const DEFINITION: u32 = 70;
+    }
+    pub mod custom_tool_artifact_ref {
+        pub const DEFINITION: u32 = 71;
+        pub const CUSTOM_TOOL_ID: u32 = 1;
+        pub const CUSTOM_TOOL_VERSION: u32 = 2;
+        pub const PUBLISHED_CUSTOM_TOOL_ID: u32 = 3;
+        pub const PUBLISHED_CUSTOM_TOOL_VERSION_ID: u32 = 4;
+    }
+    pub mod lock_mode {
+        pub const DEFINITION: u32 = 72;
+    }
+    pub mod open_type_feature {
+        pub const DEFINITION: u32 = 73;
+    }
+    pub mod export_constraint {
+        pub const DEFINITION: u32 = 74;
+        pub const TYPE: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod guid_mapping {
+        pub const DEFINITION: u32 = 75;
+        pub const FROM: u32 = 1;
+        pub const TO: u32 = 2;
+    }
+    pub mod blob {
+        pub const DEFINITION: u32 = 76;
+        pub const BYTES: u32 = 1;
+    }
+    pub mod image {
+        pub const DEFINITION: u32 = 77;
+        pub const HASH: u32 = 1;
+        pub const NAME: u32 = 2;
+        pub const DATA_BLOB: u32 = 3;
+    }
+    pub mod video {
+        pub const DEFINITION: u32 = 78;
+        pub const HASH: u32 = 1;
+        pub const S3_URL: u32 = 2;
+    }
+    pub mod paste_source {
+        pub const DEFINITION: u32 = 79;
+        pub const SRC_FILE: u32 = 1;
+        pub const SRC_NODE: u32 = 2;
+    }
+    pub mod filter_color_adjust {
+        pub const DEFINITION: u32 = 80;
+        pub const TINT: u32 = 1;
+        pub const SHADOWS: u32 = 2;
+        pub const HIGHLIGHTS: u32 = 3;
+        pub const DETAIL: u32 = 4;
+        pub const EXPOSURE: u32 = 5;
+        pub const VIGNETTE: u32 = 6;
+        pub const TEMPERATURE: u32 = 7;
+        pub const VIBRANCE: u32 = 8;
+    }
+    pub mod paint_filter_message {
+        pub const DEFINITION: u32 = 81;
+        pub const TINT: u32 = 1;
+        pub const SHADOWS: u32 = 2;
+        pub const HIGHLIGHTS: u32 = 3;
+        pub const DETAIL: u32 = 4;
+        pub const EXPOSURE: u32 = 5;
+        pub const VIGNETTE: u32 = 6;
+        pub const TEMPERATURE: u32 = 7;
+        pub const VIBRANCE: u32 = 8;
+        pub const CONTRAST: u32 = 9;
+        pub const BRIGHTNESS: u32 = 10;
+    }
+    pub mod paint {
+        pub const DEFINITION: u32 = 82;
+        pub const TYPE: u32 = 1;
+        pub const COLOR: u32 = 2;
+        pub const OPACITY: u32 = 3;
+        pub const VISIBLE: u32 = 4;
+        pub const BLEND_MODE: u32 = 5;
+        pub const STOPS: u32 = 6;
+        pub const TRANSFORM: u32 = 7;
+        pub const IMAGE: u32 = 8;
+        pub const IMAGE_THUMBNAIL: u32 = 9;
+        pub const IMAGE_SCALE_MODE: u32 = 10;
+        pub const ROTATION: u32 = 11;
+        pub const SCALE: u32 = 12;
+        pub const FILTER_COLOR_ADJUST: u32 = 13;
+        pub const PAINT_FILTER: u32 = 14;
+        pub const EMOJI_CODE_POINTS: u32 = 15;
+        pub const ANIMATED_IMAGE: u32 = 16;
+        pub const ANIMATION_FRAME: u32 = 17;
+        pub const VIDEO: u32 = 18;
+        pub const ORIGINAL_IMAGE_WIDTH: u32 = 19;
+        pub const ORIGINAL_IMAGE_HEIGHT: u32 = 20;
+        pub const COLOR_VAR: u32 = 21;
+        pub const IMAGE_SHOULD_COLOR_MANAGE: u32 = 22;
+        pub const STOPS_VAR: u32 = 23;
+        pub const THUMB_HASH_BASE64: u32 = 24;
+        pub const THUMB_HASH: u32 = 25;
+        pub const SOURCE_NODE_ID: u32 = 26;
+        pub const SPACING: u32 = 27;
+        pub const PATTERN_TILE_TYPE: u32 = 28;
+        pub const VERTICAL_ALIGNMENT: u32 = 29;
+        pub const HORIZONTAL_ALIGNMENT: u32 = 30;
+        pub const IMAGE_VAR: u32 = 31;
+        pub const ID: u32 = 32;
+        pub const ALT_TEXT: u32 = 33;
+        pub const NOISE_TYPE: u32 = 34;
+        pub const DENSITY: u32 = 35;
+        pub const NOISE_SIZE: u32 = 36;
+        pub const PATTERN_SPACING: u32 = 37;
+        pub const OPACITY_VAR: u32 = 38;
+        pub const CUSTOM_EFFECT_ID: u32 = 39;
+        pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 40;
+        pub const INTERPOLATION_COLOR_SPACE: u32 = 41;
+        pub const INTERPOLATION_HUE_METHOD: u32 = 42;
+    }
+    pub mod noise_type {
+        pub const DEFINITION: u32 = 83;
+    }
+    pub mod pattern_tile_type {
+        pub const DEFINITION: u32 = 84;
+    }
+    pub mod pattern_alignment {
+        pub const DEFINITION: u32 = 85;
+    }
+    pub mod interpolation_color_space {
+        pub const DEFINITION: u32 = 86;
+    }
+    pub mod interpolation_hue_method {
+        pub const DEFINITION: u32 = 87;
+    }
+    pub mod font_meta_data {
+        pub const DEFINITION: u32 = 88;
+        pub const KEY: u32 = 1;
+        pub const FONT_LINE_HEIGHT: u32 = 2;
+        pub const FONT_DIGEST: u32 = 3;
+        pub const FONT_STYLE: u32 = 4;
+        pub const FONT_WEIGHT: u32 = 5;
+    }
+    pub mod font_variation {
+        pub const DEFINITION: u32 = 89;
+        pub const AXIS_TAG: u32 = 1;
+        pub const AXIS_NAME: u32 = 2;
+        pub const VALUE: u32 = 3;
+    }
+    pub mod text_data {
+        pub const DEFINITION: u32 = 90;
+        pub const CHARACTERS: u32 = 1;
+        pub const CHARACTER_STYLE_I_DS: u32 = 2;
+        pub const STYLE_OVERRIDE_TABLE: u32 = 3;
+        pub const LAYOUT_SIZE: u32 = 4;
+        pub const BASELINES: u32 = 5;
+        pub const GLYPHS: u32 = 6;
+        pub const DECORATIONS: u32 = 7;
+        pub const LAYOUT_VERSION: u32 = 8;
+        pub const FONT_META_DATA: u32 = 9;
+        pub const FALLBACK_FONTS: u32 = 10;
+        pub const HYPERLINK_BOXES: u32 = 11;
+        pub const LINES: u32 = 12;
+        pub const TRUNCATION_START_INDEX: u32 = 13;
+        pub const TRUNCATED_HEIGHT: u32 = 14;
+        pub const LOGICAL_INDEX_TO_CHARACTER_OFFSET_MAP: u32 = 15;
+        pub const BLOCKQUOTES: u32 = 16;
+        pub const MIN_CONTENT_HEIGHT: u32 = 17;
+        pub const MENTION_BOXES: u32 = 18;
+        pub const DERIVED_LINES: u32 = 19;
+    }
+    pub mod derived_text_data {
+        pub const DEFINITION: u32 = 91;
+        pub const LAYOUT_SIZE: u32 = 1;
+        pub const BASELINES: u32 = 2;
+        pub const GLYPHS: u32 = 3;
+        pub const DECORATIONS: u32 = 4;
+        pub const BLOCKQUOTES: u32 = 5;
+        pub const FONT_META_DATA: u32 = 6;
+        pub const HYPERLINK_BOXES: u32 = 7;
+        pub const TRUNCATION_START_INDEX: u32 = 8;
+        pub const TRUNCATED_HEIGHT: u32 = 9;
+        pub const LOGICAL_INDEX_TO_CHARACTER_OFFSET_MAP: u32 = 10;
+        pub const MENTION_BOXES: u32 = 11;
+        pub const DERIVED_LINES: u32 = 12;
+    }
+    pub mod hyperlink_box {
+        pub const DEFINITION: u32 = 92;
+        pub const BOUNDS: u32 = 1;
+        pub const URL: u32 = 2;
+        pub const GUID: u32 = 3;
+        pub const HYPERLINK_ID: u32 = 4;
+        pub const CMS_TARGET: u32 = 5;
+        pub const OPEN_IN_NEW_TAB: u32 = 6;
+    }
+    pub mod mention_box {
+        pub const DEFINITION: u32 = 93;
+        pub const BOUNDS: u32 = 1;
+        pub const START_INDEX: u32 = 2;
+        pub const END_INDEX: u32 = 3;
+        pub const IS_VALID: u32 = 4;
+        pub const MENTION_KEY: u32 = 5;
+    }
+    pub mod baseline {
+        pub const DEFINITION: u32 = 94;
+        pub const POSITION: u32 = 1;
+        pub const WIDTH: u32 = 2;
+        pub const LINE_Y: u32 = 3;
+        pub const LINE_HEIGHT: u32 = 4;
+        pub const FIRST_CHARACTER: u32 = 5;
+        pub const END_CHARACTER: u32 = 6;
+        pub const LINE_ASCENT: u32 = 7;
+        pub const IGNORE_LEADING_TRIM: u32 = 8;
+    }
+    pub mod glyph {
+        pub const DEFINITION: u32 = 95;
+        pub const COMMANDS_BLOB: u32 = 1;
+        pub const POSITION: u32 = 2;
+        pub const STYLE_ID: u32 = 3;
+        pub const FONT_SIZE: u32 = 4;
+        pub const FIRST_CHARACTER: u32 = 5;
+        pub const ADVANCE: u32 = 6;
+        pub const EMOJI_CODE_POINTS: u32 = 7;
+        pub const EMOJI_IMAGE_SET: u32 = 8;
+        pub const ROTATION: u32 = 9;
+    }
+    pub mod decoration {
+        pub const DEFINITION: u32 = 96;
+        pub const RECTS: u32 = 1;
+        pub const STYLE_ID: u32 = 2;
+    }
+    pub mod blockquote {
+        pub const DEFINITION: u32 = 97;
+        pub const VERTICAL_BAR: u32 = 1;
+        pub const QUOTE_MARK_BOUNDS: u32 = 2;
+        pub const STYLE_ID: u32 = 3;
+    }
+    pub mod vector_data {
+        pub const DEFINITION: u32 = 98;
+        pub const VECTOR_NETWORK_BLOB: u32 = 1;
+        pub const NORMALIZED_SIZE: u32 = 2;
+        pub const STYLE_OVERRIDE_TABLE: u32 = 3;
+    }
+    pub mod text_path_start {
+        pub const DEFINITION: u32 = 99;
+        pub const T_VALUE: u32 = 1;
+        pub const FORWARD: u32 = 2;
+    }
+    pub mod guid_path {
+        pub const DEFINITION: u32 = 100;
+        pub const GUIDS: u32 = 1;
+    }
+    pub mod symbol_data {
+        pub const DEFINITION: u32 = 101;
+        pub const SYMBOL_ID: u32 = 1;
+        pub const SYMBOL_OVERRIDES: u32 = 2;
+        pub const UNIFORM_SCALE_FACTOR: u32 = 3;
+    }
+    pub mod guid_path_mapping {
+        pub const DEFINITION: u32 = 102;
+        pub const ID: u32 = 1;
+        pub const PATH: u32 = 2;
+    }
+    pub mod derived_breakpoint_data {
+        pub const DEFINITION: u32 = 103;
+        pub const OVERRIDES: u32 = 1;
+    }
+    pub mod node_generation_data {
+        pub const DEFINITION: u32 = 104;
+        pub const OVERRIDES: u32 = 1;
+        pub const USE_FINE_GRAINED_SYNCING: u32 = 2;
+        pub const DIFF_ONLY_REMOVALS: u32 = 3;
+    }
+    pub mod derived_immutable_frame_data {
+        pub const DEFINITION: u32 = 105;
+        pub const OVERRIDES: u32 = 1;
+        pub const VERSION: u32 = 2;
+    }
+    pub mod jsx_data {
+        pub const DEFINITION: u32 = 106;
+        pub const OVERRIDES: u32 = 1;
+    }
+    pub mod derived_jsx_data {
+        pub const DEFINITION: u32 = 107;
+        pub const OVERRIDES: u32 = 1;
+    }
+    pub mod asset_id_map {
+        pub const DEFINITION: u32 = 108;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod asset_id_entry {
+        pub const DEFINITION: u32 = 109;
+        pub const ASSET_KEY: u32 = 1;
+        pub const ASSET_ID: u32 = 2;
+    }
+    pub mod asset_ref {
+        pub const DEFINITION: u32 = 110;
+        pub const KEY: u32 = 1;
+        pub const VERSION: u32 = 2;
+    }
+    pub mod asset_id {
+        pub const DEFINITION: u32 = 111;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+        pub const STATE_GROUP_ID: u32 = 3;
+        pub const STYLE_ID: u32 = 4;
+        pub const SYMBOL_ID: u32 = 5;
+        pub const VARIABLE_ID: u32 = 6;
+        pub const VARIABLE_SET_ID: u32 = 7;
+    }
+    pub mod state_group_id {
+        pub const DEFINITION: u32 = 112;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod style_id {
+        pub const DEFINITION: u32 = 113;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod symbol_id {
+        pub const DEFINITION: u32 = 114;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod variable_id {
+        pub const DEFINITION: u32 = 115;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod variable_override_id {
+        pub const DEFINITION: u32 = 116;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod variable_set_id {
+        pub const DEFINITION: u32 = 117;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod theme_id {
+        pub const DEFINITION: u32 = 118;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod code_library_id {
+        pub const DEFINITION: u32 = 119;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod code_file_id {
+        pub const DEFINITION: u32 = 120;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod code_component_id {
+        pub const DEFINITION: u32 = 121;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod canvas_node_id {
+        pub const DEFINITION: u32 = 122;
+        pub const GUID: u32 = 1;
+        pub const SYMBOL_ID: u32 = 2;
+        pub const STATE_GROUP_ID: u32 = 3;
+    }
+    pub mod index_range {
+        pub const DEFINITION: u32 = 123;
+        pub const START_INDEX: u32 = 1;
+        pub const END_INDEX_EXCLUSIVE: u32 = 2;
+    }
+    pub mod collaborative_text_op_id {
+        pub const DEFINITION: u32 = 124;
+        pub const SESSION_ID: u32 = 1;
+        pub const COUNTER_ID: u32 = 2;
+    }
+    pub mod collaborative_text_op_type {
+        pub const DEFINITION: u32 = 125;
+    }
+    pub mod collaborative_text_stripped_op_run_with_i_ds {
+        pub const DEFINITION: u32 = 126;
+        pub const FIRST_ID: u32 = 1;
+        pub const RUN_LENGTH: u32 = 2;
+        pub const PARENT_IDS: u32 = 3;
+        pub const REBASED_ON_OP_IDS: u32 = 4;
+    }
+    pub mod collaborative_text_stripped_op_run_with_loc {
+        pub const DEFINITION: u32 = 127;
+        pub const TYPE: u32 = 1;
+        pub const RANGE: u32 = 2;
+        pub const RANGE_SHOULD_BE_ITERATED_IN_REVERSE: u32 = 3;
+        pub const CONTENT_BYTES_IN_BUFFER: u32 = 4;
+        pub const REBASED_RANGE: u32 = 5;
+    }
+    pub mod collaborative_text_op_run {
+        pub const DEFINITION: u32 = 128;
+        pub const ID: u32 = 1;
+        pub const PARENT_IDS: u32 = 2;
+        pub const TYPE: u32 = 3;
+        pub const RANGE: u32 = 4;
+        pub const RANGE_SHOULD_BE_ITERATED_IN_REVERSE: u32 = 5;
+        pub const CONTENT: u32 = 6;
+        pub const REBASED_ON_OP_IDS: u32 = 7;
+        pub const REBASED_RANGE: u32 = 8;
+    }
+    pub mod collaborative_plain_text {
+        pub const DEFINITION: u32 = 129;
+        pub const HISTORY_OPS_WITH_IDS: u32 = 1;
+        pub const HISTORY_OPS_WITH_LOC: u32 = 2;
+        pub const HISTORY_STRING_CONTENT_BUFFER: u32 = 3;
+        pub const CHANGES_TO_APPEND: u32 = 4;
+    }
+    pub mod collaborative_text_selection {
+        pub const DEFINITION: u32 = 130;
+        pub const NODE: u32 = 1;
+        pub const FIELD: u32 = 2;
+        pub const SELECTED_RANGE: u32 = 3;
+        pub const CARET_AT_FRONT: u32 = 4;
+        pub const TEXT_VERSION: u32 = 5;
+    }
+    pub mod responsive_text_style_variant {
+        pub const DEFINITION: u32 = 131;
+        pub const MIN_WIDTH: u32 = 1;
+        pub const FIELDS: u32 = 2;
+        pub const VARIABLE_FONT_SIZE: u32 = 3;
+        pub const VARIABLE_LINE_HEIGHT: u32 = 4;
+        pub const VARIABLE_LETTER_SPACING: u32 = 5;
+        pub const VARIABLE_PARAGRAPH_SPACING: u32 = 6;
+        pub const NAME: u32 = 7;
+    }
+    pub mod flapp_type {
+        pub const DEFINITION: u32 = 132;
+    }
+    pub mod slide_theme_props {
+        pub const DEFINITION: u32 = 133;
+        pub const THEME_VERSION: u32 = 1;
+        pub const VARIABLE_SET_ID: u32 = 2;
+        pub const TEXT_STYLE_IDS: u32 = 3;
+        pub const IS_TEXT_COLOR_MANUALLY_SELECTED: u32 = 4;
+        pub const IS_BORDER_COLOR_MANUALLY_SELECTED: u32 = 5;
+        pub const SUBSCRIBED_THEME_REF: u32 = 6;
+        pub const SCHEMA_VERSION: u32 = 7;
+        pub const IS_GENERATED_FROM_DESIGN: u32 = 8;
+    }
+    pub mod slide_theme_map {
+        pub const DEFINITION: u32 = 134;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod slide_theme_map_entry {
+        pub const DEFINITION: u32 = 135;
+        pub const THEME_ID: u32 = 1;
+        pub const THEME_PROPS: u32 = 2;
+    }
+    pub mod shared_symbol_reference {
+        pub const DEFINITION: u32 = 136;
+        pub const FILE_KEY: u32 = 1;
+        pub const SYMBOL_ID: u32 = 2;
+        pub const VERSION_HASH: u32 = 3;
+        pub const GUID_PATH_MAPPINGS: u32 = 4;
+        pub const BYTES: u32 = 5;
+        pub const LIBRARY_GUID_TO_SUBSCRIBING_GUID: u32 = 6;
+        pub const COMPONENT_KEY: u32 = 7;
+        pub const UNFLATTENING_MAPPINGS: u32 = 8;
+        pub const IS_UNFLATTENED: u32 = 9;
+    }
+    pub mod shared_component_master_data {
+        pub const DEFINITION: u32 = 137;
+        pub const COMPONENT_KEY: u32 = 1;
+        pub const PUBLISHING_GUID_PATH_TO_TEAM_LIBRARY_GUID: u32 = 2;
+        pub const IS_UNFLATTENED: u32 = 3;
+    }
+    pub mod instance_override_stash {
+        pub const DEFINITION: u32 = 138;
+        pub const OVERRIDE_PATH_OF_SWAPPED_INSTANCE: u32 = 1;
+        pub const COMPONENT_KEY: u32 = 2;
+        pub const OVERRIDES: u32 = 3;
+    }
+    pub mod instance_override_stash_v2 {
+        pub const DEFINITION: u32 = 139;
+        pub const OVERRIDE_PATH_OF_SWAPPED_INSTANCE: u32 = 1;
+        pub const LOCAL_SYMBOL_ID: u32 = 2;
+        pub const OVERRIDES: u32 = 3;
+    }
+    pub mod imported_code_file_entry {
+        pub const DEFINITION: u32 = 140;
+        pub const CODE_FILE_ID: u32 = 1;
+    }
+    pub mod imported_code_files {
+        pub const DEFINITION: u32 = 141;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod blur_op_type {
+        pub const DEFINITION: u32 = 142;
+    }
+    pub mod repeat_type {
+        pub const DEFINITION: u32 = 143;
+    }
+    pub mod unit_type {
+        pub const DEFINITION: u32 = 144;
+    }
+    pub mod repeat_order {
+        pub const DEFINITION: u32 = 145;
+    }
+    pub mod effect_axis {
+        pub const DEFINITION: u32 = 146;
+    }
+    pub mod effect {
+        pub const DEFINITION: u32 = 147;
+        pub const TYPE: u32 = 1;
+        pub const COLOR: u32 = 2;
+        pub const OFFSET: u32 = 3;
+        pub const RADIUS: u32 = 4;
+        pub const VISIBLE: u32 = 5;
+        pub const BLEND_MODE: u32 = 6;
+        pub const SPREAD: u32 = 7;
+        pub const SHOW_SHADOW_BEHIND_NODE: u32 = 8;
+        pub const RADIUS_VAR: u32 = 9;
+        pub const COLOR_VAR: u32 = 10;
+        pub const SPREAD_VAR: u32 = 11;
+        pub const X_VAR: u32 = 12;
+        pub const Y_VAR: u32 = 13;
+        pub const COUNT: u32 = 14;
+        pub const REPEAT_TYPE: u32 = 15;
+        pub const AXIS: u32 = 16;
+        pub const UNIT_TYPE: u32 = 17;
+        pub const ORDER: u32 = 18;
+        pub const BLUR_OP_TYPE: u32 = 19;
+        pub const START_OFFSET: u32 = 20;
+        pub const START_RADIUS: u32 = 21;
+        pub const NOISE_SIZE: u32 = 22;
+        pub const CLIP_TO_SHAPE: u32 = 23;
+        pub const SECONDARY_COLOR: u32 = 24;
+        pub const DENSITY: u32 = 25;
+        pub const NOISE_TYPE: u32 = 26;
+        pub const OPACITY: u32 = 27;
+        pub const END_OFFSET: u32 = 28;
+        pub const SEED: u32 = 29;
+        pub const REFRACTION_RADIUS: u32 = 30;
+        pub const SPECULAR_ANGLE: u32 = 31;
+        pub const SPECULAR_INTENSITY: u32 = 32;
+        pub const BEVEL_SIZE: u32 = 33;
+        pub const CHROMATIC_ABERRATION: u32 = 34;
+        pub const REFLECTION_DISTANCE: u32 = 35;
+        pub const REFRACTION_INTENSITY: u32 = 36;
+        pub const REFRACTION_RADIUS_VAR: u32 = 37;
+        pub const SPECULAR_ANGLE_VAR: u32 = 38;
+        pub const SPECULAR_INTENSITY_VAR: u32 = 39;
+        pub const CHROMATIC_ABERRATION_VAR: u32 = 40;
+        pub const SPLAY_VAR: u32 = 41;
+        pub const REFRACTION_INTENSITY_VAR: u32 = 42;
+        pub const CUSTOM_EFFECT_ID: u32 = 43;
+        pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 44;
+        pub const START_RADIUS_VAR: u32 = 45;
+        pub const START_OFFSET_X_VAR: u32 = 46;
+        pub const START_OFFSET_Y_VAR: u32 = 47;
+        pub const END_OFFSET_X_VAR: u32 = 48;
+        pub const END_OFFSET_Y_VAR: u32 = 49;
+        pub const NOISE_SIZE_X_VAR: u32 = 50;
+        pub const NOISE_SIZE_Y_VAR: u32 = 51;
+        pub const DENSITY_VAR: u32 = 52;
+        pub const EFFECT_OPACITY_VAR: u32 = 53;
+        pub const SECONDARY_COLOR_VAR: u32 = 54;
+        pub const ID: u32 = 55;
+    }
+    pub mod transform_modifier_type {
+        pub const DEFINITION: u32 = 148;
+    }
+    pub mod transform_modifier {
+        pub const DEFINITION: u32 = 149;
+        pub const TYPE: u32 = 1;
+        pub const OFFSET: u32 = 2;
+        pub const VISIBLE: u32 = 3;
+        pub const COUNT: u32 = 4;
+        pub const REPEAT_TYPE: u32 = 5;
+        pub const AXIS: u32 = 6;
+        pub const UNIT_TYPE: u32 = 7;
+        pub const ORDER: u32 = 8;
+        pub const SKEW_X: u32 = 9;
+        pub const SKEW_Y: u32 = 10;
+    }
+    pub mod transform_schema_type {
+        pub const DEFINITION: u32 = 150;
+    }
+    pub mod matrix4f {
+        pub const DEFINITION: u32 = 151;
+        pub const M00: u32 = 1;
+        pub const M01: u32 = 2;
+        pub const M02: u32 = 3;
+        pub const M03: u32 = 4;
+        pub const M10: u32 = 5;
+        pub const M11: u32 = 6;
+        pub const M12: u32 = 7;
+        pub const M13: u32 = 8;
+        pub const M20: u32 = 9;
+        pub const M21: u32 = 10;
+        pub const M22: u32 = 11;
+        pub const M23: u32 = 12;
+        pub const M30: u32 = 13;
+        pub const M31: u32 = 14;
+        pub const M32: u32 = 15;
+        pub const M33: u32 = 16;
+    }
+    pub mod fixed_order_transform3d {
+        pub const DEFINITION: u32 = 152;
+        pub const PERSPECTIVE: u32 = 1;
+        pub const TRANSLATE_Z: u32 = 2;
+        pub const ROTATE_X: u32 = 3;
+        pub const ROTATE_Y: u32 = 4;
+        pub const ROTATE_Z: u32 = 5;
+    }
+    pub mod transform_fn_type {
+        pub const DEFINITION: u32 = 153;
+    }
+    pub mod transform_fn_value {
+        pub const DEFINITION: u32 = 154;
+        pub const MATRIX3D: u32 = 1;
+        pub const PERSPECTIVE: u32 = 2;
+        pub const ROTATE_ANGLE: u32 = 3;
+        pub const TRANSLATE_VALUE: u32 = 4;
+    }
+    pub mod transform_fn {
+        pub const DEFINITION: u32 = 155;
+        pub const TYPE: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod transform_schema_value {
+        pub const DEFINITION: u32 = 156;
+        pub const FIXED_ORDER_TRANSFORM3D: u32 = 1;
+        pub const TRANSFORM_FUNCTIONS: u32 = 2;
+    }
+    pub mod transform3d {
+        pub const DEFINITION: u32 = 157;
+        pub const TYPE: u32 = 1;
+        pub const VALUE: u32 = 2;
+        pub const BACKFACE_HIDDEN: u32 = 3;
+    }
+    pub mod number_vector2_d {
+        pub const DEFINITION: u32 = 158;
+        pub const X: u32 = 1;
+        pub const Y: u32 = 2;
+    }
+    pub mod scene3d {
+        pub const DEFINITION: u32 = 159;
+        pub const PERSPECTIVE: u32 = 1;
+        pub const PERSPECTIVE_ORIGIN: u32 = 2;
+        pub const PRESERVE3D: u32 = 3;
+    }
+    pub mod transform_origin {
+        pub const DEFINITION: u32 = 160;
+        pub const X: u32 = 1;
+        pub const Y: u32 = 2;
+    }
+    pub mod transition_info {
+        pub const DEFINITION: u32 = 161;
+        pub const TYPE: u32 = 1;
+        pub const DURATION: u32 = 2;
+    }
+    pub mod prototype_device_type {
+        pub const DEFINITION: u32 = 162;
+    }
+    pub mod device_rotation {
+        pub const DEFINITION: u32 = 163;
+    }
+    pub mod prototype_device {
+        pub const DEFINITION: u32 = 164;
+        pub const TYPE: u32 = 1;
+        pub const SIZE: u32 = 2;
+        pub const PRESET_IDENTIFIER: u32 = 3;
+        pub const ROTATION: u32 = 4;
+    }
+    pub mod overlay_position_type {
+        pub const DEFINITION: u32 = 165;
+    }
+    pub mod overlay_background_interaction {
+        pub const DEFINITION: u32 = 166;
+    }
+    pub mod overlay_background_type {
+        pub const DEFINITION: u32 = 167;
+    }
+    pub mod overlay_background_appearance {
+        pub const DEFINITION: u32 = 168;
+        pub const BACKGROUND_TYPE: u32 = 1;
+        pub const BACKGROUND_COLOR: u32 = 2;
+    }
+    pub mod navigation_type {
+        pub const DEFINITION: u32 = 169;
+    }
+    pub mod export_color_profile {
+        pub const DEFINITION: u32 = 170;
+    }
+    pub mod export_background_type {
+        pub const DEFINITION: u32 = 171;
+    }
+    pub mod export_settings {
+        pub const DEFINITION: u32 = 172;
+        pub const SUFFIX: u32 = 1;
+        pub const IMAGE_TYPE: u32 = 2;
+        pub const CONSTRAINT: u32 = 3;
+        pub const SVG_DATA_NAME: u32 = 4;
+        pub const SVG_ID_MODE: u32 = 5;
+        pub const SVG_OUTLINE_TEXT: u32 = 6;
+        pub const CONTENTS_ONLY: u32 = 7;
+        pub const SVG_FORCE_STROKE_MASKS: u32 = 8;
+        pub const USE_ABSOLUTE_BOUNDS: u32 = 9;
+        pub const COLOR_PROFILE: u32 = 10;
+        pub const QUALITY: u32 = 11;
+        pub const USE_BICUBIC_SAMPLER: u32 = 12;
+        pub const FRAME_RATE: u32 = 13;
+        pub const LOOP_COUNT: u32 = 14;
+        pub const BACKGROUND_TYPE: u32 = 15;
+    }
+    pub mod export_svgid_mode {
+        pub const DEFINITION: u32 = 173;
+    }
+    pub mod layout_grid {
+        pub const DEFINITION: u32 = 174;
+        pub const TYPE: u32 = 1;
+        pub const AXIS: u32 = 2;
+        pub const VISIBLE: u32 = 3;
+        pub const NUM_SECTIONS: u32 = 4;
+        pub const OFFSET: u32 = 5;
+        pub const SECTION_SIZE: u32 = 6;
+        pub const GUTTER_SIZE: u32 = 7;
+        pub const COLOR: u32 = 8;
+        pub const PATTERN: u32 = 9;
+        pub const NUM_SECTIONS_VAR: u32 = 10;
+        pub const OFFSET_VAR: u32 = 11;
+        pub const SECTION_SIZE_VAR: u32 = 12;
+        pub const GUTTER_SIZE_VAR: u32 = 13;
+    }
+    pub mod guide {
+        pub const DEFINITION: u32 = 175;
+        pub const AXIS: u32 = 1;
+        pub const OFFSET: u32 = 2;
+        pub const GUID: u32 = 3;
+    }
+    pub mod path {
+        pub const DEFINITION: u32 = 176;
+        pub const WINDING_RULE: u32 = 1;
+        pub const COMMANDS_BLOB: u32 = 2;
+        pub const STYLE_ID: u32 = 3;
+    }
+    pub mod style_type {
+        pub const DEFINITION: u32 = 177;
+    }
+    pub mod brush_orientation {
+        pub const DEFINITION: u32 = 178;
+    }
+    pub mod brush_type {
+        pub const DEFINITION: u32 = 179;
+    }
+    pub mod dynamic_stroke_settings {
+        pub const DEFINITION: u32 = 180;
+        pub const FREQUENCY: u32 = 1;
+        pub const WIGGLE: u32 = 2;
+        pub const SMOOTHEN: u32 = 3;
+    }
+    pub mod scatter_stroke_settings {
+        pub const DEFINITION: u32 = 181;
+        pub const GAP: u32 = 1;
+        pub const WIGGLE: u32 = 2;
+        pub const ANGULAR_JITTER: u32 = 3;
+        pub const ROTATION: u32 = 4;
+        pub const SIZE_JITTER: u32 = 5;
+    }
+    pub mod stretch_stroke_settings {
+        pub const DEFINITION: u32 = 182;
+        pub const ORIENTATION: u32 = 1;
+    }
+    pub mod stroke_data {
+        pub const DEFINITION: u32 = 183;
+        pub const STROKES: u32 = 1;
+        pub const VERSION: u32 = 2;
+    }
+    pub mod stroke {
+        pub const DEFINITION: u32 = 184;
+        pub const STROKE_ID: u32 = 1;
+        pub const STROKE_WEIGHT: u32 = 2;
+        pub const STROKE_WEIGHT_VAR: u32 = 3;
+        pub const STROKE_PAINT: u32 = 4;
+        pub const STYLE_ID_FOR_STROKE_FILL: u32 = 5;
+        pub const STROKE_ALIGN: u32 = 6;
+        pub const STROKE_CAP: u32 = 7;
+        pub const STROKE_CAP_SIZE: u32 = 8;
+        pub const STROKE_JOIN: u32 = 9;
+        pub const MITER_LIMIT: u32 = 10;
+        pub const DASH_PATTERN: u32 = 11;
+        pub const PATH_TRIM: u32 = 12;
+        pub const STROKE_OFFSET: u32 = 13;
+        pub const IS_DELETED: u32 = 14;
+    }
+    pub mod variable_width_point {
+        pub const DEFINITION: u32 = 185;
+        pub const POSITION: u32 = 1;
+        pub const ASCENT: u32 = 2;
+        pub const DESCENT: u32 = 3;
+        pub const SEGMENT_ID: u32 = 4;
+    }
+    pub mod shared_style_reference {
+        pub const DEFINITION: u32 = 186;
+        pub const STYLE_KEY: u32 = 1;
+        pub const VERSION_HASH: u32 = 2;
+    }
+    pub mod shared_style_master_data {
+        pub const DEFINITION: u32 = 187;
+        pub const STYLE_KEY: u32 = 1;
+        pub const SORT_POSITION: u32 = 2;
+        pub const FILE_KEY: u32 = 3;
+    }
+    pub mod scroll_behavior {
+        pub const DEFINITION: u32 = 188;
+    }
+    pub mod arc_data {
+        pub const DEFINITION: u32 = 189;
+        pub const STARTING_ANGLE: u32 = 1;
+        pub const ENDING_ANGLE: u32 = 2;
+        pub const INNER_RADIUS: u32 = 3;
+    }
+    pub mod symbol_link {
+        pub const DEFINITION: u32 = 190;
+        pub const URI: u32 = 1;
+        pub const DISPLAY_NAME: u32 = 2;
+        pub const DISPLAY_TEXT: u32 = 3;
+    }
+    pub mod plugin_data {
+        pub const DEFINITION: u32 = 191;
+        pub const PLUGIN_ID: u32 = 1;
+        pub const VALUE: u32 = 2;
+        pub const KEY: u32 = 3;
+    }
+    pub mod plugin_relaunch_data {
+        pub const DEFINITION: u32 = 192;
+        pub const PLUGIN_ID: u32 = 1;
+        pub const MESSAGE: u32 = 2;
+        pub const COMMAND: u32 = 3;
+        pub const IS_DELETED: u32 = 4;
+        pub const CUSTOM_TOOL_ID: u32 = 5;
+    }
+    pub mod multiplayer_field_version {
+        pub const DEFINITION: u32 = 193;
+        pub const COUNTER: u32 = 1;
+        pub const SESSION_ID: u32 = 2;
+    }
+    pub mod connector_magnet {
+        pub const DEFINITION: u32 = 194;
+    }
+    pub mod connector_endpoint {
+        pub const DEFINITION: u32 = 195;
+        pub const ENDPOINT_NODE_ID: u32 = 1;
+        pub const POSITION: u32 = 2;
+        pub const MAGNET: u32 = 3;
+        pub const RELATIVE_POSITION: u32 = 4;
+    }
+    pub mod connector_control_point {
+        pub const DEFINITION: u32 = 196;
+        pub const POSITION: u32 = 1;
+        pub const AXIS: u32 = 2;
+    }
+    pub mod connector_text_section {
+        pub const DEFINITION: u32 = 197;
+    }
+    pub mod connector_off_axis_offset {
+        pub const DEFINITION: u32 = 198;
+    }
+    pub mod connector_text_midpoint {
+        pub const DEFINITION: u32 = 199;
+        pub const SECTION: u32 = 1;
+        pub const OFFSET: u32 = 2;
+        pub const OFF_AXIS_OFFSET: u32 = 3;
+    }
+    pub mod connector_line_style {
+        pub const DEFINITION: u32 = 200;
+    }
+    pub mod connector_type {
+        pub const DEFINITION: u32 = 201;
+    }
+    pub mod annotation_property_type {
+        pub const DEFINITION: u32 = 202;
+    }
+    pub mod annotation_property {
+        pub const DEFINITION: u32 = 203;
+        pub const TYPE: u32 = 1;
+    }
+    pub mod annotation_category_preset {
+        pub const DEFINITION: u32 = 204;
+    }
+    pub mod annotation_category_color {
+        pub const DEFINITION: u32 = 205;
+    }
+    pub mod annotation_category_custom {
+        pub const DEFINITION: u32 = 206;
+        pub const COLOR: u32 = 1;
+        pub const CUSTOM_COLOR: u32 = 2;
+        pub const LABEL: u32 = 3;
+    }
+    pub mod annotation_category {
+        pub const DEFINITION: u32 = 207;
+        pub const ID: u32 = 1;
+        pub const PRESET: u32 = 2;
+        pub const CUSTOM: u32 = 3;
+    }
+    pub mod annotation_categories {
+        pub const DEFINITION: u32 = 208;
+        pub const VERSION: u32 = 1;
+        pub const ITEMS: u32 = 2;
+    }
+    pub mod annotation {
+        pub const DEFINITION: u32 = 209;
+        pub const LABEL: u32 = 1;
+        pub const PROPERTIES: u32 = 2;
+        pub const LABEL_V2: u32 = 3;
+        pub const CATEGORY_ID: u32 = 4;
+    }
+    pub mod annotation_measurement_node_side {
+        pub const DEFINITION: u32 = 210;
+    }
+    pub mod annotation_measurement {
+        pub const DEFINITION: u32 = 211;
+        pub const ID: u32 = 1;
+        pub const FROM_NODE: u32 = 2;
+        pub const TO_NODE: u32 = 3;
+        pub const FROM_NODE_SIDE: u32 = 4;
+        pub const TO_SAME_SIDE: u32 = 5;
+        pub const INNER_OFFSET_RELATIVE: u32 = 6;
+        pub const OUTER_OFFSET_FIXED: u32 = 7;
+        pub const TO_NODE_STABLE_PATH: u32 = 8;
+        pub const FREE_TEXT: u32 = 9;
+    }
+    pub mod library_move_info {
+        pub const DEFINITION: u32 = 212;
+        pub const OLD_KEY: u32 = 1;
+        pub const PASTE_FILE_KEY: u32 = 2;
+    }
+    pub mod library_move_history_item {
+        pub const DEFINITION: u32 = 213;
+        pub const SOURCE_NODE_ID: u32 = 1;
+        pub const SOURCE_COMPONENT_KEY: u32 = 2;
+    }
+    pub mod developer_related_link {
+        pub const DEFINITION: u32 = 214;
+        pub const NODE_ID: u32 = 1;
+        pub const FILE_KEY: u32 = 2;
+        pub const LINK_NAME: u32 = 3;
+        pub const LINK_URL: u32 = 4;
+    }
+    pub mod widget_pointer {
+        pub const DEFINITION: u32 = 215;
+        pub const NODE_ID: u32 = 1;
+    }
+    pub mod edit_info {
+        pub const DEFINITION: u32 = 216;
+        pub const TIMESTAMP_ISO8601: u32 = 1;
+        pub const USER_ID: u32 = 2;
+        pub const LAST_EDITED_AT: u32 = 3;
+        pub const CREATED_AT: u32 = 4;
+    }
+    pub mod editor_type {
+        pub const DEFINITION: u32 = 217;
+    }
+    pub mod mask_type {
+        pub const DEFINITION: u32 = 218;
+    }
+    pub mod module_type {
+        pub const DEFINITION: u32 = 219;
+    }
+    pub mod section_status {
+        pub const DEFINITION: u32 = 220;
+    }
+    pub mod section_status_info {
+        pub const DEFINITION: u32 = 221;
+        pub const STATUS: u32 = 1;
+        pub const LAST_UPDATE_UNIX_TIMESTAMP: u32 = 2;
+        pub const DESCRIPTION: u32 = 3;
+        pub const USER_ID: u32 = 4;
+        pub const PREV_STATUS: u32 = 5;
+    }
+    pub mod buzz_approval_request_info {
+        pub const DEFINITION: u32 = 222;
+        pub const REQUEST_ID: u32 = 1;
+        pub const REQUESTER_USER_ID: u32 = 2;
+        pub const REQUESTED_AT: u32 = 3;
+        pub const REVIEWER_USER_IDS: u32 = 4;
+        pub const TITLE: u32 = 5;
+        pub const NOTE: u32 = 6;
+        pub const ASSETS_IN_REQUEST: u32 = 7;
+    }
+    pub mod buzz_approval_requests {
+        pub const DEFINITION: u32 = 223;
+        pub const REQUESTS: u32 = 1;
+    }
+    pub mod buzz_approval_node_status {
+        pub const DEFINITION: u32 = 224;
+    }
+    pub mod buzz_approval_node_status_info {
+        pub const DEFINITION: u32 = 225;
+        pub const CURRENT_STATUS: u32 = 1;
+        pub const WAS_PREVIOUSLY_APPROVED: u32 = 2;
+        pub const APPROVAL_REVOKED_AT_HISTORY: u32 = 3;
+    }
+    pub mod code_embed_info {
+        pub const DEFINITION: u32 = 226;
+        pub const URL: u32 = 1;
+        pub const SRC_URL: u32 = 2;
+        pub const TITLE: u32 = 3;
+        pub const THUMBNAIL_IMAGE_HASH: u32 = 4;
+        pub const IS_PUBLISHED_SITE: u32 = 5;
+    }
+    pub mod variable_timing_display_unit {
+        pub const DEFINITION: u32 = 227;
+    }
+    pub mod node_change {
+        pub const DEFINITION: u32 = 228;
+        pub const GUID: u32 = 1;
+        pub const PHASE: u32 = 2;
+        pub const PARENT_INDEX: u32 = 3;
+        pub const TYPE: u32 = 4;
+        pub const NAME: u32 = 5;
+        pub const VISIBLE: u32 = 6;
+        pub const LOCKED: u32 = 7;
+        pub const OPACITY: u32 = 8;
+        pub const BLEND_MODE: u32 = 9;
+        pub const COUNT: u32 = 10;
+        pub const SIZE: u32 = 11;
+        pub const TRANSFORM: u32 = 12;
+        pub const DASH_PATTERN: u32 = 13;
+        pub const AUTO_RENAME: u32 = 14;
+        pub const BACKGROUND_ENABLED: u32 = 15;
+        pub const MASK: u32 = 16;
+        pub const EXPORT_CONTENTS_ONLY: u32 = 17;
+        pub const MASK_IS_OUTLINE: u32 = 18;
+        pub const BACKGROUND_OPACITY: u32 = 19;
+        pub const CORNER_RADIUS: u32 = 20;
+        pub const FONT_SIZE: u32 = 21;
+        pub const PARAGRAPH_INDENT: u32 = 22;
+        pub const PARAGRAPH_SPACING: u32 = 23;
+        pub const STAR_INNER_SCALE: u32 = 24;
+        pub const MITER_LIMIT: u32 = 25;
+        pub const STROKE_WEIGHT: u32 = 26;
+        pub const TEXT_TRACKING: u32 = 27;
+        pub const HORIZONTAL_CONSTRAINT: u32 = 28;
+        pub const STROKE_ALIGN: u32 = 29;
+        pub const STROKE_CAP: u32 = 30;
+        pub const STROKE_JOIN: u32 = 31;
+        pub const TEXT_ALIGN_HORIZONTAL: u32 = 32;
+        pub const TEXT_ALIGN_VERTICAL: u32 = 33;
+        pub const TEXT_CASE: u32 = 34;
+        pub const TEXT_DECORATION: u32 = 35;
+        pub const BOOLEAN_OPERATION: u32 = 36;
+        pub const VERTICAL_CONSTRAINT: u32 = 37;
+        pub const FILL_PAINTS: u32 = 38;
+        pub const STROKE_PAINTS: u32 = 39;
+        pub const LINE_HEIGHT: u32 = 40;
+        pub const FONT_NAME: u32 = 41;
+        pub const TEXT_DATA: u32 = 42;
+        pub const EFFECTS: u32 = 43;
+        pub const HANDLE_MIRRORING: u32 = 44;
+        pub const EXPORT_SETTINGS: u32 = 45;
+        pub const TEXT_AUTO_RESIZE: u32 = 46;
+        pub const LAYOUT_GRIDS: u32 = 47;
+        pub const VECTOR_DATA: u32 = 48;
+        pub const STYLE_ID: u32 = 49;
+        pub const BACKGROUND_COLOR: u32 = 50;
+        pub const FILL_GEOMETRY: u32 = 51;
+        pub const STROKE_GEOMETRY: u32 = 52;
+        pub const GUID_TAG: u32 = 53;
+        pub const PHASE_TAG: u32 = 54;
+        pub const PARENT_INDEX_TAG: u32 = 55;
+        pub const TYPE_TAG: u32 = 56;
+        pub const NAME_TAG: u32 = 57;
+        pub const VISIBLE_TAG: u32 = 58;
+        pub const LOCKED_TAG: u32 = 59;
+        pub const OPACITY_TAG: u32 = 60;
+        pub const BLEND_MODE_TAG: u32 = 61;
+        pub const COUNT_TAG: u32 = 62;
+        pub const SIZE_TAG: u32 = 63;
+        pub const TRANSFORM_TAG: u32 = 64;
+        pub const DASH_PATTERN_TAG: u32 = 65;
+        pub const AUTO_RENAME_TAG: u32 = 66;
+        pub const BACKGROUND_ENABLED_TAG: u32 = 67;
+        pub const MASK_TAG: u32 = 68;
+        pub const EXPORT_CONTENTS_ONLY_TAG: u32 = 69;
+        pub const MASK_IS_OUTLINE_TAG: u32 = 70;
+        pub const BACKGROUND_OPACITY_TAG: u32 = 71;
+        pub const CORNER_RADIUS_TAG: u32 = 72;
+        pub const FONT_SIZE_TAG: u32 = 73;
+        pub const PARAGRAPH_INDENT_TAG: u32 = 74;
+        pub const PARAGRAPH_SPACING_TAG: u32 = 75;
+        pub const STAR_INNER_SCALE_TAG: u32 = 76;
+        pub const MITER_LIMIT_TAG: u32 = 77;
+        pub const STROKE_WEIGHT_TAG: u32 = 78;
+        pub const TEXT_TRACKING_TAG: u32 = 79;
+        pub const HORIZONTAL_CONSTRAINT_TAG: u32 = 80;
+        pub const STROKE_ALIGN_TAG: u32 = 81;
+        pub const STROKE_CAP_TAG: u32 = 82;
+        pub const STROKE_JOIN_TAG: u32 = 83;
+        pub const TEXT_ALIGN_HORIZONTAL_TAG: u32 = 84;
+        pub const TEXT_ALIGN_VERTICAL_TAG: u32 = 85;
+        pub const TEXT_CASE_TAG: u32 = 86;
+        pub const TEXT_DECORATION_TAG: u32 = 87;
+        pub const BOOLEAN_OPERATION_TAG: u32 = 88;
+        pub const VERTICAL_CONSTRAINT_TAG: u32 = 89;
+        pub const FILL_PAINTS_TAG: u32 = 90;
+        pub const STROKE_PAINTS_TAG: u32 = 91;
+        pub const LINE_HEIGHT_TAG: u32 = 92;
+        pub const FONT_NAME_TAG: u32 = 93;
+        pub const TEXT_DATA_TAG: u32 = 94;
+        pub const EFFECTS_TAG: u32 = 95;
+        pub const HANDLE_MIRRORING_TAG: u32 = 96;
+        pub const EXPORT_SETTINGS_TAG: u32 = 97;
+        pub const TEXT_AUTO_RESIZE_TAG: u32 = 98;
+        pub const LAYOUT_GRIDS_TAG: u32 = 99;
+        pub const VECTOR_DATA_TAG: u32 = 100;
+        pub const STYLE_ID_TAG: u32 = 101;
+        pub const BACKGROUND_COLOR_TAG: u32 = 102;
+        pub const FILL_GEOMETRY_TAG: u32 = 103;
+        pub const STROKE_GEOMETRY_TAG: u32 = 104;
+        pub const STACK_MODE: u32 = 105;
+        pub const STACK_MODE_TAG: u32 = 106;
+        pub const STACK_SPACING: u32 = 107;
+        pub const STACK_SPACING_TAG: u32 = 108;
+        pub const STACK_PADDING: u32 = 109;
+        pub const STACK_PADDING_TAG: u32 = 110;
+        pub const GUID_PATH: u32 = 111;
+        pub const GUID_PATH_TAG: u32 = 112;
+        pub const SYMBOL_DATA: u32 = 113;
+        pub const SYMBOL_DATA_TAG: u32 = 114;
+        pub const FRAME_MASK_DISABLED: u32 = 115;
+        pub const FRAME_MASK_DISABLED_TAG: u32 = 116;
+        pub const RESIZE_TO_FIT: u32 = 117;
+        pub const RESIZE_TO_FIT_TAG: u32 = 118;
+        pub const EXPORT_BACKGROUND_DISABLED: u32 = 119;
+        pub const STACK_COUNTER_ALIGN: u32 = 120;
+        pub const STACK_JUSTIFY: u32 = 121;
+        pub const SHARED_SYMBOL_REFERENCE: u32 = 122;
+        pub const IS_SYMBOL_PUBLISHABLE: u32 = 123;
+        pub const SHARED_SYMBOL_MAPPINGS: u32 = 124;
+        pub const DERIVED_SYMBOL_DATA: u32 = 125;
+        pub const SHARED_SYMBOL_VERSION: u32 = 126;
+        pub const FONT_VARIANT_COMMON_LIGATURES: u32 = 127;
+        pub const FONT_VARIANT_CONTEXTUAL_LIGATURES: u32 = 128;
+        pub const FONT_VARIANT_DISCRETIONARY_LIGATURES: u32 = 129;
+        pub const FONT_VARIANT_HISTORICAL_LIGATURES: u32 = 130;
+        pub const FONT_VARIANT_ORDINAL: u32 = 131;
+        pub const FONT_VARIANT_SLASHED_ZERO: u32 = 132;
+        pub const FONT_VARIANT_NUMERIC_FIGURE: u32 = 133;
+        pub const FONT_VARIANT_NUMERIC_SPACING: u32 = 134;
+        pub const FONT_VARIANT_NUMERIC_FRACTION: u32 = 135;
+        pub const FONT_VARIANT_CAPS: u32 = 136;
+        pub const FONT_VARIANT_POSITION: u32 = 137;
+        pub const GUIDES: u32 = 138;
+        pub const TRANSITION_NODE_ID: u32 = 139;
+        pub const PROTOTYPE_START_NODE_ID: u32 = 140;
+        pub const PROTOTYPE_BACKGROUND_COLOR: u32 = 141;
+        pub const INTERNAL_ONLY: u32 = 142;
+        pub const OVERRIDDEN_SYMBOL_ID: u32 = 143;
+        pub const SYMBOL_DESCRIPTION: u32 = 144;
+        pub const RECTANGLE_TOP_LEFT_CORNER_RADIUS: u32 = 145;
+        pub const RECTANGLE_TOP_RIGHT_CORNER_RADIUS: u32 = 146;
+        pub const RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS: u32 = 147;
+        pub const RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS: u32 = 148;
+        pub const RECTANGLE_CORNER_RADII_INDEPENDENT: u32 = 149;
+        pub const RECTANGLE_CORNER_TOOL_INDEPENDENT: u32 = 150;
+        pub const PROPORTIONS_CONSTRAINED: u32 = 151;
+        pub const SHARED_COMPONENT_MASTER_DATA: u32 = 152;
+        pub const TRANSITION_INFO: u32 = 153;
+        pub const TRANSITION_TYPE: u32 = 154;
+        pub const TRANSITION_DURATION: u32 = 155;
+        pub const EASING_TYPE: u32 = 156;
+        pub const IS_FILL_STYLE: u32 = 157;
+        pub const INHERIT_FILL_STYLE_ID: u32 = 158;
+        pub const SCROLL_DIRECTION: u32 = 159;
+        pub const CORNER_SMOOTHING: u32 = 160;
+        pub const IS_STROKE_STYLE: u32 = 161;
+        pub const INHERIT_STROKE_STYLE_ID: u32 = 162;
+        pub const STYLE_TYPE: u32 = 163;
+        pub const UNFLATTENING_MAPPINGS: u32 = 164;
+        pub const LETTER_SPACING: u32 = 165;
+        pub const SCROLL_OFFSET: u32 = 166;
+        pub const INHERIT_TEXT_STYLE_ID: u32 = 167;
+        pub const INHERIT_EXPORT_STYLE_ID: u32 = 168;
+        pub const INHERIT_EFFECT_STYLE_ID: u32 = 169;
+        pub const INHERIT_GRID_STYLE_ID: u32 = 170;
+        pub const VERSION: u32 = 171;
+        pub const SHARED_STYLE_MASTER_DATA: u32 = 172;
+        pub const SHARED_STYLE_REFERENCE: u32 = 173;
+        pub const IS_PUBLISHABLE: u32 = 174;
+        pub const EXPORT_TEXT_AS_SVG_TEXT: u32 = 175;
+        pub const IS_SOFT_DELETED_STYLE: u32 = 176;
+        pub const IS_NON_UPDATEABLE: u32 = 177;
+        pub const SCROLL_CONTRACTED_STATE: u32 = 178;
+        pub const CONTRACTED_SIZE: u32 = 179;
+        pub const FIXED_CHILDREN_DIVIDER: u32 = 180;
+        pub const TRANSITION_PRESERVE_SCROLL: u32 = 181;
+        pub const CONNECTION_TYPE: u32 = 182;
+        pub const CONNECTION_URL: u32 = 183;
+        pub const PROTOTYPE_DEVICE: u32 = 184;
+        pub const INHERIT_FILL_STYLE_ID_FOR_STROKE: u32 = 185;
+        pub const SCROLL_BEHAVIOR: u32 = 186;
+        pub const INTERACTION_TYPE: u32 = 187;
+        pub const TRANSITION_TIMEOUT: u32 = 188;
+        pub const INTERACTION_MAINTAINED: u32 = 189;
+        pub const INTERACTION_DURATION: u32 = 190;
+        pub const STYLE_DESCRIPTION: u32 = 191;
+        pub const DESTINATION_IS_OVERLAY: u32 = 192;
+        pub const BACKGROUND_PAINTS: u32 = 193;
+        pub const INHERIT_FILL_STYLE_ID_FOR_BACKGROUND: u32 = 194;
+        pub const ARC_DATA: u32 = 195;
+        pub const DERIVED_SYMBOL_DATA_LAYOUT_VERSION: u32 = 196;
+        pub const NAVIGATION_TYPE: u32 = 197;
+        pub const OVERLAY_POSITION_TYPE: u32 = 198;
+        pub const OVERLAY_RELATIVE_POSITION: u32 = 199;
+        pub const OVERLAY_BACKGROUND_INTERACTION: u32 = 200;
+        pub const OVERLAY_BACKGROUND_APPEARANCE: u32 = 201;
+        pub const FONT_VERSION: u32 = 202;
+        pub const TEXT_USER_LAYOUT_VERSION: u32 = 203;
+        pub const PLUGIN_DATA: u32 = 204;
+        pub const TOGGLED_ON_OT_FEATURES: u32 = 205;
+        pub const TOGGLED_OFF_OT_FEATURES: u32 = 206;
+        pub const TRANSITION_SHOULD_SMART_ANIMATE: u32 = 207;
+        pub const STACK_ALIGN: u32 = 208;
+        pub const STACK_HORIZONTAL_PADDING: u32 = 209;
+        pub const STACK_VERTICAL_PADDING: u32 = 210;
+        pub const STACK_WIDTH: u32 = 211;
+        pub const STACK_HEIGHT: u32 = 212;
+        pub const OVERRIDE_KEY: u32 = 213;
+        pub const PUBLISH_FILE: u32 = 214;
+        pub const PUBLISH_ID: u32 = 215;
+        pub const COMPONENT_KEY: u32 = 216;
+        pub const IS_C2: u32 = 217;
+        pub const PUBLISHED_VERSION: u32 = 218;
+        pub const PLUGIN_RELAUNCH_DATA: u32 = 219;
+        pub const CONTAINER_SUPPORTS_FILL_STROKE_AND_CORNERS: u32 = 220;
+        pub const STACK_COUNTER_SIZING: u32 = 221;
+        pub const CONTAINERS_SUPPORT_FILL_STROKE_AND_CORNERS: u32 = 222;
+        pub const HYPERLINK: u32 = 223;
+        pub const KEY_TRIGGER: u32 = 224;
+        pub const IS_STATE_GROUP: u32 = 225;
+        pub const PROTOTYPE_INTERACTIONS: u32 = 226;
+        pub const VOICE_EVENT_PHRASE: u32 = 227;
+        pub const FORCE_UNFLATTENING_MAPPINGS: u32 = 228;
+        pub const STACK_PRIMARY_SIZING: u32 = 229;
+        pub const STACK_PRIMARY_ALIGN_ITEMS: u32 = 230;
+        pub const STACK_COUNTER_ALIGN_ITEMS: u32 = 231;
+        pub const STACK_CHILD_PRIMARY_GROW: u32 = 232;
+        pub const STACK_PADDING_RIGHT: u32 = 233;
+        pub const STACK_PADDING_BOTTOM: u32 = 234;
+        pub const ANCESTOR_PATH_BEFORE_DELETION: u32 = 235;
+        pub const STACK_CHILD_ALIGN_SELF: u32 = 236;
+        pub const SYMBOL_LINKS: u32 = 237;
+        pub const STATE_GROUP_PROPERTY_VALUE_ORDERS: u32 = 238;
+        pub const TEXT_LIST_DATA: u32 = 239;
+        pub const NODE_GENERATION_DATA: u32 = 240;
+        pub const SHAPE_WITH_TEXT_TYPE: u32 = 241;
+        pub const CONNECTOR_START: u32 = 242;
+        pub const CONNECTOR_END: u32 = 243;
+        pub const CONNECTOR_LINE_STYLE: u32 = 244;
+        pub const CONNECTOR_START_CAP: u32 = 245;
+        pub const CONNECTOR_END_CAP: u32 = 246;
+        pub const SHAPE_USER_HEIGHT: u32 = 247;
+        pub const OVERRIDE_STASH: u32 = 248;
+        pub const PROTOTYPE_STARTING_POINT: u32 = 249;
+        pub const OVERRIDE_STASH_V2: u32 = 250;
+        pub const INTERNAL_ENUM_FOR_TEST: u32 = 251;
+        pub const ORIGIN_COMPONENT_KEY: u32 = 252;
+        pub const CONNECTOR_CONTROL_POINTS: u32 = 253;
+        pub const DERIVED_IMMUTABLE_FRAME_DATA: u32 = 254;
+        pub const CONNECTOR_TEXT_MIDPOINT: u32 = 255;
+        pub const LIBRARY_MOVE_INFO: u32 = 256;
+        pub const INTERNAL_DATA_FOR_TEST: u32 = 257;
+        pub const USE_ABSOLUTE_BOUNDS: u32 = 258;
+        pub const CODE_BLOCK_LANGUAGE: u32 = 259;
+        pub const FONT_VARIATIONS: u32 = 260;
+        pub const DETACH_OPTICAL_SIZE_FROM_FONT_SIZE: u32 = 261;
+        pub const WIDGET_METADATA: u32 = 262;
+        pub const WIDGET_EVENTS: u32 = 263;
+        pub const LIST_SPACING: u32 = 264;
+        pub const WIDGET_PROPERTY_MENU_ITEMS: u32 = 265;
+        pub const COMPONENT_PROP_DEFS: u32 = 266;
+        pub const COMPONENT_PROP_REFS: u32 = 267;
+        pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 268;
+        pub const STACK_POSITIONING: u32 = 269;
+        pub const EMBED_DATA: u32 = 270;
+        pub const STACK_REVERSE_Z_INDEX: u32 = 271;
+        pub const RICH_MEDIA_DATA: u32 = 272;
+        pub const WIDGET_SYNCED_STATE: u32 = 273;
+        pub const WIDGET_SYNC_CURSOR: u32 = 274;
+        pub const WIDGET_DERIVED_SUBTREE_CURSOR: u32 = 275;
+        pub const WIDGET_CACHED_ANCESTOR: u32 = 276;
+        pub const RENDERED_SYNCED_STATE: u32 = 277;
+        pub const LINK_PREVIEW_DATA: u32 = 278;
+        pub const TEXT_BIDI_VERSION: u32 = 279;
+        pub const TEXT_TRUNCATION: u32 = 280;
+        pub const LIBRARY_MOVE_HISTORY: u32 = 281;
+        pub const SHAPE_TRUNCATES: u32 = 282;
+        pub const SECTION_CONTENTS_HIDDEN: u32 = 283;
+        pub const SIMPLIFY_INSTANCE_PANELS: u32 = 284;
+        pub const WIDGET_INPUT_BEHAVIOR: u32 = 285;
+        pub const WIDGET_TOOLTIP: u32 = 286;
+        pub const BORDER_TOP_HIDDEN: u32 = 287;
+        pub const BORDER_BOTTOM_HIDDEN: u32 = 288;
+        pub const BORDER_LEFT_HIDDEN: u32 = 289;
+        pub const BORDER_RIGHT_HIDDEN: u32 = 290;
+        pub const WIDGET_HOVER_STYLE: u32 = 291;
+        pub const HAS_HAD_RTL_TEXT: u32 = 292;
+        pub const IS_WIDGET_STICKABLE: u32 = 293;
+        pub const BORDERS_TAKE_SPACE: u32 = 294;
+        pub const BORDER_TOP_WEIGHT: u32 = 295;
+        pub const BORDER_BOTTOM_WEIGHT: u32 = 296;
+        pub const BORDER_LEFT_WEIGHT: u32 = 297;
+        pub const BORDER_RIGHT_WEIGHT: u32 = 298;
+        pub const BORDER_STROKE_WEIGHTS_INDEPENDENT: u32 = 299;
+        pub const VIDEO_PLAYBACK: u32 = 300;
+        pub const STAMP_DATA: u32 = 301;
+        pub const ACCESSIBLE_HTML_TAG: u32 = 302;
+        pub const ARIA_ROLE: u32 = 303;
+        pub const ACCESSIBLE_LABEL: u32 = 304;
+        pub const PROPS_ARE_BUBBLED: u32 = 305;
+        pub const VARIABLE_DATA: u32 = 306;
+        pub const VARIABLE_CONSUMPTION_MAP: u32 = 307;
+        pub const TABLE_ROW_POSITIONS: u32 = 308;
+        pub const TABLE_COLUMN_POSITIONS: u32 = 309;
+        pub const TABLE_ROW_HEIGHTS: u32 = 310;
+        pub const TABLE_COLUMN_WIDTHS: u32 = 311;
+        pub const VARIABLE_SET_MODES: u32 = 312;
+        pub const VARIABLE_SET_ID: u32 = 313;
+        pub const VARIABLE_RESOLVED_TYPE: u32 = 314;
+        pub const VARIABLE_DATA_VALUES: u32 = 315;
+        pub const VARIABLE_MODE_BY_SET_MAP: u32 = 316;
+        pub const MASK_TYPE: u32 = 317;
+        pub const DESCRIPTION: u32 = 318;
+        pub const KEY: u32 = 319;
+        pub const SORT_POSITION: u32 = 320;
+        pub const OVERRIDE_LEVEL: u32 = 321;
+        pub const LEADING_TRIM: u32 = 322;
+        pub const STACK_WRAP: u32 = 323;
+        pub const STACK_COUNTER_SPACING: u32 = 324;
+        pub const MIN_SIZE: u32 = 325;
+        pub const MAX_SIZE: u32 = 326;
+        pub const AGENDA_POSITION_MAP: u32 = 327;
+        pub const AGENDA_METADATA_MAP: u32 = 328;
+        pub const MIGRATION_STATUS: u32 = 329;
+        pub const IS_SOFT_DELETED: u32 = 330;
+        pub const EDIT_INFO: u32 = 331;
+        pub const STYLE_ID_FOR_FILL: u32 = 332;
+        pub const STYLE_ID_FOR_STROKE_FILL: u32 = 333;
+        pub const STYLE_ID_FOR_TEXT: u32 = 334;
+        pub const STYLE_ID_FOR_EFFECT: u32 = 335;
+        pub const STYLE_ID_FOR_GRID: u32 = 336;
+        pub const HANGING_PUNCTUATION: u32 = 337;
+        pub const DERIVED_IMMUTABLE_FRAME_DATA_VERSION: u32 = 338;
+        pub const HANGING_LIST: u32 = 339;
+        pub const MENTION: u32 = 340;
+        pub const COLOR_PROFILE: u32 = 341;
+        pub const DETACHED_SYMBOL_ID: u32 = 342;
+        pub const STACK_COUNTER_ALIGN_CONTENT: u32 = 343;
+        pub const IS_SNAKE_GAME_BOARD: u32 = 344;
+        pub const OJANS_SUPER_SECRET_NODE_FIELD: u32 = 345;
+        pub const CHILD_READING_DIRECTION: u32 = 346;
+        pub const READING_INDEX: u32 = 347;
+        pub const SEV_MOONLIT_LILY_DATA: u32 = 348;
+        pub const DOCUMENT_COLOR_PROFILE: u32 = 349;
+        pub const VARIABLE_TOKEN_NAME: u32 = 350;
+        pub const MAX_LINES: u32 = 351;
+        pub const SECTION_STATUS: u32 = 352;
+        pub const VARIABLE_SCOPES: u32 = 353;
+        pub const DEVELOPER_RELATED_LINKS: u32 = 354;
+        pub const SECTION_STATUS_INFO: u32 = 355;
+        pub const SLIDE_ACTIVE_THEME_LIB_KEY: u32 = 356;
+        pub const ARIA_ATTRIBUTES: u32 = 357;
+        pub const CODE_SYNTAX: u32 = 358;
+        pub const DERIVED_TEXT_DATA: u32 = 359;
+        pub const SHOULD_HIDE_CURSORS_ON_WIDGET_HOVER: u32 = 360;
+        pub const HANDOFF_STATUS_MAP: u32 = 361;
+        pub const LAYOUT_ROOT: u32 = 362;
+        pub const DIAGRAM_PARENT_ID: u32 = 363;
+        pub const LAYOUT_POSITION: u32 = 364;
+        pub const EDIT_SCOPE_INFO: u32 = 365;
+        pub const DIAGRAM_LAYOUT_RULE_TYPE: u32 = 366;
+        pub const DIAGRAM_PARENT_INDEX: u32 = 367;
+        pub const DIAGRAM_LAYOUT_PAUSED: u32 = 368;
+        pub const ANNOTATIONS: u32 = 369;
+        pub const SECTION_PRESET_INFO: u32 = 370;
+        pub const INTERACTIVE_SLIDE_CONFIG_DATA: u32 = 371;
+        pub const INTERACTIVE_SLIDE_PARTICIPANT_DATA: u32 = 372;
+        pub const CONNECTOR_TYPE: u32 = 373;
+        pub const SEMANTIC_WEIGHT: u32 = 374;
+        pub const SEMANTIC_ITALIC: u32 = 375;
+        pub const IS_OVERRIDE_OVER_TEXT_STYLE: u32 = 376;
+        pub const BACKING_VARIABLE_SET_ID: u32 = 377;
+        pub const BACKING_VARIABLE_ID: u32 = 378;
+        pub const THEME_ID: u32 = 379;
+        pub const IS_PAGE_DIVIDER: u32 = 380;
+        pub const SLIDE_THEME_DATA: u32 = 381;
+        pub const MODULE_TYPE: u32 = 382;
+        pub const FILE_ASSET_IDS: u32 = 383;
+        pub const MEASUREMENTS: u32 = 384;
+        pub const IS_COLLECTION_EXTENDABLE: u32 = 385;
+        pub const ROOT_VARIABLE_KEY: u32 = 386;
+        pub const IS_RESPONSIVE_SET: u32 = 387;
+        pub const PASTE_SOURCE: u32 = 388;
+        pub const SLIDE_SPEAKER_NOTES: u32 = 389;
+        pub const SLIDE_THEME_MAP: u32 = 390;
+        pub const EMOJI_IMAGE_SET: u32 = 391;
+        pub const SLIDE_THUMBNAIL_HASH: u32 = 392;
+        pub const SLIDE_TEMPLATE_FILE_KEY: u32 = 393;
+        pub const NESTED_INSTANCE_RESIZE_ENABLED: u32 = 394;
+        pub const SOURCE_LIBRARY_KEY: u32 = 395;
+        pub const TEXT_EXPLICIT_LAYOUT_VERSION: u32 = 396;
+        pub const PAGE_TYPE: u32 = 397;
+        pub const DEFAULT_RESPONSIVE_SET_ID: u32 = 398;
+        pub const USER_FACING_VERSION: u32 = 399;
+        pub const RESPONSIVE_SET_SETTINGS: u32 = 400;
+        pub const WIDGET_INPUT_TEXT_NODE_TYPE: u32 = 401;
+        pub const FLAPP_TYPE: u32 = 402;
+        pub const ARE_SLIDES_MANUALLY_INDENTED: u32 = 403;
+        pub const BEHAVIORS: u32 = 404;
+        pub const AI_EDITED_NODE_CHANGE_FIELD_NUMBERS: u32 = 405;
+        pub const SORTED_MOVING_CHILD_INDICES: u32 = 406;
+        pub const FIRST_DRAFT_DATA: u32 = 407;
+        pub const AI_EDIT_SCOPE_LABEL: u32 = 408;
+        pub const PLATFORM_SHAPE_DEFINITION: u32 = 409;
+        pub const IS_SKIPPED_SLIDE: u32 = 410;
+        pub const TEXT_DECORATION_FILL_PAINTS: u32 = 411;
+        pub const TEXT_DECORATION_SKIP_INK: u32 = 412;
+        pub const TEXT_UNDERLINE_OFFSET: u32 = 413;
+        pub const SOURCE_CODE: u32 = 414;
+        pub const TEXT_DECORATION_THICKNESS: u32 = 415;
+        pub const TEXT_DECORATION_STYLE: u32 = 416;
+        pub const RESPONSIVE_TEXT_STYLE_VARIANTS: u32 = 417;
+        pub const FIRST_DRAFT_KIT_ELEMENT_DATA: u32 = 418;
+        pub const CMS_SELECTOR: u32 = 419;
+        pub const CMS_CONSUMPTION_MAP: u32 = 420;
+        pub const COOPER_REVERT_DATA: u32 = 421;
+        pub const HUB_FILE_ATTRIBUTION: u32 = 422;
+        pub const TARGET_ASPECT_RATIO: u32 = 423;
+        pub const ROTATION_ORIGIN: u32 = 424;
+        pub const VECTOR_OPERATION_VERSION: u32 = 425;
+        pub const OBJECT_ANIMATIONS: u32 = 426;
+        pub const BELONGS_TO_CODE_LIBRARY_ID: u32 = 427;
+        pub const EXPORTED_FROM_CODE_FILE_ID: u32 = 428;
+        pub const BACKING_CODE_COMPONENT_ID: u32 = 429;
+        pub const CODE_EXPORT_NAME: u32 = 430;
+        pub const CODE_SNAPSHOT_STATE: u32 = 431;
+        pub const TEXT_PATH_START: u32 = 432;
+        pub const CODE_BLOCK_THEME: u32 = 433;
+        pub const LOCK_MODE: u32 = 434;
+        pub const GRID_ROWS: u32 = 435;
+        pub const GRID_COLUMNS: u32 = 436;
+        pub const GRID_ROW_GAP: u32 = 437;
+        pub const GRID_COLUMN_GAP: u32 = 438;
+        pub const GRID_ROW_ANCHOR: u32 = 439;
+        pub const GRID_COLUMN_ANCHOR: u32 = 440;
+        pub const GRID_ROW_SPAN: u32 = 441;
+        pub const GRID_COLUMN_SPAN: u32 = 442;
+        pub const SLIDE_NUMBER: u32 = 443;
+        pub const COLLABORATIVE_SOURCE_CODE: u32 = 444;
+        pub const PARAMETER_CONSUMPTION_MAP: u32 = 445;
+        pub const STROKE_BRUSH_GUID: u32 = 446;
+        pub const VARIABLE_WIDTH_POINTS: u32 = 447;
+        pub const DYNAMIC_STROKE_SETTINGS: u32 = 448;
+        pub const SCATTER_STROKE_SETTINGS: u32 = 449;
+        pub const STRETCH_STROKE_SETTINGS: u32 = 450;
+        pub const CHAT_MESSAGES: u32 = 451;
+        pub const BRUSH_TYPE: u32 = 452;
+        pub const ANNOTATION_CATEGORIES: u32 = 453;
+        pub const MANAGED_STRING_DATA: u32 = 454;
+        pub const TRANSFORM_MODIFIERS: u32 = 455;
+        pub const SLIDE_NUMBER_SEPARATOR: u32 = 456;
+        pub const PRIMARY_RESPONSIVE_NODE_ID: u32 = 457;
+        pub const IS_PRIMARY_BREAKPOINT: u32 = 458;
+        pub const CODE_SNAPSHOT: u32 = 459;
+        pub const CMS_RICH_TEXT_STYLE_MAP: u32 = 460;
+        pub const COOPER_TEMPLATE_DATA: u32 = 461;
+        pub const MULTI_EDIT_GLUE_ID: u32 = 462;
+        pub const IS_SLOT: u32 = 463;
+        pub const OVERRIDDEN_VARIABLE_ID: u32 = 464;
+        pub const IS_CODE_BEHAVIOR: u32 = 465;
+        pub const THUMBNAIL_INFO: u32 = 466;
+        pub const IMPORTED_CODE_FILES: u32 = 467;
+        pub const CODE_FILE_CANVAS_NODE_ID: u32 = 468;
+        pub const AUTO_FORK_CODE: u32 = 469;
+        pub const HAS_BEEN_MANUALLY_RENAMED: u32 = 470;
+        pub const CODE_CREATED_FROM_DESIGN: u32 = 471;
+        pub const CODE_FILE_PATH: u32 = 472;
+        pub const IMAGE_IMPORTS: u32 = 473;
+        pub const GRID_COLUMNS_SIZING: u32 = 474;
+        pub const GRID_ROWS_SIZING: u32 = 475;
+        pub const GRID_CHILD_VERTICAL_ALIGN: u32 = 476;
+        pub const GRID_CHILD_HORIZONTAL_ALIGN: u32 = 477;
+        pub const CODE_BEHAVIOR_DATA: u32 = 478;
+        pub const CONNECTOR_BEZIER_CONTROL_POINTS: u32 = 479;
+        pub const CODE_SNAPSHOT_INVALIDATED_AT: u32 = 480;
+        pub const CODE_CREATED_FROM_DESIGN_NODE_ID: u32 = 481;
+        pub const STROKE_SEED: u32 = 482;
+        pub const VARIANT_PROP_SPECS: u32 = 483;
+        pub const CODE_CHAT_MESSAGES_KEY: u32 = 484;
+        pub const CHAT_COMPRESSION_STATE: u32 = 485;
+        pub const IS_EMBEDDED_PROTOTYPE: u32 = 486;
+        pub const IS_MAIN_CODE_COMPONENT: u32 = 487;
+        pub const SCATTER_BRUSH_TRANSFORMS: u32 = 488;
+        pub const JSX_PROPS: u32 = 489;
+        pub const IS_DECORATIVE_IMAGE: u32 = 490;
+        pub const JSX_DATA: u32 = 491;
+        pub const DERIVED_JSX_DATA: u32 = 492;
+        pub const STABLE_KEY: u32 = 493;
+        pub const AI_CANVAS_PROMPT: u32 = 494;
+        pub const IS_SLOT_CONTENT: u32 = 495;
+        pub const AI_CHAT_THREAD: u32 = 496;
+        pub const STROKE_CAP_SIZE: u32 = 497;
+        pub const IS_ENTRYPOINT_CODE_FILE: u32 = 498;
+        pub const BACKING_NODE_ID: u32 = 499;
+        pub const DERIVED_BREAKPOINT_DATA: u32 = 500;
+        pub const BREAKPOINT_MIN_WIDTH: u32 = 501;
+        pub const COMPONENT_OR_STATE_GROUP_KEY: u32 = 502;
+        pub const COMPONENT_OR_STATE_GROUP_VERSION: u32 = 503;
+        pub const SOURCE_CODE_LIBRARY_KEY: u32 = 504;
+        pub const INTERPOLATION_TYPE: u32 = 505;
+        pub const TIMELINE_POSITION: u32 = 506;
+        pub const KEYFRAME_VALUE: u32 = 507;
+        pub const BEZIER_HANDLES: u32 = 508;
+        pub const KEYFRAME_OPERATION: u32 = 509;
+        pub const TIMELINE_POSITION_TYPE: u32 = 510;
+        pub const CLIP_ID: u32 = 511;
+        pub const TIMELINE_DURATION: u32 = 512;
+        pub const TIMELINE_OFFSET: u32 = 513;
+        pub const PLAYBACK_STYLE: u32 = 514;
+        pub const SOURCE_CODE_LIBRARY_KEYS: u32 = 515;
+        pub const CODE_OBJECT_TYPE: u32 = 516;
+        pub const INHERITED_VARIABLE_IDS: u32 = 517;
+        pub const MAKE_LIBRARY_COMPONENT_ID: u32 = 518;
+        pub const CODE_LIBRARY_FORMAT: u32 = 519;
+        pub const SHOULD_HIDE_PREVIEW_FOR_MAKE_KIT_CREATION: u32 = 520;
+        pub const ANIMATION_PRESETS: u32 = 521;
+        pub const IS_BREAKPOINT_IN_FOCUS: u32 = 522;
+        pub const MOTION_TRANSFORM: u32 = 523;
+        pub const USED_MAKE_LIBRARIES: u32 = 524;
+        pub const CODE_EXAMPLES: u32 = 525;
+        pub const TRANSITION_OVERRIDES: u32 = 526;
+        pub const IS_CODE_PREVIEW_PLAYING_ON_CANVAS: u32 = 527;
+        pub const BUZZ_APPROVAL_REQUESTS: u32 = 528;
+        pub const BUZZ_APPROVAL_NODE_STATUS_INFO: u32 = 529;
+        pub const IS_STROKE_PAINT_DERIVED: u32 = 530;
+        pub const CODE_PREVIEW_SETTINGS: u32 = 531;
+        pub const CODE_EMBED_INFO: u32 = 532;
+        pub const CONNECTOR_VERSION: u32 = 533;
+        pub const SOURCE_CODE_COLLABORATIVE_TEXT_VERSION: u32 = 534;
+        pub const EASING_DATA: u32 = 535;
+        pub const MIME_TYPE: u32 = 536;
+        pub const BLOB_REF: u32 = 537;
+        pub const TABLE_MERGED_CELLS: u32 = 538;
+        pub const REPEATER_SYMBOL_ID: u32 = 539;
+        pub const REPEATER_CMS_OVERRIDE_DATA: u32 = 540;
+        pub const REPEATER_OVERRIDE_DATA: u32 = 541;
+        pub const PATH_TRIM: u32 = 542;
+        pub const TIMELINE_DISABLED: u32 = 543;
+        pub const USE_LEGACY_SMART_ANIMATE: u32 = 544;
+        pub const IS_CLIP: u32 = 545;
+        pub const IS_EMBED_CODE_LAYER: u32 = 546;
+        pub const CODE_COMPONENT_DESCRIPTION: u32 = 547;
+        pub const PAGE_STATUS: u32 = 548;
+        pub const REPEATER_SYMBOL_OVERRIDE_DATA: u32 = 549;
+        pub const FALLBACK_GLYPHS: u32 = 550;
+        pub const IS_MAKE_KIT: u32 = 551;
+        pub const TIMELINE_DEFINITIONS: u32 = 552;
+        pub const TIMELINE_ASSIGNMENTS: u32 = 553;
+        pub const STROKE_OFFSET: u32 = 554;
+        pub const GRID_AUTO_TRACKS: u32 = 555;
+        pub const GRID_REFLOW_ENABLED: u32 = 556;
+        pub const SOURCE_CONTROL_CONFIG: u32 = 557;
+        pub const CODE_SOURCE_INFO: u32 = 558;
+        pub const SPEC_BLOCK_TYPE: u32 = 559;
+        pub const SPEC_BLOCK_CONTENT: u32 = 560;
+        pub const SPEC_CODE_BLOCK_LANGUAGE: u32 = 561;
+        pub const SPEC_BLOCK_TABLE_ALIGNMENT: u32 = 562;
+        pub const SPEC_BLOCK_INDENT_LEVEL: u32 = 563;
+        pub const OFFSET_FILL_MASK_GEOMETRY: u32 = 564;
+        pub const PLACEHOLDER: u32 = 565;
+        pub const TIMING_DISPLAY_UNIT: u32 = 566;
+        pub const DISABLE_JIT_DST: u32 = 567;
+        pub const TOOLS: u32 = 568;
+        pub const CUSTOM_EFFECTS: u32 = 569;
+        pub const TRANSFORM3D: u32 = 570;
+        pub const STROKE_DATA: u32 = 571;
+        pub const SCENE3D: u32 = 572;
+        pub const PRESENTATION_OUTLINES: u32 = 573;
+        pub const STACK_LAYOUT_VERSION: u32 = 574;
+        pub const SPEC_IMAGE_HASH: u32 = 575;
+        pub const SPEC_WIDTH: u32 = 576;
+        pub const SPEC_HEIGHT: u32 = 577;
+        pub const SPEC_BLOCK_TABLE_ROW_HEIGHTS: u32 = 578;
+        pub const SPEC_BLOCK_TABLE_COLUMN_WIDTHS: u32 = 579;
+        pub const STYLE_ANIMATIONS: u32 = 580;
+        pub const PARTIAL_PASTE_ANNOTATION: u32 = 581;
+        pub const STYLE_IDS_FOR_ANIMATION: u32 = 582;
+        pub const BACKING_ANIMATION_PRESET_ID: u32 = 583;
+        pub const PLACEHOLDER_CLIENT_LIFECYCLE_ID: u32 = 584;
+        pub const PLACEHOLDER_INVALIDATE_AT: u32 = 585;
+        pub const KEYFRAME_VALUE_REF: u32 = 586;
+        pub const TRANSFORM_ORIGIN: u32 = 587;
+        pub const CUSTOM_TOOL_ARTIFACT_REF: u32 = 588;
+        pub const CODE_SNAPSHOT_LAYERS: u32 = 589;
+        pub const SPEC_EMBED_URL: u32 = 590;
+    }
+    pub mod git_repo_ref_provider {
+        pub const DEFINITION: u32 = 229;
+    }
+    pub mod git_repo_ref {
+        pub const DEFINITION: u32 = 230;
+        pub const PROVIDER: u32 = 1;
+        pub const GIT_REPO: u32 = 2;
+        pub const GIT_REF: u32 = 3;
+    }
+    pub mod source_control_config {
+        pub const DEFINITION: u32 = 231;
+        pub const ORIGIN: u32 = 1;
+        pub const UPSTREAM: u32 = 2;
+    }
+    pub mod code_snapshot {
+        pub const DEFINITION: u32 = 232;
+        pub const PAINTS: u32 = 1;
+        pub const OFFSET: u32 = 2;
+        pub const LAYOUT_SIZE: u32 = 3;
+        pub const DEVICE_PIXEL_RATIO: u32 = 4;
+        pub const CANVAS_SIZE: u32 = 5;
+        pub const STATE: u32 = 6;
+        pub const INVALIDATED_AT: u32 = 7;
+    }
+    pub mod code_output_layer {
+        pub const DEFINITION: u32 = 233;
+        pub const NODE: u32 = 1;
+    }
+    pub mod code_snapshot_layers {
+        pub const DEFINITION: u32 = 234;
+        pub const STATE: u32 = 1;
+        pub const INVALIDATED_AT: u32 = 2;
+        pub const LAYERS: u32 = 3;
+    }
+    pub mod code_behavior_data {
+        pub const DEFINITION: u32 = 235;
+        pub const NAME: u32 = 1;
+        pub const ICON: u32 = 2;
+        pub const NODE_TYPES: u32 = 3;
+        pub const CATEGORY: u32 = 4;
+        pub const API_VERSION: u32 = 5;
+    }
+    pub mod code_example {
+        pub const DEFINITION: u32 = 236;
+        pub const EXAMPLE_NAME: u32 = 1;
+        pub const CODE_EXPORT_NAME: u32 = 2;
+    }
+    pub mod used_make_library {
+        pub const DEFINITION: u32 = 237;
+        pub const MAKE_LIBRARY_ID: u32 = 1;
+    }
+    pub mod cookie_banner_text {
+        pub const DEFINITION: u32 = 238;
+        pub const BANNER_HEADER: u32 = 1;
+        pub const BANNER_DISCLAIMER_EXPLICIT: u32 = 2;
+        pub const BANNER_DISCLAIMER_IMPLICIT: u32 = 3;
+        pub const POLICY_LABEL: u32 = 4;
+        pub const ACCEPT_TEXT: u32 = 5;
+        pub const ACKNOWLEDGE_TEXT: u32 = 6;
+        pub const MANAGE_TEXT: u32 = 7;
+        pub const REJECT_TEXT: u32 = 8;
+        pub const NECESSARY_TEXT: u32 = 9;
+        pub const NECESSARY_DESCRIPTION: u32 = 10;
+        pub const ANALYTICS_TEXT: u32 = 11;
+        pub const ANALYTICS_DESCRIPTION: u32 = 12;
+        pub const PREFERENCES_TEXT: u32 = 13;
+        pub const PREFERENCES_DESCRIPTION: u32 = 14;
+        pub const MARKETING_TEXT: u32 = 15;
+        pub const MARKETING_DESCRIPTION: u32 = 16;
+        pub const SAVE_LABEL: u32 = 17;
+        pub const TRIGGER_LABEL: u32 = 18;
+    }
+    pub mod cookie_banner_settings {
+        pub const DEFINITION: u32 = 239;
+        pub const ENABLED: u32 = 1;
+        pub const COMPONENT_TYPE: u32 = 2;
+        pub const X_ALIGNMENT: u32 = 3;
+        pub const Y_ALIGNMENT: u32 = 4;
+        pub const TRIGGER_X_ALIGNMENT: u32 = 5;
+        pub const TRIGGER_Y_ALIGNMENT: u32 = 6;
+        pub const TRIGGER_COMPONENT_TYPE: u32 = 7;
+        pub const POLICY_URL: u32 = 8;
+        pub const TEXT: u32 = 9;
+        pub const POLICY_LINK: u32 = 10;
+        pub const LOCALE: u32 = 11;
+    }
+    pub mod cookie_banner_component_type {
+        pub const DEFINITION: u32 = 240;
+    }
+    pub mod trigger_component_type {
+        pub const DEFINITION: u32 = 241;
+    }
+    pub mod cookie_x_alignment {
+        pub const DEFINITION: u32 = 242;
+    }
+    pub mod cookie_y_alignment {
+        pub const DEFINITION: u32 = 243;
+    }
+    pub mod responsive_set_settings {
+        pub const DEFINITION: u32 = 244;
+        pub const TITLE: u32 = 1;
+        pub const DESCRIPTION: u32 = 2;
+        pub const SCALING_MODE: u32 = 3;
+        pub const SCALING_MIN_FONT_SIZE: u32 = 4;
+        pub const SCALING_MAX_FONT_SIZE: u32 = 5;
+        pub const SCALING_MIN_LAYOUT_WIDTH: u32 = 6;
+        pub const SCALING_MAX_LAYOUT_WIDTH: u32 = 7;
+        pub const LANG: u32 = 8;
+        pub const FAVICON_HASH: u32 = 9;
+        pub const SOCIAL_IMAGE_HASH: u32 = 10;
+        pub const GOOGLE_ANALYTICS_ID: u32 = 11;
+        pub const BLOCK_SEARCH_INDEXING: u32 = 12;
+        pub const CUSTOM_CODE_HEAD_START: u32 = 13;
+        pub const CUSTOM_CODE_HEAD_END: u32 = 14;
+        pub const CUSTOM_CODE_BODY_START: u32 = 15;
+        pub const CUSTOM_CODE_BODY_END: u32 = 16;
+        pub const FAVICON_ID: u32 = 17;
+        pub const SOCIAL_IMAGE_ID: u32 = 18;
+        pub const ADD_BYPASS_LINKS: u32 = 19;
+        pub const IGNORE_REDUCED_MOTION: u32 = 20;
+        pub const COOKIE_BANNER: u32 = 21;
+    }
+    pub mod responsive_scaling_mode {
+        pub const DEFINITION: u32 = 245;
+    }
+    pub mod cms_selector {
+        pub const DEFINITION: u32 = 246;
+        pub const CMS_COLLECTION_ID: u32 = 1;
+        pub const FILTER_CRITERIA: u32 = 2;
+        pub const SORTS: u32 = 3;
+        pub const LIMIT: u32 = 4;
+    }
+    pub mod cms_filter_critera {
+        pub const DEFINITION: u32 = 247;
+        pub const MATCH_TYPE: u32 = 1;
+        pub const FILTERS: u32 = 2;
+    }
+    pub mod cms_filter_criteria_match_type {
+        pub const DEFINITION: u32 = 248;
+    }
+    pub mod cms_selector_filter {
+        pub const DEFINITION: u32 = 249;
+        pub const CMS_FIELD_ID: u32 = 1;
+        pub const OP: u32 = 2;
+        pub const COMPARISON_VALUE: u32 = 3;
+    }
+    pub mod cms_selector_filter_operator {
+        pub const DEFINITION: u32 = 250;
+    }
+    pub mod cms_selector_sort {
+        pub const DEFINITION: u32 = 251;
+        pub const CMS_FIELD_ID: u32 = 1;
+        pub const ORDER_BY: u32 = 2;
+    }
+    pub mod cms_field_order_by {
+        pub const DEFINITION: u32 = 252;
+    }
+    pub mod cms_consumption_map {
+        pub const DEFINITION: u32 = 253;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod cms_consumption_map_entry {
+        pub const DEFINITION: u32 = 254;
+        pub const CONSUMPTION_FIELD: u32 = 1;
+        pub const CMS_FIELD_ID: u32 = 2;
+    }
+    pub mod cms_consumption_field {
+        pub const DEFINITION: u32 = 255;
+    }
+    pub mod cms_rich_text_style_map {
+        pub const DEFINITION: u32 = 256;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod cms_rich_text_style_entry {
+        pub const DEFINITION: u32 = 257;
+        pub const STYLE_CLASS: u32 = 1;
+        pub const TEXT_DESCRIPTOR: u32 = 2;
+    }
+    pub mod cms_rich_text_style_class {
+        pub const DEFINITION: u32 = 258;
+    }
+    pub mod cms_rich_text_descriptor {
+        pub const DEFINITION: u32 = 259;
+        pub const TEXT_STYLE_ID: u32 = 1;
+        pub const FONT_NAME_VARIANTS: u32 = 2;
+    }
+    pub mod repeater_cms_override_data {
+        pub const DEFINITION: u32 = 260;
+        pub const OVERRIDES: u32 = 1;
+    }
+    pub mod repeater_override_data {
+        pub const DEFINITION: u32 = 261;
+        pub const PARENT_INDEX_OVERRIDES: u32 = 1;
+    }
+    pub mod repeater_symbol_override_data {
+        pub const DEFINITION: u32 = 262;
+        pub const OVERRIDES_BY_POSITION: u32 = 1;
+    }
+    pub mod repeater_position_overrides {
+        pub const DEFINITION: u32 = 263;
+        pub const POSITION: u32 = 1;
+        pub const OVERRIDES: u32 = 2;
+    }
+    pub mod inherited_variables_data {
+        pub const DEFINITION: u32 = 264;
+        pub const VARIABLE_IDS: u32 = 1;
+    }
+    pub mod inherited_variable_entry {
+        pub const DEFINITION: u32 = 265;
+        pub const VARIABLE_ID: u32 = 1;
+    }
+    pub mod hub_file_attribution {
+        pub const DEFINITION: u32 = 266;
+        pub const HUB_FILE_ID: u32 = 1;
+        pub const HUB_FILE_NAME: u32 = 2;
+    }
+    pub mod managed_string_data {
+        pub const DEFINITION: u32 = 267;
+        pub const KEY: u32 = 1;
+        pub const CONTEXT: u32 = 2;
+        pub const LOCALE: u32 = 3;
+        pub const CONTENT: u32 = 4;
+        pub const CONTENT_SCHEMA: u32 = 5;
+    }
+    pub mod managed_string_content_schema {
+        pub const DEFINITION: u32 = 268;
+    }
+    pub mod managed_string_node_type {
+        pub const DEFINITION: u32 = 269;
+    }
+    pub mod managed_string_node {
+        pub const DEFINITION: u32 = 270;
+        pub const TYPE: u32 = 1;
+        pub const TEXT_NODE_DATA: u32 = 2;
+        pub const CONCATENATE_NODE_DATA: u32 = 3;
+        pub const PLURAL_NODE_DATA: u32 = 4;
+        pub const PLACEHOLDER_NODE_DATA: u32 = 5;
+    }
+    pub mod managed_string_text_node_data {
+        pub const DEFINITION: u32 = 271;
+        pub const VALUE: u32 = 1;
+    }
+    pub mod managed_string_concatenate_ast_node_data {
+        pub const DEFINITION: u32 = 272;
+        pub const VALUES: u32 = 1;
+    }
+    pub mod managed_string_plural_type {
+        pub const DEFINITION: u32 = 273;
+    }
+    pub mod managed_string_plural_ast_node_data {
+        pub const DEFINITION: u32 = 274;
+        pub const IDENTIFIER: u32 = 1;
+        pub const CONDITIONS: u32 = 2;
+    }
+    pub mod managed_string_plural_type_map_entry {
+        pub const DEFINITION: u32 = 275;
+        pub const KEY: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod managed_string_format_type {
+        pub const DEFINITION: u32 = 276;
+    }
+    pub mod managed_string_placeholder_ast_node_data {
+        pub const DEFINITION: u32 = 277;
+        pub const IDENTIFIER: u32 = 1;
+        pub const FORMAT_TYPE: u32 = 2;
+        pub const FORMAT_PATTERN: u32 = 3;
+    }
+    pub mod cooper_revert_data {
+        pub const DEFINITION: u32 = 278;
+        pub const ORIGINAL_VALUES: u32 = 1;
+    }
+    pub mod video_playback {
+        pub const DEFINITION: u32 = 279;
+        pub const AUTOPLAY: u32 = 1;
+        pub const MEDIA_LOOP: u32 = 2;
+        pub const MUTED: u32 = 3;
+        pub const SHOW_CONTROLS: u32 = 4;
+        pub const START_TIME_MS: u32 = 5;
+        pub const END_TIME_MS: u32 = 6;
+    }
+    pub mod media_action {
+        pub const DEFINITION: u32 = 280;
+    }
+    pub mod animation_timeline_action {
+        pub const DEFINITION: u32 = 281;
+    }
+    pub mod widget_hover_style {
+        pub const DEFINITION: u32 = 282;
+        pub const FILL_PAINTS: u32 = 1;
+        pub const STROKE_PAINTS: u32 = 2;
+        pub const OPACITY: u32 = 3;
+        pub const ARE_FILL_PAINTS_SET: u32 = 4;
+        pub const ARE_STROKE_PAINTS_SET: u32 = 5;
+        pub const IS_OPACITY_SET: u32 = 6;
+    }
+    pub mod widget_derived_subtree_cursor {
+        pub const DEFINITION: u32 = 283;
+        pub const SESSION_ID: u32 = 1;
+        pub const COUNTER: u32 = 2;
+    }
+    pub mod multiplayer_map {
+        pub const DEFINITION: u32 = 284;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod multiplayer_map_entry {
+        pub const DEFINITION: u32 = 285;
+        pub const KEY: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod variable_data_map {
+        pub const DEFINITION: u32 = 286;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod variable_data_map_entry {
+        pub const DEFINITION: u32 = 287;
+        pub const NODE_FIELD: u32 = 1;
+        pub const VARIABLE_DATA: u32 = 2;
+        pub const VARIABLE_FIELD: u32 = 3;
+    }
+    pub mod variable_field {
+        pub const DEFINITION: u32 = 288;
+    }
+    pub mod variable_mode_by_set_map {
+        pub const DEFINITION: u32 = 289;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod variable_mode_by_set_map_entry {
+        pub const DEFINITION: u32 = 290;
+        pub const VARIABLE_SET_ID: u32 = 1;
+        pub const VARIABLE_MODE_ID: u32 = 2;
+        pub const VARIABLE_SET_EXTENSION_ID: u32 = 3;
+    }
+    pub mod code_syntax_map {
+        pub const DEFINITION: u32 = 291;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod code_syntax_map_entry {
+        pub const DEFINITION: u32 = 292;
+        pub const PLATFORM: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod table_merged_cell_map {
+        pub const DEFINITION: u32 = 293;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod table_merged_cell_map_entry {
+        pub const DEFINITION: u32 = 294;
+        pub const ROW_ID: u32 = 1;
+        pub const COL_ID: u32 = 2;
+        pub const ROW_SPAN: u32 = 3;
+        pub const COL_SPAN: u32 = 4;
+    }
+    pub mod table_row_column_position_map {
+        pub const DEFINITION: u32 = 295;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod table_row_column_position_map_entry {
+        pub const DEFINITION: u32 = 296;
+        pub const ID: u32 = 1;
+        pub const POSITION: u32 = 2;
+    }
+    pub mod guid_position_map {
+        pub const DEFINITION: u32 = 297;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod guid_position_map_entry {
+        pub const DEFINITION: u32 = 298;
+        pub const ID: u32 = 1;
+        pub const POSITION: u32 = 2;
+    }
+    pub mod guid_grid_track_size_map {
+        pub const DEFINITION: u32 = 299;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod guid_grid_track_size_map_entry {
+        pub const DEFINITION: u32 = 300;
+        pub const ID: u32 = 1;
+        pub const TRACK_SIZE: u32 = 2;
+    }
+    pub mod object_animation_list {
+        pub const DEFINITION: u32 = 301;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod object_animation_list_item {
+        pub const DEFINITION: u32 = 302;
+        pub const TARGET_NODE_ID: u32 = 1;
+        pub const ANIMATION: u32 = 2;
+    }
+    pub mod grid_track_size {
+        pub const DEFINITION: u32 = 303;
+        pub const MIN_SIZING: u32 = 1;
+        pub const MAX_SIZING: u32 = 2;
+    }
+    pub mod grid_track_sizing_function {
+        pub const DEFINITION: u32 = 304;
+        pub const TYPE: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod grid_track_sizing_type {
+        pub const DEFINITION: u32 = 305;
+    }
+    pub mod table_row_column_size_map {
+        pub const DEFINITION: u32 = 306;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod table_row_column_size_map_entry {
+        pub const DEFINITION: u32 = 307;
+        pub const ID: u32 = 1;
+        pub const SIZE: u32 = 2;
+    }
+    pub mod agenda_position_map {
+        pub const DEFINITION: u32 = 308;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod agenda_position_map_entry {
+        pub const DEFINITION: u32 = 309;
+        pub const ID: u32 = 1;
+        pub const POSITION: u32 = 2;
+    }
+    pub mod agenda_item_type {
+        pub const DEFINITION: u32 = 310;
+    }
+    pub mod agenda_metadata_map {
+        pub const DEFINITION: u32 = 311;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod agenda_metadata_map_entry {
+        pub const DEFINITION: u32 = 312;
+        pub const ID: u32 = 1;
+        pub const DATA: u32 = 2;
+    }
+    pub mod agenda_metadata {
+        pub const DEFINITION: u32 = 313;
+        pub const NAME: u32 = 1;
+        pub const TYPE: u32 = 2;
+        pub const TARGET_NODE_ID: u32 = 3;
+        pub const TIMER_INFO: u32 = 4;
+        pub const VOTE_INFO: u32 = 5;
+        pub const MUSIC_INFO: u32 = 6;
+    }
+    pub mod agenda_timer_info {
+        pub const DEFINITION: u32 = 314;
+        pub const TIMER_LENGTH: u32 = 1;
+    }
+    pub mod agenda_vote_info {
+        pub const DEFINITION: u32 = 315;
+        pub const VOTE_COUNT: u32 = 1;
+    }
+    pub mod agenda_music_info {
+        pub const DEFINITION: u32 = 316;
+        pub const SONG_ID: u32 = 1;
+        pub const START_TIME_MS: u32 = 2;
+    }
+    pub mod diagram_layout_rule_type {
+        pub const DEFINITION: u32 = 317;
+    }
+    pub mod diagram_parent_index {
+        pub const DEFINITION: u32 = 318;
+        pub const GUID: u32 = 1;
+        pub const POSITION: u32 = 2;
+    }
+    pub mod diagram_layout_paused {
+        pub const DEFINITION: u32 = 319;
+    }
+    pub mod component_prop_ref {
+        pub const DEFINITION: u32 = 320;
+        pub const NODE_FIELD: u32 = 1;
+        pub const DEF_ID: u32 = 2;
+        pub const ZOMBIE_FALLBACK_NAME: u32 = 3;
+        pub const COMPONENT_PROP_NODE_FIELD: u32 = 4;
+        pub const IS_DELETED: u32 = 5;
+    }
+    pub mod component_prop_node_field {
+        pub const DEFINITION: u32 = 321;
+    }
+    pub mod component_prop_assignment {
+        pub const DEFINITION: u32 = 322;
+        pub const DEF_ID: u32 = 1;
+        pub const VALUE: u32 = 2;
+        pub const VAR_VALUE: u32 = 3;
+        pub const LEGACY_DERIVED_TEXT_DATA: u32 = 4;
+    }
+    pub mod component_prop_def {
+        pub const DEFINITION: u32 = 323;
+        pub const ID: u32 = 1;
+        pub const NAME: u32 = 2;
+        pub const INITIAL_VALUE: u32 = 3;
+        pub const SORT_POSITION: u32 = 4;
+        pub const PARENT_PROP_DEF_ID: u32 = 5;
+        pub const TYPE: u32 = 6;
+        pub const IS_DELETED: u32 = 7;
+        pub const PREFERRED_VALUES: u32 = 8;
+        pub const VAR_VALUE: u32 = 9;
+        pub const PARAMETER_CONFIG: u32 = 10;
+        pub const DESCRIPTION: u32 = 11;
+        pub const SLOT_PROP_CONFIG: u32 = 12;
+        pub const COLOR_ARRAY_CONFIG: u32 = 13;
+    }
+    pub mod component_prop_value {
+        pub const DEFINITION: u32 = 324;
+        pub const BOOL_VALUE: u32 = 1;
+        pub const TEXT_VALUE: u32 = 2;
+        pub const GUID_VALUE: u32 = 3;
+        pub const FLOAT_VALUE: u32 = 4;
+        pub const EASING_DATA: u32 = 5;
+        pub const VECTOR_VALUE: u32 = 6;
+        pub const LINE_VALUE: u32 = 7;
+        pub const CIRCLE_VALUE: u32 = 8;
+        pub const ROTATION3_D_VALUE: u32 = 9;
+        pub const CIRCLE_POINT_VALUE: u32 = 10;
+        pub const GRADIENT_VALUE: u32 = 11;
+        pub const COLOR_POINT_VALUE: u32 = 12;
+    }
+    pub mod timeline_data {
+        pub const DEFINITION: u32 = 325;
+        pub const DURATION_US: u32 = 1;
+        pub const DEFAULT_TIMELINE: u32 = 2;
+        pub const PARENT_TIMELINE_DEF_ID: u32 = 3;
+        pub const PLAYBACK_STYLE: u32 = 4;
+    }
+    pub mod timeline_definitions_map {
+        pub const DEFINITION: u32 = 326;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod timeline_definitions_map_entry {
+        pub const DEFINITION: u32 = 327;
+        pub const ID: u32 = 1;
+        pub const DATA: u32 = 2;
+    }
+    pub mod timeline_assignment_key {
+        pub const DEFINITION: u32 = 328;
+        pub const ASSIGNED_TIMELINE_ID: u32 = 1;
+        pub const CONTAINING_TIMELINE_ID: u32 = 2;
+    }
+    pub mod timeline_binding_data {
+        pub const DEFINITION: u32 = 329;
+        pub const OFFSET_US: u32 = 1;
+        pub const DISABLED: u32 = 2;
+    }
+    pub mod timeline_assignments_map {
+        pub const DEFINITION: u32 = 330;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod timeline_assignments_map_entry {
+        pub const DEFINITION: u32 = 331;
+        pub const KEY: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod component_prop_type {
+        pub const DEFINITION: u32 = 332;
+    }
+    pub mod component_prop_preferred_values {
+        pub const DEFINITION: u32 = 333;
+        pub const STRING_VALUES: u32 = 1;
+        pub const INSTANCE_SWAP_VALUES: u32 = 2;
+    }
+    pub mod parameter_config {
+        pub const DEFINITION: u32 = 334;
+        pub const NUMBER_PROP_CONFIG: u32 = 1;
+        pub const CONTROL: u32 = 2;
+        pub const SLIDER_CONFIG: u32 = 3;
+        pub const LABEL: u32 = 4;
+        pub const INPUT_CONFIG: u32 = 5;
+        pub const SELECT_CONFIG: u32 = 6;
+        pub const POINT_CONFIG: u32 = 7;
+        pub const LINE_CONFIG: u32 = 8;
+        pub const POINT_RADIUS_CONFIG: u32 = 9;
+        pub const ROTATION3_D_CONFIG: u32 = 10;
+        pub const CIRCLE_POINT_CONFIG: u32 = 11;
+        pub const COLOR_POINT_CONFIG: u32 = 12;
+        pub const SHOW_DIVIDER_ABOVE: u32 = 13;
+    }
+    pub mod parameter_config_control {
+        pub const DEFINITION: u32 = 335;
+    }
+    pub mod input_config {
+        pub const DEFINITION: u32 = 336;
+        pub const UNIT: u32 = 1;
+        pub const MIN: u32 = 2;
+        pub const MAX: u32 = 3;
+    }
+    pub mod slider_config {
+        pub const DEFINITION: u32 = 337;
+        pub const MIN: u32 = 1;
+        pub const MAX: u32 = 2;
+        pub const STEP: u32 = 3;
+        pub const UNIT: u32 = 4;
+    }
+    pub mod point_mode {
+        pub const DEFINITION: u32 = 338;
+    }
+    pub mod point_config {
+        pub const DEFINITION: u32 = 339;
+        pub const MODE: u32 = 1;
+        pub const UNIT: u32 = 2;
+    }
+    pub mod line {
+        pub const DEFINITION: u32 = 340;
+        pub const A: u32 = 1;
+        pub const B: u32 = 2;
+    }
+    pub mod line_config {
+        pub const DEFINITION: u32 = 341;
+        pub const MODE: u32 = 1;
+        pub const UNIT: u32 = 2;
+    }
+    pub mod circle {
+        pub const DEFINITION: u32 = 342;
+        pub const CENTER: u32 = 1;
+        pub const RADIUS: u32 = 2;
+    }
+    pub mod point_radius_config {
+        pub const DEFINITION: u32 = 343;
+        pub const MODE: u32 = 1;
+        pub const POSITION_UNIT: u32 = 2;
+        pub const RADIUS_UNIT: u32 = 3;
+        pub const MIN_RADIUS: u32 = 4;
+        pub const MAX_RADIUS: u32 = 5;
+    }
+    pub mod rotation3_d {
+        pub const DEFINITION: u32 = 344;
+        pub const X: u32 = 1;
+        pub const Y: u32 = 2;
+        pub const Z: u32 = 3;
+        pub const TRANSLATE_Z: u32 = 4;
+    }
+    pub mod rotation3_d_config {
+        pub const DEFINITION: u32 = 345;
+        pub const MODE: u32 = 1;
+    }
+    pub mod circle_point {
+        pub const DEFINITION: u32 = 346;
+        pub const CENTER: u32 = 1;
+        pub const RADIUS: u32 = 2;
+        pub const ANGLE: u32 = 3;
+    }
+    pub mod circle_point_config {
+        pub const DEFINITION: u32 = 347;
+        pub const MODE: u32 = 1;
+        pub const POSITION_UNIT: u32 = 2;
+        pub const RADIUS_UNIT: u32 = 3;
+        pub const MIN_RADIUS: u32 = 4;
+        pub const MAX_RADIUS: u32 = 5;
+    }
+    pub mod color_point {
+        pub const DEFINITION: u32 = 348;
+        pub const POINT: u32 = 1;
+        pub const COLOR: u32 = 2;
+    }
+    pub mod color_point_config {
+        pub const DEFINITION: u32 = 349;
+        pub const MODE: u32 = 1;
+        pub const UNIT: u32 = 2;
+    }
+    pub mod gradient {
+        pub const DEFINITION: u32 = 350;
+        pub const STOPS: u32 = 1;
+    }
+    pub mod gradient_stop {
+        pub const DEFINITION: u32 = 351;
+        pub const POSITION: u32 = 1;
+        pub const COLOR: u32 = 2;
+    }
+    pub mod select_option {
+        pub const DEFINITION: u32 = 352;
+        pub const VALUE: u32 = 1;
+        pub const LABEL: u32 = 2;
+    }
+    pub mod select_config {
+        pub const DEFINITION: u32 = 353;
+        pub const OPTIONS: u32 = 1;
+    }
+    pub mod color_array_config {
+        pub const DEFINITION: u32 = 354;
+        pub const MIN_LENGTH: u32 = 1;
+        pub const MAX_LENGTH: u32 = 2;
+    }
+    pub mod slot_prop_config {
+        pub const DEFINITION: u32 = 355;
+        pub const STRETCH_CHILD_ON_INSERT: u32 = 1;
+        pub const DISPLAY_BY_DEFAULT: u32 = 2;
+        pub const MIN_CHILDREN: u32 = 3;
+        pub const MAX_CHILDREN: u32 = 4;
+        pub const ALLOW_PREFERRED_VALUES_ONLY: u32 = 5;
+    }
+    pub mod number_prop_config {
+        pub const DEFINITION: u32 = 356;
+        pub const CONTROL: u32 = 1;
+        pub const MIN: u32 = 2;
+        pub const MAX: u32 = 3;
+        pub const STEP: u32 = 4;
+    }
+    pub mod instance_swap_preferred_value {
+        pub const DEFINITION: u32 = 357;
+        pub const TYPE: u32 = 1;
+        pub const KEY: u32 = 2;
+    }
+    pub mod instance_swap_preferred_value_type {
+        pub const DEFINITION: u32 = 358;
+    }
+    pub mod widget_event {
+        pub const DEFINITION: u32 = 359;
+    }
+    pub mod widget_input_behavior {
+        pub const DEFINITION: u32 = 360;
+    }
+    pub mod widget_metadata {
+        pub const DEFINITION: u32 = 361;
+        pub const PLUGIN_ID: u32 = 1;
+        pub const PLUGIN_VERSION_ID: u32 = 2;
+        pub const WIDGET_NAME: u32 = 3;
+        pub const IS_RESIZABLE: u32 = 4;
+        pub const IS_ROTATABLE: u32 = 5;
+    }
+    pub mod widget_property_menu_item_type {
+        pub const DEFINITION: u32 = 362;
+    }
+    pub mod widget_property_menu_selector_option {
+        pub const DEFINITION: u32 = 363;
+        pub const OPTION: u32 = 1;
+        pub const TOOLTIP: u32 = 2;
+    }
+    pub mod widget_input_text_node_type {
+        pub const DEFINITION: u32 = 364;
+    }
+    pub mod widget_property_menu_item {
+        pub const DEFINITION: u32 = 365;
+        pub const PROPERTY_NAME: u32 = 1;
+        pub const TOOLTIP: u32 = 2;
+        pub const ITEM_TYPE: u32 = 3;
+        pub const ICON: u32 = 4;
+        pub const OPTIONS: u32 = 5;
+        pub const SELECTED_OPTION: u32 = 6;
+        pub const IS_TOGGLED: u32 = 7;
+        pub const HREF: u32 = 8;
+        pub const ALLOW_CUSTOM_COLOR: u32 = 9;
+    }
+    pub mod code_block_language {
+        pub const DEFINITION: u32 = 366;
+    }
+    pub mod code_block_theme {
+        pub const DEFINITION: u32 = 367;
+    }
+    pub mod spec_block_type {
+        pub const DEFINITION: u32 = 368;
+    }
+    pub mod internal_enum_for_test {
+        pub const DEFINITION: u32 = 369;
+    }
+    pub mod internal_data_for_test {
+        pub const DEFINITION: u32 = 370;
+        pub const TEST_FIELD_A: u32 = 1;
+    }
+    pub mod state_group_property_value_order {
+        pub const DEFINITION: u32 = 371;
+        pub const PROPERTY: u32 = 1;
+        pub const VALUES: u32 = 2;
+    }
+    pub mod backfill_error {
+        pub const DEFINITION: u32 = 372;
+    }
+    pub mod partial_paste_annotation {
+        pub const DEFINITION: u32 = 373;
+        pub const IS_PARTIAL: u32 = 1;
+        pub const ANNOTATED_AT: u32 = 2;
+        pub const ERROR_STATE: u32 = 3;
+    }
+    pub mod variant_prop_spec {
+        pub const DEFINITION: u32 = 374;
+        pub const PROP_DEF_ID: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod text_list_data {
+        pub const DEFINITION: u32 = 375;
+        pub const LIST_ID: u32 = 1;
+        pub const BULLET_TYPE: u32 = 2;
+        pub const INDENTATION_LEVEL: u32 = 3;
+        pub const LINE_NUMBER: u32 = 4;
+    }
+    pub mod bullet_type {
+        pub const DEFINITION: u32 = 376;
+    }
+    pub mod text_line_data {
+        pub const DEFINITION: u32 = 377;
+        pub const LINE_TYPE: u32 = 1;
+        pub const INDENTATION_LEVEL: u32 = 2;
+        pub const DIRECTIONALITY: u32 = 3;
+        pub const DIRECTIONALITY_INTENT: u32 = 4;
+        pub const DOWNGRADE_STYLE_ID: u32 = 5;
+        pub const CONSISTENCY_STYLE_ID: u32 = 6;
+        pub const LIST_START_OFFSET: u32 = 7;
+        pub const IS_FIRST_LINE_OF_LIST: u32 = 8;
+        pub const SOURCE_DIRECTIONALITY: u32 = 9;
+        pub const STYLE_ID: u32 = 10;
+    }
+    pub mod derived_text_line_data {
+        pub const DEFINITION: u32 = 378;
+        pub const DIRECTIONALITY: u32 = 1;
+    }
+    pub mod line_type {
+        pub const DEFINITION: u32 = 379;
+    }
+    pub mod source_directionality {
+        pub const DEFINITION: u32 = 380;
+    }
+    pub mod directionality {
+        pub const DEFINITION: u32 = 381;
+    }
+    pub mod directionality_intent {
+        pub const DEFINITION: u32 = 382;
+    }
+    pub mod prototype_interaction {
+        pub const DEFINITION: u32 = 383;
+        pub const ID: u32 = 1;
+        pub const EVENT: u32 = 2;
+        pub const ACTIONS: u32 = 3;
+        pub const IS_DELETED: u32 = 4;
+        pub const STATE_MANAGEMENT_VERSION: u32 = 5;
+    }
+    pub mod prototype_event {
+        pub const DEFINITION: u32 = 384;
+        pub const INTERACTION_TYPE: u32 = 1;
+        pub const INTERACTION_MAINTAINED: u32 = 2;
+        pub const INTERACTION_DURATION: u32 = 3;
+        pub const KEY_TRIGGER: u32 = 4;
+        pub const VOICE_EVENT_PHRASE: u32 = 5;
+        pub const TRANSITION_TIMEOUT: u32 = 6;
+        pub const MEDIA_HIT_TIME: u32 = 7;
+    }
+    pub mod prototype_variable_target {
+        pub const DEFINITION: u32 = 385;
+        pub const ID: u32 = 1;
+        pub const NODE_FIELD_ALIAS: u32 = 2;
+    }
+    pub mod conditional_actions {
+        pub const DEFINITION: u32 = 386;
+        pub const ACTIONS: u32 = 1;
+        pub const CONDITION: u32 = 2;
+    }
+    pub mod prototype_action {
+        pub const DEFINITION: u32 = 387;
+        pub const TRANSITION_NODE_ID: u32 = 1;
+        pub const TRANSITION_TYPE: u32 = 2;
+        pub const TRANSITION_DURATION: u32 = 3;
+        pub const EASING_TYPE: u32 = 4;
+        pub const TRANSITION_TIMEOUT: u32 = 5;
+        pub const TRANSITION_SHOULD_SMART_ANIMATE: u32 = 6;
+        pub const CONNECTION_TYPE: u32 = 7;
+        pub const CONNECTION_URL: u32 = 8;
+        pub const OVERLAY_RELATIVE_POSITION: u32 = 9;
+        pub const NAVIGATION_TYPE: u32 = 10;
+        pub const TRANSITION_PRESERVE_SCROLL: u32 = 11;
+        pub const EASING_FUNCTION: u32 = 12;
+        pub const EXTRA_SCROLL_OFFSET: u32 = 13;
+        pub const TARGET_VARIABLE_ID: u32 = 14;
+        pub const TARGET_VARIABLE_VALUE: u32 = 15;
+        pub const MEDIA_ACTION: u32 = 16;
+        pub const TRANSITION_RESET_VIDEO_POSITION: u32 = 17;
+        pub const OPEN_URL_IN_NEW_TAB: u32 = 18;
+        pub const TARGET_VARIABLE: u32 = 19;
+        pub const TARGET_VARIABLE_DATA: u32 = 20;
+        pub const MEDIA_SKIP_TO_TIME: u32 = 21;
+        pub const MEDIA_SKIP_BY_AMOUNT: u32 = 22;
+        pub const CONDITIONS: u32 = 23;
+        pub const CONDITIONAL_ACTIONS: u32 = 24;
+        pub const TRANSITION_RESET_SCROLL_POSITION: u32 = 25;
+        pub const TRANSITION_RESET_INTERACTIVE_COMPONENTS: u32 = 26;
+        pub const TARGET_VARIABLE_SET_ID: u32 = 27;
+        pub const TARGET_VARIABLE_MODE_ID: u32 = 28;
+        pub const TARGET_VARIABLE_SET_KEY: u32 = 29;
+        pub const ANIMATION_TYPE: u32 = 30;
+        pub const ANIMATION_TARGET_ID: u32 = 31;
+        pub const ANIMATION_PHASE: u32 = 32;
+        pub const ANIMATION_STATE: u32 = 33;
+        pub const LINK_PARAM: u32 = 34;
+        pub const CMS_TARGET: u32 = 35;
+        pub const MEDIA_PLAYBACK_RATE: u32 = 36;
+        pub const SIMPLE_LINK: u32 = 37;
+        pub const VARIABLE_SET_TARGET_EXTENSION_ID: u32 = 38;
+        pub const ANIMATION_TIMELINE_ACTION: u32 = 39;
+        pub const ANIMATION_SKIP_TO_TIME: u32 = 40;
+        pub const ANIMATION_TIMELINE_DEF_ID: u32 = 41;
+        pub const TRANSITION_OVERRIDES_ENABLED: u32 = 42;
+    }
+    pub mod animation_phase {
+        pub const DEFINITION: u32 = 388;
+    }
+    pub mod animation_type {
+        pub const DEFINITION: u32 = 389;
+    }
+    pub mod animation_state {
+        pub const DEFINITION: u32 = 390;
+        pub const OPACITY: u32 = 1;
+        pub const TRANSFORM: u32 = 2;
+    }
+    pub mod prototype_starting_point {
+        pub const DEFINITION: u32 = 391;
+        pub const NAME: u32 = 1;
+        pub const DESCRIPTION: u32 = 2;
+        pub const POSITION: u32 = 3;
+    }
+    pub mod trigger_device {
+        pub const DEFINITION: u32 = 392;
+    }
+    pub mod key_trigger {
+        pub const DEFINITION: u32 = 393;
+        pub const KEY_CODES: u32 = 1;
+        pub const TRIGGER_DEVICE: u32 = 2;
+    }
+    pub mod hyperlink {
+        pub const DEFINITION: u32 = 394;
+        pub const URL: u32 = 1;
+        pub const GUID: u32 = 2;
+        pub const OPEN_IN_NEW_TAB: u32 = 3;
+        pub const CMS_TARGET: u32 = 4;
+    }
+    pub mod cms_item_page_target {
+        pub const DEFINITION: u32 = 395;
+        pub const NODE_ID: u32 = 1;
+        pub const CMS_ITEM_ID: u32 = 2;
+        pub const FIELD_SCHEMA_ID: u32 = 3;
+    }
+    pub mod mention_source {
+        pub const DEFINITION: u32 = 396;
+    }
+    pub mod mention {
+        pub const DEFINITION: u32 = 397;
+        pub const ID: u32 = 1;
+        pub const MENTIONED_USER_ID: u32 = 2;
+        pub const MENTIONED_BY_USER_ID: u32 = 3;
+        pub const FILE_KEY: u32 = 4;
+        pub const SOURCE: u32 = 5;
+        pub const MENTIONED_USER_ID_INT: u32 = 6;
+        pub const MENTIONED_BY_USER_ID_INT: u32 = 7;
+        pub const MENTIONED_USER_GROUP_ID: u32 = 8;
+    }
+    pub mod embed_data {
+        pub const DEFINITION: u32 = 398;
+        pub const URL: u32 = 1;
+        pub const SRC_URL: u32 = 2;
+        pub const TITLE: u32 = 3;
+        pub const THUMBNAIL_URL: u32 = 4;
+        pub const WIDTH: u32 = 5;
+        pub const HEIGHT: u32 = 6;
+        pub const EMBED_TYPE: u32 = 7;
+        pub const THUMBNAIL_IMAGE_HASH: u32 = 8;
+        pub const FAVICON_IMAGE_HASH: u32 = 9;
+        pub const PROVIDER: u32 = 10;
+        pub const ORIGINAL_TEXT: u32 = 11;
+        pub const DESCRIPTION: u32 = 12;
+        pub const EMBED_VERSION_ID: u32 = 13;
+        pub const IS_PUBLISHED_SITE: u32 = 14;
+    }
+    pub mod stamp_data {
+        pub const DEFINITION: u32 = 399;
+        pub const USER_ID: u32 = 1;
+        pub const VOTING_SESSION_ID: u32 = 2;
+        pub const STAMPED_BY_USER_ID: u32 = 3;
+    }
+    pub mod link_preview_data {
+        pub const DEFINITION: u32 = 400;
+        pub const URL: u32 = 1;
+        pub const TITLE: u32 = 2;
+        pub const PROVIDER: u32 = 3;
+        pub const DESCRIPTION: u32 = 4;
+        pub const THUMBNAIL_IMAGE_HASH: u32 = 5;
+        pub const FAVICON_IMAGE_HASH: u32 = 6;
+        pub const THUMBNAIL_IMAGE_WIDTH: u32 = 7;
+        pub const THUMBNAIL_IMAGE_HEIGHT: u32 = 8;
+    }
+    pub mod viewport {
+        pub const DEFINITION: u32 = 401;
+        pub const CANVAS_SPACE_BOUNDS: u32 = 1;
+        pub const PIXEL_PREVIEW: u32 = 2;
+        pub const PIXEL_DENSITY: u32 = 3;
+        pub const CANVAS_GUID: u32 = 4;
+    }
+    pub mod mouse {
+        pub const DEFINITION: u32 = 402;
+        pub const CURSOR: u32 = 1;
+        pub const CANVAS_SPACE_LOCATION: u32 = 2;
+        pub const CANVAS_SPACE_SELECTION_BOX: u32 = 3;
+        pub const CANVAS_GUID: u32 = 4;
+        pub const CURSOR_HIDDEN_REASON: u32 = 5;
+    }
+    pub mod click {
+        pub const DEFINITION: u32 = 403;
+        pub const ID: u32 = 1;
+        pub const POINT: u32 = 2;
+    }
+    pub mod scroll_position {
+        pub const DEFINITION: u32 = 404;
+        pub const NODE: u32 = 1;
+        pub const SCROLL_OFFSET: u32 = 2;
+    }
+    pub mod triggered_overlay {
+        pub const DEFINITION: u32 = 405;
+        pub const OVERLAY_GUID: u32 = 1;
+        pub const HOTSPOT_GUID: u32 = 2;
+        pub const SWAP_GUID: u32 = 3;
+    }
+    pub mod triggered_overlay_data {
+        pub const DEFINITION: u32 = 406;
+        pub const OVERLAY_GUID: u32 = 1;
+        pub const HOTSPOT_GUID: u32 = 2;
+        pub const SWAP_GUID: u32 = 3;
+        pub const PROTOTYPE_INTERACTION_GUID: u32 = 4;
+        pub const HOTSPOT_BLUEPRINT_ID: u32 = 5;
+    }
+    pub mod triggered_set_variable_action_data {
+        pub const DEFINITION: u32 = 407;
+        pub const NODE_FOR_FINDING_TOPMOST_SCREEN_ID: u32 = 1;
+        pub const TARGET_VARIABLE_ID: u32 = 2;
+        pub const TARGET_VARIABLE_DATA: u32 = 3;
+        pub const RESOLVED_VARIABLE_MODES: u32 = 4;
+    }
+    pub mod triggered_set_variable_mode_action_data {
+        pub const DEFINITION: u32 = 408;
+        pub const NODE_FOR_FINDING_TOPMOST_SCREEN_ID: u32 = 1;
+        pub const TARGET_VARIABLE_SET_KEY: u32 = 2;
+        pub const TARGET_VARIABLE_MODE_ID: u32 = 3;
+        pub const TARGET_VARIABLE_SET_ID: u32 = 4;
+    }
+    pub mod video_state_change_data {
+        pub const DEFINITION: u32 = 409;
+        pub const TARGET_NODE_ID: u32 = 1;
+        pub const IS_PLAYING: u32 = 2;
+        pub const IS_PLAYING_SOUND: u32 = 3;
+        pub const CURRENT_TIMES: u32 = 4;
+        pub const ACTION_TAKEN_TIMESTAMP: u32 = 5;
+    }
+    pub mod embedded_prototype_data {
+        pub const DEFINITION: u32 = 410;
+        pub const NODE_ID: u32 = 1;
+        pub const SESSION_ID: u32 = 2;
+    }
+    pub mod presented_state {
+        pub const DEFINITION: u32 = 411;
+        pub const BASE_SCREEN_ID: u32 = 1;
+        pub const OVERLAYS: u32 = 2;
+    }
+    pub mod transition_direction {
+        pub const DEFINITION: u32 = 412;
+    }
+    pub mod top_level_playback_change {
+        pub const DEFINITION: u32 = 413;
+        pub const OLD_STATE: u32 = 1;
+        pub const NEW_STATE: u32 = 2;
+        pub const HOTSPOT_BLUEPRINT_ID: u32 = 3;
+        pub const INTERACTION_ID: u32 = 4;
+        pub const IS_HOTSPOT_IN_NEW_PRESENTED_STATE: u32 = 5;
+        pub const DIRECTION: u32 = 6;
+        pub const INSTANCE_STABLE_PATH: u32 = 7;
+    }
+    pub mod instance_state_change {
+        pub const DEFINITION: u32 = 414;
+        pub const STATE_ID: u32 = 1;
+        pub const INTERACTION_ID: u32 = 2;
+        pub const HOTSPOT_STABLE_PATH: u32 = 3;
+        pub const INSTANCE_STABLE_PATH: u32 = 4;
+        pub const PHASE: u32 = 5;
+    }
+    pub mod text_cursor {
+        pub const DEFINITION: u32 = 415;
+        pub const SELECTION_BOX: u32 = 1;
+        pub const CANVAS_GUID: u32 = 2;
+        pub const TEXT_NODE_GUID: u32 = 3;
+    }
+    pub mod text_selection {
+        pub const DEFINITION: u32 = 416;
+        pub const SELECTION_BOXES: u32 = 1;
+        pub const CANVAS_GUID: u32 = 2;
+        pub const TEXT_NODE_GUID: u32 = 3;
+        pub const TEXT_SELECTION_RANGE: u32 = 4;
+        pub const TEXT_NODE_OR_CONTAINING_IF_GUID: u32 = 5;
+        pub const TABLE_CELL_ROW_ID: u32 = 6;
+        pub const TABLE_CELL_COL_ID: u32 = 7;
+    }
+    pub mod playback_change_phase {
+        pub const DEFINITION: u32 = 417;
+    }
+    pub mod playback_change_keyframe {
+        pub const DEFINITION: u32 = 418;
+        pub const PHASE: u32 = 1;
+        pub const PROGRESS: u32 = 2;
+        pub const TIMESTAMP: u32 = 3;
+    }
+    pub mod state_mapping {
+        pub const DEFINITION: u32 = 419;
+        pub const STABLE_PATH: u32 = 1;
+        pub const LAST_TOP_LEVEL_CHANGE: u32 = 2;
+        pub const LAST_TOP_LEVEL_CHANGE_STATUS: u32 = 3;
+        pub const TIMESTAMP: u32 = 4;
+    }
+    pub mod scroll_mapping {
+        pub const DEFINITION: u32 = 420;
+        pub const BLUEPRINT_ID: u32 = 1;
+        pub const OVERLAY_INDEX: u32 = 2;
+        pub const SCROLL_OFFSET: u32 = 3;
+    }
+    pub mod playback_update {
+        pub const DEFINITION: u32 = 421;
+        pub const LAST_TOP_LEVEL_CHANGE: u32 = 1;
+        pub const LAST_TOP_LEVEL_CHANGE_STATUS: u32 = 2;
+        pub const SCROLL_MAPPINGS: u32 = 3;
+        pub const TIMESTAMP: u32 = 4;
+        pub const POINTER_LOCATION: u32 = 5;
+        pub const IS_TOP_LEVEL_FRAME_CHANGE: u32 = 6;
+        pub const STATE_MAPPINGS: u32 = 7;
+    }
+    pub mod chat_message {
+        pub const DEFINITION: u32 = 422;
+        pub const TEXT: u32 = 1;
+        pub const PREVIOUS_TEXT: u32 = 2;
+    }
+    pub mod voice_metadata {
+        pub const DEFINITION: u32 = 423;
+        pub const CONNECTED_CALL_ID: u32 = 1;
+    }
+    pub mod april_fun_cursor {
+        pub const DEFINITION: u32 = 424;
+        pub const ID: u32 = 1;
+        pub const TRAIL_ENABLED: u32 = 2;
+    }
+    pub mod april_fun_fig_pal {
+        pub const DEFINITION: u32 = 425;
+        pub const CUSTOMIZATION: u32 = 1;
+        pub const NAME: u32 = 2;
+    }
+    pub mod heartbeat {
+        pub const DEFINITION: u32 = 426;
+    }
+    pub mod sites_view_state {
+        pub const DEFINITION: u32 = 427;
+    }
+    pub mod design_full_page_view_state {
+        pub const DEFINITION: u32 = 428;
+    }
+    pub mod agent_info {
+        pub const DEFINITION: u32 = 429;
+        pub const NAME: u32 = 1;
+        pub const LOGO: u32 = 2;
+        pub const OAUTH_CLIENT_ID: u32 = 3;
+    }
+    pub mod user_change {
+        pub const DEFINITION: u32 = 430;
+        pub const SESSION_ID: u32 = 1;
+        pub const CONNECTED: u32 = 2;
+        pub const NAME: u32 = 3;
+        pub const COLOR: u32 = 4;
+        pub const IMAGE_URL: u32 = 5;
+        pub const VIEWPORT: u32 = 6;
+        pub const MOUSE: u32 = 7;
+        pub const SELECTION: u32 = 8;
+        pub const OBSERVING: u32 = 9;
+        pub const DEVICE_NAME: u32 = 10;
+        pub const RECENT_CLICKS: u32 = 11;
+        pub const SCROLL_POSITIONS: u32 = 12;
+        pub const TRIGGERED_OVERLAYS: u32 = 13;
+        pub const USER_ID: u32 = 14;
+        pub const LAST_TRIGGERED_HOTSPOT: u32 = 15;
+        pub const LAST_TRIGGERED_PROTOTYPE_INTERACTION_ID: u32 = 16;
+        pub const TRIGGERED_OVERLAYS_DATA: u32 = 17;
+        pub const PLAYBACK_UPDATES: u32 = 18;
+        pub const CHAT_MESSAGE: u32 = 19;
+        pub const VOICE_METADATA: u32 = 20;
+        pub const CAN_WRITE: u32 = 21;
+        pub const HIGH_FIVE_STATUS: u32 = 22;
+        pub const INSTANCE_STATE_CHANGES: u32 = 23;
+        pub const TEXT_CURSOR: u32 = 24;
+        pub const TEXT_SELECTION: u32 = 25;
+        pub const CONNECTED_AT_TIME_S: u32 = 26;
+        pub const FOCUS_ON_TEXT_CURSOR: u32 = 27;
+        pub const HEARTBEAT: u32 = 28;
+        pub const TRIGGERED_SET_VARIABLE_ACTION_DATA: u32 = 29;
+        pub const VIDEO_STATE_CHANGE_DATA: u32 = 30;
+        pub const CLIENT_ID: u32 = 31;
+        pub const FOCUSED_SLIDE_ID: u32 = 32;
+        pub const TRIGGERED_SET_VARIABLE_MODE_ACTION_DATA: u32 = 33;
+        pub const APRIL_FUN_CURSOR: u32 = 34;
+        pub const EMBEDDED_PROTOTYPE_DATA: u32 = 35;
+        pub const ACTIVE_SLIDES_EMBEDDABLE_PROTOTYPE: u32 = 36;
+        pub const ACTIVE_CODE_COMPONENT_ID: u32 = 37;
+        pub const LAST_TRIGGERED_OBJECT_ANIMATION_INDEX: u32 = 38;
+        pub const APRIL_FUN_FIG_PAL: u32 = 39;
+        pub const COLLABORATIVE_TEXT_SELECTION: u32 = 40;
+        pub const SITES_VIEW_STATE: u32 = 41;
+        pub const NODE_CHAT_EXCHANGES: u32 = 42;
+        pub const ACTIVE_EMBEDDED_PROTOTYPES: u32 = 43;
+        pub const STABLE_SESSION_ID: u32 = 44;
+        pub const DESIGN_FULL_PAGE_VIEW_STATE: u32 = 45;
+        pub const AGENT_INFO: u32 = 46;
+    }
+    pub mod interactive_slide_element_change {
+        pub const DEFINITION: u32 = 431;
+        pub const USER_ID: u32 = 1;
+        pub const ANONYMOUS_USER_ID: u32 = 2;
+        pub const NODE_ID: u32 = 3;
+        pub const RESPONSE_DATA: u32 = 4;
+    }
+    pub mod node_status_change {
+        pub const DEFINITION: u32 = 432;
+        pub const NODE_IDS: u32 = 1;
+        pub const STATUS_INFO: u32 = 2;
+    }
+    pub mod buzz_approval_asset_entry {
+        pub const DEFINITION: u32 = 433;
+        pub const ASSET_NODE_ID: u32 = 1;
+        pub const APPROVED: u32 = 2;
+    }
+    pub mod buzz_approval_change {
+        pub const DEFINITION: u32 = 434;
+        pub const ASSET_ENTRIES: u32 = 1;
+        pub const CANVAS_GRID_NODE_ID: u32 = 2;
+        pub const REQUEST_ID: u32 = 3;
+    }
+    pub mod scene_graph_query_behavior {
+        pub const DEFINITION: u32 = 435;
+    }
+    pub mod scene_graph_query_mode {
+        pub const DEFINITION: u32 = 436;
+    }
+    pub mod scene_graph_query {
+        pub const DEFINITION: u32 = 437;
+        pub const STARTING_NODE: u32 = 1;
+        pub const DEPTH: u32 = 2;
+        pub const BEHAVIOR: u32 = 3;
+    }
+    pub mod node_changes_metadata {
+        pub const DEFINITION: u32 = 438;
+        pub const BLOBS_FIELD_OFFSET: u32 = 1;
+    }
+    pub mod cursor_reaction {
+        pub const DEFINITION: u32 = 439;
+        pub const IMAGE_URL: u32 = 1;
+    }
+    pub mod timer_info {
+        pub const DEFINITION: u32 = 440;
+        pub const IS_PAUSED: u32 = 1;
+        pub const TIME_REMAINING_MS: u32 = 2;
+        pub const TOTAL_TIME_MS: u32 = 3;
+        pub const TIMER_ID: u32 = 4;
+        pub const SET_BY: u32 = 5;
+        pub const SONG_ID: u32 = 6;
+        pub const LAST_RECEIVED_SONG_TIMESTAMP_MS: u32 = 7;
+        pub const SONG_UUID: u32 = 8;
+    }
+    pub mod music_info {
+        pub const DEFINITION: u32 = 441;
+        pub const IS_PAUSED: u32 = 1;
+        pub const MESSAGE_ID: u32 = 2;
+        pub const SONG_ID: u32 = 3;
+        pub const LAST_RECEIVED_SONG_TIMESTAMP_MS: u32 = 4;
+        pub const IS_STOPPED: u32 = 5;
+    }
+    pub mod presenter_nomination {
+        pub const DEFINITION: u32 = 442;
+        pub const SESSION_ID: u32 = 1;
+        pub const IS_CANCELLED: u32 = 2;
+    }
+    pub mod presenter_info {
+        pub const DEFINITION: u32 = 443;
+        pub const SESSION_ID: u32 = 1;
+        pub const NOMINATION: u32 = 2;
+        pub const IS_RECONNECTED: u32 = 3;
+    }
+    pub mod client_broadcast {
+        pub const DEFINITION: u32 = 444;
+        pub const SESSION_ID: u32 = 1;
+        pub const CURSOR_REACTION: u32 = 2;
+        pub const TIMER: u32 = 3;
+        pub const PRESENTER: u32 = 4;
+        pub const PROTOTYPE_PRESENTER: u32 = 5;
+        pub const MUSIC: u32 = 6;
+    }
+    pub mod paste_asset_type {
+        pub const DEFINITION: u32 = 445;
+    }
+    pub mod message {
+        pub const DEFINITION: u32 = 446;
+        pub const TYPE: u32 = 1;
+        pub const SESSION_ID: u32 = 2;
+        pub const ACK_ID: u32 = 3;
+        pub const NODE_CHANGES: u32 = 4;
+        pub const USER_CHANGES: u32 = 5;
+        pub const BLOBS: u32 = 6;
+        pub const SIGNAL_NAME: u32 = 7;
+        pub const ACCESS: u32 = 8;
+        pub const STYLE_SET_NAME: u32 = 9;
+        pub const STYLE_SET_TYPE: u32 = 10;
+        pub const STYLE_SET_CONTENT_TYPE: u32 = 11;
+        pub const PASTE_ID: u32 = 12;
+        pub const PASTE_OFFSET: u32 = 13;
+        pub const PASTE_FILE_KEY: u32 = 14;
+        pub const SIGNAL_PAYLOAD: u32 = 15;
+        pub const SCENE_GRAPH_QUERIES: u32 = 16;
+        pub const NODE_CHANGES_METADATA: u32 = 17;
+        pub const FILE_VERSION: u32 = 18;
+        pub const PASTE_IS_PARTIALLY_OUTSIDE_ENCLOSING_FRAME: u32 = 19;
+        pub const PASTE_PAGE_ID: u32 = 20;
+        pub const IS_CUT: u32 = 21;
+        pub const LOCAL_UNDO_STACK: u32 = 22;
+        pub const LOCAL_REDO_STACK: u32 = 23;
+        pub const BROADCASTS: u32 = 24;
+        pub const RECONNECT_SEQUENCE_NUMBER: u32 = 25;
+        pub const PASTE_BRANCH_SOURCE_FILE_KEY: u32 = 26;
+        pub const PASTE_EDITOR_TYPE: u32 = 27;
+        pub const POST_SYNC_ACTIONS: u32 = 28;
+        pub const PUBLISHED_ASSET_GUIDS: u32 = 29;
+        pub const BLOB_BASE_INDEX: u32 = 30;
+        pub const DIRTY_FROM_INITIAL_LOAD: u32 = 31;
+        pub const INTERACTIVE_SLIDE_ELEMENT_CHANGE: u32 = 32;
+        pub const CLIPBOARD_SELECTION_REGIONS: u32 = 33;
+        pub const ENCODED_OFFSETS_INDEX: u32 = 34;
+        pub const HAS_REPEATING_CONTENT: u32 = 35;
+        pub const NODE_STATUS_CHANGE: u32 = 36;
+        pub const IS_RETRANSMISSION: u32 = 37;
+        pub const SENT_TIMESTAMP: u32 = 38;
+        pub const ANNOTATION_CATEGORIES: u32 = 39;
+        pub const CLIENT_RENDERED_METADATA: u32 = 40;
+        pub const PASTE_ASSET_TYPE: u32 = 41;
+        pub const STABLE_SESSION_ID: u32 = 42;
+        pub const OBJECT_ANIMATIONS: u32 = 43;
+        pub const BUZZ_APPROVAL_CHANGE: u32 = 44;
+        pub const SCENE_GRAPH_QUERY_MODE: u32 = 45;
+    }
+    pub mod encoded_offsets_index {
+        pub const DEFINITION: u32 = 447;
+        pub const NODE_CHANGES_FIELD_OFFSET: u32 = 1;
+        pub const NODE_CHANGES_FIELD_LENGTH: u32 = 2;
+        pub const BLOBS_FIELD_OFFSET: u32 = 3;
+        pub const NODE_CHANGE_OFFSETS: u32 = 4;
+    }
+    pub mod guid_and_encoded_offset {
+        pub const DEFINITION: u32 = 448;
+        pub const GUID: u32 = 1;
+        pub const OFFSET: u32 = 2;
+    }
+    pub mod rich_media_type {
+        pub const DEFINITION: u32 = 449;
+    }
+    pub mod rich_media_data {
+        pub const DEFINITION: u32 = 450;
+        pub const MEDIA_HASH: u32 = 1;
+        pub const RICH_MEDIA_TYPE: u32 = 2;
+    }
+    pub mod variable_data_type {
+        pub const DEFINITION: u32 = 451;
+    }
+    pub mod variable_resolved_data_type {
+        pub const DEFINITION: u32 = 452;
+    }
+    pub mod variable_any_value {
+        pub const DEFINITION: u32 = 453;
+        pub const BOOL_VALUE: u32 = 1;
+        pub const TEXT_VALUE: u32 = 2;
+        pub const FLOAT_VALUE: u32 = 3;
+        pub const ALIAS: u32 = 4;
+        pub const COLOR_VALUE: u32 = 5;
+        pub const EXPRESSION_VALUE: u32 = 6;
+        pub const MAP_VALUE: u32 = 7;
+        pub const SYMBOL_ID_VALUE: u32 = 8;
+        pub const FONT_STYLE_VALUE: u32 = 9;
+        pub const TEXT_DATA_VALUE: u32 = 10;
+        pub const NODE_FIELD_ALIAS_VALUE: u32 = 11;
+        pub const CMS_ALIAS_VALUE: u32 = 12;
+        pub const PROP_REF_VALUE: u32 = 13;
+        pub const IMAGE_VALUE: u32 = 14;
+        pub const MANAGED_STRING_ALIAS_VALUE: u32 = 15;
+        pub const LINK_VALUE: u32 = 16;
+        pub const JS_RUNTIME_ALIAS_VALUE: u32 = 17;
+        pub const SLOT_CONTENT_ID_VALUE: u32 = 18;
+        pub const KEYFRAME_TRACK_ID_VALUE: u32 = 19;
+        pub const KEYFRAME_TRACK_PARAMETER_VALUE: u32 = 20;
+        pub const EASING_VALUE: u32 = 21;
+        pub const VECTOR_VALUE: u32 = 22;
+        pub const COLOR_ARRAY_VALUE: u32 = 23;
+        pub const LINE_VALUE: u32 = 24;
+        pub const CIRCLE_VALUE: u32 = 25;
+        pub const ROTATION3_D_VALUE: u32 = 26;
+        pub const CIRCLE_POINT_VALUE: u32 = 27;
+        pub const GRADIENT_VALUE: u32 = 28;
+        pub const COLOR_POINT_VALUE: u32 = 29;
+    }
+    pub mod expression_function {
+        pub const DEFINITION: u32 = 454;
+    }
+    pub mod expression {
+        pub const DEFINITION: u32 = 455;
+        pub const EXPRESSION_FUNCTION: u32 = 1;
+        pub const EXPRESSION_ARGUMENTS: u32 = 2;
+    }
+    pub mod variable_map_value {
+        pub const DEFINITION: u32 = 456;
+        pub const KEY: u32 = 1;
+        pub const VALUE: u32 = 2;
+        pub const GUID_KEY: u32 = 3;
+    }
+    pub mod variable_map {
+        pub const DEFINITION: u32 = 457;
+        pub const VALUES: u32 = 1;
+    }
+    pub mod color_array {
+        pub const DEFINITION: u32 = 458;
+        pub const COLORS: u32 = 1;
+    }
+    pub mod variable_font_style {
+        pub const DEFINITION: u32 = 459;
+        pub const AS_STRING: u32 = 1;
+        pub const AS_FLOAT: u32 = 2;
+        pub const AS_VARIATIONS: u32 = 3;
+    }
+    pub mod image_parameter_value {
+        pub const DEFINITION: u32 = 460;
+        pub const IMAGE: u32 = 1;
+        pub const IMAGE_THUMBNAIL: u32 = 2;
+        pub const ALT_TEXT: u32 = 3;
+        pub const ORIGINAL_IMAGE_HEIGHT: u32 = 4;
+        pub const ORIGINAL_IMAGE_WIDTH: u32 = 5;
+        pub const ANIMATED_IMAGE: u32 = 6;
+        pub const ANIMATION_FRAME: u32 = 7;
+    }
+    pub mod thumbnail_info {
+        pub const DEFINITION: u32 = 461;
+        pub const NODE_ID: u32 = 1;
+        pub const THUMBNAIL_VERSION: u32 = 2;
+    }
+    pub mod ai_canvas_prompt {
+        pub const DEFINITION: u32 = 462;
+        pub const USER_PROMPT: u32 = 1;
+        pub const AUTHOR_ID: u32 = 2;
+        pub const PARENT_NODE_IDS: u32 = 3;
+    }
+    pub mod node_field_alias {
+        pub const DEFINITION: u32 = 463;
+        pub const STABLE_PATH_TO_NODE: u32 = 1;
+        pub const NODE_FIELD: u32 = 2;
+        pub const INDEX_OR_KEY: u32 = 3;
+    }
+    pub mod node_field_alias_type {
+        pub const DEFINITION: u32 = 464;
+    }
+    pub mod cms_alias {
+        pub const DEFINITION: u32 = 465;
+        pub const COLLECTION_ID: u32 = 1;
+        pub const ITEM_ID: u32 = 2;
+        pub const FIELD_ID: u32 = 3;
+        pub const TYPE: u32 = 4;
+    }
+    pub mod js_runtime_alias {
+        pub const DEFINITION: u32 = 466;
+        pub const LOOKUP_KEY: u32 = 1;
+    }
+    pub mod prop_ref_value {
+        pub const DEFINITION: u32 = 467;
+        pub const DEF_ID: u32 = 1;
+    }
+    pub mod managed_string_id {
+        pub const DEFINITION: u32 = 468;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod managed_string_placeholder_map_entry {
+        pub const DEFINITION: u32 = 469;
+        pub const KEY: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod slot_content_id {
+        pub const DEFINITION: u32 = 470;
+        pub const GUID: u32 = 1;
+    }
+    pub mod managed_string_alias {
+        pub const DEFINITION: u32 = 471;
+        pub const MANAGED_STRING_ID: u32 = 1;
+        pub const PLACEHOLDER_VALUES: u32 = 2;
+    }
+    pub mod keyframe_track_id {
+        pub const DEFINITION: u32 = 472;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod animation_preset_id {
+        pub const DEFINITION: u32 = 473;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod tool_id {
+        pub const DEFINITION: u32 = 474;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod custom_effect_id {
+        pub const DEFINITION: u32 = 475;
+        pub const GUID: u32 = 1;
+        pub const ASSET_REF: u32 = 2;
+    }
+    pub mod trss_transform2_d {
+        pub const DEFINITION: u32 = 476;
+        pub const TRANSLATION: u32 = 1;
+        pub const ROTATION: u32 = 2;
+        pub const SCALE: u32 = 3;
+        pub const SHEAR_X: u32 = 4;
+    }
+    pub mod variable_data {
+        pub const DEFINITION: u32 = 477;
+        pub const VALUE: u32 = 1;
+        pub const DATA_TYPE: u32 = 2;
+        pub const RESOLVED_DATA_TYPE: u32 = 3;
+    }
+    pub mod variable_set_mode {
+        pub const DEFINITION: u32 = 478;
+        pub const ID: u32 = 1;
+        pub const NAME: u32 = 2;
+        pub const SORT_POSITION: u32 = 3;
+        pub const PARENT_VARIABLE_SET_ID: u32 = 4;
+        pub const PARENT_MODE_ID: u32 = 5;
+    }
+    pub mod variable_data_values {
+        pub const DEFINITION: u32 = 479;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod variable_data_values_entry {
+        pub const DEFINITION: u32 = 480;
+        pub const MODE_ID: u32 = 1;
+        pub const VARIABLE_DATA: u32 = 2;
+    }
+    pub mod variable_scope {
+        pub const DEFINITION: u32 = 481;
+    }
+    pub mod keyframe_any_value {
+        pub const DEFINITION: u32 = 482;
+        pub const FLOAT_VALUE: u32 = 1;
+        pub const COLOR_VALUE: u32 = 2;
+        pub const TEXT_DATA_VALUE: u32 = 3;
+        pub const VECTOR_VALUE: u32 = 4;
+    }
+    pub mod keyframe_value_type {
+        pub const DEFINITION: u32 = 483;
+    }
+    pub mod keyframe_value_data {
+        pub const DEFINITION: u32 = 484;
+        pub const VALUE: u32 = 1;
+        pub const VALUE_TYPE: u32 = 2;
+    }
+    pub mod keyframe_track_parameter_type {
+        pub const DEFINITION: u32 = 485;
+    }
+    pub mod manual_keyframe_track_parameter {
+        pub const DEFINITION: u32 = 486;
+        pub const KEYFRAME_TRACK_ID: u32 = 1;
+        pub const TIMELINE_DEF_ID: u32 = 2;
+    }
+    pub mod animation_preset_keyframe_track_parameter {
+        pub const DEFINITION: u32 = 487;
+        pub const ANIMATION_PRESET_ID: u32 = 1;
+        pub const KEYFRAME_TRACK_ID: u32 = 2;
+        pub const TIMELINE_DEF_ID: u32 = 3;
+    }
+    pub mod keyframe_track_any_parameter {
+        pub const DEFINITION: u32 = 488;
+        pub const MANUAL: u32 = 1;
+        pub const ANIMATION_PRESET: u32 = 2;
+        pub const ANIMATION_STYLE_BINDING_ID: u32 = 3;
+    }
+    pub mod keyframe_track_parameter {
+        pub const DEFINITION: u32 = 489;
+        pub const VALUE: u32 = 1;
+        pub const TYPE: u32 = 2;
+    }
+    pub mod keyframe_track_parameter_value {
+        pub const DEFINITION: u32 = 490;
+        pub const PARAMETERS: u32 = 1;
+    }
+    pub mod animation_presets {
+        pub const DEFINITION: u32 = 491;
+        pub const PRESETS: u32 = 1;
+    }
+    pub mod animation_preset_data {
+        pub const DEFINITION: u32 = 492;
+        pub const ANIMATION_PRESET_ID: u32 = 1;
+        pub const TIMELINE_DEF_ID: u32 = 2;
+    }
+    pub mod style_animation {
+        pub const DEFINITION: u32 = 493;
+        pub const ANIMATION_PRESET_ID: u32 = 1;
+    }
+    pub mod style_id_for_animation {
+        pub const DEFINITION: u32 = 494;
+        pub const ID: u32 = 1;
+        pub const TIMELINE_DEF_ID: u32 = 2;
+        pub const ANIMATION_STYLE_ID: u32 = 3;
+        pub const TIMELINE_OFFSET: u32 = 4;
+    }
+    pub mod tools {
+        pub const DEFINITION: u32 = 495;
+        pub const TOOLS: u32 = 1;
+    }
+    pub mod tool_data {
+        pub const DEFINITION: u32 = 496;
+        pub const TOOL_ID: u32 = 1;
+        pub const BACKING_CODE_COMPONENT_ID: u32 = 2;
+        pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 3;
+    }
+    pub mod custom_effects {
+        pub const DEFINITION: u32 = 497;
+        pub const CUSTOM_EFFECTS: u32 = 1;
+    }
+    pub mod custom_effect_data {
+        pub const DEFINITION: u32 = 498;
+        pub const CUSTOM_EFFECT_ID: u32 = 1;
+    }
+    pub mod spring_params {
+        pub const DEFINITION: u32 = 499;
+        pub const STIFFNESS: u32 = 1;
+        pub const DAMPING: u32 = 2;
+        pub const MASS: u32 = 3;
+    }
+    pub mod transition_easing_any_value {
+        pub const DEFINITION: u32 = 500;
+        pub const SPRING_EASING: u32 = 1;
+        pub const BEZIER_EASING: u32 = 2;
+    }
+    pub mod easing_data {
+        pub const DEFINITION: u32 = 501;
+        pub const EASING_TYPE: u32 = 1;
+        pub const EASING_VALUE: u32 = 2;
+    }
+    pub mod transition_override {
+        pub const DEFINITION: u32 = 502;
+        pub const ID: u32 = 1;
+        pub const DURATION: u32 = 2;
+        pub const DURATION_VAR: u32 = 3;
+        pub const DELAY: u32 = 4;
+        pub const DELAY_VAR: u32 = 5;
+        pub const EASING: u32 = 6;
+        pub const EASING_VAR: u32 = 7;
+        pub const CREATED_AT_MS: u32 = 8;
+        pub const INTERACTION_I_DS: u32 = 9;
+        pub const DISABLED: u32 = 10;
+    }
+    pub mod transition_override_data {
+        pub const DEFINITION: u32 = 503;
+        pub const ALL: u32 = 1;
+        pub const PROPERTY_OVERRIDES: u32 = 2;
+    }
+    pub mod transition_override_prop {
+        pub const DEFINITION: u32 = 504;
+    }
+    pub mod transition_override_binding_top_level_field {
+        pub const DEFINITION: u32 = 505;
+    }
+    pub mod transition_override_binding_location {
+        pub const DEFINITION: u32 = 506;
+        pub const TOP_LEVEL_FIELD: u32 = 1;
+        pub const PARAMETER_FIELD_VALUE: u32 = 2;
+        pub const INDEX: u32 = 3;
+        pub const EFFECT_PARAMETRIZED_FIELD_VALUE: u32 = 4;
+    }
+    pub mod keyframe_binding_effect_parametrized_field {
+        pub const DEFINITION: u32 = 507;
+    }
+    pub mod node_contents_keyframe_binding_location {
+        pub const DEFINITION: u32 = 508;
+        pub const TOP_LEVEL_FIELD: u32 = 1;
+        pub const PARAMETER_FIELD_VALUE: u32 = 2;
+        pub const INDEX: u32 = 3;
+        pub const EFFECT_PARAMETRIZED_FIELD_VALUE: u32 = 4;
+    }
+    pub mod transition_override_prop_map {
+        pub const DEFINITION: u32 = 509;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod transition_override_prop_map_entry {
+        pub const DEFINITION: u32 = 510;
+        pub const PROP: u32 = 1;
+        pub const OVERRIDES: u32 = 2;
+        pub const BINDING_LOCATION: u32 = 3;
+        pub const NODE_CONTENTS_BINDING_LOCATION: u32 = 4;
+    }
+    pub mod code_syntax_platform {
+        pub const DEFINITION: u32 = 511;
+    }
+    pub mod optional_vector {
+        pub const DEFINITION: u32 = 512;
+        pub const VALUE: u32 = 1;
+    }
+    pub mod html_tag {
+        pub const DEFINITION: u32 = 513;
+    }
+    pub mod aria_role {
+        pub const DEFINITION: u32 = 514;
+    }
+    pub mod migration_status {
+        pub const DEFINITION: u32 = 515;
+        pub const DSD_CLEANUP: u32 = 1;
+    }
+    pub mod color_profile {
+        pub const DEFINITION: u32 = 516;
+    }
+    pub mod document_color_profile {
+        pub const DEFINITION: u32 = 517;
+    }
+    pub mod child_reading_direction {
+        pub const DEFINITION: u32 = 518;
+    }
+    pub mod aria_attribute_any_value {
+        pub const DEFINITION: u32 = 519;
+        pub const BOOL_VALUE: u32 = 1;
+        pub const STRING_VALUE: u32 = 2;
+        pub const FLOAT_VALUE: u32 = 3;
+        pub const INT_VALUE: u32 = 4;
+        pub const STRING_ARRAY_VALUE: u32 = 5;
+    }
+    pub mod aria_attribute_data_type {
+        pub const DEFINITION: u32 = 520;
+    }
+    pub mod aria_attribute_data {
+        pub const DEFINITION: u32 = 521;
+        pub const TYPE: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod aria_attributes_map {
+        pub const DEFINITION: u32 = 522;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod aria_attributes_map_entry {
+        pub const DEFINITION: u32 = 523;
+        pub const ATTRIBUTE: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod handoff_status_map_entry {
+        pub const DEFINITION: u32 = 524;
+        pub const GUID: u32 = 1;
+        pub const HANDOFF_STATUS: u32 = 2;
+    }
+    pub mod handoff_status_map {
+        pub const DEFINITION: u32 = 525;
+        pub const ENTRIES: u32 = 1;
+    }
+    pub mod edit_scope_info {
+        pub const DEFINITION: u32 = 526;
+        pub const EDIT_SCOPE_STACKS: u32 = 1;
+        pub const SNAPSHOTS: u32 = 2;
+    }
+    pub mod edit_scope_snapshot {
+        pub const DEFINITION: u32 = 527;
+        pub const FRAMES: u32 = 1;
+        pub const NODE_CHANGE_FIELD_NUMBERS: u32 = 2;
+    }
+    pub mod edit_scope_stack {
+        pub const DEFINITION: u32 = 528;
+        pub const STACK: u32 = 1;
+    }
+    pub mod edit_scope {
+        pub const DEFINITION: u32 = 529;
+        pub const TYPE: u32 = 1;
+        pub const LABEL: u32 = 2;
+        pub const EDITOR_TYPE: u32 = 3;
+    }
+    pub mod edit_scope_type {
+        pub const DEFINITION: u32 = 530;
+    }
+    pub mod section_preset_state {
+        pub const DEFINITION: u32 = 531;
+    }
+    pub mod emoji_image_set {
+        pub const DEFINITION: u32 = 532;
+    }
+    pub mod selection_region_focus_type {
+        pub const DEFINITION: u32 = 533;
+    }
+    pub mod section_preset_info {
+        pub const DEFINITION: u32 = 534;
+        pub const SHELF_ID: u32 = 1;
+        pub const TEMPLATE_ID: u32 = 2;
+        pub const TEMPLATE_NAME: u32 = 3;
+        pub const STATE: u32 = 4;
+    }
+    pub mod clipboard_selection_region {
+        pub const DEFINITION: u32 = 535;
+        pub const PARENT: u32 = 1;
+        pub const NODES: u32 = 2;
+        pub const ENCLOSING_FRAME_OFFSET: u32 = 3;
+        pub const PASTE_IS_PARTIALLY_OUTSIDE_ENCLOSING_FRAME: u32 = 4;
+        pub const FOCUS_TYPE: u32 = 5;
+    }
+    pub mod first_draft_kit_type {
+        pub const DEFINITION: u32 = 536;
+    }
+    pub mod first_draft_kit {
+        pub const DEFINITION: u32 = 537;
+        pub const KEY: u32 = 1;
+        pub const TYPE: u32 = 2;
+    }
+    pub mod first_draft_data {
+        pub const DEFINITION: u32 = 538;
+        pub const GENERATION_ID: u32 = 1;
+        pub const KIT: u32 = 2;
+    }
+    pub mod first_draft_kit_element_type {
+        pub const DEFINITION: u32 = 539;
+    }
+    pub mod first_draft_kit_element_data {
+        pub const DEFINITION: u32 = 540;
+        pub const TYPE: u32 = 1;
+    }
+    pub mod platform_shape_property {
+        pub const DEFINITION: u32 = 541;
+    }
+    pub mod platform_shape_behavior_type {
+        pub const DEFINITION: u32 = 542;
+    }
+    pub mod platform_shape_property_map_entry {
+        pub const DEFINITION: u32 = 543;
+        pub const PROPERTY: u32 = 1;
+        pub const NODE_PATHS: u32 = 2;
+    }
+    pub mod platform_shape_definition {
+        pub const DEFINITION: u32 = 544;
+        pub const PROPERTY_MAP_ENTRIES: u32 = 1;
+        pub const BEHAVIOR_TYPE: u32 = 2;
+        pub const THUMBNAIL_NODE: u32 = 3;
+    }
+    pub mod node_behaviors {
+        pub const DEFINITION: u32 = 545;
+        pub const LINK: u32 = 1;
+        pub const APPEAR: u32 = 2;
+        pub const HOVER: u32 = 3;
+        pub const PRESS: u32 = 4;
+        pub const FOCUS: u32 = 5;
+        pub const SCROLL_PARALLAX: u32 = 6;
+        pub const SCROLL_TRANSFORM: u32 = 7;
+        pub const CURSOR: u32 = 8;
+        pub const MARQUEE: u32 = 9;
+        pub const CODE: u32 = 10;
+    }
+    pub mod behavior_transition {
+        pub const DEFINITION: u32 = 546;
+        pub const EASING_TYPE: u32 = 1;
+        pub const EASING_FUNCTION: u32 = 2;
+        pub const TRANSITION_DURATION: u32 = 3;
+        pub const DELAY: u32 = 4;
+        pub const TRANSITION_DURATION_VAR: u32 = 5;
+        pub const DELAY_VAR: u32 = 6;
+    }
+    pub mod appear_behavior_trigger {
+        pub const DEFINITION: u32 = 547;
+    }
+    pub mod relative_direction {
+        pub const DEFINITION: u32 = 548;
+    }
+    pub mod appear_behavior {
+        pub const DEFINITION: u32 = 549;
+        pub const TRIGGER: u32 = 1;
+        pub const DIRECTION: u32 = 2;
+        pub const OTHER_LAYER: u32 = 3;
+        pub const ENTER_TRANSITION: u32 = 4;
+        pub const ENTER_STATE: u32 = 5;
+        pub const EXIT_TRANSITION: u32 = 6;
+        pub const EXIT_STATE: u32 = 7;
+        pub const PLAYS_ONCE: u32 = 8;
+        pub const PLAYS_ONCE_VAR: u32 = 9;
+        pub const IS_DELETED: u32 = 10;
+    }
+    pub mod hover_behavior {
+        pub const DEFINITION: u32 = 550;
+        pub const TRANSITION: u32 = 1;
+        pub const STATE: u32 = 2;
+        pub const IS_DELETED: u32 = 3;
+    }
+    pub mod press_behavior {
+        pub const DEFINITION: u32 = 551;
+        pub const TRANSITION: u32 = 1;
+        pub const STATE: u32 = 2;
+        pub const IS_DELETED: u32 = 3;
+    }
+    pub mod focus_behavior {
+        pub const DEFINITION: u32 = 552;
+        pub const TRANSITION: u32 = 1;
+        pub const STATE: u32 = 2;
+        pub const IS_DELETED: u32 = 3;
+    }
+    pub mod scroll_parallax_behavior {
+        pub const DEFINITION: u32 = 553;
+        pub const AXIS: u32 = 1;
+        pub const SPEED: u32 = 2;
+        pub const RELATIVE_TO_PAGE: u32 = 3;
+        pub const SPEED_VAR: u32 = 4;
+        pub const IS_DELETED: u32 = 5;
+    }
+    pub mod scroll_transform_behavior_trigger {
+        pub const DEFINITION: u32 = 554;
+    }
+    pub mod scroll_transform_behavior {
+        pub const DEFINITION: u32 = 555;
+        pub const TRIGGER: u32 = 1;
+        pub const OTHER_LAYER: u32 = 2;
+        pub const TRANSITION: u32 = 3;
+        pub const FROM_STATE: u32 = 4;
+        pub const TO_STATE: u32 = 5;
+        pub const PLAYS_ONCE: u32 = 6;
+        pub const PLAYS_ONCE_VAR: u32 = 7;
+        pub const PLAYS_ONCE_VAR2: u32 = 8;
+        pub const IS_DELETED: u32 = 9;
+    }
+    pub mod cursor_behavior {
+        pub const DEFINITION: u32 = 556;
+        pub const HOTSPOT_X: u32 = 1;
+        pub const HOTSPOT_Y: u32 = 2;
+        pub const CURSOR_GUID: u32 = 3;
+        pub const IS_DELETED: u32 = 4;
+    }
+    pub mod marquee_behavior {
+        pub const DEFINITION: u32 = 557;
+        pub const DIRECTION: u32 = 1;
+        pub const SPEED: u32 = 2;
+        pub const SHOULD_LOOP_INFINITELY: u32 = 3;
+        pub const SPEED_VAR: u32 = 4;
+        pub const SHOULD_LOOP_INFINITELY_VAR: u32 = 5;
+        pub const PAUSE_ON_HOVER: u32 = 6;
+        pub const IS_DELETED: u32 = 7;
+    }
+    pub mod code_behavior {
+        pub const DEFINITION: u32 = 558;
+        pub const CODE_COMPONENT_ID: u32 = 1;
+        pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 2;
+        pub const IS_DELETED: u32 = 3;
+    }
+    pub mod client_rendered_metadata {
+        pub const DEFINITION: u32 = 559;
+        pub const LOAD_ID: u32 = 1;
+        pub const TRACKING_SESSION_ID: u32 = 2;
+        pub const TRACKING_SESSION_SEQUENCE_ID: u32 = 3;
+        pub const RECONNECT_ID: u32 = 4;
+    }
+    pub mod link_behavior_type {
+        pub const DEFINITION: u32 = 560;
+    }
+    pub mod link_behavior {
+        pub const DEFINITION: u32 = 561;
+        pub const TYPE: u32 = 1;
+        pub const URL: u32 = 2;
+        pub const PAGE: u32 = 3;
+        pub const OPEN_IN_NEW_WINDOW: u32 = 4;
+    }
+    pub mod variable_id_or_variable_override_id {
+        pub const DEFINITION: u32 = 562;
+        pub const VARIABLE_ID: u32 = 1;
+        pub const VARIABLE_OVERRIDE_ID: u32 = 2;
+    }
+    pub mod slide_theme_data {
+        pub const DEFINITION: u32 = 563;
+        pub const THEME_ID: u32 = 1;
+        pub const VERSION: u32 = 2;
+    }
+    pub mod slide_number {
+        pub const DEFINITION: u32 = 564;
+    }
+    pub mod node_chat_message_type {
+        pub const DEFINITION: u32 = 565;
+    }
+    pub mod node_chat_message {
+        pub const DEFINITION: u32 = 566;
+        pub const ID: u32 = 1;
+        pub const TYPE: u32 = 2;
+        pub const USER_ID: u32 = 3;
+        pub const TEXT_CONTENT: u32 = 4;
+        pub const SENT_AT: u32 = 5;
+        pub const TOOL_CALLS: u32 = 6;
+        pub const TOOL_RESULTS: u32 = 7;
+        pub const SENT_AT64: u32 = 8;
+    }
+    pub mod node_chat_tool_call {
+        pub const DEFINITION: u32 = 567;
+        pub const TOOL_CALL_ID: u32 = 1;
+        pub const TOOL_NAME: u32 = 2;
+        pub const ARGS_JSON: u32 = 3;
+    }
+    pub mod node_chat_tool_result {
+        pub const DEFINITION: u32 = 568;
+        pub const TOOL_CALL_ID: u32 = 1;
+        pub const TOOL_NAME: u32 = 2;
+        pub const RESULT_JSON: u32 = 3;
+    }
+    pub mod node_chat_exchange {
+        pub const DEFINITION: u32 = 569;
+        pub const NODE: u32 = 1;
+        pub const MESSAGES: u32 = 2;
+        pub const IS_TYPING: u32 = 3;
+        pub const FILE_UPDATES: u32 = 4;
+    }
+    pub mod node_chat_compression_state {
+        pub const DEFINITION: u32 = 570;
+        pub const START_INDEX: u32 = 1;
+        pub const SUMMARY: u32 = 2;
+    }
+    pub mod file_update {
+        pub const DEFINITION: u32 = 571;
+        pub const NAME: u32 = 1;
+        pub const CONTENTS: u32 = 2;
+        pub const IS_DELETED: u32 = 3;
+    }
+    pub mod ai_chat_content_part {
+        pub const DEFINITION: u32 = 572;
+        pub const TYPE: u32 = 1;
+        pub const VALUE: u32 = 2;
+    }
+    pub mod ai_chat_content_part_type {
+        pub const DEFINITION: u32 = 573;
+    }
+    pub mod ai_chat_content_part_any_value {
+        pub const DEFINITION: u32 = 574;
+        pub const TEXT_VALUE: u32 = 1;
+        pub const SELECTED_NODE_IDS: u32 = 2;
+    }
+    pub mod ai_chat_message_role {
+        pub const DEFINITION: u32 = 575;
+    }
+    pub mod ai_chat_message {
+        pub const DEFINITION: u32 = 576;
+        pub const CREATED_AT_MS: u32 = 1;
+        pub const ROLE: u32 = 2;
+        pub const CONTENT: u32 = 3;
+        pub const CLIENT_ID: u32 = 4;
+        pub const CREATED_AT_MS64: u32 = 5;
+    }
+    pub mod ai_chat_thread {
+        pub const DEFINITION: u32 = 577;
+        pub const MESSAGES: u32 = 1;
+    }
+    pub mod cooper_template_type {
+        pub const DEFINITION: u32 = 578;
+    }
+    pub mod cooper_template_data {
+        pub const DEFINITION: u32 = 579;
+        pub const TYPE: u32 = 1;
+    }
+    pub mod image_import_map {
+        pub const DEFINITION: u32 = 580;
+        pub const IMPORTS: u32 = 1;
+    }
+    pub mod image_import {
+        pub const DEFINITION: u32 = 581;
+        pub const NAME: u32 = 1;
+        pub const IMAGE: u32 = 2;
+    }
+    pub mod interpolation_type {
+        pub const DEFINITION: u32 = 582;
+    }
+    pub mod bezier_handles {
+        pub const DEFINITION: u32 = 583;
+        pub const P1X: u32 = 1;
+        pub const P1Y: u32 = 2;
+        pub const P2X: u32 = 3;
+        pub const P2Y: u32 = 4;
+    }
+    pub mod keyframe_operation {
+        pub const DEFINITION: u32 = 584;
+    }
+    pub mod timeline_position_type {
+        pub const DEFINITION: u32 = 585;
+    }
+    pub mod playback_style {
+        pub const DEFINITION: u32 = 586;
+    }
+}
+
 #[derive(rustler::NifMap)]
 pub struct SceneSummary {
     node_count: usize,
@@ -13641,6 +41911,19 @@ pub fn decode_sparse_message_impl<'a>(
     decoder.finish()?;
     Ok(value)
 }
+/// Decodes the message into native records, then encodes them as `decode_sparse_message_impl`
+/// returns it.
+pub fn decode_record_message_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let record = kiwi_decode_record(&mut decoder, kiwi_records::message::DEFINITION)?;
+    decoder.finish()?;
+    kiwi_encode_record(env, &record)
+}
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,
@@ -13801,6 +42084,14 @@ pub fn decode_sparse_message<'a>(
     schema: Binary<'a>,
 ) -> NifResult<Term<'a>> {
     decode_sparse_message_impl(env, bytes, schema)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn decode_record_message<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    decode_record_message_impl(env, bytes, schema)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_graph_focused_sparse_message<'a>(

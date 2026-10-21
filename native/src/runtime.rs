@@ -145,6 +145,21 @@ impl<'a> Decoder<'a> {
         Ok(Term::from(binary))
     }
 
+    pub fn read_byte_array_value(&mut self) -> NifResult<&'a [u8]> {
+        let len = self.read_var_uint()? as usize;
+        self.read_bytes(len)
+    }
+
+    /// A string borrowed from the data, validated as UTF-8.
+    pub fn read_string_str(&mut self) -> NifResult<&'a str> {
+        let bytes = self.read_string_bytes()?;
+        std::str::from_utf8(bytes).map_err(|_| Error::Term(Box::new("invalid utf-8")))
+    }
+
+    pub fn remaining(&self) -> usize {
+        self.data.len() - self.index
+    }
+
     pub fn skip_byte_array(&mut self) -> NifResult<()> {
         let len = self.read_var_uint()? as usize;
         self.skip_bytes(len)

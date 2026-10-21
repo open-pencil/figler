@@ -46,7 +46,7 @@ generate "native", "native/src/generated.rs" do
     KiwiCodec.RustlerGenerator.source(schema,
       entrypoints: [],
       definitions: ["Message"],
-      features: [:sparse, :skip],
+      features: [:sparse, :skip, :records],
       sparse_messages: :descriptor,
       decoder_sources: ["native/src/runtime.rs"],
       unknown_fields: :runtime_schema,
