@@ -168,6 +168,63 @@ fn kiwi_skip_kind(decoder: &mut Decoder<'_>, kind: &KiwiSkipKind) -> NifResult<(
 }
 
 
+/// The atom for a schema name, interned once per process. Atoms are never freed, so a cached
+/// atom stays valid across calls and threads; the names are static, so their address and length
+/// identify them without hashing their text. Each scheduler thread keeps its own copy of the
+/// atoms it has used, so a lookup takes no lock once that thread has seen the name.
+fn kiwi_atom(env: Env<'_>, name: &'static str) -> Atom {
+    type KiwiAtoms = std::collections::HashMap<(usize, usize), Atom, KiwiAtomHasher>;
+
+    static SHARED: std::sync::OnceLock<std::sync::RwLock<KiwiAtoms>> = std::sync::OnceLock::new();
+
+    thread_local! {
+        static LOCAL: std::cell::RefCell<KiwiAtoms> = std::cell::RefCell::new(KiwiAtoms::default());
+    }
+
+    let key = (name.as_ptr() as usize, name.len());
+
+    LOCAL.with(|local| {
+        *local.borrow_mut().entry(key).or_insert_with(|| {
+            let shared = SHARED.get_or_init(Default::default);
+            let known = shared.read().ok().and_then(|atoms| atoms.get(&key).copied());
+
+            known.unwrap_or_else(|| {
+                let atom = Atom::from_str(env, name).unwrap();
+                if let Ok(mut atoms) = shared.write() {
+                    atoms.insert(key, atom);
+                }
+                atom
+            })
+        })
+    })
+}
+
+/// Mixes a static name's address and length; the keys need no protection from collisions.
+#[derive(Default)]
+struct KiwiAtomHash(u64);
+
+impl std::hash::Hasher for KiwiAtomHash {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        for byte in bytes {
+            self.write_u64(u64::from(*byte));
+        }
+    }
+
+    fn write_usize(&mut self, value: usize) {
+        self.write_u64(value as u64);
+    }
+
+    fn write_u64(&mut self, value: u64) {
+        self.0 = (self.0.rotate_left(5) ^ value).wrapping_mul(0x51_7c_c1_b7_27_22_0a_95);
+    }
+}
+
+type KiwiAtomHasher = std::hash::BuildHasherDefault<KiwiAtomHash>;
+
 pub type KiwiSparseDecodeFn = for<'a> fn(
     Env<'a>,
     &mut Decoder<'_>,
@@ -328,7 +385,7 @@ fn kiwi_sparse_enum_value<'a>(
     match variants.binary_search_by_key(&value, |variant| variant.value) {
         Ok(index) => {
             let variant = variants.get(index).unwrap();
-            Ok(Atom::from_str(env, variant.name).unwrap().encode(env))
+            Ok(kiwi_atom(env, variant.name).encode(env))
         }
         Err(_index) => Ok(value.encode(env)),
     }
@@ -368,12 +425,12 @@ fn kiwi_sparse_struct_field_value<'a>(
 fn kiwi_sparse_struct_fields<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
-    module_name: &str,
+    module_name: &'static str,
     capacity: usize,
     fields: &[KiwiSparseStructField],
 ) -> NifResult<Term<'a>> {
-    let module_atom = Atom::from_str(env, module_name).unwrap();
-    let module_key_atom = Atom::from_str(env, "__kiwi_module__").unwrap();
+    let module_atom = kiwi_atom(env, module_name);
+    let module_key_atom = kiwi_atom(env, "__kiwi_module__");
     let mut keys = Vec::with_capacity(capacity);
     let mut values = Vec::with_capacity(capacity);
     keys.push(module_key_atom.encode(env));
@@ -416,7 +473,7 @@ fn kiwi_sparse_struct_fields_remaining<'a>(
         Ok(())
     } else {
         let field = fields.get(index).unwrap();
-        keys.push(Atom::from_str(env, field.name).unwrap().encode(env));
+        keys.push(kiwi_atom(env, field.name).encode(env));
         values.push(kiwi_sparse_struct_field_value(env, decoder, field)?);
         kiwi_sparse_struct_fields_remaining(
             env,
@@ -433,13 +490,13 @@ fn kiwi_sparse_struct_fields_remaining<'a>(
 fn kiwi_sparse_message_fields<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
-    module_name: &str,
+    module_name: &'static str,
     definition_name: &str,
     capacity: usize,
     fields: &[KiwiSparseField],
 ) -> NifResult<Term<'a>> {
-    let module_atom = Atom::from_str(env, module_name).unwrap();
-    let module_key_atom = Atom::from_str(env, "__kiwi_module__").unwrap();
+    let module_atom = kiwi_atom(env, module_name);
+    let module_key_atom = kiwi_atom(env, "__kiwi_module__");
     let mut keys = Vec::with_capacity(capacity);
     let mut values = Vec::with_capacity(capacity);
     keys.push(module_key_atom.encode(env));
@@ -471,7 +528,7 @@ fn kiwi_sparse_message_fields_remaining<'a>(
         match fields.binary_search_by_key(&field_id, |field| field.id) {
             Ok(index) => {
                 let field = fields.get(index).unwrap();
-                keys.push(Atom::from_str(env, field.name).unwrap().encode(env));
+                keys.push(kiwi_atom(env, field.name).encode(env));
                 values.push(kiwi_sparse_field_value(env, decoder, field)?);
             }
             Err(_index) => {
