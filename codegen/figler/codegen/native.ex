@@ -23,6 +23,12 @@ defmodule Figler.Codegen.Native do
       graph_records: Graph.Records.items(),
       graph_prepare: Graph.Prepare.items(),
       graph_source_index: Graph.SourceIndex.items(),
+      graph_occurrence: Graph.Occurrence.items(),
+      graph_claims: Graph.Claims.items(),
+      graph_bindings: Graph.Bindings.items(),
+      graph_layer: Graph.Layer.items(),
+      graph_geometry: Graph.Geometry.items(),
+      graph_interpreter: Graph.Interpreter.items(),
       node_type_name_arms: node_type_name_arms(definition_map),
       graph_focus_decoders:
         Focus.render(definition_map, &Skip.message_arm/2, &Scene.render_template/2)

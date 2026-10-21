@@ -40,6 +40,21 @@ pub fn graph_source_index_impl<'a>(
     graph::encode_source_index(env, &message)
 }
 
+/// The occurrence tree the native interpreter builds for `root`, encoded for comparison with
+/// Elixir's.
+pub fn graph_interpret_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+    root: (u32, u32),
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    graph::encode_interpretation(env, &message, root)
+}
+
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,

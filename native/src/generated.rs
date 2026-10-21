@@ -10505,6 +10505,22 @@ impl KiwiRecord {
         }
     }
 
+    /// The floats in array `field`; other values are left out.
+    pub fn floats(&self, field: u32) -> Vec<f32> {
+        self.array(field)
+            .iter()
+            .filter_map(|value| match value {
+                KiwiValue::Float(value) => Some(*value),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The ids of the fields the record sets, in order.
+    pub fn field_ids(&self) -> Vec<u32> {
+        self.fields.iter().map(|(id, _)| *id).collect()
+    }
+
     /// An enum field's value.
     pub fn enum_value(&self, field: u32) -> Option<u32> {
         match self.get(field) {
@@ -10521,6 +10537,31 @@ impl KiwiRecord {
             Err(index) => fields.insert(index, (field, value)),
         }
         self.with_fields(fields)
+    }
+
+    /// The record with `field` holding `value`.
+    pub fn put_bool(&self, field: u32, value: bool) -> Self {
+        self.put(field, KiwiValue::Bool(value))
+    }
+
+    /// The record with `field` holding `value`.
+    pub fn put_uint(&self, field: u32, value: u32) -> Self {
+        self.put(field, KiwiValue::Uint(value))
+    }
+
+    /// The record with `field` holding `value`.
+    pub fn put_float(&self, field: u32, value: f32) -> Self {
+        self.put(field, KiwiValue::Float(value))
+    }
+
+    /// The record with `field` holding `value`.
+    pub fn put_str(&self, field: u32, value: &str) -> Self {
+        self.put(field, KiwiValue::String(value.into()))
+    }
+
+    /// The record with array `field` holding `values`.
+    pub fn put_floats(&self, field: u32, values: Vec<f32>) -> Self {
+        self.put(field, KiwiValue::Array(values.into_iter().map(KiwiValue::Float).collect()))
     }
 
     /// The record with `field` holding `record`.
@@ -43628,7 +43669,9 @@ fn decode_scene_node_change_from_decoder(
     clippy::redundant_closure,
     clippy::needless_borrow,
     clippy::manual_map,
-    clippy::useless_vec
+    clippy::useless_vec,
+    clippy::match_like_matches_macro,
+    clippy::unnecessary_sort_by
 )]
 pub mod graph {
     use super::*;
@@ -43671,7 +43714,10 @@ pub mod graph {
     pub type StyleKeys = HashMap<String, GuidKey>;
     pub type Styles = HashMap<GuidKey, KiwiRecord>;
     fn prepare(records: Vec<KiwiRecord>, styles: bool) -> NifResult<Vec<KiwiRecord>> {
-        let normalized = records.iter().map(|record| normalize(record)).collect();
+        let normalized = records
+            .iter()
+            .map(|record| normalize(record))
+            .collect::<Vec<KiwiRecord>>();
         let inherited = inherit_property_definitions(normalized)?;
         if styles { Ok(apply_styles(inherited)) } else { Ok(inherited) }
     }
@@ -43764,7 +43810,7 @@ pub mod graph {
             .records(kiwi_records::node_change::COMPONENT_PROP_REFS)
             .into_iter()
             .cloned()
-            .collect();
+            .collect::<Vec<_>>();
         let refs = entries
             .iter()
             .filter_map(|entry| prop_ref(entry))
@@ -43937,7 +43983,7 @@ pub mod graph {
         match parent_id(record).and_then(|id| by_id.get(&id)) {
             None => Ok(Vec::new()),
             Some(parent) => {
-                let parent = resolve(&parent, by_id, resolved, visiting)?;
+                let parent = resolve(parent, by_id, resolved, visiting)?;
                 let mut ancestors = resolved_ancestors(
                     &parent,
                     by_id,
@@ -44191,12 +44237,12 @@ pub mod graph {
     fn with_text_style(record: KiwiRecord, style: &KiwiRecord) -> KiwiRecord {
         let text = style
             .take(
-                &&vec![
+                &[
                     kiwi_records::node_change::FONT_SIZE,
                     kiwi_records::node_change::FONT_NAME,
                     kiwi_records::node_change::LINE_HEIGHT,
                     kiwi_records::node_change::LETTER_SPACING,
-                    kiwi_records::node_change::TEXT_CASE
+                    kiwi_records::node_change::TEXT_CASE,
                 ],
             );
         let merged = record.merge(&text);
@@ -44257,6 +44303,12 @@ pub mod graph {
         pub children: Children,
     }
     pub type Sources = HashMap<GuidKey, KiwiRecord>;
+    #[derive(Clone, Debug)]
+    pub struct StaticSegment {
+        pub count: usize,
+        pub record: Option<GuidKey>,
+        pub top: Option<GuidKey>,
+    }
     fn source_index(message: &KiwiRecord, styles: bool) -> NifResult<SourceIndex> {
         let live = live_records(message);
         if duplicate_ids(&live) {
@@ -44329,6 +44381,2348 @@ pub mod graph {
     fn record_refs(records: &[KiwiRecord]) -> Vec<&KiwiRecord> {
         records.iter().collect()
     }
+    fn source(index: &SourceIndex, id: GuidKey) -> Option<&KiwiRecord> {
+        index.sources.get(&id)
+    }
+    fn children_of(index: &SourceIndex, id: GuidKey) -> &[GuidKey] {
+        match index.children.get(&id) {
+            Some(children) => children.as_slice(),
+            None => &[],
+        }
+    }
+    fn symbol_id(record: &KiwiRecord) -> Option<GuidKey> {
+        record
+            .record(kiwi_records::node_change::SYMBOL_DATA)
+            .and_then(|data| guid_key(data.record(kiwi_records::symbol_data::SYMBOL_ID)))
+    }
+    fn override_key(record: &KiwiRecord) -> Option<GuidKey> {
+        guid_key(record.record(kiwi_records::node_change::OVERRIDE_KEY))
+            .filter(|key| *key != (4294967295, 4294967295))
+    }
+    fn matches(record: &KiwiRecord, guid: GuidKey) -> bool {
+        record_id(record) == Some(guid) || override_key(record) == Some(guid)
+    }
+    fn find_static_segment(
+        index: &SourceIndex,
+        parent_id: GuidKey,
+        guid: GuidKey,
+    ) -> StaticSegment {
+        let mut found = Vec::new();
+        for top in children_of(index, parent_id) {
+            collect_static(index, *top, *top, guid, &mut found);
+        }
+        if found.len() == 1 {
+            let (record, top) = found[0];
+            StaticSegment {
+                count: 1,
+                record: Some(record),
+                top: Some(top),
+            }
+        } else {
+            StaticSegment {
+                count: found.len(),
+                record: None,
+                top: None,
+            }
+        }
+    }
+    fn collect_static(
+        index: &SourceIndex,
+        id: GuidKey,
+        top: GuidKey,
+        guid: GuidKey,
+        found: &mut Vec<(GuidKey, GuidKey)>,
+    ) {
+        if let Some(record) = source(index, id) {
+            if matches(record, guid) {
+                found.push((id, top));
+            } else {
+                if symbol_id(record).is_none() {
+                    for child in children_of(index, id) {
+                        collect_static(index, *child, top, guid, found);
+                    }
+                }
+            };
+        }
+    }
+    fn resolves_in_source_component(
+        index: &SourceIndex,
+        component_id: GuidKey,
+        path: &[GuidKey],
+    ) -> bool {
+        resolves_from(index, component_id, path, 0)
+    }
+    fn resolves_from(
+        index: &SourceIndex,
+        current: GuidKey,
+        path: &[GuidKey],
+        position: usize,
+    ) -> bool {
+        match path.get(position) {
+            Some(segment) => {
+                match source(index, current) {
+                    Some(record) => {
+                        if position == 0 && matches(record, *segment) {
+                            resolves_from(index, current, path, position + 1)
+                        } else {
+                            match find_static_segment(index, current, *segment).record {
+                                Some(_found) if position + 1 == path.len() => true,
+                                Some(found) => {
+                                    match source(index, found)
+                                        .and_then(|found| symbol_id(found))
+                                    {
+                                        Some(next) => resolves_from(index, next, path, position + 1),
+                                        None => false,
+                                    }
+                                }
+                                None => false,
+                            }
+                        }
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+    #[derive(Clone, Debug)]
+    pub struct BindingClaim {
+        pub definition_id: GuidKey,
+        pub field: BoundField,
+        pub origin: Origin,
+    }
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum BoundField {
+        Visible,
+        TextData,
+        SymbolData,
+        SlotContent,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Occurrence {
+        pub source_id: GuidKey,
+        pub override_key: Option<GuidKey>,
+        pub main_component_id: Option<GuidKey>,
+        pub main_component_override_key: Option<GuidKey>,
+        pub source_component_id: Option<GuidKey>,
+        pub source_component_override_key: Option<GuidKey>,
+        pub derived_size: Option<KiwiRecord>,
+        pub slot_content_id: Option<GuidKey>,
+        pub default_instance_name: Option<String>,
+        pub properties: KiwiRecord,
+        pub children: Vec<Occurrence>,
+        pub property_claims: Vec<PropertyClaim>,
+        pub binding_claims: Vec<BindingClaim>,
+        pub layout_scale: f64,
+        pub has_own_name: bool,
+        pub bound_fields: HashMap<u32, u32>,
+        pub replaced_components: Vec<GuidKey>,
+        pub overridden: HashSet<u32>,
+    }
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum Origin {
+        Default,
+        Assignment,
+    }
+    #[derive(Clone, Debug)]
+    pub struct PropertyClaim {
+        pub declared_by: GuidKey,
+        pub path: Vec<GuidKey>,
+        pub properties: KiwiRecord,
+    }
+    pub type SegmentTable = HashMap<GuidKey, Vec<Vec<usize>>>;
+    pub type SegmentTables = HashMap<Vec<usize>, SegmentTable>;
+    fn instance(occurrence: &Occurrence) -> bool {
+        occurrence.main_component_id.is_some()
+    }
+    fn root_guid(owner: &Occurrence, guid: GuidKey) -> bool {
+        symbol_id(&owner.properties) == Some(guid)
+            || owner.main_component_override_key == Some(guid)
+            || owner.source_component_override_key == Some(guid)
+            || owner.source_component_id == Some(guid)
+    }
+    fn find_segment(root: &Occurrence, guid: GuidKey) -> Result<Vec<usize>, usize> {
+        let mut found = Vec::new();
+        for (index, child) in root.children.iter().enumerate() {
+            find_within(child, vec![index], guid, &mut found);
+        }
+        if found.len() == 1 { Ok(found.remove(0)) } else { Err(found.len()) }
+    }
+    fn find_within(
+        node: &Occurrence,
+        path: Vec<usize>,
+        guid: GuidKey,
+        found: &mut Vec<Vec<usize>>,
+    ) {
+        if node.override_key == Some(guid) || node.source_id == guid {
+            found.push(path);
+        } else {
+            if !instance(node) {
+                for (index, child) in node.children.iter().enumerate() {
+                    let mut child_path = path.clone();
+                    child_path.push(index);
+                    find_within(child, child_path, guid, found);
+                }
+            }
+        };
+    }
+    fn resolve_path(
+        owner: &Occurrence,
+        path: &[GuidKey],
+        tables: &mut SegmentTables,
+    ) -> Result<Vec<usize>, (GuidKey, usize)> {
+        match path.first() {
+            Some(first) => {
+                let start = if root_guid(owner, *first) { 1 } else { 0 };
+                resolve_segments(owner, path, start, Vec::new(), tables)
+            }
+            None => Ok(Vec::new()),
+        }
+    }
+    fn resolve_segments(
+        owner: &Occurrence,
+        path: &[GuidKey],
+        position: usize,
+        at: Vec<usize>,
+        tables: &mut SegmentTables,
+    ) -> Result<Vec<usize>, (GuidKey, usize)> {
+        match path.get(position) {
+            Some(guid) => {
+                let matches = segment_matches(owner, &at, *guid, tables);
+                if matches.len() == 1 {
+                    let mut next = at.clone();
+                    next.extend_from_slice(&matches[0]);
+                    resolve_segments(owner, path, position + 1, next, tables)
+                } else {
+                    Err((*guid, matches.len()))
+                }
+            }
+            None => Ok(at),
+        }
+    }
+    fn segment_matches(
+        owner: &Occurrence,
+        at: &[usize],
+        guid: GuidKey,
+        tables: &mut SegmentTables,
+    ) -> Vec<Vec<usize>> {
+        let table = tables
+            .entry(at.to_vec())
+            .or_insert_with(|| segment_lookup(get_at(owner, at)));
+        table.get(&guid).cloned().unwrap_or_default()
+    }
+    fn segment_lookup(root: &Occurrence) -> SegmentTable {
+        let mut table: SegmentTable = HashMap::new();
+        for (index, child) in root.children.iter().enumerate() {
+            collect_segments(child, vec![index], &HashSet::new(), &mut table);
+        }
+        table
+    }
+    fn collect_segments(
+        node: &Occurrence,
+        path: Vec<usize>,
+        matched: &HashSet<GuidKey>,
+        table: &mut SegmentTable,
+    ) {
+        let new_keys = new_segment_keys(node, matched);
+        for key in new_keys.iter() {
+            table.entry(*key).or_default().push(path.clone());
+        }
+        if !instance(node) {
+            let mut matched = matched.clone();
+            matched.extend(new_keys);
+            for (index, child) in node.children.iter().enumerate() {
+                let mut child_path = path.clone();
+                child_path.push(index);
+                collect_segments(child, child_path, &matched, table);
+            }
+        }
+    }
+    fn new_segment_keys(node: &Occurrence, matched: &HashSet<GuidKey>) -> Vec<GuidKey> {
+        segment_keys(node)
+            .into_iter()
+            .filter_map(|item| match item {
+                key if !matched.contains(&key) => Some(key),
+                _ => None,
+            })
+            .collect()
+    }
+    fn segment_keys(node: &Occurrence) -> Vec<GuidKey> {
+        match node.override_key {
+            Some(key) if key != node.source_id => vec![key, node.source_id],
+            _ => vec![node.source_id],
+        }
+    }
+    fn get_at<'a>(occurrence: &'a Occurrence, path: &[usize]) -> &'a Occurrence {
+        match path.split_first() {
+            Some((index, rest)) => get_at(&occurrence.children[*index], rest),
+            None => occurrence,
+        }
+    }
+    fn at_mut<'a>(occurrence: &'a mut Occurrence, path: &[usize]) -> &'a mut Occurrence {
+        match path.split_first() {
+            Some((index, rest)) => at_mut(&mut occurrence.children[*index], rest),
+            None => occurrence,
+        }
+    }
+    fn component_identity() -> &'static [u32] {
+        &[
+            kiwi_records::node_change::COMPONENT_KEY,
+            kiwi_records::node_change::SOURCE_LIBRARY_KEY,
+            kiwi_records::node_change::PUBLISH_ID,
+            kiwi_records::node_change::PUBLISHED_VERSION,
+            kiwi_records::node_change::SHARED_SYMBOL_VERSION,
+            kiwi_records::node_change::IS_SYMBOL_PUBLISHABLE,
+            kiwi_records::node_change::VARIANT_PROP_SPECS,
+            kiwi_records::node_change::COMPONENT_PROP_DEFS,
+            kiwi_records::node_change::OVERRIDE_KEY,
+        ]
+    }
+    fn text_shaping() -> &'static [u32] {
+        &[
+            kiwi_records::node_change::FONT_SIZE,
+            kiwi_records::node_change::FONT_NAME,
+            kiwi_records::node_change::FONT_VARIATIONS,
+            kiwi_records::node_change::LETTER_SPACING,
+            kiwi_records::node_change::LINE_HEIGHT,
+            kiwi_records::node_change::TEXT_CASE,
+            kiwi_records::node_change::TEXT_ALIGN_HORIZONTAL,
+            kiwi_records::node_change::TEXT_ALIGN_VERTICAL,
+            kiwi_records::node_change::TEXT_AUTO_RESIZE,
+            kiwi_records::node_change::STYLE_ID_FOR_TEXT,
+            kiwi_records::node_change::FONT_VARIANT_COMMON_LIGATURES,
+            kiwi_records::node_change::FONT_VARIANT_CONTEXTUAL_LIGATURES,
+        ]
+    }
+    fn retained(props: &KiwiRecord, target: &Occurrence, owner_rank: u32) -> KiwiRecord {
+        let kept = props
+            .field_ids()
+            .into_iter()
+            .filter_map(|item| match item {
+                field if target
+                    .bound_fields
+                    .get(&field)
+                    .is_none_or(|rank| *rank >= owner_rank) => Some(field),
+                _ => None,
+            })
+            .collect::<Vec<u32>>();
+        props.take(&kept)
+    }
+    fn apply_claim(target: &mut Occurrence, props: &KiwiRecord) {
+        let merged = invalidate_inherited_text(&target.properties, props).merge(props);
+        let properties = match merge_variable_consumption(&target.properties, props) {
+            Some(consumption) => {
+                merged
+                    .put_record(
+                        kiwi_records::node_change::PARAMETER_CONSUMPTION_MAP,
+                        consumption,
+                    )
+            }
+            None => merged,
+        };
+        target.properties = properties;
+        target.has_own_name = target.has_own_name
+            || props.has(kiwi_records::node_change::NAME);
+        target.overridden.extend(props.field_ids());
+    }
+    fn invalidate_inherited_text(
+        properties: &KiwiRecord,
+        patch: &KiwiRecord,
+    ) -> KiwiRecord {
+        if !patch.has(kiwi_records::node_change::DERIVED_TEXT_DATA)
+            && (changed_text(properties, patch) || changed_shaping(properties, patch))
+        {
+            properties.delete(kiwi_records::node_change::DERIVED_TEXT_DATA)
+        } else {
+            properties.clone()
+        }
+    }
+    fn changed_text(properties: &KiwiRecord, patch: &KiwiRecord) -> bool {
+        match patch.record(kiwi_records::node_change::TEXT_DATA) {
+            Some(text) => {
+                match properties.record(kiwi_records::node_change::TEXT_DATA) {
+                    Some(source) => {
+                        text.fields()
+                            .any(|(field, value)| source.get(field) != Some(value))
+                    }
+                    None => true,
+                }
+            }
+            None => false,
+        }
+    }
+    fn changed_shaping(properties: &KiwiRecord, patch: &KiwiRecord) -> bool {
+        text_shaping()
+            .iter()
+            .any(|field| {
+                patch.has(*field) && properties.get(*field) != patch.get(*field)
+            })
+    }
+    fn merge_variable_consumption(
+        base: &KiwiRecord,
+        patch: &KiwiRecord,
+    ) -> Option<KiwiRecord> {
+        let incoming = consumption_entries(patch);
+        if incoming.is_empty() {
+            None
+        } else {
+            let mut entries = consumption_entries(base);
+            entries.extend(incoming);
+            Some(
+                KiwiRecord::new(kiwi_record_definitions::VARIABLE_DATA_MAP)
+                    .put_records(
+                        kiwi_records::variable_data_map::ENTRIES,
+                        dedupe_by_field(&entries),
+                    ),
+            )
+        }
+    }
+    fn consumption_entries(record: &KiwiRecord) -> Vec<KiwiRecord> {
+        let mut entries = map_entries(
+            record,
+            kiwi_records::node_change::VARIABLE_CONSUMPTION_MAP,
+        );
+        entries
+            .extend(
+                map_entries(record, kiwi_records::node_change::PARAMETER_CONSUMPTION_MAP),
+            );
+        let mut unkeyed = entries
+            .iter()
+            .filter_map(|item| match item {
+                entry if entry
+                    .enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD)
+                    .is_none() => Some(entry),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<KiwiRecord>>();
+        let keyed = entries
+            .iter()
+            .filter_map(|item| match item {
+                entry if entry
+                    .enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD)
+                    .is_some() => Some(entry),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<KiwiRecord>>();
+        unkeyed.extend(dedupe_by_field(&keyed));
+        unkeyed
+    }
+    fn map_entries(record: &KiwiRecord, field: u32) -> Vec<KiwiRecord> {
+        match record.record(field) {
+            Some(map) => {
+                map.records(kiwi_records::variable_data_map::ENTRIES)
+                    .into_iter()
+                    .cloned()
+                    .collect()
+            }
+            None => Vec::new(),
+        }
+    }
+    fn dedupe_by_field(entries: &[KiwiRecord]) -> Vec<KiwiRecord> {
+        let mut last = HashMap::new();
+        for (index, entry) in entries.iter().enumerate() {
+            if let Some(field) = entry
+                .enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD)
+            {
+                last.insert(field, index);
+            }
+        }
+        let mut seen = HashSet::new();
+        let mut kept = Vec::new();
+        for entry in entries {
+            match entry.enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD)
+            {
+                Some(field) => {
+                    if seen.insert(field) {
+                        kept.push(entries[last[&field]].clone());
+                    }
+                }
+                None => {
+                    kept.push(entry.clone());
+                }
+            };
+        }
+        kept
+    }
+    #[derive(Clone, Debug)]
+    pub struct Binding {
+        pub id: GuidKey,
+        pub value: PropValue,
+        pub origin: Origin,
+        pub rank: Option<u32>,
+        pub superseded: Vec<PropValue>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct PropValue {
+        pub bool: Option<bool>,
+        pub text: Option<String>,
+        pub guid: Option<KiwiRecord>,
+        pub has_slot_content: bool,
+        pub slot_content: Option<GuidKey>,
+    }
+    fn empty_value() -> PropValue {
+        PropValue {
+            bool: None,
+            text: None,
+            guid: None,
+            has_slot_content: false,
+            slot_content: None,
+        }
+    }
+    fn component(definitions: &[&KiwiRecord]) -> Vec<Binding> {
+        definitions
+            .iter()
+            .filter_map(|definition| match guid_key(
+                definition.record(kiwi_records::component_prop_def::ID),
+            ) {
+                Some(id) => {
+                    match definition
+                        .record(kiwi_records::component_prop_def::INITIAL_VALUE)
+                    {
+                        Some(value) => {
+                            Some(Binding {
+                                id,
+                                value: prop_value(value),
+                                origin: Origin::Default,
+                                rank: None,
+                                superseded: Vec::new(),
+                            })
+                        }
+                        _ => None,
+                    }
+                }
+                _ => None,
+            })
+            .collect()
+    }
+    fn prop_value(value: &KiwiRecord) -> PropValue {
+        if value.definition() == kiwi_record_definitions::COMPONENT_PROP_VALUE {
+            PropValue {
+                bool: value.bool(kiwi_records::component_prop_value::BOOL_VALUE),
+                text: text_characters(
+                    value.record(kiwi_records::component_prop_value::TEXT_VALUE),
+                ),
+                guid: value
+                    .record(kiwi_records::component_prop_value::GUID_VALUE)
+                    .cloned(),
+                ..empty_value()
+            }
+        } else {
+            let text = match value.str(kiwi_records::variable_any_value::TEXT_VALUE) {
+                Some(text) => Some(text.to_string()),
+                None => {
+                    text_characters(
+                        value.record(kiwi_records::variable_any_value::TEXT_DATA_VALUE),
+                    )
+                }
+            };
+            PropValue {
+                bool: value.bool(kiwi_records::variable_any_value::BOOL_VALUE),
+                text,
+                has_slot_content: value
+                    .has(kiwi_records::variable_any_value::SLOT_CONTENT_ID_VALUE),
+                slot_content: slot_content(value),
+                ..empty_value()
+            }
+        }
+    }
+    fn assign(
+        mut bindings: Vec<Binding>,
+        assignments: &[&KiwiRecord],
+        rank: Option<u32>,
+    ) -> Vec<Binding> {
+        for assignment in assignments {
+            if let Some(binding) = assignment_binding(assignment, rank) {
+                match bindings.iter().rposition(|previous| previous.id == binding.id) {
+                    Some(index) => {
+                        let previous = bindings.remove(index);
+                        let mut superseded = previous.superseded;
+                        superseded.push(previous.value);
+                        bindings.insert(index, Binding { superseded, ..binding });
+                    }
+                    None => {
+                        bindings.push(binding);
+                    }
+                };
+            }
+        }
+        bindings
+    }
+    fn assignment_binding(
+        assignment: &KiwiRecord,
+        rank: Option<u32>,
+    ) -> Option<Binding> {
+        match guid_key(
+            assignment.record(kiwi_records::component_prop_assignment::DEF_ID),
+        ) {
+            Some(id) => {
+                match assignment_value(assignment) {
+                    Some(value) => {
+                        Some(Binding {
+                            id,
+                            value,
+                            origin: Origin::Assignment,
+                            rank,
+                            superseded: Vec::new(),
+                        })
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+    fn assignment_value(assignment: &KiwiRecord) -> Option<PropValue> {
+        let value = assignment.record(kiwi_records::component_prop_assignment::VALUE);
+        let variable = assignment
+            .record(kiwi_records::component_prop_assignment::VAR_VALUE)
+            .and_then(|variable| variable.record(kiwi_records::variable_data::VALUE));
+        let symbol = variable
+            .and_then(|variable| {
+                variable.record(kiwi_records::variable_any_value::SYMBOL_ID_VALUE)
+            })
+            .and_then(|symbol| symbol.record(kiwi_records::symbol_id::GUID));
+        match (value, symbol, variable) {
+            (
+                Some(value),
+                _symbol,
+                _variable,
+            ) if value.has(kiwi_records::component_prop_value::BOOL_VALUE)
+                || value.has(kiwi_records::component_prop_value::TEXT_VALUE)
+                || value.has(kiwi_records::component_prop_value::GUID_VALUE) => {
+                Some(prop_value(value))
+            }
+            (_value, Some(symbol), _variable) => {
+                Some(PropValue {
+                    guid: Some(symbol.clone()),
+                    ..empty_value()
+                })
+            }
+            (_value, _symbol, Some(variable)) => variable_value(variable),
+            _ => None,
+        }
+    }
+    fn variable_value(variable: &KiwiRecord) -> Option<PropValue> {
+        let value = prop_value(variable);
+        if variable.has(kiwi_records::variable_any_value::BOOL_VALUE) {
+            Some(PropValue {
+                bool: value.bool,
+                ..empty_value()
+            })
+        } else if variable.has(kiwi_records::variable_any_value::TEXT_VALUE)
+            || variable.has(kiwi_records::variable_any_value::TEXT_DATA_VALUE)
+        {
+            Some(PropValue {
+                text: value.text,
+                ..empty_value()
+            })
+        } else if variable.has(kiwi_records::variable_any_value::SLOT_CONTENT_ID_VALUE) {
+            Some(PropValue {
+                has_slot_content: true,
+                slot_content: value.slot_content,
+                ..empty_value()
+            })
+        } else {
+            None
+        }
+    }
+    fn slot_content(value: &KiwiRecord) -> Option<GuidKey> {
+        value
+            .record(kiwi_records::variable_any_value::SLOT_CONTENT_ID_VALUE)
+            .and_then(|slot| guid_key(slot.record(kiwi_records::slot_content_id::GUID)))
+            .filter(|key| *key != (4294967295, 4294967295))
+    }
+    fn text_characters(text: Option<&KiwiRecord>) -> Option<String> {
+        text.and_then(|text| text.str(kiwi_records::text_data::CHARACTERS))
+            .map(|characters| characters.to_string())
+    }
+    fn bind(
+        record: &KiwiRecord,
+        bindings: &[Binding],
+    ) -> (KiwiRecord, Vec<(BindingClaim, Binding)>) {
+        let mut bound = record.clone();
+        let mut claims = Vec::new();
+        for reference in record.records(kiwi_records::node_change::COMPONENT_PROP_REFS) {
+            if let Some((next, claim, binding)) = bind_ref(&bound, reference, bindings) {
+                bound = next;
+                claims.push((claim, binding));
+            }
+        }
+        (bound, claims)
+    }
+    fn bind_ref(
+        record: &KiwiRecord,
+        reference: &KiwiRecord,
+        bindings: &[Binding],
+    ) -> Option<(KiwiRecord, BindingClaim, Binding)> {
+        match reference
+            .bool(kiwi_records::component_prop_ref::IS_DELETED)
+            .unwrap_or(false)
+        {
+            false => {
+                match guid_key(
+                    reference.record(kiwi_records::component_prop_ref::DEF_ID),
+                ) {
+                    Some(id) => {
+                        match bindings.iter().find(|binding| binding.id == id) {
+                            Some(binding) => {
+                                match bind_field(record, reference, &binding.value) {
+                                    Some((bound, field)) => {
+                                        let claim = BindingClaim {
+                                            definition_id: id,
+                                            field,
+                                            origin: binding.origin,
+                                        };
+                                        Some((bound, claim, binding.clone()))
+                                    }
+                                    _ => None,
+                                }
+                            }
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+    fn bind_field(
+        record: &KiwiRecord,
+        reference: &KiwiRecord,
+        value: &PropValue,
+    ) -> Option<(KiwiRecord, BoundField)> {
+        match (
+            reference
+                .enum_value(kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD),
+            &value.bool,
+            &value.text,
+            &value.guid,
+        ) {
+            (
+                Some(kiwi_records::component_prop_node_field::VISIBLE),
+                Some(visible),
+                _text,
+                _guid,
+            ) => {
+                Some((
+                    record.put_bool(kiwi_records::node_change::VISIBLE, *visible),
+                    BoundField::Visible,
+                ))
+            }
+            (
+                Some(kiwi_records::component_prop_node_field::TEXT_DATA),
+                _visible,
+                Some(text),
+                _guid,
+            ) => Some((bind_text(record, text), BoundField::TextData)),
+            (
+                Some(kiwi_records::component_prop_node_field::OVERRIDDEN_SYMBOL_ID),
+                _visible,
+                _text,
+                Some(guid),
+            ) => Some((bind_symbol(record, guid), BoundField::SymbolData)),
+            (
+                Some(kiwi_records::component_prop_node_field::SLOT_CONTENT_ID),
+                _visible,
+                _text,
+                _guid,
+            ) if value.has_slot_content => {
+                Some((record.clone(), BoundField::SlotContent))
+            }
+            _ => None,
+        }
+    }
+    fn bind_symbol(record: &KiwiRecord, guid: &KiwiRecord) -> KiwiRecord {
+        let symbol_data = match record.record(kiwi_records::node_change::SYMBOL_DATA) {
+            Some(data) => data.clone(),
+            None => KiwiRecord::new(kiwi_record_definitions::SYMBOL_DATA),
+        };
+        record
+            .put_record(
+                kiwi_records::node_change::SYMBOL_DATA,
+                symbol_data
+                    .put_record(kiwi_records::symbol_data::SYMBOL_ID, guid.clone()),
+            )
+    }
+    fn bind_text(record: &KiwiRecord, text: &str) -> KiwiRecord {
+        let text_data = match record.record(kiwi_records::node_change::TEXT_DATA) {
+            Some(text_data) => text_data.clone(),
+            None => KiwiRecord::new(kiwi_record_definitions::TEXT_DATA),
+        };
+        let record = if text_data.str(kiwi_records::text_data::CHARACTERS) != Some(text)
+        {
+            record.delete(kiwi_records::node_change::DERIVED_TEXT_DATA)
+        } else {
+            record.clone()
+        };
+        record
+            .put_record(
+                kiwi_records::node_change::TEXT_DATA,
+                text_data.put_str(kiwi_records::text_data::CHARACTERS, text),
+            )
+    }
+    #[derive(Clone, Debug)]
+    pub struct Boundary {
+        pub replaced: Vec<GuidKey>,
+        pub path: Vec<GuidKey>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Claim {
+        pub path: Vec<GuidKey>,
+        pub props: KiwiRecord,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Layer {
+        pub owner: LayerOwner,
+        pub declared_path: Vec<GuidKey>,
+        pub path: Vec<GuidKey>,
+        pub swap: Option<GuidKey>,
+        pub boundary: Option<Boundary>,
+        pub assignments: Vec<KiwiRecord>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct LayerOwner {
+        pub id: GuidKey,
+        pub rank: u32,
+    }
+    fn own(source: &KiwiRecord, owner: LayerOwner) -> (Vec<Layer>, Vec<Claim>) {
+        let overrides = match source.record(kiwi_records::node_change::SYMBOL_DATA) {
+            Some(data) => data.records(kiwi_records::symbol_data::SYMBOL_OVERRIDES),
+            None => Vec::new(),
+        };
+        let layers = overrides
+            .iter()
+            .filter_map(|r#override| structural_layer(r#override, &owner))
+            .collect::<Vec<Layer>>();
+        let mut claims = mode_claims(source);
+        for r#override in overrides {
+            let path = override_path(r#override);
+            let props = r#override
+                .drop(
+                    &[
+                        kiwi_records::node_change::GUID_PATH,
+                        kiwi_records::node_change::OVERRIDDEN_SYMBOL_ID,
+                        kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS,
+                    ],
+                );
+            if !path.is_empty() && !props.is_empty() {
+                claims.push(Claim { path, props });
+            }
+        }
+        (layers, claims)
+    }
+    fn mode_claims(source: &KiwiRecord) -> Vec<Claim> {
+        match source.enum_value(kiwi_records::node_change::TYPE)
+            == Some(kiwi_records::node_type::INSTANCE)
+        {
+            true => {
+                match source.has(kiwi_records::node_change::VARIABLE_MODE_BY_SET_MAP) {
+                    true => {
+                        match symbol_id(source) {
+                            Some(symbol_id) => {
+                                vec![
+                                    Claim { path : vec![symbol_id], props : source.take(&
+                                    [kiwi_records::node_change::VARIABLE_MODE_BY_SET_MAP]) }
+                                ]
+                            }
+                            _ => Vec::new(),
+                        }
+                    }
+                    _ => Vec::new(),
+                }
+            }
+            _ => Vec::new(),
+        }
+    }
+    fn override_path(r#override: &KiwiRecord) -> Vec<GuidKey> {
+        match r#override.record(kiwi_records::node_change::GUID_PATH) {
+            Some(path) => {
+                path.records(kiwi_records::guid_path::GUIDS)
+                    .into_iter()
+                    .filter_map(|guid| guid_key(Some(guid)))
+                    .collect()
+            }
+            None => Vec::new(),
+        }
+    }
+    fn structural_layer(r#override: &KiwiRecord, owner: &LayerOwner) -> Option<Layer> {
+        let path = override_path(r#override);
+        let swap = guid_key(
+            r#override.record(kiwi_records::node_change::OVERRIDDEN_SYMBOL_ID),
+        );
+        let assignments = r#override
+            .records(kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS)
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        if !path.is_empty() && (swap.is_some() || !assignments.is_empty()) {
+            Some(Layer {
+                owner: owner.clone(),
+                declared_path: path.clone(),
+                path,
+                swap,
+                boundary: None,
+                assignments,
+            })
+        } else {
+            None
+        }
+    }
+    fn descend(layer: &Layer) -> Layer {
+        Layer {
+            path: layer.path.iter().skip(1).copied().collect(),
+            ..layer.clone()
+        }
+    }
+    fn visual_lengths() -> &'static [u32] {
+        &[
+            kiwi_records::node_change::STROKE_WEIGHT,
+            kiwi_records::node_change::CORNER_RADIUS,
+            kiwi_records::node_change::RECTANGLE_TOP_LEFT_CORNER_RADIUS,
+            kiwi_records::node_change::RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
+            kiwi_records::node_change::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
+            kiwi_records::node_change::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS,
+        ]
+    }
+    fn layout_distances() -> &'static [u32] {
+        &[
+            kiwi_records::node_change::STACK_PADDING,
+            kiwi_records::node_change::STACK_SPACING,
+            kiwi_records::node_change::STACK_COUNTER_SPACING,
+            kiwi_records::node_change::STACK_HORIZONTAL_PADDING,
+            kiwi_records::node_change::STACK_VERTICAL_PADDING,
+            kiwi_records::node_change::STACK_PADDING_RIGHT,
+            kiwi_records::node_change::STACK_PADDING_BOTTOM,
+        ]
+    }
+    fn scaled_fields() -> &'static [u32] {
+        &[
+            kiwi_records::node_change::STACK_PADDING,
+            kiwi_records::node_change::STACK_SPACING,
+            kiwi_records::node_change::STACK_COUNTER_SPACING,
+            kiwi_records::node_change::STACK_HORIZONTAL_PADDING,
+            kiwi_records::node_change::STACK_VERTICAL_PADDING,
+            kiwi_records::node_change::STACK_PADDING_RIGHT,
+            kiwi_records::node_change::STACK_PADDING_BOTTOM,
+            kiwi_records::node_change::STROKE_WEIGHT,
+            kiwi_records::node_change::CORNER_RADIUS,
+            kiwi_records::node_change::RECTANGLE_TOP_LEFT_CORNER_RADIUS,
+            kiwi_records::node_change::RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
+            kiwi_records::node_change::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
+            kiwi_records::node_change::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS,
+            kiwi_records::node_change::FONT_SIZE,
+            kiwi_records::node_change::LINE_HEIGHT,
+            kiwi_records::node_change::LETTER_SPACING,
+            kiwi_records::node_change::TEXT_DATA,
+            kiwi_records::node_change::DERIVED_TEXT_DATA,
+            kiwi_records::node_change::DASH_PATTERN,
+            kiwi_records::node_change::EFFECTS,
+            kiwi_records::node_change::SIZE,
+            kiwi_records::node_change::TRANSFORM,
+        ]
+    }
+    fn derived_fields() -> &'static [u32] {
+        &[
+            kiwi_records::node_change::DERIVED_TEXT_DATA,
+            kiwi_records::node_change::FONT_SIZE,
+            kiwi_records::node_change::LINE_HEIGHT,
+            kiwi_records::node_change::LETTER_SPACING,
+            kiwi_records::node_change::SIZE,
+            kiwi_records::node_change::TRANSFORM,
+            kiwi_records::node_change::FILL_GEOMETRY,
+            kiwi_records::node_change::STROKE_GEOMETRY,
+            kiwi_records::node_change::VECTOR_DATA,
+        ]
+    }
+    fn uniform_scale(record: &KiwiRecord) -> f64 {
+        match record
+            .record(kiwi_records::node_change::SYMBOL_DATA)
+            .and_then(|data| data.float(kiwi_records::symbol_data::UNIFORM_SCALE_FACTOR))
+        {
+            Some(factor) => factor as f64,
+            None => 1.0,
+        }
+    }
+    fn apply_layout_scale(
+        root: Occurrence,
+        source: &KiwiRecord,
+    ) -> NifResult<Occurrence> {
+        let factor = uniform_scale(source);
+        if factor == 1.0 {
+            Ok(root)
+        } else if factor > 0.0 {
+            let scaled = scale_occurrence(root, factor);
+            let properties = scaled.properties.merge(&source.take(scaled_fields()));
+            Ok(Occurrence { properties, ..scaled })
+        } else {
+            Err(rustler::Error::BadArg)
+        }
+    }
+    fn scale_occurrence(occurrence: Occurrence, factor: f64) -> Occurrence {
+        let properties = scale_properties(&occurrence.properties, factor);
+        let derived_size = occurrence
+            .derived_size
+            .as_ref()
+            .map(|size| scale_vector(size, factor));
+        let layout_scale = occurrence.layout_scale * factor;
+        let children = occurrence
+            .children
+            .into_iter()
+            .map(|child| scale_occurrence(child, factor))
+            .collect::<Vec<_>>();
+        Occurrence {
+            properties,
+            derived_size,
+            layout_scale,
+            children,
+            ..occurrence
+        }
+    }
+    fn scale_properties(properties: &KiwiRecord, factor: f64) -> KiwiRecord {
+        scale_floats(
+                scale_numbers(
+                    &scale_numbers(
+                        &scale_text_layout(properties, factor),
+                        visual_lengths(),
+                        factor,
+                    ),
+                    layout_distances(),
+                    factor,
+                ),
+                kiwi_records::node_change::DASH_PATTERN,
+                factor,
+            )
+            .map_records(
+                kiwi_records::node_change::EFFECTS,
+                |effect| scale_effect(effect, factor),
+            )
+            .map_record(
+                kiwi_records::node_change::SIZE,
+                |size| scale_vector(size, factor),
+            )
+            .map_record(
+                kiwi_records::node_change::TRANSFORM,
+                |transform| scale_numbers(
+                    transform,
+                    &[kiwi_records::matrix::M02, kiwi_records::matrix::M12],
+                    factor,
+                ),
+            )
+    }
+    fn scale_effect(effect: &KiwiRecord, factor: f64) -> KiwiRecord {
+        scale_numbers(
+            &effect
+                .map_record(
+                    kiwi_records::effect::OFFSET,
+                    |offset| scale_vector(offset, factor),
+                ),
+            &[kiwi_records::effect::RADIUS, kiwi_records::effect::SPREAD],
+            factor,
+        )
+    }
+    fn scale_text_layout(properties: &KiwiRecord, factor: f64) -> KiwiRecord {
+        scale_pixel_value(
+                scale_pixel_value(
+                    scale_numbers(
+                        properties,
+                        &[kiwi_records::node_change::FONT_SIZE],
+                        factor,
+                    ),
+                    kiwi_records::node_change::LINE_HEIGHT,
+                    factor,
+                ),
+                kiwi_records::node_change::LETTER_SPACING,
+                factor,
+            )
+            .map_record(
+                kiwi_records::node_change::TEXT_DATA,
+                |text| {
+                    text.map_records(
+                        kiwi_records::text_data::STYLE_OVERRIDE_TABLE,
+                        |style| scale_text_layout(style, factor),
+                    )
+                },
+            )
+            .map_record(
+                kiwi_records::node_change::DERIVED_TEXT_DATA,
+                |derived| scale_derived_text(derived, factor),
+            )
+    }
+    fn scale_derived_text(derived: &KiwiRecord, factor: f64) -> KiwiRecord {
+        scale_numbers(
+                &derived
+                    .map_record(
+                        kiwi_records::derived_text_data::LAYOUT_SIZE,
+                        |size| scale_vector(size, factor),
+                    ),
+                &[kiwi_records::derived_text_data::TRUNCATED_HEIGHT],
+                factor,
+            )
+            .map_records(
+                kiwi_records::derived_text_data::GLYPHS,
+                |glyph| scale_glyph(glyph, factor),
+            )
+            .map_records(
+                kiwi_records::derived_text_data::BASELINES,
+                |baseline| scale_baseline(baseline, factor),
+            )
+    }
+    fn scale_glyph(glyph: &KiwiRecord, factor: f64) -> KiwiRecord {
+        scale_numbers(
+            &glyph
+                .map_record(
+                    kiwi_records::glyph::POSITION,
+                    |position| scale_vector(position, factor),
+                ),
+            &[kiwi_records::glyph::FONT_SIZE],
+            factor,
+        )
+    }
+    fn scale_baseline(baseline: &KiwiRecord, factor: f64) -> KiwiRecord {
+        scale_numbers(
+            &baseline
+                .map_record(
+                    kiwi_records::baseline::POSITION,
+                    |position| scale_vector(position, factor),
+                ),
+            &[
+                kiwi_records::baseline::WIDTH,
+                kiwi_records::baseline::LINE_HEIGHT,
+                kiwi_records::baseline::LINE_ASCENT,
+                kiwi_records::baseline::LINE_Y,
+            ],
+            factor,
+        )
+    }
+    fn scale_pixel_value(properties: KiwiRecord, field: u32, factor: f64) -> KiwiRecord {
+        properties
+            .map_record(
+                field,
+                |metric| {
+                    if metric.enum_value(kiwi_records::number::UNITS)
+                        == Some(kiwi_records::number_units::PIXELS)
+                    {
+                        scale_numbers(metric, &[kiwi_records::number::VALUE], factor)
+                    } else {
+                        metric.clone()
+                    }
+                },
+            )
+    }
+    fn scale_numbers(record: &KiwiRecord, fields: &[u32], factor: f64) -> KiwiRecord {
+        fields
+            .iter()
+            .fold(
+                record.clone(),
+                |scaled, field| match scaled.float(*field) {
+                    Some(value) => {
+                        scaled.put_float(*field, (value as f64 * factor) as f32)
+                    }
+                    None => scaled,
+                },
+            )
+    }
+    fn scale_vector(vector: &KiwiRecord, factor: f64) -> KiwiRecord {
+        scale_numbers(
+            vector,
+            &[kiwi_records::vector::X, kiwi_records::vector::Y],
+            factor,
+        )
+    }
+    fn scale_floats(record: KiwiRecord, field: u32, factor: f64) -> KiwiRecord {
+        if record.has(field) {
+            let values = record
+                .floats(field)
+                .into_iter()
+                .map(|value| (value as f64 * factor) as f32)
+                .collect::<Vec<f32>>();
+            record.put_floats(field, values)
+        } else {
+            record
+        }
+    }
+    fn vector_size(vector: &KiwiRecord) -> (f64, f64) {
+        (
+            vector.float(kiwi_records::vector::X).unwrap_or(0.0) as f64,
+            vector.float(kiwi_records::vector::Y).unwrap_or(0.0) as f64,
+        )
+    }
+    fn apply_placed_constraints(
+        root: Occurrence,
+        base: Option<&Occurrence>,
+        source: &KiwiRecord,
+    ) -> Occurrence {
+        match base {
+            Some(base) => {
+                match base.properties.record(kiwi_records::node_change::SIZE) {
+                    Some(base_size) => {
+                        match source.record(kiwi_records::node_change::SIZE) {
+                            Some(size) => {
+                                let (width, height) = vector_size(base_size);
+                                let factor = uniform_scale(source);
+                                resize(
+                                    root,
+                                    (width * factor, height * factor),
+                                    vector_size(size),
+                                )
+                            }
+                            _ => root,
+                        }
+                    }
+                    _ => root,
+                }
+            }
+            _ => root,
+        }
+    }
+    fn resize(
+        root: Occurrence,
+        before_size: (f64, f64),
+        after_size: (f64, f64),
+    ) -> Occurrence {
+        if before_size == after_size {
+            root
+        } else {
+            let auto_layout = match root
+                .properties
+                .enum_value(kiwi_records::node_change::STACK_MODE)
+            {
+                Some(kiwi_records::stack_mode::NONE) => false,
+                Some(_mode) => true,
+                None => false,
+            };
+            let children = root
+                .children
+                .into_iter()
+                .map(|child| resize_child(child, before_size, after_size, auto_layout))
+                .collect::<Vec<_>>();
+            Occurrence { children, ..root }
+        }
+    }
+    fn resize_child(
+        child: Occurrence,
+        before_size: (f64, f64),
+        after_size: (f64, f64),
+        auto_layout: bool,
+    ) -> Occurrence {
+        let absolute = child
+            .properties
+            .enum_value(kiwi_records::node_change::STACK_POSITIONING)
+            == Some(kiwi_records::stack_positioning::ABSOLUTE);
+        if auto_layout && !absolute
+            || !child.properties.has(kiwi_records::node_change::SIZE)
+        {
+            child
+        } else {
+            resized_child(child, before_size, after_size)
+        }
+    }
+    fn resized_child(
+        child: Occurrence,
+        before_size: (f64, f64),
+        after_size: (f64, f64),
+    ) -> Occurrence {
+        let transform = match child
+            .properties
+            .record(kiwi_records::node_change::TRANSFORM)
+        {
+            Some(transform) => transform.clone(),
+            None => identity_matrix(),
+        };
+        let size = match child.properties.record(kiwi_records::node_change::SIZE) {
+            Some(size) => size.clone(),
+            None => KiwiRecord::new(kiwi_record_definitions::VECTOR),
+        };
+        let (width, height) = vector_size(&size);
+        let (before_width, before_height) = before_size;
+        let (after_width, after_height) = after_size;
+        let (x, new_width) = constrained_axis(
+            transform.float(kiwi_records::matrix::M02).unwrap_or(0.0) as f64,
+            width,
+            before_width,
+            after_width,
+            child.properties.enum_value(kiwi_records::node_change::HORIZONTAL_CONSTRAINT),
+        );
+        let (y, new_height) = constrained_axis(
+            transform.float(kiwi_records::matrix::M12).unwrap_or(0.0) as f64,
+            height,
+            before_height,
+            after_height,
+            child.properties.enum_value(kiwi_records::node_change::VERTICAL_CONSTRAINT),
+        );
+        let child = resize(child, (width, height), (new_width, new_height));
+        let new_size = size
+            .put_float(kiwi_records::vector::X, new_width as f32)
+            .put_float(kiwi_records::vector::Y, new_height as f32);
+        let placed = transform
+            .put_float(kiwi_records::matrix::M02, x as f32)
+            .put_float(kiwi_records::matrix::M12, y as f32);
+        let properties = child
+            .properties
+            .put_record(kiwi_records::node_change::SIZE, new_size)
+            .put_record(kiwi_records::node_change::TRANSFORM, placed);
+        Occurrence { properties, ..child }
+    }
+    fn constrained_axis(
+        position: f64,
+        size: f64,
+        before_size: f64,
+        after_size: f64,
+        constraint: Option<u32>,
+    ) -> (f64, f64) {
+        let delta = after_size - before_size;
+        match constraint {
+            Some(kiwi_records::constraint_type::SCALE) if before_size > 0.0 => {
+                (
+                    position * (after_size / before_size),
+                    size * (after_size / before_size),
+                )
+            }
+            Some(kiwi_records::constraint_type::MAX) => (position + delta, size),
+            Some(kiwi_records::constraint_type::CENTER) => (position + delta / 2.0, size),
+            Some(kiwi_records::constraint_type::STRETCH) => {
+                (position, (size + delta).max(0.0))
+            }
+            _ => (position, size),
+        }
+    }
+    fn identity_matrix() -> KiwiRecord {
+        KiwiRecord::new(kiwi_record_definitions::MATRIX)
+            .put_float(kiwi_records::matrix::M00, 1.0)
+            .put_float(kiwi_records::matrix::M01, 0.0)
+            .put_float(kiwi_records::matrix::M02, 0.0)
+            .put_float(kiwi_records::matrix::M10, 0.0)
+            .put_float(kiwi_records::matrix::M11, 1.0)
+            .put_float(kiwi_records::matrix::M12, 0.0)
+    }
+    fn apply_derived_entry(target: &mut Occurrence, entry: &KiwiRecord) {
+        let derived = entry.take(derived_fields());
+        if let Some(size) = derived.record(kiwi_records::node_change::SIZE) {
+            target.derived_size = Some(size.clone());
+        }
+        target.properties = target.properties.merge(&derived);
+    }
+    #[derive(Clone, Debug)]
+    pub struct BoundRecord {
+        pub source: KiwiRecord,
+        pub claims: Vec<BindingClaim>,
+        pub bound: HashMap<u32, u32>,
+        pub superseded: Vec<GuidKey>,
+        pub slot_content: Option<GuidKey>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Diagnostic {
+        pub kind: DiagnosticKind,
+        pub owner: GuidKey,
+        pub component: Option<GuidKey>,
+        pub path: Vec<GuidKey>,
+        pub reason: Option<TargetReason>,
+    }
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum DiagnosticKind {
+        UnresolvedProperty,
+        UnresolvedAssignment,
+        MissingComponent,
+        MissingSlotContent,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Group {
+        pub assignments: Vec<KiwiRecord>,
+        pub rank: u32,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Pending {
+        pub path: Vec<GuidKey>,
+        pub reason: TargetReason,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Root {
+        pub effective: Option<GuidKey>,
+        pub replaced: Vec<GuidKey>,
+        pub keys: Vec<GuidKey>,
+        pub groups: Vec<Group>,
+        pub descendant: Vec<Layer>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct State {
+        pub expanding: HashSet<GuidKey>,
+        pub diagnostics: Vec<Diagnostic>,
+        pub pending: HashMap<GuidKey, Vec<Pending>>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Subtree {
+        pub base: Option<Occurrence>,
+        pub dangling: bool,
+    }
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum TargetReason {
+        MissingTarget,
+        AmbiguousTarget,
+    }
+    fn interpret(
+        index: &SourceIndex,
+        root_id: GuidKey,
+    ) -> NifResult<(Occurrence, Vec<Diagnostic>)> {
+        let mut state = State {
+            expanding: HashSet::new(),
+            diagnostics: Vec::new(),
+            pending: HashMap::new(),
+        };
+        let occurrence = expand(index, root_id, &[], Vec::new(), 0, &mut state)?;
+        Ok((drop_slot_content(index, occurrence), state.diagnostics))
+    }
+    fn drop_slot_content(index: &SourceIndex, occurrence: Occurrence) -> Occurrence {
+        if node_type(index, occurrence.source_id)
+            == Some(kiwi_records::node_type::CANVAS)
+        {
+            let children = occurrence
+                .children
+                .into_iter()
+                .filter_map(|item| match item {
+                    child if !child
+                        .properties
+                        .bool(kiwi_records::node_change::IS_SLOT_CONTENT)
+                        .unwrap_or(false) => Some(child),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+            Occurrence {
+                children,
+                ..occurrence
+            }
+        } else {
+            occurrence
+        }
+    }
+    fn expand(
+        index: &SourceIndex,
+        id: GuidKey,
+        bindings: &[Binding],
+        layers: Vec<Layer>,
+        rank: u32,
+        state: &mut State,
+    ) -> NifResult<Occurrence> {
+        match source(index, id) {
+            Some(raw) if !state.expanding.contains(&id) => {
+                expand_source(index, id, raw, bindings, layers, rank, state)
+            }
+            _ => Err(rustler::Error::BadArg),
+        }
+    }
+    fn expand_source(
+        index: &SourceIndex,
+        id: GuidKey,
+        raw: &KiwiRecord,
+        bindings: &[Binding],
+        layers: Vec<Layer>,
+        rank: u32,
+        state: &mut State,
+    ) -> NifResult<Occurrence> {
+        let record = bind_record(index, raw, bindings, state);
+        state.expanding.insert(id);
+        let owner = LayerOwner { id, rank };
+        let (mut structural, own_claims) = own(&record.source, owner.clone());
+        structural.extend(layers);
+        structural.sort_by(|left, right| right.owner.rank.cmp(&left.owner.rank));
+        let root = resolve_root(index, raw, &record, structural, rank)?;
+        let (subtree, children) = expand_subtree(
+            index,
+            &owner,
+            &record,
+            bindings,
+            &root,
+            rank,
+            state,
+        )?;
+        let base = subtree.base.as_ref();
+        let occurrence = create_occurrence(
+            index,
+            id,
+            raw,
+            &record.source,
+            &root,
+            base,
+            children,
+        );
+        let occurrence = Occurrence {
+            binding_claims: record.claims.clone(),
+            slot_content_id: record.slot_content,
+            bound_fields: record.bound.clone(),
+            overridden: assigned_visibility(&&record.claims),
+            replaced_components: if base.is_some() {
+                root.replaced.clone()
+            } else {
+                Vec::new()
+            },
+            ..occurrence
+        };
+        let claims = if subtree.dangling {
+            own_claims
+                .into_iter()
+                .filter_map(|item| match item {
+                    claim if root_claim(&occurrence, &claim) => Some(claim),
+                    _ => None,
+                })
+                .collect()
+        } else {
+            own_claims
+        };
+        let occurrence = finish_occurrence(
+            index,
+            occurrence,
+            &subtree,
+            &record.source,
+            claims,
+            rank,
+            state,
+        )?;
+        report_owner(state, id, occurrence.main_component_id);
+        state.expanding.remove(&id);
+        Ok(occurrence)
+    }
+    fn expand_subtree(
+        index: &SourceIndex,
+        owner: &LayerOwner,
+        record: &BoundRecord,
+        bindings: &[Binding],
+        root: &Root,
+        rank: u32,
+        state: &mut State,
+    ) -> NifResult<(Subtree, Vec<Occurrence>)> {
+        if root.effective.is_some() {
+            expand_base(index, owner, root, rank, state)
+        } else if record.slot_content.is_some() {
+            expand_children_of(
+                index,
+                record.slot_content.unwrap(),
+                &[],
+                &&root.descendant,
+                rank,
+                state,
+            )
+        } else if record.source.enum_value(kiwi_records::node_change::TYPE)
+            == Some(kiwi_records::node_type::SYMBOL)
+        {
+            expand_children_of(
+                index,
+                owner.id,
+                &scoped_bindings(&record.source, &&root.groups),
+                &&root.descendant,
+                rank,
+                state,
+            )
+        } else {
+            expand_children_of(index, owner.id, bindings, &&root.descendant, rank, state)
+        }
+    }
+    fn root_claim(occurrence: &Occurrence, claim: &Claim) -> bool {
+        claim.path.len() == 1 && root_guid(occurrence, claim.path[0])
+    }
+    fn bind_record(
+        index: &SourceIndex,
+        raw: &KiwiRecord,
+        bindings: &[Binding],
+        state: &mut State,
+    ) -> BoundRecord {
+        let (source, bound_claims) = bind(raw, bindings);
+        let record = bound_claims
+            .iter()
+            .fold(
+                BoundRecord {
+                    source,
+                    claims: Vec::new(),
+                    bound: HashMap::new(),
+                    superseded: Vec::new(),
+                    slot_content: None,
+                },
+                |record, (claim, binding)| collect_binding(record, claim, binding),
+            );
+        match record.slot_content {
+            Some(content) if !index.sources.contains_key(&content) => {
+                state
+                    .diagnostics
+                    .push(Diagnostic {
+                        kind: DiagnosticKind::MissingSlotContent,
+                        owner: record_id(raw).unwrap_or_default(),
+                        component: Some(content),
+                        path: Vec::new(),
+                        reason: None,
+                    });
+                BoundRecord {
+                    slot_content: None,
+                    ..record
+                }
+            }
+            _ => record,
+        }
+    }
+    fn collect_binding(
+        mut record: BoundRecord,
+        claim: &BindingClaim,
+        binding: &Binding,
+    ) -> BoundRecord {
+        record.claims.push(claim.clone());
+        if let (Origin::Assignment, Some(rank), Some(field)) = (
+            binding.origin,
+            binding.rank,
+            bound_node_field(claim.field),
+        ) {
+            record.bound.insert(field, rank);
+        }
+        match claim.field {
+            BoundField::SymbolData => {
+                let mut superseded = binding
+                    .superseded
+                    .iter()
+                    .filter_map(|value| {
+                        value.guid.as_ref().and_then(|guid| guid_key(Some(guid)))
+                    })
+                    .collect::<Vec<_>>();
+                superseded.extend(record.superseded);
+                BoundRecord {
+                    superseded,
+                    ..record
+                }
+            }
+            BoundField::SlotContent => {
+                BoundRecord {
+                    slot_content: binding.value.slot_content,
+                    ..record
+                }
+            }
+            _ => record,
+        }
+    }
+    fn bound_node_field(field: BoundField) -> Option<u32> {
+        match field {
+            BoundField::Visible => Some(kiwi_records::node_change::VISIBLE),
+            BoundField::TextData => Some(kiwi_records::node_change::TEXT_DATA),
+            BoundField::SymbolData => Some(kiwi_records::node_change::SYMBOL_DATA),
+            BoundField::SlotContent => None,
+        }
+    }
+    fn assigned_visibility(claims: &[BindingClaim]) -> HashSet<u32> {
+        let mut overridden: HashSet<u32> = HashSet::new();
+        if claims.iter().any(|claim| assigned_visible(claim)) {
+            overridden.insert(kiwi_records::node_change::VISIBLE);
+        }
+        overridden
+    }
+    fn assigned_visible(claim: &BindingClaim) -> bool {
+        match (claim.field, claim.origin) {
+            (BoundField::Visible, Origin::Assignment) => true,
+            _ => false,
+        }
+    }
+    fn component_keys(index: &SourceIndex, guid: Option<GuidKey>) -> Vec<GuidKey> {
+        match guid {
+            Some(guid) => {
+                match source(index, guid).and_then(|record| override_key(record)) {
+                    Some(key) => vec![guid, key],
+                    None => vec![guid],
+                }
+            }
+            None => Vec::new(),
+        }
+    }
+    fn resolve_root(
+        index: &SourceIndex,
+        raw: &KiwiRecord,
+        record: &BoundRecord,
+        structural: Vec<Layer>,
+        rank: u32,
+    ) -> NifResult<Root> {
+        let original = symbol_id(raw);
+        let effective = symbol_id(&record.source);
+        let mut keys = component_keys(index, original);
+        keys.extend(component_keys(index, effective));
+        let assignments = record
+            .source
+            .records(kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS)
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        let mut root = Root {
+            effective,
+            replaced: replaced_before(original, effective, &&record.superseded),
+            keys,
+            groups: vec![Group { assignments, rank }],
+            descendant: Vec::new(),
+        };
+        for layer in structural {
+            route_root_layer(index, &mut root, layer)?;
+        }
+        Ok(root)
+    }
+    fn replaced_before(
+        original: Option<GuidKey>,
+        effective: Option<GuidKey>,
+        superseded: &[GuidKey],
+    ) -> Vec<GuidKey> {
+        match effective {
+            Some(effective) => {
+                original
+                    .into_iter()
+                    .chain(superseded.iter().copied())
+                    .filter(|component| *component != effective)
+                    .collect()
+            }
+            None => Vec::new(),
+        }
+    }
+    fn route_root_layer(
+        index: &SourceIndex,
+        root: &mut Root,
+        layer: Layer,
+    ) -> NifResult<()> {
+        let at_root = match layer.path.first() {
+            Some(first) => root.keys.contains(first),
+            None => true,
+        };
+        if !at_root {
+            root.descendant.push(layer);
+            Ok(())
+        } else if layer.path.len() >= 2 {
+            root.descendant.push(descend(&layer));
+            Ok(())
+        } else {
+            {
+                swap_root(index, root, layer.swap)?;
+                if !layer.assignments.is_empty() {
+                    root.groups
+                        .push(Group {
+                            assignments: layer.assignments,
+                            rank: layer.owner.rank,
+                        });
+                }
+                Ok(())
+            }
+        }
+    }
+    fn swap_root(
+        index: &SourceIndex,
+        root: &mut Root,
+        swap: Option<GuidKey>,
+    ) -> NifResult<()> {
+        match (swap, root.effective) {
+            (None, _effective) => Ok(()),
+            (Some(_swap), None) => Err(rustler::Error::BadArg),
+            (Some(swap), Some(effective)) if swap == effective => Ok(()),
+            (Some(swap), Some(effective)) => {
+                for key in component_keys(index, Some(swap)) {
+                    if !root.keys.contains(&key) {
+                        root.keys.push(key);
+                    }
+                }
+                root.replaced.push(effective);
+                root.effective = Some(swap);
+                Ok(())
+            }
+        }
+    }
+    fn scoped_bindings(source: &KiwiRecord, groups: &[Group]) -> Vec<Binding> {
+        groups
+            .iter()
+            .fold(
+                component(
+                    &source.records(kiwi_records::node_change::COMPONENT_PROP_DEFS),
+                ),
+                |bindings, group| assign(
+                    bindings,
+                    &group.assignments.iter().collect::<Vec<_>>(),
+                    Some(group.rank),
+                ),
+            )
+    }
+    fn expand_base(
+        index: &SourceIndex,
+        owner: &LayerOwner,
+        root: &Root,
+        rank: u32,
+        state: &mut State,
+    ) -> NifResult<(Subtree, Vec<Occurrence>)> {
+        let component_id = root.effective.unwrap();
+        if index.sources.contains_key(&component_id) {
+            let mut layers = root_layers(owner, &&root.groups);
+            layers
+                .extend(
+                    root
+                        .descendant
+                        .iter()
+                        .map(|layer| cross_boundary(layer, &&root.replaced)),
+                );
+            let base = expand(index, component_id, &[], layers, rank + 1, state)?;
+            let children = base.children;
+            Ok((
+                Subtree {
+                    base: Some(Occurrence {
+                        children: Vec::new(),
+                        ..base
+                    }),
+                    dangling: false,
+                },
+                children,
+            ))
+        } else {
+            state
+                .diagnostics
+                .push(Diagnostic {
+                    kind: DiagnosticKind::MissingComponent,
+                    owner: owner.id,
+                    component: Some(component_id),
+                    path: Vec::new(),
+                    reason: None,
+                });
+            Ok((
+                Subtree {
+                    base: None,
+                    dangling: true,
+                },
+                Vec::new(),
+            ))
+        }
+    }
+    fn root_layers(owner: &LayerOwner, groups: &[Group]) -> Vec<Layer> {
+        groups
+            .iter()
+            .filter_map(|item| match item {
+                group if !group.assignments.is_empty() => Some(group),
+                _ => None,
+            })
+            .map(|group| Layer {
+                owner: LayerOwner {
+                    id: owner.id,
+                    rank: group.rank,
+                },
+                declared_path: Vec::new(),
+                path: Vec::new(),
+                swap: None,
+                boundary: None,
+                assignments: group.assignments.clone(),
+            })
+            .collect()
+    }
+    fn cross_boundary(layer: &Layer, replaced: &[GuidKey]) -> Layer {
+        if replaced.is_empty() {
+            layer.clone()
+        } else {
+            let boundary = Boundary {
+                replaced: replaced.to_vec(),
+                path: layer.path.clone(),
+            };
+            Layer {
+                boundary: Some(boundary),
+                ..layer.clone()
+            }
+        }
+    }
+    fn expand_children_of(
+        index: &SourceIndex,
+        id: GuidKey,
+        bindings: &[Binding],
+        descendant: &[Layer],
+        rank: u32,
+        state: &mut State,
+    ) -> NifResult<(Subtree, Vec<Occurrence>)> {
+        let mut routed = route_to_children(index, id, descendant, state);
+        let mut children = Vec::new();
+        for child_id in children_of(index, id) {
+            let layers = routed.remove(child_id).unwrap_or_default();
+            children.push(expand(index, *child_id, bindings, layers, rank + 1, state)?);
+        }
+        Ok((
+            Subtree {
+                base: None,
+                dangling: false,
+            },
+            children,
+        ))
+    }
+    fn route_to_children(
+        index: &SourceIndex,
+        id: GuidKey,
+        layers: &[Layer],
+        state: &mut State,
+    ) -> HashMap<GuidKey, Vec<Layer>> {
+        let mut routed: HashMap<GuidKey, Vec<Layer>> = HashMap::new();
+        for layer in layers {
+            let found = find_static_segment(index, id, layer.path[0]);
+            match found.top {
+                Some(top) => {
+                    routed
+                        .entry(top)
+                        .or_default()
+                        .push(routed_layer(index, top, &layer));
+                }
+                None => {
+                    unresolved_structural(index, &layer, found.count, state);
+                }
+            };
+        }
+        routed
+    }
+    fn routed_layer(index: &SourceIndex, top: GuidKey, layer: &Layer) -> Layer {
+        if source(index, top).is_some_and(|record| matches(record, layer.path[0])) {
+            descend(layer)
+        } else {
+            layer.clone()
+        }
+    }
+    fn unresolved_structural(
+        index: &SourceIndex,
+        layer: &Layer,
+        count: usize,
+        state: &mut State,
+    ) {
+        if count != 0 || !stale_layer(index, layer) {
+            state
+                .pending
+                .entry(layer.owner.id)
+                .or_default()
+                .push(Pending {
+                    path: layer.declared_path.clone(),
+                    reason: reason(count),
+                });
+        }
+    }
+    fn stale_layer(index: &SourceIndex, layer: &Layer) -> bool {
+        match &layer.boundary {
+            Some(boundary) => {
+                boundary
+                    .replaced
+                    .iter()
+                    .any(|component| resolves_in_source_component(
+                        index,
+                        *component,
+                        &boundary.path,
+                    ))
+            }
+            None => false,
+        }
+    }
+    fn report_owner(state: &mut State, id: GuidKey, main_component_id: Option<GuidKey>) {
+        for pending in state.pending.remove(&id).unwrap_or_default() {
+            state
+                .diagnostics
+                .push(Diagnostic {
+                    kind: DiagnosticKind::UnresolvedAssignment,
+                    owner: id,
+                    component: main_component_id,
+                    path: pending.path,
+                    reason: Some(pending.reason),
+                });
+        }
+    }
+    fn create_occurrence(
+        index: &SourceIndex,
+        id: GuidKey,
+        raw: &KiwiRecord,
+        source: &KiwiRecord,
+        root: &Root,
+        base: Option<&Occurrence>,
+        children: Vec<Occurrence>,
+    ) -> Occurrence {
+        let original = symbol_id(raw);
+        let occurrence = new_occurrence(
+            id,
+            effective_properties(index, source, base, original, root),
+            children,
+        );
+        let occurrence = Occurrence {
+            source_component_id: original,
+            source_component_override_key: component_keys(index, original)
+                .get(1)
+                .copied(),
+            override_key: override_key(source),
+            ..occurrence
+        };
+        let occurrence = match base {
+            Some(base) => {
+                let inherited = Occurrence {
+                    main_component_id: base.main_component_id.or(Some(base.source_id)),
+                    main_component_override_key: base
+                        .main_component_override_key
+                        .or(base.override_key),
+                    property_claims: base.property_claims.clone(),
+                    has_own_name: node_type(index, base.source_id)
+                        == Some(kiwi_records::node_type::INSTANCE) && base.has_own_name,
+                    ..occurrence
+                };
+                rename_swapped(inherited, base, &&root.replaced)
+            }
+            None => occurrence,
+        };
+        let name = default_instance_name(index, &occurrence);
+        Occurrence {
+            default_instance_name: name,
+            ..occurrence
+        }
+    }
+    fn effective_properties(
+        index: &SourceIndex,
+        source: &KiwiRecord,
+        base: Option<&Occurrence>,
+        original: Option<GuidKey>,
+        root: &Root,
+    ) -> KiwiRecord {
+        let placed = if base.is_some() && original != root.effective
+            && source.enum_value(kiwi_records::node_change::TYPE)
+                == Some(kiwi_records::node_type::INSTANCE)
+        {
+            source
+                .drop(
+                    &[
+                        kiwi_records::node_change::FILL_PAINTS,
+                        kiwi_records::node_change::STYLE_ID_FOR_FILL,
+                    ],
+                )
+        } else {
+            source.clone()
+        };
+        let base_properties = match base {
+            Some(base) => base.properties.clone(),
+            None => KiwiRecord::new(kiwi_record_definitions::NODE_CHANGE),
+        };
+        let properties = put_effective_symbol(
+            base_properties.drop(component_identity()).merge(&placed),
+            root.effective,
+            source,
+        );
+        let properties = match merge_variable_consumption(&base_properties, source) {
+            Some(consumption) => {
+                properties
+                    .put_record(
+                        kiwi_records::node_change::PARAMETER_CONSUMPTION_MAP,
+                        consumption,
+                    )
+            }
+            None => properties,
+        };
+        put_assignments(index, properties, source, &&root.groups)
+    }
+    fn put_effective_symbol(
+        properties: KiwiRecord,
+        effective: Option<GuidKey>,
+        source: &KiwiRecord,
+    ) -> KiwiRecord {
+        match (effective, source.record(kiwi_records::node_change::SYMBOL_DATA)) {
+            (Some(effective), Some(symbol_data)) => {
+                properties
+                    .put_record(
+                        kiwi_records::node_change::SYMBOL_DATA,
+                        symbol_data
+                            .put_record(
+                                kiwi_records::symbol_data::SYMBOL_ID,
+                                guid_record(effective),
+                            ),
+                    )
+            }
+            _ => properties,
+        }
+    }
+    fn guid_record(guid: GuidKey) -> KiwiRecord {
+        let (session_id, local_id) = guid;
+        KiwiRecord::new(kiwi_record_definitions::GUID)
+            .put_uint(kiwi_records::guid::SESSION_ID, session_id)
+            .put_uint(kiwi_records::guid::LOCAL_ID, local_id)
+    }
+    fn put_assignments(
+        index: &SourceIndex,
+        properties: KiwiRecord,
+        source: &KiwiRecord,
+        groups: &[Group],
+    ) -> KiwiRecord {
+        if source.enum_value(kiwi_records::node_change::TYPE)
+            == Some(kiwi_records::node_type::INSTANCE)
+        {
+            let assignments = groups
+                .iter()
+                .flat_map(|group| Vec::from_iter(
+                    group
+                        .assignments
+                        .iter()
+                        .filter_map(|item| match item {
+                            assignment if !missing_slot_content(index, assignment) => {
+                                Some(assignment)
+                            }
+                            _ => None,
+                        })
+                        .cloned(),
+                ))
+                .collect::<Vec<KiwiRecord>>();
+            properties
+                .put_records(
+                    kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS,
+                    assignments,
+                )
+        } else {
+            properties
+        }
+    }
+    fn missing_slot_content(index: &SourceIndex, assignment: &KiwiRecord) -> bool {
+        assignment
+            .record(kiwi_records::component_prop_assignment::VAR_VALUE)
+            .and_then(|variable| variable.record(kiwi_records::variable_data::VALUE))
+            .and_then(|value| slot_content(value))
+            .is_some_and(|content| !index.sources.contains_key(&content))
+    }
+    fn rename_swapped(
+        occurrence: Occurrence,
+        base: &Occurrence,
+        replaced: &[GuidKey],
+    ) -> Occurrence {
+        if replaced.is_empty() || occurrence.has_own_name {
+            occurrence
+        } else {
+            let name = match &base.default_instance_name {
+                Some(name) => Some(name.clone()),
+                None => {
+                    base.properties
+                        .str(kiwi_records::node_change::NAME)
+                        .map(|name| name.to_string())
+                }
+            };
+            let properties = match name {
+                Some(name) => {
+                    occurrence.properties.put_str(kiwi_records::node_change::NAME, &name)
+                }
+                None => occurrence.properties.delete(kiwi_records::node_change::NAME),
+            };
+            Occurrence {
+                properties,
+                ..occurrence
+            }
+        }
+    }
+    fn default_instance_name(
+        index: &SourceIndex,
+        occurrence: &Occurrence,
+    ) -> Option<String> {
+        let parent = source(index, occurrence.source_id)
+            .and_then(|record| parent_id(record))
+            .and_then(|parent| source(index, parent));
+        match parent {
+            Some(
+                set,
+            ) if node_type(index, occurrence.source_id)
+                != Some(kiwi_records::node_type::INSTANCE)
+                && set.bool(kiwi_records::node_change::IS_STATE_GROUP) == Some(true) => {
+                set.str(kiwi_records::node_change::NAME).map(|name| name.to_string())
+            }
+            _ => {
+                occurrence
+                    .properties
+                    .str(kiwi_records::node_change::NAME)
+                    .map(|name| name.to_string())
+            }
+        }
+    }
+    fn finish_occurrence(
+        index: &SourceIndex,
+        mut occurrence: Occurrence,
+        subtree: &Subtree,
+        source: &KiwiRecord,
+        claims: Vec<Claim>,
+        rank: u32,
+        state: &mut State,
+    ) -> NifResult<Occurrence> {
+        let mut tables = HashMap::new();
+        for claim in claims.iter() {
+            if let Some(target_path) = resolve_claim_target(
+                index,
+                &occurrence,
+                &claim.path,
+                state,
+                &mut tables,
+            ) {
+                apply_property_claim(&mut occurrence, rank, &&target_path, claim);
+            }
+        }
+        let scaled = apply_layout_scale(occurrence, source)?;
+        let placed = put_instance_size(
+            apply_placed_constraints(scaled, subtree.base.as_ref(), source),
+            source,
+        );
+        if subtree.dangling {
+            Ok(placed)
+        } else {
+            Ok(apply_derived_bounds(index, placed, source, state))
+        }
+    }
+    fn put_instance_size(occurrence: Occurrence, source: &KiwiRecord) -> Occurrence {
+        match source.record(kiwi_records::node_change::SIZE) {
+            Some(
+                size,
+            ) if source.enum_value(kiwi_records::node_change::TYPE)
+                == Some(kiwi_records::node_type::INSTANCE) => {
+                Occurrence {
+                    properties: occurrence
+                        .properties
+                        .put_record(kiwi_records::node_change::SIZE, size.clone()),
+                    derived_size: Some(size.clone()),
+                    ..occurrence
+                }
+            }
+            _ => occurrence,
+        }
+    }
+    fn apply_property_claim(
+        owner: &mut Occurrence,
+        owner_rank: u32,
+        target_path: &[usize],
+        claim: &Claim,
+    ) {
+        let retained = retained(&claim.props, get_at(owner, target_path), owner_rank);
+        if !retained.is_empty() {
+            apply_claim(at_mut(owner, target_path), &retained);
+            owner
+                .property_claims
+                .push(PropertyClaim {
+                    declared_by: owner.source_id,
+                    path: claim.path.clone(),
+                    properties: retained,
+                });
+        }
+    }
+    fn resolve_claim_target(
+        index: &SourceIndex,
+        owner: &Occurrence,
+        path: &[GuidKey],
+        state: &mut State,
+        tables: &mut SegmentTables,
+    ) -> Option<Vec<usize>> {
+        match resolve_path(owner, path, tables) {
+            Ok(target_path) => Some(target_path),
+            Err((_segment, 0)) => {
+                if !removed_target(index, owner, path) {
+                    state.diagnostics.push(unresolved_property(owner, path, 0));
+                }
+                None
+            }
+            Err((_segment, count)) => {
+                state.diagnostics.push(unresolved_property(owner, path, count));
+                None
+            }
+        }
+    }
+    fn unresolved_property(
+        owner: &Occurrence,
+        path: &[GuidKey],
+        count: usize,
+    ) -> Diagnostic {
+        Diagnostic {
+            kind: DiagnosticKind::UnresolvedProperty,
+            owner: owner.source_id,
+            component: owner.main_component_id,
+            path: path.to_vec(),
+            reason: Some(reason(count)),
+        }
+    }
+    fn removed_target(
+        index: &SourceIndex,
+        owner: &Occurrence,
+        path: &[GuidKey],
+    ) -> bool {
+        removed_from(index, owner, path, 0)
+    }
+    fn removed_from(
+        index: &SourceIndex,
+        current: &Occurrence,
+        path: &[GuidKey],
+        position: usize,
+    ) -> bool {
+        match path.get(position) {
+            Some(segment) => {
+                let rest = path.iter().skip(position).copied().collect::<Vec<GuidKey>>();
+                if current
+                    .replaced_components
+                    .iter()
+                    .any(|component| resolves_in_source_component(
+                        index,
+                        *component,
+                        &&rest,
+                    ))
+                {
+                    true
+                } else if position == 0 && root_guid(current, *segment) {
+                    removed_from(index, current, path, position + 1)
+                } else {
+                    match find_segment(current, *segment) {
+                        Ok(indexes) => {
+                            removed_from(
+                                index,
+                                get_at(current, &&indexes),
+                                path,
+                                position + 1,
+                            )
+                        }
+                        Err(_count) => false,
+                    }
+                }
+            }
+            None => false,
+        }
+    }
+    fn apply_derived_bounds(
+        index: &SourceIndex,
+        mut owner: Occurrence,
+        source: &KiwiRecord,
+        state: &mut State,
+    ) -> Occurrence {
+        let mut tables = HashMap::new();
+        for entry in source.records(kiwi_records::node_change::DERIVED_SYMBOL_DATA) {
+            let path = override_path(entry);
+            if !path.is_empty() {
+                match resolve_claim_target(index, &owner, &&path, state, &mut tables) {
+                    Some(target_path) if !target_path.is_empty() => {
+                        apply_derived_entry(at_mut(&mut owner, &&target_path), entry);
+                    }
+                    _ => {}
+                };
+            }
+        }
+        owner
+    }
+    fn reason(count: usize) -> TargetReason {
+        if count == 0 {
+            TargetReason::MissingTarget
+        } else {
+            TargetReason::AmbiguousTarget
+        }
+    }
+    fn node_type(index: &SourceIndex, id: GuidKey) -> Option<u32> {
+        source(index, id)
+            .and_then(|record| record.enum_value(kiwi_records::node_change::TYPE))
+    }
+    fn new_occurrence(
+        id: GuidKey,
+        properties: KiwiRecord,
+        children: Vec<Occurrence>,
+    ) -> Occurrence {
+        Occurrence {
+            source_id: id,
+            override_key: None,
+            main_component_id: None,
+            main_component_override_key: None,
+            source_component_id: None,
+            source_component_override_key: None,
+            derived_size: None,
+            slot_content_id: None,
+            default_instance_name: None,
+            properties,
+            children,
+            property_claims: Vec::new(),
+            binding_claims: Vec::new(),
+            layout_scale: 1.0,
+            has_own_name: false,
+            bound_fields: HashMap::new(),
+            replaced_components: Vec::new(),
+            overridden: HashSet::new(),
+        }
+    }
     /// Encodes the source index of `message` as Elixir's `SourceIndex` holds it: records by
     /// GUID tuple, and each parent's child GUIDs in saved order.
     pub fn encode_source_index<'a>(
@@ -44354,6 +46748,175 @@ pub mod graph {
             )
                 .encode(env),
         )
+    }
+    /// Interprets `root` from the records of `message` and encodes the occurrence tree and
+    /// diagnostics as plain maps, for comparison with Elixir's interpreter.
+    pub fn encode_interpretation<'a>(
+        env: Env<'a>,
+        message: &KiwiRecord,
+        root: GuidKey,
+    ) -> NifResult<Term<'a>> {
+        let index = source_index(message, true)?;
+        let (occurrence, diagnostics) = interpret(&index, root)?;
+        let diagnostics = diagnostics
+            .iter()
+            .map(|diagnostic| encode_diagnostic(env, diagnostic))
+            .collect::<Vec<_>>();
+        Ok((encode_occurrence(env, &occurrence)?, diagnostics).encode(env))
+    }
+    fn encode_occurrence<'a>(
+        env: Env<'a>,
+        occurrence: &Occurrence,
+    ) -> NifResult<Term<'a>> {
+        let children = occurrence
+            .children
+            .iter()
+            .map(|child| encode_occurrence(env, child))
+            .collect::<NifResult<Vec<_>>>()?;
+        let property_claims = occurrence
+            .property_claims
+            .iter()
+            .map(|claim| {
+                Ok(
+                    map(
+                        env,
+                        &[
+                            ("declared_by", claim.declared_by.encode(env)),
+                            ("path", claim.path.encode(env)),
+                            ("properties", kiwi_encode_record(env, &claim.properties)?),
+                        ],
+                    ),
+                )
+            })
+            .collect::<NifResult<Vec<_>>>()?;
+        let binding_claims = occurrence
+            .binding_claims
+            .iter()
+            .map(|claim| {
+                map(
+                    env,
+                    &[
+                        ("definition_id", claim.definition_id.encode(env)),
+                        ("field", atom(env, bound_field_name(&claim.field))),
+                        (
+                            "origin",
+                            atom(
+                                env,
+                                match claim.origin {
+                                    Origin::Default => "default",
+                                    Origin::Assignment => "assignment",
+                                },
+                            ),
+                        ),
+                    ],
+                )
+            })
+            .collect::<Vec<_>>();
+        let (bound_keys, bound_values): (Vec<_>, Vec<_>) = occurrence
+            .bound_fields
+            .iter()
+            .map(|(field, rank)| (
+                atom(env, node_change_field(*field)),
+                rank.encode(env),
+            ))
+            .unzip();
+        let overridden = occurrence
+            .overridden
+            .iter()
+            .map(|field| atom(env, node_change_field(*field)))
+            .collect::<Vec<_>>();
+        let derived_size = match &occurrence.derived_size {
+            Some(size) => kiwi_encode_record(env, size)?,
+            None => atom(env, "nil"),
+        };
+        Ok(
+            map(
+                env,
+                &[
+                    ("source_id", occurrence.source_id.encode(env)),
+                    ("override_key", occurrence.override_key.encode(env)),
+                    ("main_component_id", occurrence.main_component_id.encode(env)),
+                    (
+                        "main_component_override_key",
+                        occurrence.main_component_override_key.encode(env),
+                    ),
+                    ("source_component_id", occurrence.source_component_id.encode(env)),
+                    (
+                        "source_component_override_key",
+                        occurrence.source_component_override_key.encode(env),
+                    ),
+                    ("derived_size", derived_size),
+                    ("slot_content_id", occurrence.slot_content_id.encode(env)),
+                    (
+                        "default_instance_name",
+                        occurrence.default_instance_name.encode(env),
+                    ),
+                    ("properties", kiwi_encode_record(env, &occurrence.properties)?),
+                    ("children", children.encode(env)),
+                    ("property_claims", property_claims.encode(env)),
+                    ("binding_claims", binding_claims.encode(env)),
+                    ("layout_scale", occurrence.layout_scale.encode(env)),
+                    ("has_own_name", occurrence.has_own_name.encode(env)),
+                    (
+                        "bound_fields",
+                        Term::map_from_term_arrays(env, &bound_keys, &bound_values)?,
+                    ),
+                    ("replaced_components", occurrence.replaced_components.encode(env)),
+                    ("overridden", overridden.encode(env)),
+                ],
+            ),
+        )
+    }
+    fn encode_diagnostic<'a>(env: Env<'a>, diagnostic: &Diagnostic) -> Term<'a> {
+        let reason = match diagnostic.reason {
+            Some(TargetReason::MissingTarget) => atom(env, "missing_target"),
+            Some(TargetReason::AmbiguousTarget) => atom(env, "ambiguous_target"),
+            None => atom(env, "nil"),
+        };
+        let owner = diagnostic.owner.encode(env);
+        let component = diagnostic.component.encode(env);
+        let path = diagnostic.path.encode(env);
+        match diagnostic.kind {
+            DiagnosticKind::UnresolvedProperty => {
+                (atom(env, "unresolved_property"), owner, component, path, reason)
+                    .encode(env)
+            }
+            DiagnosticKind::UnresolvedAssignment => {
+                (atom(env, "unresolved_assignment"), owner, component, path, reason)
+                    .encode(env)
+            }
+            DiagnosticKind::MissingComponent => {
+                (atom(env, "missing_component"), owner, component).encode(env)
+            }
+            DiagnosticKind::MissingSlotContent => {
+                (atom(env, "missing_slot_content"), owner, component).encode(env)
+            }
+        }
+    }
+    fn bound_field_name(field: &BoundField) -> &'static str {
+        match field {
+            BoundField::Visible => "visible",
+            BoundField::TextData => "text_data",
+            BoundField::SymbolData => "symbol_data",
+            BoundField::SlotContent => "slot_content",
+        }
+    }
+    fn node_change_field(field: u32) -> &'static str {
+        let fields = KIWI_RECORD_DEFINITIONS[kiwi_record_definitions::NODE_CHANGE
+                as usize]
+            .fields;
+        fields
+            .binary_search_by_key(&field, |candidate| candidate.id)
+            .map(|position| fields[position].name)
+            .unwrap_or("unknown")
+    }
+    fn atom<'a>(env: Env<'a>, name: &str) -> Term<'a> {
+        Atom::from_str(env, name).expect("atom").encode(env)
+    }
+    fn map<'a>(env: Env<'a>, entries: &[(&str, Term<'a>)]) -> Term<'a> {
+        let keys = entries.iter().map(|(key, _)| atom(env, key)).collect::<Vec<_>>();
+        let values = entries.iter().map(|(_, value)| *value).collect::<Vec<_>>();
+        Term::map_from_term_arrays(env, &keys, &values).expect("unique keys")
     }
 }
 use crate::runtime::runtime_schema;
@@ -44392,6 +46955,20 @@ pub fn graph_source_index_impl<'a>(
     let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
     decoder.finish()?;
     graph::encode_source_index(env, &message)
+}
+/// The occurrence tree the native interpreter builds for `root`, encoded for comparison with
+/// Elixir's.
+pub fn graph_interpret_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+    root: (u32, u32),
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    graph::encode_interpretation(env, &message, root)
 }
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
@@ -44569,6 +47146,15 @@ pub fn graph_source_index<'a>(
     schema: Binary<'a>,
 ) -> NifResult<Term<'a>> {
     graph_source_index_impl(env, bytes, schema)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn graph_interpret<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+    root: (u32, u32),
+) -> NifResult<Term<'a>> {
+    graph_interpret_impl(env, bytes, schema, root)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_graph_focused_sparse_message<'a>(
