@@ -60,6 +60,11 @@ defmodule Figler.Scene.Graph.Occurrence.Claims do
   consult after the legacy map.
   """
   @spec merge_variable_consumption(map(), map()) :: map()
+  def merge_variable_consumption(_base, patch)
+      when not is_map_key(patch, :variable_consumption_map) and
+             not is_map_key(patch, :parameter_consumption_map),
+      do: %{}
+
   def merge_variable_consumption(base, patch) do
     case consumption_entries(patch) do
       [] ->
@@ -75,6 +80,9 @@ defmodule Figler.Scene.Graph.Occurrence.Claims do
   end
 
   # Entries keep the position of a field's first entry and the value of its last.
+  defp dedupe_by_field([]), do: []
+  defp dedupe_by_field([_entry] = entries), do: entries
+
   defp dedupe_by_field(entries) do
     last = Map.new(entries, &{Map.get(&1, :variable_field), &1})
 
@@ -101,6 +109,11 @@ defmodule Figler.Scene.Graph.Occurrence.Claims do
   one entry per field in first-seen order.
   """
   @spec consumption_entries(map()) :: [map()]
+  def consumption_entries(record)
+      when not is_map_key(record, :variable_consumption_map) and
+             not is_map_key(record, :parameter_consumption_map),
+      do: []
+
   def consumption_entries(record) do
     legacy = get_in(record, [:variable_consumption_map, :entries]) || []
     parameters = get_in(record, [:parameter_consumption_map, :entries]) || []

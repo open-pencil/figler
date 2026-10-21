@@ -131,17 +131,32 @@ defmodule Figler.Scene.Graph.Variables.Bindings do
   defp linear_expression(_expression, _depth), do: :error
 
   defp bind_paints(bound, record, field, vars) do
-    record
-    |> Map.get(field)
-    |> List.wrap()
-    |> Stream.with_index()
-    |> Enum.reduce(bound, fn {paint, index}, bound ->
-      case Variables.reference(vars, get_in(paint, [:color_var, :value, :alias])) do
+    case Map.get(record, field) do
+      [_ | _] = paints -> bind_paint_list(paints, 0, bound, field, vars)
+      _none -> bound
+    end
+  end
+
+  defp bind_paint_list([], _index, bound, _field, _vars), do: bound
+
+  defp bind_paint_list(
+         [%{color_var: %{value: %{alias: alias}}} | rest],
+         index,
+         bound,
+         field,
+         vars
+       ) do
+    bound =
+      case Variables.reference(vars, alias) do
         nil -> bound
         id -> Map.put(bound, {field, index}, {id, 1})
       end
-    end)
+
+    bind_paint_list(rest, index + 1, bound, field, vars)
   end
+
+  defp bind_paint_list([_paint | rest], index, bound, field, vars),
+    do: bind_paint_list(rest, index + 1, bound, field, vars)
 
   @doc """
   Writes the values a record's bindings resolve to in `modes` into the record.

@@ -123,6 +123,10 @@ defmodule Figler.Scene.Graph.Occurrence.Prepare do
       Map.has_key?(cache, id) ->
         {Map.fetch!(cache, id), cache}
 
+      # Only definitions that name a parent take anything from ancestors.
+      not linked_definitions?(record) ->
+        {record, Map.put(cache, id, record)}
+
       MapSet.member?(visiting, id) ->
         raise ArgumentError, "cyclic component-property ancestry"
 
