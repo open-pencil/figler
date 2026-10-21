@@ -281,7 +281,7 @@ defmodule Figler.Render.Text do
 
   defp base_style(node) do
     %{
-      line_height: Measurement.from_sparse(Map.get(node, :line_height)),
+      line_height: line_height(node),
       letter_spacing: Measurement.from_sparse(Map.get(node, :letter_spacing)),
       text_decoration: Map.get(node, :text_decoration),
       text_decoration_style: Map.get(node, :text_decoration_style),
@@ -291,6 +291,22 @@ defmodule Figler.Render.Text do
       text_decoration_fill_paints: Map.get(node, :text_decoration_fill_paints),
       text_case: Map.get(node, :text_case)
     }
+  end
+
+  # Figma saves each line at the larger of its line height and its tallest font's height, so a
+  # first line shorter than the text's height in pixels was laid out at one a style set.
+  defp line_height(node) do
+    line_height = Measurement.from_sparse(Map.get(node, :line_height))
+
+    case get_in(node, [:derived_text_data, :baselines]) do
+      [%{line_height: derived} | _]
+      when is_number(derived) and is_struct(line_height, Measurement) and
+             line_height.units == :pixels and derived < line_height.value ->
+        %Measurement{value: derived * 1.0, units: :pixels}
+
+      _saved ->
+        line_height
+    end
   end
 
   defp style_measurement(nil, base_style, field), do: Map.get(base_style, field)

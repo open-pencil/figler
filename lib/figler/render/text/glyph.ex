@@ -12,8 +12,8 @@ defmodule Figler.Render.Text.Glyph do
     :font_size,
     :first_character,
     :advance,
-    rotation: 0.0,
-    emoji?: false
+    :emoji,
+    rotation: 0.0
   ]
 
   @type t :: %__MODULE__{
@@ -24,6 +24,6 @@ defmodule Figler.Render.Text.Glyph do
           first_character: non_neg_integer() | nil,
           advance: float() | nil,
           rotation: float(),
-          emoji?: boolean()
+          emoji: String.t() | nil
         }
 end

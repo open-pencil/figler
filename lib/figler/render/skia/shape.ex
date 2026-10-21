@@ -41,10 +41,27 @@ defmodule Figler.Render.Skia.Shape do
   @spec draw_node(Skia.Document.t(), Node.t(), map()) :: Skia.Document.t()
   # Path text draws its stroke outlines first, under the glyphs they surround.
   def draw_node(document, %Node{node_type: :text_path} = node, assets),
-    do: document |> draw_strokes(node, assets) |> draw_fills(node, assets)
+    do:
+      document
+      |> draw_strokes(node, assets)
+      |> draw_fills(node, assets)
+      |> draw_emoji(node, assets)
 
   def draw_node(document, node, assets),
-    do: document |> draw_fills(node, assets) |> draw_strokes(node, assets)
+    do:
+      document
+      |> draw_fills(node, assets)
+      |> draw_emoji(node, assets)
+      |> draw_strokes(node, assets)
+
+  # Emoji are drawn once, apart from the fills that paint the other glyphs.
+  defp draw_emoji(document, node, %{text_emoji: emoji}) when is_map_key(emoji, node.guid) do
+    Enum.reduce(emoji[node.guid], document, fn {text, opts}, drawn ->
+      Skia.text(drawn, text, opts)
+    end)
+  end
+
+  defp draw_emoji(document, _node, _assets), do: document
 
   defp draw_fills(document, node, assets),
     do: Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))

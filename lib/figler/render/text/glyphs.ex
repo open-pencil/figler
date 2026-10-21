@@ -76,9 +76,12 @@ defmodule Figler.Render.Text.Glyphs do
       # Kiwi stores the advance in ems.
       advance: if(advance = Map.get(saved, :advance), do: advance * font_size),
       rotation: Map.get(saved, :rotation) || 0.0,
-      emoji?: (Map.get(saved, :emoji_code_points) || []) != []
+      emoji: emoji_text(Map.get(saved, :emoji_code_points))
     }
   end
+
+  defp emoji_text([_ | _] = code_points), do: List.to_string(code_points)
+  defp emoji_text(_code_points), do: nil
 
   defp saved_decoration(decoration) do
     %{
@@ -129,7 +132,7 @@ defmodule Figler.Render.Text.Glyphs do
     snap? = Enum.all?(glyphs, &(&1.rotation == 0.0))
 
     glyphs
-    |> Enum.reject(& &1.emoji?)
+    |> Enum.reject(& &1.emoji)
     |> Enum.chunk_by(&fill_run(runs, &1))
     |> Enum.map(fn [first | _] = chunk ->
       {fill_run(runs, first), Enum.map(chunk, &{&1, matrix(&1, snap?)})}
@@ -153,6 +156,16 @@ defmodule Figler.Render.Text.Glyphs do
     cos = :math.cos(angle) * glyph.font_size
     sin = :math.sin(angle) * glyph.font_size
     {cos, sin, glyph.x, sin, -cos, y}
+  end
+
+  @doc """
+  The emoji among the glyphs, each at its pen position and size. Their saved outlines are
+  placeholder squares, 1 em wide.
+  """
+  @spec emoji(Text.t()) :: [%{emoji: String.t(), x: float(), baseline: float(), size: float()}]
+  def emoji(%Text{glyphs: glyphs}) do
+    for %Glyph{emoji: emoji} = glyph when is_binary(emoji) <- glyphs,
+        do: %{emoji: emoji, x: glyph.x, baseline: glyph.y, size: glyph.font_size}
   end
 
   @doc "The saved decoration rects, each with its style run's decoration style and paints."

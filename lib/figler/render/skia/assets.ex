@@ -1,6 +1,6 @@
 defmodule Figler.Render.Skia.Assets do
   @moduledoc false
-  @compile {:no_warn_undefined, [Skia.Image, Skia.Path]}
+  @compile {:no_warn_undefined, [Skia.Font, Skia.Image, Skia.Path, Skia.Typeface]}
 
   alias Figler.Render.Geometry
   alias Figler.Render.Skia.Fonts
@@ -17,6 +17,7 @@ defmodule Figler.Render.Skia.Assets do
             vector_networks: %{},
             vector_network_errors: %{},
             text_glyphs: %{},
+            text_emoji: %{},
             fonts: %{},
             font_spans: %{},
             font_warnings: %{}
@@ -30,6 +31,7 @@ defmodule Figler.Render.Skia.Assets do
           vector_networks: %{optional(tuple()) => VectorNetwork.t()},
           vector_network_errors: %{optional(tuple()) => term()},
           text_glyphs: %{optional(tuple()) => [{Figler.Render.Text.Run.t() | nil, Skia.Path.t()}]},
+          text_emoji: %{optional(tuple()) => [{String.t(), keyword()}]},
           fonts: %{optional(tuple()) => Figler.Render.Skia.Fonts.Resolved.t()},
           font_spans: %{optional(tuple()) => [Figler.Render.Skia.Fonts.Span.t()]},
           font_warnings: %{optional(tuple()) => [map()]}
@@ -174,7 +176,9 @@ defmodule Figler.Render.Skia.Assets do
       %{text: %{} = text} = node, loaded ->
         with true <- Glyphs.drawable?(text, node.fill_paints || []),
              {:ok, paths} <- glyph_paths(text, blobs) do
-          put_in(loaded, [Access.key(:text_glyphs), node.guid], paths)
+          loaded
+          |> put_in([Access.key(:text_glyphs), node.guid], paths)
+          |> put_in([Access.key(:text_emoji), node.guid], emoji_texts(text))
         else
           _laid_out -> loaded
         end
@@ -199,6 +203,17 @@ defmodule Figler.Render.Skia.Assets do
       {:ok, paths} -> {:ok, Enum.reverse(paths)}
       error -> error
     end)
+  end
+
+  # Figma draws an emoji glyph as an image over its placeholder square; the system's emoji font,
+  # set on the glyph's baseline, stands in for the image.
+  defp emoji_texts(text) do
+    for %{emoji: emoji, x: x, baseline: baseline, size: size} <- Glyphs.emoji(text),
+        {:ok, typeface} <- [Skia.Typeface.match_character(emoji)],
+        font = Skia.Font.new(typeface, size: size),
+        {:ok, %{ascent: ascent}} <- [Skia.Font.metrics(font)] do
+      {emoji, [x: x, y: baseline + ascent, width: size * 4, font: font, size: size]}
+    end
   end
 
   defp glyph_path(placed, blobs) do

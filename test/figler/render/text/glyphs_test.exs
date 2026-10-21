@@ -19,8 +19,8 @@ defmodule Figler.Render.Text.GlyphsTest do
       }
 
       assert {[first, emoji], []} = Glyphs.from_derived(derived, "A😀")
-      assert %Glyph{commands_blob: 0, advance: 6.0, emoji?: false} = first
-      assert %Glyph{commands_blob: 1, advance: nil, emoji?: true} = emoji
+      assert %Glyph{commands_blob: 0, advance: 6.0, emoji: nil} = first
+      assert %Glyph{commands_blob: 1, advance: nil, emoji: "😀"} = emoji
     end
 
     test "hides glyphs from the truncation index on" do
@@ -98,7 +98,7 @@ defmodule Figler.Render.Text.GlyphsTest do
 
     test "groups glyphs by the style run whose fills paint them and skips emoji" do
       coloured = run(1, 2, fill_paints: [solid()])
-      glyphs = [glyph(0), glyph(1), %{glyph(2) | emoji?: true}, glyph(2), glyph(3)]
+      glyphs = [glyph(0), glyph(1), %{glyph(2) | emoji: "😀"}, glyph(2), glyph(3)]
 
       assert [{nil, [_]}, {^coloured, [_, _]}, {nil, [_]}] =
                Glyphs.placements(text(glyphs, [run(0, 1), coloured, run(3, 1)]))
