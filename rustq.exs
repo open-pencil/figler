@@ -27,6 +27,8 @@ for {module, file} <- [
       {Figler.Codegen.Native.Scene.Decode, "codegen/figler/codegen/native/scene/decode.ex"},
       {Figler.Codegen.Native.Scene.Record, "codegen/figler/codegen/native/scene/record.ex"},
       {Figler.Codegen.Native.Scene, "codegen/figler/codegen/native/scene.ex"},
+      {Figler.Codegen.Native.Graph.Records, "codegen/figler/codegen/native/graph/records.ex"},
+      {Figler.Codegen.Native.Graph.Prepare, "codegen/figler/codegen/native/graph/prepare.ex"},
       {Figler.Codegen.Native.Graph.SourceIndex,
        "codegen/figler/codegen/native/graph/source_index.ex"},
       {Figler.Codegen.Native, "codegen/figler/codegen/native.ex"}

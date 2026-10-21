@@ -10523,6 +10523,47 @@ impl KiwiRecord {
         self.with_fields(fields)
     }
 
+    /// The record with `field` holding `record`.
+    pub fn put_record(&self, field: u32, record: KiwiRecord) -> Self {
+        self.put(field, KiwiValue::Record(record))
+    }
+
+    /// The record with `field` holding `value` of the enum defined at `definition`.
+    pub fn put_enum(&self, field: u32, value: u32, definition: u32) -> Self {
+        self.put(field, KiwiValue::Enum(value, definition))
+    }
+
+    /// The record with array `field` holding `records`.
+    pub fn put_records(&self, field: u32, records: Vec<KiwiRecord>) -> Self {
+        self.put(field, KiwiValue::Array(records.into_iter().map(KiwiValue::Record).collect()))
+    }
+
+    /// The record with each record in array `field` replaced by `update` of it. A record that
+    /// does not set the field is returned as it is.
+    pub fn map_records(&self, field: u32, update: impl Fn(&KiwiRecord) -> KiwiRecord) -> Self {
+        match self.get(field) {
+            Some(KiwiValue::Array(values)) => {
+                let values = values
+                    .iter()
+                    .map(|value| match value {
+                        KiwiValue::Record(record) => KiwiValue::Record(update(record)),
+                        other => other.clone(),
+                    })
+                    .collect();
+                self.put(field, KiwiValue::Array(values))
+            }
+            _ => self.clone(),
+        }
+    }
+
+    /// The record with the record in `field` replaced by `update` of it, when it has one.
+    pub fn map_record(&self, field: u32, update: impl Fn(&KiwiRecord) -> KiwiRecord) -> Self {
+        match self.record(field) {
+            Some(record) => self.put_record(field, update(record)),
+            None => self.clone(),
+        }
+    }
+
     /// The record without `field`.
     pub fn delete(&self, field: u32) -> Self {
         match self.position(field) {
@@ -43583,18 +43624,17 @@ fn decode_scene_node_change_from_decoder(
     Ok(())
 }
 /// The native occurrence interpreter: source records and the effective graph built from them.
-#[allow(clippy::match_single_binding)]
+#[allow(
+    clippy::match_single_binding,
+    clippy::redundant_closure,
+    clippy::needless_borrow,
+    clippy::manual_map,
+    clippy::useless_vec
+)]
 pub mod graph {
     use super::*;
     use std::collections::{HashMap, HashSet};
-    pub type Children = HashMap<GuidKey, Vec<GuidKey>>;
     pub type GuidKey = (u32, u32);
-    #[derive(Clone, Debug)]
-    pub struct SourceIndex {
-        pub sources: Sources,
-        pub children: Children,
-    }
-    pub type Sources = HashMap<GuidKey, KiwiRecord>;
     fn guid_key(guid: Option<&KiwiRecord>) -> Option<GuidKey> {
         match guid {
             Some(guid) => {
@@ -43640,32 +43680,678 @@ pub mod graph {
             None => "",
         }
     }
-    fn live_record(record: &KiwiRecord) -> bool {
-        record.enum_value(kiwi_records::node_change::PHASE)
-            != Some(kiwi_records::node_phase::REMOVED)
+    fn enum_is(record: &KiwiRecord, field: u32, value: u32) -> bool {
+        record.enum_value(field) == Some(value)
     }
-    fn source_index(message: &KiwiRecord) -> NifResult<SourceIndex> {
+    fn has_guid(record: &KiwiRecord, field: u32, id: GuidKey) -> bool {
+        guid_key(record.record(field)) == Some(id)
+    }
+    pub type Resolved = HashMap<GuidKey, KiwiRecord>;
+    pub type StyleKeys = HashMap<String, GuidKey>;
+    pub type Styles = HashMap<GuidKey, KiwiRecord>;
+    fn prepare(records: Vec<KiwiRecord>, styles: bool) -> NifResult<Vec<KiwiRecord>> {
+        let normalized = records.iter().map(|record| normalize(record)).collect();
+        let inherited = inherit_property_definitions(normalized)?;
+        if styles { Ok(apply_styles(inherited)) } else { Ok(inherited) }
+    }
+    fn normalize(record: &KiwiRecord) -> KiwiRecord {
+        let defaults = record
+            .map_records(
+                kiwi_records::node_change::COMPONENT_PROP_DEFS,
+                |definition| normalize_default(definition),
+            );
+        put_prop_refs(defaults)
+            .map_record(
+                kiwi_records::node_change::SYMBOL_DATA,
+                |data| {
+                    data.map_records(
+                        kiwi_records::symbol_data::SYMBOL_OVERRIDES,
+                        |layer| normalize(layer),
+                    )
+                },
+            )
+            .map_records(
+                kiwi_records::node_change::DERIVED_SYMBOL_DATA,
+                |derived| normalize(derived),
+            )
+            .map_record(
+                kiwi_records::node_change::TEXT_DATA,
+                |text| {
+                    text.map_records(
+                        kiwi_records::text_data::STYLE_OVERRIDE_TABLE,
+                        |style| normalize(style),
+                    )
+                },
+            )
+    }
+    fn normalize_default(definition: &KiwiRecord) -> KiwiRecord {
+        if definition.has(kiwi_records::component_prop_def::INITIAL_VALUE) {
+            definition.clone()
+        } else {
+            match default_value(definition) {
+                Some(value) => {
+                    definition
+                        .put_record(
+                            kiwi_records::component_prop_def::INITIAL_VALUE,
+                            value,
+                        )
+                }
+                None => definition.clone(),
+            }
+        }
+    }
+    fn default_value(definition: &KiwiRecord) -> Option<KiwiRecord> {
+        match definition.record(kiwi_records::component_prop_def::VAR_VALUE) {
+            Some(variable) => {
+                match variable.record(kiwi_records::variable_data::VALUE) {
+                    Some(value) => {
+                        match value
+                            .record(kiwi_records::variable_any_value::SYMBOL_ID_VALUE)
+                            .and_then(|symbol| {
+                                symbol.record(kiwi_records::symbol_id::GUID)
+                            })
+                        {
+                            Some(guid) => {
+                                Some(
+                                    KiwiRecord::new(
+                                            kiwi_record_definitions::COMPONENT_PROP_VALUE,
+                                        )
+                                        .put_record(
+                                            kiwi_records::component_prop_value::GUID_VALUE,
+                                            guid.clone(),
+                                        ),
+                                )
+                            }
+                            None => Some(value.clone()),
+                        }
+                    }
+                    __rustq_with_value => {
+                        match __rustq_with_value {
+                            _ => None,
+                        }
+                    }
+                }
+            }
+            __rustq_with_value => {
+                match __rustq_with_value {
+                    _ => None,
+                }
+            }
+        }
+    }
+    fn put_prop_refs(record: KiwiRecord) -> KiwiRecord {
+        let entries = match record
+            .record(kiwi_records::node_change::PARAMETER_CONSUMPTION_MAP)
+        {
+            Some(map) => map.records(kiwi_records::variable_data_map::ENTRIES),
+            None => Vec::new(),
+        };
+        let saved = record
+            .records(kiwi_records::node_change::COMPONENT_PROP_REFS)
+            .into_iter()
+            .cloned()
+            .collect();
+        let refs = entries
+            .iter()
+            .filter_map(|entry| prop_ref(entry))
+            .fold(saved, |refs, prop_ref| upsert_ref(refs, prop_ref));
+        if refs.is_empty() {
+            record
+        } else {
+            record.put_records(kiwi_records::node_change::COMPONENT_PROP_REFS, refs)
+        }
+    }
+    fn prop_ref(entry: &&KiwiRecord) -> Option<KiwiRecord> {
+        match entry.enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD) {
+            Some(variable_field) => {
+                match node_field(variable_field) {
+                    Some(field) => {
+                        match entry
+                            .record(kiwi_records::variable_data_map_entry::VARIABLE_DATA)
+                        {
+                            Some(variable) => {
+                                match variable.record(kiwi_records::variable_data::VALUE) {
+                                    Some(value) => {
+                                        match value
+                                            .record(kiwi_records::variable_any_value::PROP_REF_VALUE)
+                                        {
+                                            Some(reference) => {
+                                                match reference.record(kiwi_records::prop_ref_value::DEF_ID)
+                                                {
+                                                    Some(def_id) => {
+                                                        if enum_is(
+                                                            variable,
+                                                            kiwi_records::variable_data::DATA_TYPE,
+                                                            kiwi_records::variable_data_type::PROP_REF,
+                                                        ) {
+                                                            Some(
+                                                                KiwiRecord::new(kiwi_record_definitions::COMPONENT_PROP_REF)
+                                                                    .put_record(
+                                                                        kiwi_records::component_prop_ref::DEF_ID,
+                                                                        def_id.clone(),
+                                                                    )
+                                                                    .put_enum(
+                                                                        kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD,
+                                                                        field,
+                                                                        kiwi_record_definitions::COMPONENT_PROP_NODE_FIELD,
+                                                                    ),
+                                                            )
+                                                        } else {
+                                                            None
+                                                        }
+                                                    }
+                                                    __rustq_with_value => {
+                                                        match __rustq_with_value {
+                                                            _ => None,
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            __rustq_with_value => {
+                                                match __rustq_with_value {
+                                                    _ => None,
+                                                }
+                                            }
+                                        }
+                                    }
+                                    __rustq_with_value => {
+                                        match __rustq_with_value {
+                                            _ => None,
+                                        }
+                                    }
+                                }
+                            }
+                            __rustq_with_value => {
+                                match __rustq_with_value {
+                                    _ => None,
+                                }
+                            }
+                        }
+                    }
+                    __rustq_with_value => {
+                        match __rustq_with_value {
+                            _ => None,
+                        }
+                    }
+                }
+            }
+            __rustq_with_value => {
+                match __rustq_with_value {
+                    _ => None,
+                }
+            }
+        }
+    }
+    fn node_field(field: u32) -> Option<u32> {
+        if field == kiwi_records::variable_field::VISIBLE {
+            Some(kiwi_records::component_prop_node_field::VISIBLE)
+        } else if field == kiwi_records::variable_field::TEXT_DATA {
+            Some(kiwi_records::component_prop_node_field::TEXT_DATA)
+        } else if field == kiwi_records::variable_field::OVERRIDDEN_SYMBOL_ID {
+            Some(kiwi_records::component_prop_node_field::OVERRIDDEN_SYMBOL_ID)
+        } else if field == kiwi_records::variable_field::SLOT_CONTENT_ID {
+            Some(kiwi_records::component_prop_node_field::SLOT_CONTENT_ID)
+        } else {
+            None
+        }
+    }
+    fn upsert_ref(mut refs: Vec<KiwiRecord>, prop_ref: KiwiRecord) -> Vec<KiwiRecord> {
+        match refs.iter().rposition(|saved| same_node_field(saved, &prop_ref)) {
+            Some(index) => {
+                refs.remove(index);
+                refs.insert(index, prop_ref);
+                refs
+            }
+            None => {
+                refs.push(prop_ref);
+                refs
+            }
+        }
+    }
+    fn inherit_property_definitions(
+        records: Vec<KiwiRecord>,
+    ) -> NifResult<Vec<KiwiRecord>> {
+        if records.iter().any(|record| linked_definitions(record)) {
+            let by_id = records_by_id(&&records);
+            let mut resolved = no_records();
+            records
+                .iter()
+                .map(|record| resolve(record, &by_id, &mut resolved, &HashSet::new()))
+                .collect()
+        } else {
+            Ok(records)
+        }
+    }
+    fn linked_definitions(record: &KiwiRecord) -> bool {
+        record
+            .records(kiwi_records::node_change::COMPONENT_PROP_DEFS)
+            .iter()
+            .any(|definition| {
+                definition.has(kiwi_records::component_prop_def::PARENT_PROP_DEF_ID)
+            })
+    }
+    fn resolve(
+        record: &KiwiRecord,
+        by_id: &HashMap<GuidKey, &KiwiRecord>,
+        resolved: &mut Resolved,
+        visiting: &HashSet<GuidKey>,
+    ) -> NifResult<KiwiRecord> {
+        match record_id(record) {
+            None => Ok(record.clone()),
+            Some(id) => {
+                if resolved.contains_key(&id) {
+                    cached(resolved, id)
+                } else if !linked_definitions(record) {
+                    resolved.insert(id, record.clone());
+                    Ok(record.clone())
+                } else if visiting.contains(&id) {
+                    Err(rustler::Error::BadArg)
+                } else {
+                    {
+                        let mut visiting = visiting.clone();
+                        visiting.insert(id);
+                        let ancestors = resolved_ancestors(
+                            record,
+                            by_id,
+                            resolved,
+                            &visiting,
+                        )?;
+                        let definitions = inherit_from(record, &&ancestors)?;
+                        resolved.insert(id, definitions.clone());
+                        Ok(definitions)
+                    }
+                }
+            }
+        }
+    }
+    fn resolved_ancestors(
+        record: &KiwiRecord,
+        by_id: &HashMap<GuidKey, &KiwiRecord>,
+        resolved: &mut Resolved,
+        visiting: &HashSet<GuidKey>,
+    ) -> NifResult<Vec<KiwiRecord>> {
+        match parent_id(record).and_then(|id| by_id.get(&id)) {
+            None => Ok(Vec::new()),
+            Some(parent) => {
+                let parent = resolve(&parent, by_id, resolved, visiting)?;
+                let mut ancestors = resolved_ancestors(
+                    &parent,
+                    by_id,
+                    resolved,
+                    visiting,
+                )?;
+                ancestors.insert(0, parent);
+                Ok(ancestors)
+            }
+        }
+    }
+    fn inherit_from(
+        record: &KiwiRecord,
+        ancestors: &[KiwiRecord],
+    ) -> NifResult<KiwiRecord> {
+        let definitions = inherit_definitions(record, ancestors)?;
+        if record.has(kiwi_records::node_change::COMPONENT_PROP_DEFS) {
+            Ok(
+                record
+                    .put_records(
+                        kiwi_records::node_change::COMPONENT_PROP_DEFS,
+                        definitions,
+                    ),
+            )
+        } else {
+            Ok(record.clone())
+        }
+    }
+    fn inherit_definition(
+        definition: &KiwiRecord,
+        ancestors: &[KiwiRecord],
+    ) -> NifResult<KiwiRecord> {
+        match guid_key(
+            definition.record(kiwi_records::component_prop_def::PARENT_PROP_DEF_ID),
+        ) {
+            None => Ok(definition.clone()),
+            Some(parent_id) => {
+                let parent = parent_definition(ancestors, parent_id)?;
+                Ok(parent.merge(definition))
+            }
+        }
+    }
+    fn parent_definition(
+        ancestors: &[KiwiRecord],
+        parent_id: GuidKey,
+    ) -> NifResult<KiwiRecord> {
+        let found = ancestors
+            .iter()
+            .map(|ancestor| definitions_named(ancestor, parent_id))
+            .find(|definitions| !definitions.is_empty());
+        match found {
+            None => Ok(KiwiRecord::new(kiwi_record_definitions::COMPONENT_PROP_DEF)),
+            Some(definitions) => {
+                if definitions.len() == 1 {
+                    Ok(definitions[0].clone())
+                } else {
+                    Err(rustler::Error::BadArg)
+                }
+            }
+        }
+    }
+    fn apply_styles(records: Vec<KiwiRecord>) -> Vec<KiwiRecord> {
+        let styles = style_records(&&records);
+        if styles.is_empty() {
+            records
+        } else {
+            let keys = style_keys(&&records);
+            records
+                .iter()
+                .map(|record| apply_style_refs(record, &styles, &keys))
+                .collect()
+        }
+    }
+    fn style_records(records: &[KiwiRecord]) -> Styles {
+        records
+            .iter()
+            .filter(|record| record.has(kiwi_records::node_change::STYLE_TYPE))
+            .filter_map(|record| record_id(record).map(|id| (id, record.clone())))
+            .collect()
+    }
+    fn style_keys(records: &[KiwiRecord]) -> StyleKeys {
+        let mut keys = no_style_keys();
+        for record in records {
+            put_style_key(&mut keys, &record);
+        }
+        keys
+    }
+    fn apply_style_refs(
+        record: &KiwiRecord,
+        styles: &Styles,
+        keys: &StyleKeys,
+    ) -> KiwiRecord {
+        let fill = style_field(
+            record.clone(),
+            kiwi_records::node_change::STYLE_ID_FOR_FILL,
+            kiwi_records::style_type::FILL,
+            kiwi_records::node_change::FILL_PAINTS,
+            kiwi_records::node_change::FILL_PAINTS,
+            styles,
+            keys,
+        );
+        let stroke = style_field(
+            fill,
+            kiwi_records::node_change::STYLE_ID_FOR_STROKE_FILL,
+            kiwi_records::style_type::FILL,
+            kiwi_records::node_change::FILL_PAINTS,
+            kiwi_records::node_change::STROKE_PAINTS,
+            styles,
+            keys,
+        );
+        let effect = style_field(
+            stroke,
+            kiwi_records::node_change::STYLE_ID_FOR_EFFECT,
+            kiwi_records::style_type::EFFECT,
+            kiwi_records::node_change::EFFECTS,
+            kiwi_records::node_change::EFFECTS,
+            styles,
+            keys,
+        );
+        let grid = style_field(
+            effect,
+            kiwi_records::node_change::STYLE_ID_FOR_GRID,
+            kiwi_records::style_type::GRID,
+            kiwi_records::node_change::LAYOUT_GRIDS,
+            kiwi_records::node_change::LAYOUT_GRIDS,
+            styles,
+            keys,
+        );
+        text_style(grid, styles, keys)
+            .map_record(
+                kiwi_records::node_change::SYMBOL_DATA,
+                |data| {
+                    data.map_records(
+                        kiwi_records::symbol_data::SYMBOL_OVERRIDES,
+                        |layer| apply_style_refs(layer, styles, keys),
+                    )
+                },
+            )
+    }
+    fn style_field(
+        record: KiwiRecord,
+        field: u32,
+        style_type: u32,
+        source: u32,
+        target: u32,
+        styles: &Styles,
+        keys: &StyleKeys,
+    ) -> KiwiRecord {
+        match referenced_style(&record, field, styles, keys) {
+            Some(style) => {
+                match style.get(source) {
+                    Some(value) => {
+                        if enum_is(
+                            &style,
+                            kiwi_records::node_change::STYLE_TYPE,
+                            style_type,
+                        ) {
+                            record.put(target, value.clone())
+                        } else {
+                            record
+                        }
+                    }
+                    __rustq_with_value => {
+                        match __rustq_with_value {
+                            _ => record,
+                        }
+                    }
+                }
+            }
+            __rustq_with_value => {
+                match __rustq_with_value {
+                    _ => record,
+                }
+            }
+        }
+    }
+    fn text_style(record: KiwiRecord, styles: &Styles, keys: &StyleKeys) -> KiwiRecord {
+        match referenced_style(
+            &record,
+            kiwi_records::node_change::STYLE_ID_FOR_TEXT,
+            styles,
+            keys,
+        ) {
+            Some(style) => {
+                if enum_is(
+                    &style,
+                    kiwi_records::node_change::TYPE,
+                    kiwi_records::node_type::TEXT,
+                )
+                    && enum_is(
+                        &style,
+                        kiwi_records::node_change::STYLE_TYPE,
+                        kiwi_records::style_type::TEXT,
+                    )
+                {
+                    with_text_style(record, &style)
+                } else {
+                    record
+                }
+            }
+            None => record,
+        }
+    }
+    fn referenced_style(
+        record: &KiwiRecord,
+        field: u32,
+        styles: &Styles,
+        keys: &StyleKeys,
+    ) -> Option<KiwiRecord> {
+        match record.record(field) {
+            None => None,
+            Some(reference) => {
+                match guid_key(reference.record(kiwi_records::style_id::GUID)) {
+                    Some(id) => style_by_id(styles, id),
+                    None => {
+                        match reference.record(kiwi_records::style_id::ASSET_REF) {
+                            Some(asset) => asset_style(asset, styles, keys),
+                            None => None,
+                        }
+                    }
+                }
+            }
+        }
+    }
+    fn asset_style(
+        asset: &KiwiRecord,
+        styles: &Styles,
+        keys: &StyleKeys,
+    ) -> Option<KiwiRecord> {
+        match asset.str(kiwi_records::asset_ref::KEY) {
+            None => None,
+            Some(key) => {
+                match asset.str(kiwi_records::asset_ref::VERSION) {
+                    Some(version) => {
+                        match keys.get(&format!("{key}@{version}")) {
+                            Some(id) => style_by_id(styles, *id),
+                            None => unversioned_style(styles, keys, key),
+                        }
+                    }
+                    None => unversioned_style(styles, keys, key),
+                }
+            }
+        }
+    }
+    fn put_style_key(keys: &mut StyleKeys, record: &KiwiRecord) {
+        for key in record.str(kiwi_records::node_change::KEY).into_iter() {
+            put_versioned_key(keys, key, record);
+        }
+    }
+    fn records_by_id(records: &[KiwiRecord]) -> HashMap<GuidKey, &KiwiRecord> {
+        records
+            .iter()
+            .filter_map(|record| record_id(record).map(|id| (id, record)))
+            .collect()
+    }
+    fn no_records() -> Resolved {
+        HashMap::new()
+    }
+    fn inherit_definitions(
+        record: &KiwiRecord,
+        ancestors: &[KiwiRecord],
+    ) -> NifResult<Vec<KiwiRecord>> {
+        record
+            .records(kiwi_records::node_change::COMPONENT_PROP_DEFS)
+            .into_iter()
+            .map(|definition| inherit_definition(definition, ancestors))
+            .collect()
+    }
+    fn definitions_named(ancestor: &KiwiRecord, id: GuidKey) -> Vec<&KiwiRecord> {
+        ancestor
+            .records(kiwi_records::node_change::COMPONENT_PROP_DEFS)
+            .into_iter()
+            .filter(|definition| has_guid(
+                definition,
+                kiwi_records::component_prop_def::ID,
+                id,
+            ))
+            .collect()
+    }
+    fn with_text_style(record: KiwiRecord, style: &KiwiRecord) -> KiwiRecord {
+        let text = style
+            .take(
+                &&vec![
+                    kiwi_records::node_change::FONT_SIZE,
+                    kiwi_records::node_change::FONT_NAME,
+                    kiwi_records::node_change::LINE_HEIGHT,
+                    kiwi_records::node_change::LETTER_SPACING,
+                    kiwi_records::node_change::TEXT_CASE
+                ],
+            );
+        let merged = record.merge(&text);
+        match style.get(kiwi_records::node_change::TEXT_DECORATION) {
+            Some(decoration) => {
+                merged
+                    .put(kiwi_records::node_change::TEXT_DECORATION, decoration.clone())
+            }
+            None => merged.delete(kiwi_records::node_change::TEXT_DECORATION),
+        }
+    }
+    fn same_node_field(saved: &KiwiRecord, prop_ref: &KiwiRecord) -> bool {
+        saved.enum_value(kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD)
+            == prop_ref
+                .enum_value(kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD)
+    }
+    fn cached(resolved: &Resolved, id: GuidKey) -> NifResult<KiwiRecord> {
+        match resolved.get(&id) {
+            Some(record) => Ok(record.clone()),
+            None => Err(rustler::Error::BadArg),
+        }
+    }
+    fn no_style_keys() -> StyleKeys {
+        HashMap::new()
+    }
+    fn put_versioned_key(keys: &mut StyleKeys, key: &str, record: &KiwiRecord) {
+        for id in record_id(record).into_iter() {
+            keys.insert(key.to_string(), id);
+            for version in record.str(kiwi_records::node_change::VERSION).into_iter() {
+                keys.insert(format!("{key}@{version}"), id);
+            }
+        }
+    }
+    fn unversioned_style(
+        styles: &Styles,
+        keys: &StyleKeys,
+        key: &str,
+    ) -> Option<KiwiRecord> {
+        match keys.get(key) {
+            Some(id) => style_by_id(styles, *id),
+            None => None,
+        }
+    }
+    fn style_by_id(styles: &Styles, id: GuidKey) -> Option<KiwiRecord> {
+        match styles.get(&id) {
+            Some(style) => Some(style.clone()),
+            None => None,
+        }
+    }
+    pub type Children = HashMap<GuidKey, Vec<GuidKey>>;
+    #[derive(Clone, Debug)]
+    pub struct SourceIndex {
+        pub sources: Sources,
+        pub children: Children,
+    }
+    pub type Sources = HashMap<GuidKey, KiwiRecord>;
+    fn live_record(record: &KiwiRecord) -> bool {
+        !enum_is(
+            record,
+            kiwi_records::node_change::PHASE,
+            kiwi_records::node_phase::REMOVED,
+        )
+    }
+    fn source_index(message: &KiwiRecord, styles: bool) -> NifResult<SourceIndex> {
         let live = live_records(message);
-        if duplicate_ids(&live) {
+        if duplicate_ids(&&live) {
             Err(rustler::Error::BadArg)
         } else {
-            Ok(SourceIndex {
-                sources: sources(&live),
-                children: children(&live),
-            })
+            match prepare(live.into_iter().cloned().collect(), styles) {
+                Ok(prepared) => {
+                    Ok(SourceIndex {
+                        sources: sources(&prepared),
+                        children: children(&prepared),
+                    })
+                }
+                Err(error) => Err(error),
+            }
         }
     }
     fn duplicate_ids(records: &[&KiwiRecord]) -> bool {
         let ids = record_ids(records);
         ids.len() != id_set(&ids).len()
     }
-    fn sources(records: &[&KiwiRecord]) -> Sources {
+    fn sources(records: &[KiwiRecord]) -> Sources {
         records
             .iter()
-            .filter_map(|record| record_id(record).map(|id| (id, (*record).clone())))
+            .filter_map(|record| record_id(record).map(|id| (id, record.clone())))
             .collect()
     }
-    fn children(records: &[&KiwiRecord]) -> Children {
+    fn children(records: &[KiwiRecord]) -> Children {
         let mut children = no_children();
         for (parent, id) in child_pairs(records) {
             push_child(&mut children, parent, id);
@@ -43688,8 +44374,8 @@ pub mod graph {
     fn no_children() -> Children {
         HashMap::new()
     }
-    fn child_pairs(records: &[&KiwiRecord]) -> Vec<(GuidKey, GuidKey)> {
-        let mut ordered = records.to_vec();
+    fn child_pairs(records: &[KiwiRecord]) -> Vec<(GuidKey, GuidKey)> {
+        let mut ordered = record_refs(records);
         ordered.sort_by_key(|record| position(record));
         ordered
             .iter()
@@ -43715,13 +44401,16 @@ pub mod graph {
     fn push_child(children: &mut Children, parent: GuidKey, id: GuidKey) {
         children.entry(parent).or_default().push(id)
     }
+    fn record_refs(records: &[KiwiRecord]) -> Vec<&KiwiRecord> {
+        records.iter().collect()
+    }
     /// Encodes the source index of `message` as Elixir's `SourceIndex` holds it: records by
     /// GUID tuple, and each parent's child GUIDs in saved order.
     pub fn encode_source_index<'a>(
         env: Env<'a>,
         message: &KiwiRecord,
     ) -> NifResult<Term<'a>> {
-        let index = source_index(message)?;
+        let index = source_index(message, true)?;
         let mut source_keys = Vec::with_capacity(index.sources.len());
         let mut source_values = Vec::with_capacity(index.sources.len());
         for (id, record) in &index.sources {

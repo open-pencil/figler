@@ -20,6 +20,8 @@ defmodule Figler.Codegen.Native do
 
     [
       graph_focus_helpers: SupportFunction.focus_helper_items(),
+      graph_records: Graph.Records.items(),
+      graph_prepare: Graph.Prepare.items(),
       graph_source_index: Graph.SourceIndex.items(),
       node_type_name_arms: node_type_name_arms(definition_map),
       graph_focus_decoders:
