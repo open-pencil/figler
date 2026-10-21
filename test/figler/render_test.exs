@@ -1132,8 +1132,9 @@ defmodule Figler.RenderTest do
         type: :image,
         visible: true,
         image: struct(Figler.Schema.Image, data_blob: 0),
-        image_scale_mode: :tile,
-        scale: 0.0
+        image_scale_mode: :stretch,
+        transform:
+          struct(Figler.Schema.Matrix, m00: 0.0, m01: 0.0, m02: 0.0, m10: 0.0, m11: 0.0, m12: 0.0)
       )
 
     blob = struct(Figler.Schema.Blob, bytes: image_png)
@@ -1143,7 +1144,7 @@ defmodule Figler.RenderTest do
             %{
               warnings: [
                 %{
-                  code: :invalid_image_scale,
+                  code: :singular_paint_transform,
                   feature: :fill,
                   context: %{paint_type: :image}
                 }
