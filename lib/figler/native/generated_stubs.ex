@@ -10,6 +10,10 @@ defmodule Figler.Native.GeneratedStubs do
         :erlang.nif_error(:nif_not_loaded)
       end
 
+      def graph_source_index(_bytes, _schema) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
       def decode_graph_focused_sparse_message(_bytes, _schema, _focus) do
         :erlang.nif_error(:nif_not_loaded)
       end

@@ -10443,6 +10443,76 @@ impl KiwiRecord {
         self.position(field).is_ok()
     }
 
+    /// The record a message or struct field holds.
+    pub fn record(&self, field: u32) -> Option<&KiwiRecord> {
+        match self.get(field) {
+            Some(KiwiValue::Record(record)) => Some(record),
+            _ => None,
+        }
+    }
+
+    /// The values an array field holds; none when the field is unset.
+    pub fn array(&self, field: u32) -> &[KiwiValue] {
+        match self.get(field) {
+            Some(KiwiValue::Array(values)) => values,
+            _ => &[],
+        }
+    }
+
+    /// The records an array field holds.
+    pub fn records(&self, field: u32) -> Vec<&KiwiRecord> {
+        self.array(field)
+            .iter()
+            .filter_map(|value| match value {
+                KiwiValue::Record(record) => Some(record),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn str(&self, field: u32) -> Option<&str> {
+        match self.get(field) {
+            Some(KiwiValue::String(value)) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn bool(&self, field: u32) -> Option<bool> {
+        match self.get(field) {
+            Some(KiwiValue::Bool(value)) => Some(*value),
+            _ => None,
+        }
+    }
+
+    pub fn uint(&self, field: u32) -> Option<u32> {
+        match self.get(field) {
+            Some(KiwiValue::Uint(value)) => Some(*value),
+            _ => None,
+        }
+    }
+
+    pub fn int(&self, field: u32) -> Option<i32> {
+        match self.get(field) {
+            Some(KiwiValue::Int(value)) => Some(*value),
+            _ => None,
+        }
+    }
+
+    pub fn float(&self, field: u32) -> Option<f32> {
+        match self.get(field) {
+            Some(KiwiValue::Float(value)) => Some(*value),
+            _ => None,
+        }
+    }
+
+    /// An enum field's value.
+    pub fn enum_value(&self, field: u32) -> Option<u32> {
+        match self.get(field) {
+            Some(KiwiValue::Enum(value, _definition)) => Some(*value),
+            _ => None,
+        }
+    }
+
     /// The record with `field` set to `value`.
     pub fn put(&self, field: u32, value: KiwiValue) -> Self {
         let mut fields = self.fields.to_vec();
@@ -34707,191 +34777,1111 @@ static KIWI_RECORD_DEFINITIONS: &[KiwiRecordDefinition] = &[
 ];
 
 
+pub mod kiwi_record_definitions {
+    pub const MESSAGE_TYPE: u32 = 0;
+    pub const AXIS: u32 = 1;
+    pub const ACCESS: u32 = 2;
+    pub const NODE_PHASE: u32 = 3;
+    pub const WINDING_RULE: u32 = 4;
+    pub const NODE_TYPE: u32 = 5;
+    pub const SHAPE_WITH_TEXT_TYPE: u32 = 6;
+    pub const BLEND_MODE: u32 = 7;
+    pub const PAINT_TYPE: u32 = 8;
+    pub const IMAGE_SCALE_MODE: u32 = 9;
+    pub const EFFECT_TYPE: u32 = 10;
+    pub const TEXT_CASE: u32 = 11;
+    pub const TEXT_DECORATION: u32 = 12;
+    pub const TEXT_DECORATION_STYLE: u32 = 13;
+    pub const LEADING_TRIM: u32 = 14;
+    pub const NUMBER_UNITS: u32 = 15;
+    pub const CONSTRAINT_TYPE: u32 = 16;
+    pub const STROKE_ALIGN: u32 = 17;
+    pub const STROKE_CAP: u32 = 18;
+    pub const STROKE_JOIN: u32 = 19;
+    pub const BOOLEAN_OPERATION: u32 = 20;
+    pub const TEXT_ALIGN_HORIZONTAL: u32 = 21;
+    pub const TEXT_ALIGN_VERTICAL: u32 = 22;
+    pub const MOUSE_CURSOR: u32 = 23;
+    pub const VECTOR_MIRROR: u32 = 24;
+    pub const IMAGE_TYPE: u32 = 25;
+    pub const EXPORT_CONSTRAINT_TYPE: u32 = 26;
+    pub const LAYOUT_GRID_TYPE: u32 = 27;
+    pub const LAYOUT_GRID_PATTERN: u32 = 28;
+    pub const TEXT_AUTO_RESIZE: u32 = 29;
+    pub const TEXT_TRUNCATION: u32 = 30;
+    pub const STYLE_SET_TYPE: u32 = 31;
+    pub const STYLE_SET_CONTENT_TYPE: u32 = 32;
+    pub const STACK_MODE: u32 = 33;
+    pub const STACK_ALIGN: u32 = 34;
+    pub const STACK_COUNTER_ALIGN: u32 = 35;
+    pub const STACK_JUSTIFY: u32 = 36;
+    pub const GRID_CHILD_ALIGN: u32 = 37;
+    pub const GRID_AUTO_TRACKS: u32 = 38;
+    pub const STACK_SIZE: u32 = 39;
+    pub const STACK_POSITIONING: u32 = 40;
+    pub const STACK_WRAP: u32 = 41;
+    pub const STACK_COUNTER_ALIGN_CONTENT: u32 = 42;
+    pub const CONNECTION_TYPE: u32 = 43;
+    pub const INTERACTION_TYPE: u32 = 44;
+    pub const TRANSITION_TYPE: u32 = 45;
+    pub const EASING_TYPE: u32 = 46;
+    pub const SCROLL_DIRECTION: u32 = 47;
+    pub const SCROLL_CONTRACTED_STATE: u32 = 48;
+    pub const GUID: u32 = 49;
+    pub const COLOR: u32 = 50;
+    pub const VECTOR: u32 = 51;
+    pub const RECT: u32 = 52;
+    pub const COLOR_STOP: u32 = 53;
+    pub const COLOR_STOP_VAR: u32 = 54;
+    pub const MATRIX: u32 = 55;
+    pub const PARENT_INDEX: u32 = 56;
+    pub const NUMBER: u32 = 57;
+    pub const FONT_NAME: u32 = 58;
+    pub const FONT_VARIANT_NUMERIC_FIGURE: u32 = 59;
+    pub const FONT_VARIANT_NUMERIC_SPACING: u32 = 60;
+    pub const FONT_VARIANT_NUMERIC_FRACTION: u32 = 61;
+    pub const FONT_VARIANT_CAPS: u32 = 62;
+    pub const FONT_VARIANT_POSITION: u32 = 63;
+    pub const FONT_STYLE: u32 = 64;
+    pub const SEMANTIC_WEIGHT: u32 = 65;
+    pub const SEMANTIC_ITALIC: u32 = 66;
+    pub const CODE_SNAPSHOT_STATE: u32 = 67;
+    pub const SNAPSHOT_CAPTURE_MODE: u32 = 68;
+    pub const CODE_SOURCE_INFO: u32 = 69;
+    pub const CODE_OBJECT_TYPE: u32 = 70;
+    pub const CUSTOM_TOOL_ARTIFACT_REF: u32 = 71;
+    pub const LOCK_MODE: u32 = 72;
+    pub const OPEN_TYPE_FEATURE: u32 = 73;
+    pub const EXPORT_CONSTRAINT: u32 = 74;
+    pub const GUID_MAPPING: u32 = 75;
+    pub const BLOB: u32 = 76;
+    pub const IMAGE: u32 = 77;
+    pub const VIDEO: u32 = 78;
+    pub const PASTE_SOURCE: u32 = 79;
+    pub const FILTER_COLOR_ADJUST: u32 = 80;
+    pub const PAINT_FILTER_MESSAGE: u32 = 81;
+    pub const PAINT: u32 = 82;
+    pub const NOISE_TYPE: u32 = 83;
+    pub const PATTERN_TILE_TYPE: u32 = 84;
+    pub const PATTERN_ALIGNMENT: u32 = 85;
+    pub const INTERPOLATION_COLOR_SPACE: u32 = 86;
+    pub const INTERPOLATION_HUE_METHOD: u32 = 87;
+    pub const FONT_META_DATA: u32 = 88;
+    pub const FONT_VARIATION: u32 = 89;
+    pub const TEXT_DATA: u32 = 90;
+    pub const DERIVED_TEXT_DATA: u32 = 91;
+    pub const HYPERLINK_BOX: u32 = 92;
+    pub const MENTION_BOX: u32 = 93;
+    pub const BASELINE: u32 = 94;
+    pub const GLYPH: u32 = 95;
+    pub const DECORATION: u32 = 96;
+    pub const BLOCKQUOTE: u32 = 97;
+    pub const VECTOR_DATA: u32 = 98;
+    pub const TEXT_PATH_START: u32 = 99;
+    pub const GUID_PATH: u32 = 100;
+    pub const SYMBOL_DATA: u32 = 101;
+    pub const GUID_PATH_MAPPING: u32 = 102;
+    pub const DERIVED_BREAKPOINT_DATA: u32 = 103;
+    pub const NODE_GENERATION_DATA: u32 = 104;
+    pub const DERIVED_IMMUTABLE_FRAME_DATA: u32 = 105;
+    pub const JSX_DATA: u32 = 106;
+    pub const DERIVED_JSX_DATA: u32 = 107;
+    pub const ASSET_ID_MAP: u32 = 108;
+    pub const ASSET_ID_ENTRY: u32 = 109;
+    pub const ASSET_REF: u32 = 110;
+    pub const ASSET_ID: u32 = 111;
+    pub const STATE_GROUP_ID: u32 = 112;
+    pub const STYLE_ID: u32 = 113;
+    pub const SYMBOL_ID: u32 = 114;
+    pub const VARIABLE_ID: u32 = 115;
+    pub const VARIABLE_OVERRIDE_ID: u32 = 116;
+    pub const VARIABLE_SET_ID: u32 = 117;
+    pub const THEME_ID: u32 = 118;
+    pub const CODE_LIBRARY_ID: u32 = 119;
+    pub const CODE_FILE_ID: u32 = 120;
+    pub const CODE_COMPONENT_ID: u32 = 121;
+    pub const CANVAS_NODE_ID: u32 = 122;
+    pub const INDEX_RANGE: u32 = 123;
+    pub const COLLABORATIVE_TEXT_OP_ID: u32 = 124;
+    pub const COLLABORATIVE_TEXT_OP_TYPE: u32 = 125;
+    pub const COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_I_DS: u32 = 126;
+    pub const COLLABORATIVE_TEXT_STRIPPED_OP_RUN_WITH_LOC: u32 = 127;
+    pub const COLLABORATIVE_TEXT_OP_RUN: u32 = 128;
+    pub const COLLABORATIVE_PLAIN_TEXT: u32 = 129;
+    pub const COLLABORATIVE_TEXT_SELECTION: u32 = 130;
+    pub const RESPONSIVE_TEXT_STYLE_VARIANT: u32 = 131;
+    pub const FLAPP_TYPE: u32 = 132;
+    pub const SLIDE_THEME_PROPS: u32 = 133;
+    pub const SLIDE_THEME_MAP: u32 = 134;
+    pub const SLIDE_THEME_MAP_ENTRY: u32 = 135;
+    pub const SHARED_SYMBOL_REFERENCE: u32 = 136;
+    pub const SHARED_COMPONENT_MASTER_DATA: u32 = 137;
+    pub const INSTANCE_OVERRIDE_STASH: u32 = 138;
+    pub const INSTANCE_OVERRIDE_STASH_V2: u32 = 139;
+    pub const IMPORTED_CODE_FILE_ENTRY: u32 = 140;
+    pub const IMPORTED_CODE_FILES: u32 = 141;
+    pub const BLUR_OP_TYPE: u32 = 142;
+    pub const REPEAT_TYPE: u32 = 143;
+    pub const UNIT_TYPE: u32 = 144;
+    pub const REPEAT_ORDER: u32 = 145;
+    pub const EFFECT_AXIS: u32 = 146;
+    pub const EFFECT: u32 = 147;
+    pub const TRANSFORM_MODIFIER_TYPE: u32 = 148;
+    pub const TRANSFORM_MODIFIER: u32 = 149;
+    pub const TRANSFORM_SCHEMA_TYPE: u32 = 150;
+    pub const MATRIX4F: u32 = 151;
+    pub const FIXED_ORDER_TRANSFORM3D: u32 = 152;
+    pub const TRANSFORM_FN_TYPE: u32 = 153;
+    pub const TRANSFORM_FN_VALUE: u32 = 154;
+    pub const TRANSFORM_FN: u32 = 155;
+    pub const TRANSFORM_SCHEMA_VALUE: u32 = 156;
+    pub const TRANSFORM3D: u32 = 157;
+    pub const NUMBER_VECTOR2_D: u32 = 158;
+    pub const SCENE3D: u32 = 159;
+    pub const TRANSFORM_ORIGIN: u32 = 160;
+    pub const TRANSITION_INFO: u32 = 161;
+    pub const PROTOTYPE_DEVICE_TYPE: u32 = 162;
+    pub const DEVICE_ROTATION: u32 = 163;
+    pub const PROTOTYPE_DEVICE: u32 = 164;
+    pub const OVERLAY_POSITION_TYPE: u32 = 165;
+    pub const OVERLAY_BACKGROUND_INTERACTION: u32 = 166;
+    pub const OVERLAY_BACKGROUND_TYPE: u32 = 167;
+    pub const OVERLAY_BACKGROUND_APPEARANCE: u32 = 168;
+    pub const NAVIGATION_TYPE: u32 = 169;
+    pub const EXPORT_COLOR_PROFILE: u32 = 170;
+    pub const EXPORT_BACKGROUND_TYPE: u32 = 171;
+    pub const EXPORT_SETTINGS: u32 = 172;
+    pub const EXPORT_SVGID_MODE: u32 = 173;
+    pub const LAYOUT_GRID: u32 = 174;
+    pub const GUIDE: u32 = 175;
+    pub const PATH: u32 = 176;
+    pub const STYLE_TYPE: u32 = 177;
+    pub const BRUSH_ORIENTATION: u32 = 178;
+    pub const BRUSH_TYPE: u32 = 179;
+    pub const DYNAMIC_STROKE_SETTINGS: u32 = 180;
+    pub const SCATTER_STROKE_SETTINGS: u32 = 181;
+    pub const STRETCH_STROKE_SETTINGS: u32 = 182;
+    pub const STROKE_DATA: u32 = 183;
+    pub const STROKE: u32 = 184;
+    pub const VARIABLE_WIDTH_POINT: u32 = 185;
+    pub const SHARED_STYLE_REFERENCE: u32 = 186;
+    pub const SHARED_STYLE_MASTER_DATA: u32 = 187;
+    pub const SCROLL_BEHAVIOR: u32 = 188;
+    pub const ARC_DATA: u32 = 189;
+    pub const SYMBOL_LINK: u32 = 190;
+    pub const PLUGIN_DATA: u32 = 191;
+    pub const PLUGIN_RELAUNCH_DATA: u32 = 192;
+    pub const MULTIPLAYER_FIELD_VERSION: u32 = 193;
+    pub const CONNECTOR_MAGNET: u32 = 194;
+    pub const CONNECTOR_ENDPOINT: u32 = 195;
+    pub const CONNECTOR_CONTROL_POINT: u32 = 196;
+    pub const CONNECTOR_TEXT_SECTION: u32 = 197;
+    pub const CONNECTOR_OFF_AXIS_OFFSET: u32 = 198;
+    pub const CONNECTOR_TEXT_MIDPOINT: u32 = 199;
+    pub const CONNECTOR_LINE_STYLE: u32 = 200;
+    pub const CONNECTOR_TYPE: u32 = 201;
+    pub const ANNOTATION_PROPERTY_TYPE: u32 = 202;
+    pub const ANNOTATION_PROPERTY: u32 = 203;
+    pub const ANNOTATION_CATEGORY_PRESET: u32 = 204;
+    pub const ANNOTATION_CATEGORY_COLOR: u32 = 205;
+    pub const ANNOTATION_CATEGORY_CUSTOM: u32 = 206;
+    pub const ANNOTATION_CATEGORY: u32 = 207;
+    pub const ANNOTATION_CATEGORIES: u32 = 208;
+    pub const ANNOTATION: u32 = 209;
+    pub const ANNOTATION_MEASUREMENT_NODE_SIDE: u32 = 210;
+    pub const ANNOTATION_MEASUREMENT: u32 = 211;
+    pub const LIBRARY_MOVE_INFO: u32 = 212;
+    pub const LIBRARY_MOVE_HISTORY_ITEM: u32 = 213;
+    pub const DEVELOPER_RELATED_LINK: u32 = 214;
+    pub const WIDGET_POINTER: u32 = 215;
+    pub const EDIT_INFO: u32 = 216;
+    pub const EDITOR_TYPE: u32 = 217;
+    pub const MASK_TYPE: u32 = 218;
+    pub const MODULE_TYPE: u32 = 219;
+    pub const SECTION_STATUS: u32 = 220;
+    pub const SECTION_STATUS_INFO: u32 = 221;
+    pub const BUZZ_APPROVAL_REQUEST_INFO: u32 = 222;
+    pub const BUZZ_APPROVAL_REQUESTS: u32 = 223;
+    pub const BUZZ_APPROVAL_NODE_STATUS: u32 = 224;
+    pub const BUZZ_APPROVAL_NODE_STATUS_INFO: u32 = 225;
+    pub const CODE_EMBED_INFO: u32 = 226;
+    pub const VARIABLE_TIMING_DISPLAY_UNIT: u32 = 227;
+    pub const NODE_CHANGE: u32 = 228;
+    pub const GIT_REPO_REF_PROVIDER: u32 = 229;
+    pub const GIT_REPO_REF: u32 = 230;
+    pub const SOURCE_CONTROL_CONFIG: u32 = 231;
+    pub const CODE_SNAPSHOT: u32 = 232;
+    pub const CODE_OUTPUT_LAYER: u32 = 233;
+    pub const CODE_SNAPSHOT_LAYERS: u32 = 234;
+    pub const CODE_BEHAVIOR_DATA: u32 = 235;
+    pub const CODE_EXAMPLE: u32 = 236;
+    pub const USED_MAKE_LIBRARY: u32 = 237;
+    pub const COOKIE_BANNER_TEXT: u32 = 238;
+    pub const COOKIE_BANNER_SETTINGS: u32 = 239;
+    pub const COOKIE_BANNER_COMPONENT_TYPE: u32 = 240;
+    pub const TRIGGER_COMPONENT_TYPE: u32 = 241;
+    pub const COOKIE_X_ALIGNMENT: u32 = 242;
+    pub const COOKIE_Y_ALIGNMENT: u32 = 243;
+    pub const RESPONSIVE_SET_SETTINGS: u32 = 244;
+    pub const RESPONSIVE_SCALING_MODE: u32 = 245;
+    pub const CMS_SELECTOR: u32 = 246;
+    pub const CMS_FILTER_CRITERA: u32 = 247;
+    pub const CMS_FILTER_CRITERIA_MATCH_TYPE: u32 = 248;
+    pub const CMS_SELECTOR_FILTER: u32 = 249;
+    pub const CMS_SELECTOR_FILTER_OPERATOR: u32 = 250;
+    pub const CMS_SELECTOR_SORT: u32 = 251;
+    pub const CMS_FIELD_ORDER_BY: u32 = 252;
+    pub const CMS_CONSUMPTION_MAP: u32 = 253;
+    pub const CMS_CONSUMPTION_MAP_ENTRY: u32 = 254;
+    pub const CMS_CONSUMPTION_FIELD: u32 = 255;
+    pub const CMS_RICH_TEXT_STYLE_MAP: u32 = 256;
+    pub const CMS_RICH_TEXT_STYLE_ENTRY: u32 = 257;
+    pub const CMS_RICH_TEXT_STYLE_CLASS: u32 = 258;
+    pub const CMS_RICH_TEXT_DESCRIPTOR: u32 = 259;
+    pub const REPEATER_CMS_OVERRIDE_DATA: u32 = 260;
+    pub const REPEATER_OVERRIDE_DATA: u32 = 261;
+    pub const REPEATER_SYMBOL_OVERRIDE_DATA: u32 = 262;
+    pub const REPEATER_POSITION_OVERRIDES: u32 = 263;
+    pub const INHERITED_VARIABLES_DATA: u32 = 264;
+    pub const INHERITED_VARIABLE_ENTRY: u32 = 265;
+    pub const HUB_FILE_ATTRIBUTION: u32 = 266;
+    pub const MANAGED_STRING_DATA: u32 = 267;
+    pub const MANAGED_STRING_CONTENT_SCHEMA: u32 = 268;
+    pub const MANAGED_STRING_NODE_TYPE: u32 = 269;
+    pub const MANAGED_STRING_NODE: u32 = 270;
+    pub const MANAGED_STRING_TEXT_NODE_DATA: u32 = 271;
+    pub const MANAGED_STRING_CONCATENATE_AST_NODE_DATA: u32 = 272;
+    pub const MANAGED_STRING_PLURAL_TYPE: u32 = 273;
+    pub const MANAGED_STRING_PLURAL_AST_NODE_DATA: u32 = 274;
+    pub const MANAGED_STRING_PLURAL_TYPE_MAP_ENTRY: u32 = 275;
+    pub const MANAGED_STRING_FORMAT_TYPE: u32 = 276;
+    pub const MANAGED_STRING_PLACEHOLDER_AST_NODE_DATA: u32 = 277;
+    pub const COOPER_REVERT_DATA: u32 = 278;
+    pub const VIDEO_PLAYBACK: u32 = 279;
+    pub const MEDIA_ACTION: u32 = 280;
+    pub const ANIMATION_TIMELINE_ACTION: u32 = 281;
+    pub const WIDGET_HOVER_STYLE: u32 = 282;
+    pub const WIDGET_DERIVED_SUBTREE_CURSOR: u32 = 283;
+    pub const MULTIPLAYER_MAP: u32 = 284;
+    pub const MULTIPLAYER_MAP_ENTRY: u32 = 285;
+    pub const VARIABLE_DATA_MAP: u32 = 286;
+    pub const VARIABLE_DATA_MAP_ENTRY: u32 = 287;
+    pub const VARIABLE_FIELD: u32 = 288;
+    pub const VARIABLE_MODE_BY_SET_MAP: u32 = 289;
+    pub const VARIABLE_MODE_BY_SET_MAP_ENTRY: u32 = 290;
+    pub const CODE_SYNTAX_MAP: u32 = 291;
+    pub const CODE_SYNTAX_MAP_ENTRY: u32 = 292;
+    pub const TABLE_MERGED_CELL_MAP: u32 = 293;
+    pub const TABLE_MERGED_CELL_MAP_ENTRY: u32 = 294;
+    pub const TABLE_ROW_COLUMN_POSITION_MAP: u32 = 295;
+    pub const TABLE_ROW_COLUMN_POSITION_MAP_ENTRY: u32 = 296;
+    pub const GUID_POSITION_MAP: u32 = 297;
+    pub const GUID_POSITION_MAP_ENTRY: u32 = 298;
+    pub const GUID_GRID_TRACK_SIZE_MAP: u32 = 299;
+    pub const GUID_GRID_TRACK_SIZE_MAP_ENTRY: u32 = 300;
+    pub const OBJECT_ANIMATION_LIST: u32 = 301;
+    pub const OBJECT_ANIMATION_LIST_ITEM: u32 = 302;
+    pub const GRID_TRACK_SIZE: u32 = 303;
+    pub const GRID_TRACK_SIZING_FUNCTION: u32 = 304;
+    pub const GRID_TRACK_SIZING_TYPE: u32 = 305;
+    pub const TABLE_ROW_COLUMN_SIZE_MAP: u32 = 306;
+    pub const TABLE_ROW_COLUMN_SIZE_MAP_ENTRY: u32 = 307;
+    pub const AGENDA_POSITION_MAP: u32 = 308;
+    pub const AGENDA_POSITION_MAP_ENTRY: u32 = 309;
+    pub const AGENDA_ITEM_TYPE: u32 = 310;
+    pub const AGENDA_METADATA_MAP: u32 = 311;
+    pub const AGENDA_METADATA_MAP_ENTRY: u32 = 312;
+    pub const AGENDA_METADATA: u32 = 313;
+    pub const AGENDA_TIMER_INFO: u32 = 314;
+    pub const AGENDA_VOTE_INFO: u32 = 315;
+    pub const AGENDA_MUSIC_INFO: u32 = 316;
+    pub const DIAGRAM_LAYOUT_RULE_TYPE: u32 = 317;
+    pub const DIAGRAM_PARENT_INDEX: u32 = 318;
+    pub const DIAGRAM_LAYOUT_PAUSED: u32 = 319;
+    pub const COMPONENT_PROP_REF: u32 = 320;
+    pub const COMPONENT_PROP_NODE_FIELD: u32 = 321;
+    pub const COMPONENT_PROP_ASSIGNMENT: u32 = 322;
+    pub const COMPONENT_PROP_DEF: u32 = 323;
+    pub const COMPONENT_PROP_VALUE: u32 = 324;
+    pub const TIMELINE_DATA: u32 = 325;
+    pub const TIMELINE_DEFINITIONS_MAP: u32 = 326;
+    pub const TIMELINE_DEFINITIONS_MAP_ENTRY: u32 = 327;
+    pub const TIMELINE_ASSIGNMENT_KEY: u32 = 328;
+    pub const TIMELINE_BINDING_DATA: u32 = 329;
+    pub const TIMELINE_ASSIGNMENTS_MAP: u32 = 330;
+    pub const TIMELINE_ASSIGNMENTS_MAP_ENTRY: u32 = 331;
+    pub const COMPONENT_PROP_TYPE: u32 = 332;
+    pub const COMPONENT_PROP_PREFERRED_VALUES: u32 = 333;
+    pub const PARAMETER_CONFIG: u32 = 334;
+    pub const PARAMETER_CONFIG_CONTROL: u32 = 335;
+    pub const INPUT_CONFIG: u32 = 336;
+    pub const SLIDER_CONFIG: u32 = 337;
+    pub const POINT_MODE: u32 = 338;
+    pub const POINT_CONFIG: u32 = 339;
+    pub const LINE: u32 = 340;
+    pub const LINE_CONFIG: u32 = 341;
+    pub const CIRCLE: u32 = 342;
+    pub const POINT_RADIUS_CONFIG: u32 = 343;
+    pub const ROTATION3_D: u32 = 344;
+    pub const ROTATION3_D_CONFIG: u32 = 345;
+    pub const CIRCLE_POINT: u32 = 346;
+    pub const CIRCLE_POINT_CONFIG: u32 = 347;
+    pub const COLOR_POINT: u32 = 348;
+    pub const COLOR_POINT_CONFIG: u32 = 349;
+    pub const GRADIENT: u32 = 350;
+    pub const GRADIENT_STOP: u32 = 351;
+    pub const SELECT_OPTION: u32 = 352;
+    pub const SELECT_CONFIG: u32 = 353;
+    pub const COLOR_ARRAY_CONFIG: u32 = 354;
+    pub const SLOT_PROP_CONFIG: u32 = 355;
+    pub const NUMBER_PROP_CONFIG: u32 = 356;
+    pub const INSTANCE_SWAP_PREFERRED_VALUE: u32 = 357;
+    pub const INSTANCE_SWAP_PREFERRED_VALUE_TYPE: u32 = 358;
+    pub const WIDGET_EVENT: u32 = 359;
+    pub const WIDGET_INPUT_BEHAVIOR: u32 = 360;
+    pub const WIDGET_METADATA: u32 = 361;
+    pub const WIDGET_PROPERTY_MENU_ITEM_TYPE: u32 = 362;
+    pub const WIDGET_PROPERTY_MENU_SELECTOR_OPTION: u32 = 363;
+    pub const WIDGET_INPUT_TEXT_NODE_TYPE: u32 = 364;
+    pub const WIDGET_PROPERTY_MENU_ITEM: u32 = 365;
+    pub const CODE_BLOCK_LANGUAGE: u32 = 366;
+    pub const CODE_BLOCK_THEME: u32 = 367;
+    pub const SPEC_BLOCK_TYPE: u32 = 368;
+    pub const INTERNAL_ENUM_FOR_TEST: u32 = 369;
+    pub const INTERNAL_DATA_FOR_TEST: u32 = 370;
+    pub const STATE_GROUP_PROPERTY_VALUE_ORDER: u32 = 371;
+    pub const BACKFILL_ERROR: u32 = 372;
+    pub const PARTIAL_PASTE_ANNOTATION: u32 = 373;
+    pub const VARIANT_PROP_SPEC: u32 = 374;
+    pub const TEXT_LIST_DATA: u32 = 375;
+    pub const BULLET_TYPE: u32 = 376;
+    pub const TEXT_LINE_DATA: u32 = 377;
+    pub const DERIVED_TEXT_LINE_DATA: u32 = 378;
+    pub const LINE_TYPE: u32 = 379;
+    pub const SOURCE_DIRECTIONALITY: u32 = 380;
+    pub const DIRECTIONALITY: u32 = 381;
+    pub const DIRECTIONALITY_INTENT: u32 = 382;
+    pub const PROTOTYPE_INTERACTION: u32 = 383;
+    pub const PROTOTYPE_EVENT: u32 = 384;
+    pub const PROTOTYPE_VARIABLE_TARGET: u32 = 385;
+    pub const CONDITIONAL_ACTIONS: u32 = 386;
+    pub const PROTOTYPE_ACTION: u32 = 387;
+    pub const ANIMATION_PHASE: u32 = 388;
+    pub const ANIMATION_TYPE: u32 = 389;
+    pub const ANIMATION_STATE: u32 = 390;
+    pub const PROTOTYPE_STARTING_POINT: u32 = 391;
+    pub const TRIGGER_DEVICE: u32 = 392;
+    pub const KEY_TRIGGER: u32 = 393;
+    pub const HYPERLINK: u32 = 394;
+    pub const CMS_ITEM_PAGE_TARGET: u32 = 395;
+    pub const MENTION_SOURCE: u32 = 396;
+    pub const MENTION: u32 = 397;
+    pub const EMBED_DATA: u32 = 398;
+    pub const STAMP_DATA: u32 = 399;
+    pub const LINK_PREVIEW_DATA: u32 = 400;
+    pub const VIEWPORT: u32 = 401;
+    pub const MOUSE: u32 = 402;
+    pub const CLICK: u32 = 403;
+    pub const SCROLL_POSITION: u32 = 404;
+    pub const TRIGGERED_OVERLAY: u32 = 405;
+    pub const TRIGGERED_OVERLAY_DATA: u32 = 406;
+    pub const TRIGGERED_SET_VARIABLE_ACTION_DATA: u32 = 407;
+    pub const TRIGGERED_SET_VARIABLE_MODE_ACTION_DATA: u32 = 408;
+    pub const VIDEO_STATE_CHANGE_DATA: u32 = 409;
+    pub const EMBEDDED_PROTOTYPE_DATA: u32 = 410;
+    pub const PRESENTED_STATE: u32 = 411;
+    pub const TRANSITION_DIRECTION: u32 = 412;
+    pub const TOP_LEVEL_PLAYBACK_CHANGE: u32 = 413;
+    pub const INSTANCE_STATE_CHANGE: u32 = 414;
+    pub const TEXT_CURSOR: u32 = 415;
+    pub const TEXT_SELECTION: u32 = 416;
+    pub const PLAYBACK_CHANGE_PHASE: u32 = 417;
+    pub const PLAYBACK_CHANGE_KEYFRAME: u32 = 418;
+    pub const STATE_MAPPING: u32 = 419;
+    pub const SCROLL_MAPPING: u32 = 420;
+    pub const PLAYBACK_UPDATE: u32 = 421;
+    pub const CHAT_MESSAGE: u32 = 422;
+    pub const VOICE_METADATA: u32 = 423;
+    pub const APRIL_FUN_CURSOR: u32 = 424;
+    pub const APRIL_FUN_FIG_PAL: u32 = 425;
+    pub const HEARTBEAT: u32 = 426;
+    pub const SITES_VIEW_STATE: u32 = 427;
+    pub const DESIGN_FULL_PAGE_VIEW_STATE: u32 = 428;
+    pub const AGENT_INFO: u32 = 429;
+    pub const USER_CHANGE: u32 = 430;
+    pub const INTERACTIVE_SLIDE_ELEMENT_CHANGE: u32 = 431;
+    pub const NODE_STATUS_CHANGE: u32 = 432;
+    pub const BUZZ_APPROVAL_ASSET_ENTRY: u32 = 433;
+    pub const BUZZ_APPROVAL_CHANGE: u32 = 434;
+    pub const SCENE_GRAPH_QUERY_BEHAVIOR: u32 = 435;
+    pub const SCENE_GRAPH_QUERY_MODE: u32 = 436;
+    pub const SCENE_GRAPH_QUERY: u32 = 437;
+    pub const NODE_CHANGES_METADATA: u32 = 438;
+    pub const CURSOR_REACTION: u32 = 439;
+    pub const TIMER_INFO: u32 = 440;
+    pub const MUSIC_INFO: u32 = 441;
+    pub const PRESENTER_NOMINATION: u32 = 442;
+    pub const PRESENTER_INFO: u32 = 443;
+    pub const CLIENT_BROADCAST: u32 = 444;
+    pub const PASTE_ASSET_TYPE: u32 = 445;
+    pub const MESSAGE: u32 = 446;
+    pub const ENCODED_OFFSETS_INDEX: u32 = 447;
+    pub const GUID_AND_ENCODED_OFFSET: u32 = 448;
+    pub const RICH_MEDIA_TYPE: u32 = 449;
+    pub const RICH_MEDIA_DATA: u32 = 450;
+    pub const VARIABLE_DATA_TYPE: u32 = 451;
+    pub const VARIABLE_RESOLVED_DATA_TYPE: u32 = 452;
+    pub const VARIABLE_ANY_VALUE: u32 = 453;
+    pub const EXPRESSION_FUNCTION: u32 = 454;
+    pub const EXPRESSION: u32 = 455;
+    pub const VARIABLE_MAP_VALUE: u32 = 456;
+    pub const VARIABLE_MAP: u32 = 457;
+    pub const COLOR_ARRAY: u32 = 458;
+    pub const VARIABLE_FONT_STYLE: u32 = 459;
+    pub const IMAGE_PARAMETER_VALUE: u32 = 460;
+    pub const THUMBNAIL_INFO: u32 = 461;
+    pub const AI_CANVAS_PROMPT: u32 = 462;
+    pub const NODE_FIELD_ALIAS: u32 = 463;
+    pub const NODE_FIELD_ALIAS_TYPE: u32 = 464;
+    pub const CMS_ALIAS: u32 = 465;
+    pub const JS_RUNTIME_ALIAS: u32 = 466;
+    pub const PROP_REF_VALUE: u32 = 467;
+    pub const MANAGED_STRING_ID: u32 = 468;
+    pub const MANAGED_STRING_PLACEHOLDER_MAP_ENTRY: u32 = 469;
+    pub const SLOT_CONTENT_ID: u32 = 470;
+    pub const MANAGED_STRING_ALIAS: u32 = 471;
+    pub const KEYFRAME_TRACK_ID: u32 = 472;
+    pub const ANIMATION_PRESET_ID: u32 = 473;
+    pub const TOOL_ID: u32 = 474;
+    pub const CUSTOM_EFFECT_ID: u32 = 475;
+    pub const TRSS_TRANSFORM2_D: u32 = 476;
+    pub const VARIABLE_DATA: u32 = 477;
+    pub const VARIABLE_SET_MODE: u32 = 478;
+    pub const VARIABLE_DATA_VALUES: u32 = 479;
+    pub const VARIABLE_DATA_VALUES_ENTRY: u32 = 480;
+    pub const VARIABLE_SCOPE: u32 = 481;
+    pub const KEYFRAME_ANY_VALUE: u32 = 482;
+    pub const KEYFRAME_VALUE_TYPE: u32 = 483;
+    pub const KEYFRAME_VALUE_DATA: u32 = 484;
+    pub const KEYFRAME_TRACK_PARAMETER_TYPE: u32 = 485;
+    pub const MANUAL_KEYFRAME_TRACK_PARAMETER: u32 = 486;
+    pub const ANIMATION_PRESET_KEYFRAME_TRACK_PARAMETER: u32 = 487;
+    pub const KEYFRAME_TRACK_ANY_PARAMETER: u32 = 488;
+    pub const KEYFRAME_TRACK_PARAMETER: u32 = 489;
+    pub const KEYFRAME_TRACK_PARAMETER_VALUE: u32 = 490;
+    pub const ANIMATION_PRESETS: u32 = 491;
+    pub const ANIMATION_PRESET_DATA: u32 = 492;
+    pub const STYLE_ANIMATION: u32 = 493;
+    pub const STYLE_ID_FOR_ANIMATION: u32 = 494;
+    pub const TOOLS: u32 = 495;
+    pub const TOOL_DATA: u32 = 496;
+    pub const CUSTOM_EFFECTS: u32 = 497;
+    pub const CUSTOM_EFFECT_DATA: u32 = 498;
+    pub const SPRING_PARAMS: u32 = 499;
+    pub const TRANSITION_EASING_ANY_VALUE: u32 = 500;
+    pub const EASING_DATA: u32 = 501;
+    pub const TRANSITION_OVERRIDE: u32 = 502;
+    pub const TRANSITION_OVERRIDE_DATA: u32 = 503;
+    pub const TRANSITION_OVERRIDE_PROP: u32 = 504;
+    pub const TRANSITION_OVERRIDE_BINDING_TOP_LEVEL_FIELD: u32 = 505;
+    pub const TRANSITION_OVERRIDE_BINDING_LOCATION: u32 = 506;
+    pub const KEYFRAME_BINDING_EFFECT_PARAMETRIZED_FIELD: u32 = 507;
+    pub const NODE_CONTENTS_KEYFRAME_BINDING_LOCATION: u32 = 508;
+    pub const TRANSITION_OVERRIDE_PROP_MAP: u32 = 509;
+    pub const TRANSITION_OVERRIDE_PROP_MAP_ENTRY: u32 = 510;
+    pub const CODE_SYNTAX_PLATFORM: u32 = 511;
+    pub const OPTIONAL_VECTOR: u32 = 512;
+    pub const HTML_TAG: u32 = 513;
+    pub const ARIA_ROLE: u32 = 514;
+    pub const MIGRATION_STATUS: u32 = 515;
+    pub const COLOR_PROFILE: u32 = 516;
+    pub const DOCUMENT_COLOR_PROFILE: u32 = 517;
+    pub const CHILD_READING_DIRECTION: u32 = 518;
+    pub const ARIA_ATTRIBUTE_ANY_VALUE: u32 = 519;
+    pub const ARIA_ATTRIBUTE_DATA_TYPE: u32 = 520;
+    pub const ARIA_ATTRIBUTE_DATA: u32 = 521;
+    pub const ARIA_ATTRIBUTES_MAP: u32 = 522;
+    pub const ARIA_ATTRIBUTES_MAP_ENTRY: u32 = 523;
+    pub const HANDOFF_STATUS_MAP_ENTRY: u32 = 524;
+    pub const HANDOFF_STATUS_MAP: u32 = 525;
+    pub const EDIT_SCOPE_INFO: u32 = 526;
+    pub const EDIT_SCOPE_SNAPSHOT: u32 = 527;
+    pub const EDIT_SCOPE_STACK: u32 = 528;
+    pub const EDIT_SCOPE: u32 = 529;
+    pub const EDIT_SCOPE_TYPE: u32 = 530;
+    pub const SECTION_PRESET_STATE: u32 = 531;
+    pub const EMOJI_IMAGE_SET: u32 = 532;
+    pub const SELECTION_REGION_FOCUS_TYPE: u32 = 533;
+    pub const SECTION_PRESET_INFO: u32 = 534;
+    pub const CLIPBOARD_SELECTION_REGION: u32 = 535;
+    pub const FIRST_DRAFT_KIT_TYPE: u32 = 536;
+    pub const FIRST_DRAFT_KIT: u32 = 537;
+    pub const FIRST_DRAFT_DATA: u32 = 538;
+    pub const FIRST_DRAFT_KIT_ELEMENT_TYPE: u32 = 539;
+    pub const FIRST_DRAFT_KIT_ELEMENT_DATA: u32 = 540;
+    pub const PLATFORM_SHAPE_PROPERTY: u32 = 541;
+    pub const PLATFORM_SHAPE_BEHAVIOR_TYPE: u32 = 542;
+    pub const PLATFORM_SHAPE_PROPERTY_MAP_ENTRY: u32 = 543;
+    pub const PLATFORM_SHAPE_DEFINITION: u32 = 544;
+    pub const NODE_BEHAVIORS: u32 = 545;
+    pub const BEHAVIOR_TRANSITION: u32 = 546;
+    pub const APPEAR_BEHAVIOR_TRIGGER: u32 = 547;
+    pub const RELATIVE_DIRECTION: u32 = 548;
+    pub const APPEAR_BEHAVIOR: u32 = 549;
+    pub const HOVER_BEHAVIOR: u32 = 550;
+    pub const PRESS_BEHAVIOR: u32 = 551;
+    pub const FOCUS_BEHAVIOR: u32 = 552;
+    pub const SCROLL_PARALLAX_BEHAVIOR: u32 = 553;
+    pub const SCROLL_TRANSFORM_BEHAVIOR_TRIGGER: u32 = 554;
+    pub const SCROLL_TRANSFORM_BEHAVIOR: u32 = 555;
+    pub const CURSOR_BEHAVIOR: u32 = 556;
+    pub const MARQUEE_BEHAVIOR: u32 = 557;
+    pub const CODE_BEHAVIOR: u32 = 558;
+    pub const CLIENT_RENDERED_METADATA: u32 = 559;
+    pub const LINK_BEHAVIOR_TYPE: u32 = 560;
+    pub const LINK_BEHAVIOR: u32 = 561;
+    pub const VARIABLE_ID_OR_VARIABLE_OVERRIDE_ID: u32 = 562;
+    pub const SLIDE_THEME_DATA: u32 = 563;
+    pub const SLIDE_NUMBER: u32 = 564;
+    pub const NODE_CHAT_MESSAGE_TYPE: u32 = 565;
+    pub const NODE_CHAT_MESSAGE: u32 = 566;
+    pub const NODE_CHAT_TOOL_CALL: u32 = 567;
+    pub const NODE_CHAT_TOOL_RESULT: u32 = 568;
+    pub const NODE_CHAT_EXCHANGE: u32 = 569;
+    pub const NODE_CHAT_COMPRESSION_STATE: u32 = 570;
+    pub const FILE_UPDATE: u32 = 571;
+    pub const AI_CHAT_CONTENT_PART: u32 = 572;
+    pub const AI_CHAT_CONTENT_PART_TYPE: u32 = 573;
+    pub const AI_CHAT_CONTENT_PART_ANY_VALUE: u32 = 574;
+    pub const AI_CHAT_MESSAGE_ROLE: u32 = 575;
+    pub const AI_CHAT_MESSAGE: u32 = 576;
+    pub const AI_CHAT_THREAD: u32 = 577;
+    pub const COOPER_TEMPLATE_TYPE: u32 = 578;
+    pub const COOPER_TEMPLATE_DATA: u32 = 579;
+    pub const IMAGE_IMPORT_MAP: u32 = 580;
+    pub const IMAGE_IMPORT: u32 = 581;
+    pub const INTERPOLATION_TYPE: u32 = 582;
+    pub const BEZIER_HANDLES: u32 = 583;
+    pub const KEYFRAME_OPERATION: u32 = 584;
+    pub const TIMELINE_POSITION_TYPE: u32 = 585;
+    pub const PLAYBACK_STYLE: u32 = 586;
+}
+
+
 pub mod kiwi_records {
     pub mod message_type {
-        pub const DEFINITION: u32 = 0;
+        pub const JOIN_START: u32 = 0;
+        pub const NODE_CHANGES: u32 = 1;
+        pub const USER_CHANGES: u32 = 2;
+        pub const JOIN_END: u32 = 3;
+        pub const SIGNAL: u32 = 4;
+        pub const STYLE: u32 = 5;
+        pub const STYLE_SET: u32 = 6;
+        pub const JOIN_START_SKIP_RELOAD: u32 = 7;
+        pub const NOTIFY_SHOULD_UPGRADE: u32 = 8;
+        pub const UPGRADE_DONE: u32 = 9;
+        pub const UPGRADE_REFRESH: u32 = 10;
+        pub const SCENE_GRAPH_QUERY: u32 = 11;
+        pub const SCENE_GRAPH_REPLY: u32 = 12;
+        pub const DIFF: u32 = 13;
+        pub const CLIENT_BROADCAST: u32 = 14;
+        pub const JOIN_START_JOURNALED: u32 = 15;
+        pub const STREAM_START: u32 = 16;
+        pub const STREAM_END: u32 = 17;
+        pub const INTERACTIVE_SLIDE_CHANGE: u32 = 18;
+        pub const RECONNECT_SCENE_GRAPH_QUERY: u32 = 19;
+        pub const RECONNECT_SCENE_GRAPH_REPLY: u32 = 20;
+        pub const JOIN_END_INCREMENTAL_RECONNECT: u32 = 21;
+        pub const NODE_STATUS_CHANGE: u32 = 22;
+        pub const CLIENT_RENDERED: u32 = 23;
+        pub const BUZZ_APPROVAL_CHANGE: u32 = 24;
     }
     pub mod axis {
-        pub const DEFINITION: u32 = 1;
+        pub const X: u32 = 0;
+        pub const Y: u32 = 1;
     }
     pub mod access {
-        pub const DEFINITION: u32 = 2;
+        pub const READ_ONLY: u32 = 0;
+        pub const READ_WRITE: u32 = 1;
     }
     pub mod node_phase {
-        pub const DEFINITION: u32 = 3;
+        pub const CREATED: u32 = 0;
+        pub const REMOVED: u32 = 1;
     }
     pub mod winding_rule {
-        pub const DEFINITION: u32 = 4;
+        pub const NONZERO: u32 = 0;
+        pub const ODD: u32 = 1;
     }
     pub mod node_type {
-        pub const DEFINITION: u32 = 5;
+        pub const NONE: u32 = 0;
+        pub const DOCUMENT: u32 = 1;
+        pub const CANVAS: u32 = 2;
+        pub const GROUP: u32 = 3;
+        pub const FRAME: u32 = 4;
+        pub const BOOLEAN_OPERATION: u32 = 5;
+        pub const VECTOR: u32 = 6;
+        pub const STAR: u32 = 7;
+        pub const LINE: u32 = 8;
+        pub const ELLIPSE: u32 = 9;
+        pub const RECTANGLE: u32 = 10;
+        pub const REGULAR_POLYGON: u32 = 11;
+        pub const ROUNDED_RECTANGLE: u32 = 12;
+        pub const TEXT: u32 = 13;
+        pub const SLICE: u32 = 14;
+        pub const SYMBOL: u32 = 15;
+        pub const INSTANCE: u32 = 16;
+        pub const STICKY: u32 = 17;
+        pub const SHAPE_WITH_TEXT: u32 = 18;
+        pub const CONNECTOR: u32 = 19;
+        pub const CODE_BLOCK: u32 = 20;
+        pub const WIDGET: u32 = 21;
+        pub const STAMP: u32 = 22;
+        pub const MEDIA: u32 = 23;
+        pub const HIGHLIGHT: u32 = 24;
+        pub const SECTION: u32 = 25;
+        pub const SECTION_OVERLAY: u32 = 26;
+        pub const WASHI_TAPE: u32 = 27;
+        pub const VARIABLE: u32 = 28;
+        pub const TABLE: u32 = 29;
+        pub const TABLE_CELL: u32 = 30;
+        pub const VARIABLE_SET: u32 = 31;
+        pub const SLIDE: u32 = 32;
+        pub const ASSISTED_LAYOUT: u32 = 33;
+        pub const INTERACTIVE_SLIDE_ELEMENT: u32 = 34;
+        pub const VARIABLE_OVERRIDE: u32 = 35;
+        pub const MODULE: u32 = 36;
+        pub const SLIDE_GRID: u32 = 37;
+        pub const SLIDE_ROW: u32 = 38;
+        pub const RESPONSIVE_SET: u32 = 39;
+        pub const CODE_COMPONENT: u32 = 40;
+        pub const TEXT_PATH: u32 = 41;
+        pub const CODE_INSTANCE: u32 = 42;
+        pub const CODE_LIBRARY: u32 = 43;
+        pub const CODE_FILE: u32 = 44;
+        pub const CODE_LAYER: u32 = 45;
+        pub const BRUSH: u32 = 46;
+        pub const MANAGED_STRING: u32 = 47;
+        pub const TRANSFORM: u32 = 48;
+        pub const CMS_RICH_TEXT: u32 = 49;
+        pub const REPEATER: u32 = 50;
+        pub const JSX: u32 = 51;
+        pub const EMBEDDED_PROTOTYPE: u32 = 52;
+        pub const REACT_FIBER: u32 = 53;
+        pub const RESPONSIVE_NODE_SET: u32 = 54;
+        pub const WEBPAGE: u32 = 55;
+        pub const KEYFRAME: u32 = 56;
+        pub const KEYFRAME_TRACK: u32 = 57;
+        pub const ANIMATION_PRESET_INSTANCE: u32 = 58;
+        pub const CODE_EMBED: u32 = 59;
+        pub const BINARY_FILE: u32 = 60;
+        pub const SPEC_BLOCK: u32 = 61;
+        pub const TOOL_INSTANCE: u32 = 62;
+        pub const CUSTOM_EFFECT_INSTANCE: u32 = 63;
+        pub const NATIVE_CODE_LAYER_INSTANCE: u32 = 64;
     }
     pub mod shape_with_text_type {
-        pub const DEFINITION: u32 = 6;
+        pub const SQUARE: u32 = 0;
+        pub const ELLIPSE: u32 = 1;
+        pub const DIAMOND: u32 = 2;
+        pub const TRIANGLE_UP: u32 = 3;
+        pub const TRIANGLE_DOWN: u32 = 4;
+        pub const ROUNDED_RECTANGLE: u32 = 5;
+        pub const PARALLELOGRAM_RIGHT: u32 = 6;
+        pub const PARALLELOGRAM_LEFT: u32 = 7;
+        pub const ENG_DATABASE: u32 = 8;
+        pub const ENG_QUEUE: u32 = 9;
+        pub const ENG_FILE: u32 = 10;
+        pub const ENG_FOLDER: u32 = 11;
+        pub const TRAPEZOID: u32 = 12;
+        pub const PREDEFINED_PROCESS: u32 = 13;
+        pub const SHIELD: u32 = 14;
+        pub const DOCUMENT_SINGLE: u32 = 15;
+        pub const DOCUMENT_MULTIPLE: u32 = 16;
+        pub const MANUAL_INPUT: u32 = 17;
+        pub const HEXAGON: u32 = 18;
+        pub const CHEVRON: u32 = 19;
+        pub const PENTAGON: u32 = 20;
+        pub const OCTAGON: u32 = 21;
+        pub const STAR: u32 = 22;
+        pub const PLUS: u32 = 23;
+        pub const ARROW_LEFT: u32 = 24;
+        pub const ARROW_RIGHT: u32 = 25;
+        pub const SUMMING_JUNCTION: u32 = 26;
+        pub const OR: u32 = 27;
+        pub const SPEECH_BUBBLE: u32 = 28;
+        pub const INTERNAL_STORAGE: u32 = 29;
     }
     pub mod blend_mode {
-        pub const DEFINITION: u32 = 7;
+        pub const PASS_THROUGH: u32 = 0;
+        pub const NORMAL: u32 = 1;
+        pub const DARKEN: u32 = 2;
+        pub const MULTIPLY: u32 = 3;
+        pub const LINEAR_BURN: u32 = 4;
+        pub const COLOR_BURN: u32 = 5;
+        pub const LIGHTEN: u32 = 6;
+        pub const SCREEN: u32 = 7;
+        pub const LINEAR_DODGE: u32 = 8;
+        pub const COLOR_DODGE: u32 = 9;
+        pub const OVERLAY: u32 = 10;
+        pub const SOFT_LIGHT: u32 = 11;
+        pub const HARD_LIGHT: u32 = 12;
+        pub const DIFFERENCE: u32 = 13;
+        pub const EXCLUSION: u32 = 14;
+        pub const HUE: u32 = 15;
+        pub const SATURATION: u32 = 16;
+        pub const COLOR: u32 = 17;
+        pub const LUMINOSITY: u32 = 18;
     }
     pub mod paint_type {
-        pub const DEFINITION: u32 = 8;
+        pub const SOLID: u32 = 0;
+        pub const GRADIENT_LINEAR: u32 = 1;
+        pub const GRADIENT_RADIAL: u32 = 2;
+        pub const GRADIENT_ANGULAR: u32 = 3;
+        pub const GRADIENT_DIAMOND: u32 = 4;
+        pub const IMAGE: u32 = 5;
+        pub const EMOJI: u32 = 6;
+        pub const VIDEO: u32 = 7;
+        pub const PATTERN: u32 = 8;
+        pub const NOISE: u32 = 9;
+        pub const CUSTOM: u32 = 10;
     }
     pub mod image_scale_mode {
-        pub const DEFINITION: u32 = 9;
+        pub const STRETCH: u32 = 0;
+        pub const FIT: u32 = 1;
+        pub const FILL: u32 = 2;
+        pub const TILE: u32 = 3;
     }
     pub mod effect_type {
-        pub const DEFINITION: u32 = 10;
+        pub const INNER_SHADOW: u32 = 0;
+        pub const DROP_SHADOW: u32 = 1;
+        pub const FOREGROUND_BLUR: u32 = 2;
+        pub const BACKGROUND_BLUR: u32 = 3;
+        pub const REPEAT: u32 = 4;
+        pub const SYMMETRY: u32 = 5;
+        pub const GRAIN: u32 = 6;
+        pub const NOISE: u32 = 7;
+        pub const GLASS: u32 = 8;
+        pub const CUSTOM: u32 = 9;
     }
     pub mod text_case {
-        pub const DEFINITION: u32 = 11;
+        pub const ORIGINAL: u32 = 0;
+        pub const UPPER: u32 = 1;
+        pub const LOWER: u32 = 2;
+        pub const TITLE: u32 = 3;
+        pub const SMALL_CAPS: u32 = 4;
+        pub const SMALL_CAPS_FORCED: u32 = 5;
     }
     pub mod text_decoration {
-        pub const DEFINITION: u32 = 12;
+        pub const NONE: u32 = 0;
+        pub const UNDERLINE: u32 = 1;
+        pub const STRIKETHROUGH: u32 = 2;
     }
     pub mod text_decoration_style {
-        pub const DEFINITION: u32 = 13;
+        pub const SOLID: u32 = 0;
+        pub const DOTTED: u32 = 1;
+        pub const WAVY: u32 = 2;
     }
     pub mod leading_trim {
-        pub const DEFINITION: u32 = 14;
+        pub const NONE: u32 = 0;
+        pub const CAP_HEIGHT: u32 = 1;
     }
     pub mod number_units {
-        pub const DEFINITION: u32 = 15;
+        pub const RAW: u32 = 0;
+        pub const PIXELS: u32 = 1;
+        pub const PERCENT: u32 = 2;
     }
     pub mod constraint_type {
-        pub const DEFINITION: u32 = 16;
+        pub const MIN: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const MAX: u32 = 2;
+        pub const STRETCH: u32 = 3;
+        pub const SCALE: u32 = 4;
+        pub const FIXED_MIN: u32 = 5;
+        pub const FIXED_MAX: u32 = 6;
     }
     pub mod stroke_align {
-        pub const DEFINITION: u32 = 17;
+        pub const CENTER: u32 = 0;
+        pub const INSIDE: u32 = 1;
+        pub const OUTSIDE: u32 = 2;
+        pub const OFFSET: u32 = 3;
     }
     pub mod stroke_cap {
-        pub const DEFINITION: u32 = 18;
+        pub const NONE: u32 = 0;
+        pub const ROUND: u32 = 1;
+        pub const SQUARE: u32 = 2;
+        pub const ARROW_LINES: u32 = 3;
+        pub const ARROW_EQUILATERAL: u32 = 4;
+        pub const DIAMOND_FILLED: u32 = 5;
+        pub const TRIANGLE_FILLED: u32 = 6;
+        pub const HIGHLIGHT: u32 = 7;
+        pub const WASHI_TAPE_1: u32 = 8;
+        pub const WASHI_TAPE_2: u32 = 9;
+        pub const WASHI_TAPE_3: u32 = 10;
+        pub const WASHI_TAPE_4: u32 = 11;
+        pub const WASHI_TAPE_5: u32 = 12;
+        pub const WASHI_TAPE_6: u32 = 13;
+        pub const CIRCLE_FILLED: u32 = 14;
+        pub const ERD_ZERO_OR_ONE: u32 = 15;
+        pub const ERD_EXACTLY_ONE: u32 = 16;
+        pub const ERD_ZERO_OR_MORE: u32 = 17;
+        pub const ERD_ONE_OR_MORE: u32 = 18;
+        pub const ERD_ONE: u32 = 19;
+        pub const ERD_MANY: u32 = 20;
     }
     pub mod stroke_join {
-        pub const DEFINITION: u32 = 19;
+        pub const MITER: u32 = 0;
+        pub const BEVEL: u32 = 1;
+        pub const ROUND: u32 = 2;
     }
     pub mod boolean_operation {
-        pub const DEFINITION: u32 = 20;
+        pub const UNION: u32 = 0;
+        pub const INTERSECT: u32 = 1;
+        pub const SUBTRACT: u32 = 2;
+        pub const XOR: u32 = 3;
     }
     pub mod text_align_horizontal {
-        pub const DEFINITION: u32 = 21;
+        pub const LEFT: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const RIGHT: u32 = 2;
+        pub const JUSTIFIED: u32 = 3;
     }
     pub mod text_align_vertical {
-        pub const DEFINITION: u32 = 22;
+        pub const TOP: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const BOTTOM: u32 = 2;
     }
     pub mod mouse_cursor {
-        pub const DEFINITION: u32 = 23;
+        pub const DEFAULT: u32 = 0;
+        pub const CROSSHAIR: u32 = 1;
+        pub const EYEDROPPER: u32 = 2;
+        pub const HAND: u32 = 3;
+        pub const PAINT_BUCKET: u32 = 4;
+        pub const PEN: u32 = 5;
+        pub const PENCIL: u32 = 6;
+        pub const MARKER: u32 = 7;
+        pub const ERASER: u32 = 8;
+        pub const HIGHLIGHTER: u32 = 9;
+        pub const LASSO: u32 = 10;
     }
     pub mod vector_mirror {
-        pub const DEFINITION: u32 = 24;
+        pub const NONE: u32 = 0;
+        pub const ANGLE: u32 = 1;
+        pub const ANGLE_AND_LENGTH: u32 = 2;
     }
     pub mod image_type {
-        pub const DEFINITION: u32 = 25;
+        pub const PNG: u32 = 0;
+        pub const JPEG: u32 = 1;
+        pub const SVG: u32 = 2;
+        pub const PDF: u32 = 3;
+        pub const MP4: u32 = 4;
+        pub const GIF: u32 = 5;
     }
     pub mod export_constraint_type {
-        pub const DEFINITION: u32 = 26;
+        pub const CONTENT_SCALE: u32 = 0;
+        pub const CONTENT_WIDTH: u32 = 1;
+        pub const CONTENT_HEIGHT: u32 = 2;
     }
     pub mod layout_grid_type {
-        pub const DEFINITION: u32 = 27;
+        pub const MIN: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const STRETCH: u32 = 2;
+        pub const MAX: u32 = 3;
     }
     pub mod layout_grid_pattern {
-        pub const DEFINITION: u32 = 28;
+        pub const STRIPES: u32 = 0;
+        pub const GRID: u32 = 1;
     }
     pub mod text_auto_resize {
-        pub const DEFINITION: u32 = 29;
+        pub const NONE: u32 = 0;
+        pub const WIDTH_AND_HEIGHT: u32 = 1;
+        pub const HEIGHT: u32 = 2;
     }
     pub mod text_truncation {
-        pub const DEFINITION: u32 = 30;
+        pub const DISABLED: u32 = 0;
+        pub const ENDING: u32 = 1;
     }
     pub mod style_set_type {
-        pub const DEFINITION: u32 = 31;
+        pub const PERSONAL: u32 = 0;
+        pub const TEAM: u32 = 1;
+        pub const CUSTOM: u32 = 2;
+        pub const FREQUENCY: u32 = 3;
+        pub const TEMPORARY: u32 = 4;
     }
     pub mod style_set_content_type {
-        pub const DEFINITION: u32 = 32;
+        pub const SOLID: u32 = 0;
+        pub const GRADIENT: u32 = 1;
+        pub const IMAGE: u32 = 2;
     }
     pub mod stack_mode {
-        pub const DEFINITION: u32 = 33;
+        pub const NONE: u32 = 0;
+        pub const HORIZONTAL: u32 = 1;
+        pub const VERTICAL: u32 = 2;
+        pub const GRID: u32 = 3;
     }
     pub mod stack_align {
-        pub const DEFINITION: u32 = 34;
+        pub const MIN: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const MAX: u32 = 2;
+        pub const BASELINE: u32 = 3;
     }
     pub mod stack_counter_align {
-        pub const DEFINITION: u32 = 35;
+        pub const MIN: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const MAX: u32 = 2;
+        pub const STRETCH: u32 = 3;
+        pub const AUTO: u32 = 4;
+        pub const BASELINE: u32 = 5;
     }
     pub mod stack_justify {
-        pub const DEFINITION: u32 = 36;
+        pub const MIN: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const MAX: u32 = 2;
+        pub const SPACE_EVENLY: u32 = 3;
+        pub const SPACE_BETWEEN: u32 = 4;
     }
     pub mod grid_child_align {
-        pub const DEFINITION: u32 = 37;
+        pub const AUTO: u32 = 0;
+        pub const MIN: u32 = 1;
+        pub const CENTER: u32 = 2;
+        pub const MAX: u32 = 3;
     }
     pub mod grid_auto_tracks {
-        pub const DEFINITION: u32 = 38;
+        pub const NONE: u32 = 0;
+        pub const ROWS: u32 = 1;
     }
     pub mod stack_size {
-        pub const DEFINITION: u32 = 39;
+        pub const FIXED: u32 = 0;
+        pub const RESIZE_TO_FIT: u32 = 1;
+        pub const RESIZE_TO_FIT_WITH_IMPLICIT_SIZE: u32 = 2;
     }
     pub mod stack_positioning {
-        pub const DEFINITION: u32 = 40;
+        pub const AUTO: u32 = 0;
+        pub const ABSOLUTE: u32 = 1;
     }
     pub mod stack_wrap {
-        pub const DEFINITION: u32 = 41;
+        pub const NO_WRAP: u32 = 0;
+        pub const WRAP: u32 = 1;
     }
     pub mod stack_counter_align_content {
-        pub const DEFINITION: u32 = 42;
+        pub const AUTO: u32 = 0;
+        pub const SPACE_BETWEEN: u32 = 1;
     }
     pub mod connection_type {
-        pub const DEFINITION: u32 = 43;
+        pub const NONE: u32 = 0;
+        pub const INTERNAL_NODE: u32 = 1;
+        pub const URL: u32 = 2;
+        pub const BACK: u32 = 3;
+        pub const CLOSE: u32 = 4;
+        pub const SET_VARIABLE: u32 = 5;
+        pub const UPDATE_MEDIA_RUNTIME: u32 = 6;
+        pub const CONDITIONAL: u32 = 7;
+        pub const SET_VARIABLE_MODE: u32 = 8;
+        pub const OBJECT_ANIMATION: u32 = 9;
+        pub const UPDATE_ANIMATION_TIMELINE_STATE: u32 = 10;
     }
     pub mod interaction_type {
-        pub const DEFINITION: u32 = 44;
+        pub const ON_CLICK: u32 = 0;
+        pub const AFTER_TIMEOUT: u32 = 1;
+        pub const MOUSE_IN: u32 = 2;
+        pub const MOUSE_OUT: u32 = 3;
+        pub const ON_HOVER: u32 = 4;
+        pub const MOUSE_DOWN: u32 = 5;
+        pub const MOUSE_UP: u32 = 6;
+        pub const ON_PRESS: u32 = 7;
+        pub const NONE: u32 = 8;
+        pub const DRAG: u32 = 9;
+        pub const ON_KEY_DOWN: u32 = 10;
+        pub const ON_VOICE: u32 = 11;
+        pub const ON_MEDIA_HIT: u32 = 12;
+        pub const ON_MEDIA_END: u32 = 13;
+        pub const MOUSE_ENTER: u32 = 14;
+        pub const MOUSE_LEAVE: u32 = 15;
     }
     pub mod transition_type {
-        pub const DEFINITION: u32 = 45;
+        pub const INSTANT_TRANSITION: u32 = 0;
+        pub const DISSOLVE: u32 = 1;
+        pub const FADE: u32 = 2;
+        pub const SLIDE_FROM_LEFT: u32 = 3;
+        pub const SLIDE_FROM_RIGHT: u32 = 4;
+        pub const SLIDE_FROM_TOP: u32 = 5;
+        pub const SLIDE_FROM_BOTTOM: u32 = 6;
+        pub const PUSH_FROM_LEFT: u32 = 7;
+        pub const PUSH_FROM_RIGHT: u32 = 8;
+        pub const PUSH_FROM_TOP: u32 = 9;
+        pub const PUSH_FROM_BOTTOM: u32 = 10;
+        pub const MOVE_FROM_LEFT: u32 = 11;
+        pub const MOVE_FROM_RIGHT: u32 = 12;
+        pub const MOVE_FROM_TOP: u32 = 13;
+        pub const MOVE_FROM_BOTTOM: u32 = 14;
+        pub const SLIDE_OUT_TO_LEFT: u32 = 15;
+        pub const SLIDE_OUT_TO_RIGHT: u32 = 16;
+        pub const SLIDE_OUT_TO_TOP: u32 = 17;
+        pub const SLIDE_OUT_TO_BOTTOM: u32 = 18;
+        pub const MOVE_OUT_TO_LEFT: u32 = 19;
+        pub const MOVE_OUT_TO_RIGHT: u32 = 20;
+        pub const MOVE_OUT_TO_TOP: u32 = 21;
+        pub const MOVE_OUT_TO_BOTTOM: u32 = 22;
+        pub const MAGIC_MOVE: u32 = 23;
+        pub const SMART_ANIMATE: u32 = 24;
+        pub const SCROLL_ANIMATE: u32 = 25;
     }
     pub mod easing_type {
-        pub const DEFINITION: u32 = 46;
+        pub const IN_CUBIC: u32 = 0;
+        pub const OUT_CUBIC: u32 = 1;
+        pub const INOUT_CUBIC: u32 = 2;
+        pub const LINEAR: u32 = 3;
+        pub const IN_BACK_CUBIC: u32 = 4;
+        pub const OUT_BACK_CUBIC: u32 = 5;
+        pub const INOUT_BACK_CUBIC: u32 = 6;
+        pub const CUSTOM_CUBIC: u32 = 7;
+        pub const SPRING: u32 = 8;
+        pub const GENTLE_SPRING: u32 = 9;
+        pub const CUSTOM_SPRING: u32 = 10;
+        pub const SPRING_PRESET_ONE: u32 = 11;
+        pub const SPRING_PRESET_TWO: u32 = 12;
+        pub const SPRING_PRESET_THREE: u32 = 13;
+        pub const HOLD: u32 = 14;
     }
     pub mod scroll_direction {
-        pub const DEFINITION: u32 = 47;
+        pub const NONE: u32 = 0;
+        pub const HORIZONTAL: u32 = 1;
+        pub const VERTICAL: u32 = 2;
+        pub const BOTH: u32 = 3;
     }
     pub mod scroll_contracted_state {
-        pub const DEFINITION: u32 = 48;
+        pub const EXPANDED: u32 = 0;
+        pub const CONTRACTED: u32 = 1;
     }
     pub mod guid {
-        pub const DEFINITION: u32 = 49;
         pub const SESSION_ID: u32 = 1;
         pub const LOCAL_ID: u32 = 2;
     }
     pub mod color {
-        pub const DEFINITION: u32 = 50;
         pub const R: u32 = 1;
         pub const G: u32 = 2;
         pub const B: u32 = 3;
         pub const A: u32 = 4;
     }
     pub mod vector {
-        pub const DEFINITION: u32 = 51;
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
     }
     pub mod rect {
-        pub const DEFINITION: u32 = 52;
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
         pub const W: u32 = 3;
         pub const H: u32 = 4;
     }
     pub mod color_stop {
-        pub const DEFINITION: u32 = 53;
         pub const COLOR: u32 = 1;
         pub const POSITION: u32 = 2;
     }
     pub mod color_stop_var {
-        pub const DEFINITION: u32 = 54;
         pub const COLOR: u32 = 1;
         pub const COLOR_VAR: u32 = 2;
         pub const POSITION: u32 = 3;
     }
     pub mod matrix {
-        pub const DEFINITION: u32 = 55;
         pub const M00: u32 = 1;
         pub const M01: u32 = 2;
         pub const M02: u32 = 3;
@@ -34900,53 +35890,71 @@ pub mod kiwi_records {
         pub const M12: u32 = 6;
     }
     pub mod parent_index {
-        pub const DEFINITION: u32 = 56;
         pub const GUID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
     pub mod number {
-        pub const DEFINITION: u32 = 57;
         pub const VALUE: u32 = 1;
         pub const UNITS: u32 = 2;
     }
     pub mod font_name {
-        pub const DEFINITION: u32 = 58;
         pub const FAMILY: u32 = 1;
         pub const STYLE: u32 = 2;
         pub const POSTSCRIPT: u32 = 3;
     }
     pub mod font_variant_numeric_figure {
-        pub const DEFINITION: u32 = 59;
+        pub const NORMAL: u32 = 0;
+        pub const LINING: u32 = 1;
+        pub const OLDSTYLE: u32 = 2;
     }
     pub mod font_variant_numeric_spacing {
-        pub const DEFINITION: u32 = 60;
+        pub const NORMAL: u32 = 0;
+        pub const PROPORTIONAL: u32 = 1;
+        pub const TABULAR: u32 = 2;
     }
     pub mod font_variant_numeric_fraction {
-        pub const DEFINITION: u32 = 61;
+        pub const NORMAL: u32 = 0;
+        pub const DIAGONAL: u32 = 1;
+        pub const STACKED: u32 = 2;
     }
     pub mod font_variant_caps {
-        pub const DEFINITION: u32 = 62;
+        pub const NORMAL: u32 = 0;
+        pub const SMALL: u32 = 1;
+        pub const ALL_SMALL: u32 = 2;
+        pub const PETITE: u32 = 3;
+        pub const ALL_PETITE: u32 = 4;
+        pub const UNICASE: u32 = 5;
+        pub const TITLING: u32 = 6;
     }
     pub mod font_variant_position {
-        pub const DEFINITION: u32 = 63;
+        pub const NORMAL: u32 = 0;
+        pub const SUB: u32 = 1;
+        pub const SUPER: u32 = 2;
     }
     pub mod font_style {
-        pub const DEFINITION: u32 = 64;
+        pub const NORMAL: u32 = 0;
+        pub const ITALIC: u32 = 1;
     }
     pub mod semantic_weight {
-        pub const DEFINITION: u32 = 65;
+        pub const NORMAL: u32 = 0;
+        pub const BOLD: u32 = 1;
     }
     pub mod semantic_italic {
-        pub const DEFINITION: u32 = 66;
+        pub const NORMAL: u32 = 0;
+        pub const ITALIC: u32 = 1;
     }
     pub mod code_snapshot_state {
-        pub const DEFINITION: u32 = 67;
+        pub const INITIAL: u32 = 0;
+        pub const SNAPSHOTTING: u32 = 1;
+        pub const OK: u32 = 2;
+        pub const SNAPSHOT_ERROR: u32 = 3;
+        pub const LLM_IN_PROGRESS: u32 = 4;
     }
     pub mod snapshot_capture_mode {
-        pub const DEFINITION: u32 = 68;
+        pub const FULL: u32 = 0;
+        pub const PARTIAL: u32 = 1;
     }
     pub mod code_source_info {
-        pub const DEFINITION: u32 = 69;
         pub const ORIGIN_REFERENCE_ID: u32 = 1;
         pub const ORIGIN_NODE_ID: u32 = 2;
         pub const LINKED_SNAPSHOT_ID: u32 = 3;
@@ -34955,53 +35963,283 @@ pub mod kiwi_records {
         pub const SOURCE_ELEMENT_ID: u32 = 6;
     }
     pub mod code_object_type {
-        pub const DEFINITION: u32 = 70;
+        pub const WEB_LAYER: u32 = 0;
+        pub const WEB_INTERACTION: u32 = 1;
+        pub const NATIVE_LAYER: u32 = 2;
+        pub const ANIMATION_PRESET: u32 = 3;
+        pub const TOOL: u32 = 4;
+        pub const CUSTOM_EFFECT: u32 = 5;
+        pub const PLUGIN: u32 = 6;
+        pub const WEB_LAYER_GENERIC: u32 = 7;
+        pub const CUSTOM_FILL: u32 = 8;
     }
     pub mod custom_tool_artifact_ref {
-        pub const DEFINITION: u32 = 71;
         pub const CUSTOM_TOOL_ID: u32 = 1;
         pub const CUSTOM_TOOL_VERSION: u32 = 2;
         pub const PUBLISHED_CUSTOM_TOOL_ID: u32 = 3;
         pub const PUBLISHED_CUSTOM_TOOL_VERSION_ID: u32 = 4;
     }
     pub mod lock_mode {
-        pub const DEFINITION: u32 = 72;
+        pub const NONE: u32 = 0;
+        pub const ALL: u32 = 1;
+        pub const BACKGROUND_ONLY: u32 = 2;
     }
     pub mod open_type_feature {
-        pub const DEFINITION: u32 = 73;
+        pub const PCAP: u32 = 0;
+        pub const C2_PC: u32 = 1;
+        pub const CASE: u32 = 2;
+        pub const CPSP: u32 = 3;
+        pub const TITL: u32 = 4;
+        pub const UNIC: u32 = 5;
+        pub const ZERO: u32 = 6;
+        pub const SINF: u32 = 7;
+        pub const ORDN: u32 = 8;
+        pub const AFRC: u32 = 9;
+        pub const DNOM: u32 = 10;
+        pub const NUMR: u32 = 11;
+        pub const LIGA: u32 = 12;
+        pub const CLIG: u32 = 13;
+        pub const DLIG: u32 = 14;
+        pub const HLIG: u32 = 15;
+        pub const RLIG: u32 = 16;
+        pub const AALT: u32 = 17;
+        pub const CALT: u32 = 18;
+        pub const RCLT: u32 = 19;
+        pub const SALT: u32 = 20;
+        pub const RVRN: u32 = 21;
+        pub const VERT: u32 = 22;
+        pub const SWSH: u32 = 23;
+        pub const CSWH: u32 = 24;
+        pub const NALT: u32 = 25;
+        pub const CCMP: u32 = 26;
+        pub const STCH: u32 = 27;
+        pub const HIST: u32 = 28;
+        pub const SIZE: u32 = 29;
+        pub const ORNM: u32 = 30;
+        pub const ITAL: u32 = 31;
+        pub const RAND: u32 = 32;
+        pub const DTLS: u32 = 33;
+        pub const FLAC: u32 = 34;
+        pub const MGRK: u32 = 35;
+        pub const SSTY: u32 = 36;
+        pub const KERN: u32 = 37;
+        pub const FWID: u32 = 38;
+        pub const HWID: u32 = 39;
+        pub const HALT: u32 = 40;
+        pub const TWID: u32 = 41;
+        pub const QWID: u32 = 42;
+        pub const PWID: u32 = 43;
+        pub const JUST: u32 = 44;
+        pub const LFBD: u32 = 45;
+        pub const OPBD: u32 = 46;
+        pub const RTBD: u32 = 47;
+        pub const PALT: u32 = 48;
+        pub const PKNA: u32 = 49;
+        pub const LTRA: u32 = 50;
+        pub const LTRM: u32 = 51;
+        pub const RTLA: u32 = 52;
+        pub const RTLM: u32 = 53;
+        pub const ABRV: u32 = 54;
+        pub const ABVM: u32 = 55;
+        pub const ABVS: u32 = 56;
+        pub const VALT: u32 = 57;
+        pub const VHAL: u32 = 58;
+        pub const BLWF: u32 = 59;
+        pub const BLWM: u32 = 60;
+        pub const BLWS: u32 = 61;
+        pub const AKHN: u32 = 62;
+        pub const CJCT: u32 = 63;
+        pub const CFAR: u32 = 64;
+        pub const CPCT: u32 = 65;
+        pub const CURS: u32 = 66;
+        pub const DIST: u32 = 67;
+        pub const EXPT: u32 = 68;
+        pub const FALT: u32 = 69;
+        pub const FINA: u32 = 70;
+        pub const FIN2: u32 = 71;
+        pub const FIN3: u32 = 72;
+        pub const HALF: u32 = 73;
+        pub const HALN: u32 = 74;
+        pub const HKNA: u32 = 75;
+        pub const HNGL: u32 = 76;
+        pub const HOJO: u32 = 77;
+        pub const INIT: u32 = 78;
+        pub const ISOL: u32 = 79;
+        pub const JP78: u32 = 80;
+        pub const JP83: u32 = 81;
+        pub const JP90: u32 = 82;
+        pub const JP04: u32 = 83;
+        pub const LJMO: u32 = 84;
+        pub const LOCL: u32 = 85;
+        pub const MARK: u32 = 86;
+        pub const MEDI: u32 = 87;
+        pub const MED2: u32 = 88;
+        pub const MKMK: u32 = 89;
+        pub const NLCK: u32 = 90;
+        pub const NUKT: u32 = 91;
+        pub const PREF: u32 = 92;
+        pub const PRES: u32 = 93;
+        pub const VPAL: u32 = 94;
+        pub const PSTF: u32 = 95;
+        pub const PSTS: u32 = 96;
+        pub const RKRF: u32 = 97;
+        pub const RPHF: u32 = 98;
+        pub const RUBY: u32 = 99;
+        pub const SMPL: u32 = 100;
+        pub const TJMO: u32 = 101;
+        pub const TNAM: u32 = 102;
+        pub const TRAD: u32 = 103;
+        pub const VATU: u32 = 104;
+        pub const VJMO: u32 = 105;
+        pub const VKNA: u32 = 106;
+        pub const VKRN: u32 = 107;
+        pub const VRTR: u32 = 108;
+        pub const VRT2: u32 = 109;
+        pub const SS01: u32 = 110;
+        pub const SS02: u32 = 111;
+        pub const SS03: u32 = 112;
+        pub const SS04: u32 = 113;
+        pub const SS05: u32 = 114;
+        pub const SS06: u32 = 115;
+        pub const SS07: u32 = 116;
+        pub const SS08: u32 = 117;
+        pub const SS09: u32 = 118;
+        pub const SS10: u32 = 119;
+        pub const SS11: u32 = 120;
+        pub const SS12: u32 = 121;
+        pub const SS13: u32 = 122;
+        pub const SS14: u32 = 123;
+        pub const SS15: u32 = 124;
+        pub const SS16: u32 = 125;
+        pub const SS17: u32 = 126;
+        pub const SS18: u32 = 127;
+        pub const SS19: u32 = 128;
+        pub const SS20: u32 = 129;
+        pub const CV01: u32 = 130;
+        pub const CV02: u32 = 131;
+        pub const CV03: u32 = 132;
+        pub const CV04: u32 = 133;
+        pub const CV05: u32 = 134;
+        pub const CV06: u32 = 135;
+        pub const CV07: u32 = 136;
+        pub const CV08: u32 = 137;
+        pub const CV09: u32 = 138;
+        pub const CV10: u32 = 139;
+        pub const CV11: u32 = 140;
+        pub const CV12: u32 = 141;
+        pub const CV13: u32 = 142;
+        pub const CV14: u32 = 143;
+        pub const CV15: u32 = 144;
+        pub const CV16: u32 = 145;
+        pub const CV17: u32 = 146;
+        pub const CV18: u32 = 147;
+        pub const CV19: u32 = 148;
+        pub const CV20: u32 = 149;
+        pub const CV21: u32 = 150;
+        pub const CV22: u32 = 151;
+        pub const CV23: u32 = 152;
+        pub const CV24: u32 = 153;
+        pub const CV25: u32 = 154;
+        pub const CV26: u32 = 155;
+        pub const CV27: u32 = 156;
+        pub const CV28: u32 = 157;
+        pub const CV29: u32 = 158;
+        pub const CV30: u32 = 159;
+        pub const CV31: u32 = 160;
+        pub const CV32: u32 = 161;
+        pub const CV33: u32 = 162;
+        pub const CV34: u32 = 163;
+        pub const CV35: u32 = 164;
+        pub const CV36: u32 = 165;
+        pub const CV37: u32 = 166;
+        pub const CV38: u32 = 167;
+        pub const CV39: u32 = 168;
+        pub const CV40: u32 = 169;
+        pub const CV41: u32 = 170;
+        pub const CV42: u32 = 171;
+        pub const CV43: u32 = 172;
+        pub const CV44: u32 = 173;
+        pub const CV45: u32 = 174;
+        pub const CV46: u32 = 175;
+        pub const CV47: u32 = 176;
+        pub const CV48: u32 = 177;
+        pub const CV49: u32 = 178;
+        pub const CV50: u32 = 179;
+        pub const CV51: u32 = 180;
+        pub const CV52: u32 = 181;
+        pub const CV53: u32 = 182;
+        pub const CV54: u32 = 183;
+        pub const CV55: u32 = 184;
+        pub const CV56: u32 = 185;
+        pub const CV57: u32 = 186;
+        pub const CV58: u32 = 187;
+        pub const CV59: u32 = 188;
+        pub const CV60: u32 = 189;
+        pub const CV61: u32 = 190;
+        pub const CV62: u32 = 191;
+        pub const CV63: u32 = 192;
+        pub const CV64: u32 = 193;
+        pub const CV65: u32 = 194;
+        pub const CV66: u32 = 195;
+        pub const CV67: u32 = 196;
+        pub const CV68: u32 = 197;
+        pub const CV69: u32 = 198;
+        pub const CV70: u32 = 199;
+        pub const CV71: u32 = 200;
+        pub const CV72: u32 = 201;
+        pub const CV73: u32 = 202;
+        pub const CV74: u32 = 203;
+        pub const CV75: u32 = 204;
+        pub const CV76: u32 = 205;
+        pub const CV77: u32 = 206;
+        pub const CV78: u32 = 207;
+        pub const CV79: u32 = 208;
+        pub const CV80: u32 = 209;
+        pub const CV81: u32 = 210;
+        pub const CV82: u32 = 211;
+        pub const CV83: u32 = 212;
+        pub const CV84: u32 = 213;
+        pub const CV85: u32 = 214;
+        pub const CV86: u32 = 215;
+        pub const CV87: u32 = 216;
+        pub const CV88: u32 = 217;
+        pub const CV89: u32 = 218;
+        pub const CV90: u32 = 219;
+        pub const CV91: u32 = 220;
+        pub const CV92: u32 = 221;
+        pub const CV93: u32 = 222;
+        pub const CV94: u32 = 223;
+        pub const CV95: u32 = 224;
+        pub const CV96: u32 = 225;
+        pub const CV97: u32 = 226;
+        pub const CV98: u32 = 227;
+        pub const CV99: u32 = 228;
     }
     pub mod export_constraint {
-        pub const DEFINITION: u32 = 74;
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod guid_mapping {
-        pub const DEFINITION: u32 = 75;
         pub const FROM: u32 = 1;
         pub const TO: u32 = 2;
     }
     pub mod blob {
-        pub const DEFINITION: u32 = 76;
         pub const BYTES: u32 = 1;
     }
     pub mod image {
-        pub const DEFINITION: u32 = 77;
         pub const HASH: u32 = 1;
         pub const NAME: u32 = 2;
         pub const DATA_BLOB: u32 = 3;
     }
     pub mod video {
-        pub const DEFINITION: u32 = 78;
         pub const HASH: u32 = 1;
         pub const S3_URL: u32 = 2;
     }
     pub mod paste_source {
-        pub const DEFINITION: u32 = 79;
         pub const SRC_FILE: u32 = 1;
         pub const SRC_NODE: u32 = 2;
     }
     pub mod filter_color_adjust {
-        pub const DEFINITION: u32 = 80;
         pub const TINT: u32 = 1;
         pub const SHADOWS: u32 = 2;
         pub const HIGHLIGHTS: u32 = 3;
@@ -35012,7 +36250,6 @@ pub mod kiwi_records {
         pub const VIBRANCE: u32 = 8;
     }
     pub mod paint_filter_message {
-        pub const DEFINITION: u32 = 81;
         pub const TINT: u32 = 1;
         pub const SHADOWS: u32 = 2;
         pub const HIGHLIGHTS: u32 = 3;
@@ -35025,7 +36262,6 @@ pub mod kiwi_records {
         pub const BRIGHTNESS: u32 = 10;
     }
     pub mod paint {
-        pub const DEFINITION: u32 = 82;
         pub const TYPE: u32 = 1;
         pub const COLOR: u32 = 2;
         pub const OPACITY: u32 = 3;
@@ -35070,22 +36306,34 @@ pub mod kiwi_records {
         pub const INTERPOLATION_HUE_METHOD: u32 = 42;
     }
     pub mod noise_type {
-        pub const DEFINITION: u32 = 83;
+        pub const MULTITONE: u32 = 0;
+        pub const MONOTONE: u32 = 1;
+        pub const DUOTONE: u32 = 2;
     }
     pub mod pattern_tile_type {
-        pub const DEFINITION: u32 = 84;
+        pub const RECTANGULAR: u32 = 0;
+        pub const HORIZONTAL_HEXAGONAL: u32 = 1;
+        pub const VERTICAL_HEXAGONAL: u32 = 2;
     }
     pub mod pattern_alignment {
-        pub const DEFINITION: u32 = 85;
+        pub const START: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const END: u32 = 2;
     }
     pub mod interpolation_color_space {
-        pub const DEFINITION: u32 = 86;
+        pub const DEFAULT: u32 = 0;
+        pub const OKLAB: u32 = 1;
+        pub const OKLCH: u32 = 2;
+        pub const HSL: u32 = 3;
+        pub const SRGB_LINEAR: u32 = 4;
     }
     pub mod interpolation_hue_method {
-        pub const DEFINITION: u32 = 87;
+        pub const SHORTER: u32 = 0;
+        pub const LONGER: u32 = 1;
+        pub const INCREASING: u32 = 2;
+        pub const DECREASING: u32 = 3;
     }
     pub mod font_meta_data {
-        pub const DEFINITION: u32 = 88;
         pub const KEY: u32 = 1;
         pub const FONT_LINE_HEIGHT: u32 = 2;
         pub const FONT_DIGEST: u32 = 3;
@@ -35093,13 +36341,11 @@ pub mod kiwi_records {
         pub const FONT_WEIGHT: u32 = 5;
     }
     pub mod font_variation {
-        pub const DEFINITION: u32 = 89;
         pub const AXIS_TAG: u32 = 1;
         pub const AXIS_NAME: u32 = 2;
         pub const VALUE: u32 = 3;
     }
     pub mod text_data {
-        pub const DEFINITION: u32 = 90;
         pub const CHARACTERS: u32 = 1;
         pub const CHARACTER_STYLE_I_DS: u32 = 2;
         pub const STYLE_OVERRIDE_TABLE: u32 = 3;
@@ -35121,7 +36367,6 @@ pub mod kiwi_records {
         pub const DERIVED_LINES: u32 = 19;
     }
     pub mod derived_text_data {
-        pub const DEFINITION: u32 = 91;
         pub const LAYOUT_SIZE: u32 = 1;
         pub const BASELINES: u32 = 2;
         pub const GLYPHS: u32 = 3;
@@ -35136,7 +36381,6 @@ pub mod kiwi_records {
         pub const DERIVED_LINES: u32 = 12;
     }
     pub mod hyperlink_box {
-        pub const DEFINITION: u32 = 92;
         pub const BOUNDS: u32 = 1;
         pub const URL: u32 = 2;
         pub const GUID: u32 = 3;
@@ -35145,7 +36389,6 @@ pub mod kiwi_records {
         pub const OPEN_IN_NEW_TAB: u32 = 6;
     }
     pub mod mention_box {
-        pub const DEFINITION: u32 = 93;
         pub const BOUNDS: u32 = 1;
         pub const START_INDEX: u32 = 2;
         pub const END_INDEX: u32 = 3;
@@ -35153,7 +36396,6 @@ pub mod kiwi_records {
         pub const MENTION_KEY: u32 = 5;
     }
     pub mod baseline {
-        pub const DEFINITION: u32 = 94;
         pub const POSITION: u32 = 1;
         pub const WIDTH: u32 = 2;
         pub const LINE_Y: u32 = 3;
@@ -35164,7 +36406,6 @@ pub mod kiwi_records {
         pub const IGNORE_LEADING_TRIM: u32 = 8;
     }
     pub mod glyph {
-        pub const DEFINITION: u32 = 95;
         pub const COMMANDS_BLOB: u32 = 1;
         pub const POSITION: u32 = 2;
         pub const STYLE_ID: u32 = 3;
@@ -35176,81 +36417,65 @@ pub mod kiwi_records {
         pub const ROTATION: u32 = 9;
     }
     pub mod decoration {
-        pub const DEFINITION: u32 = 96;
         pub const RECTS: u32 = 1;
         pub const STYLE_ID: u32 = 2;
     }
     pub mod blockquote {
-        pub const DEFINITION: u32 = 97;
         pub const VERTICAL_BAR: u32 = 1;
         pub const QUOTE_MARK_BOUNDS: u32 = 2;
         pub const STYLE_ID: u32 = 3;
     }
     pub mod vector_data {
-        pub const DEFINITION: u32 = 98;
         pub const VECTOR_NETWORK_BLOB: u32 = 1;
         pub const NORMALIZED_SIZE: u32 = 2;
         pub const STYLE_OVERRIDE_TABLE: u32 = 3;
     }
     pub mod text_path_start {
-        pub const DEFINITION: u32 = 99;
         pub const T_VALUE: u32 = 1;
         pub const FORWARD: u32 = 2;
     }
     pub mod guid_path {
-        pub const DEFINITION: u32 = 100;
         pub const GUIDS: u32 = 1;
     }
     pub mod symbol_data {
-        pub const DEFINITION: u32 = 101;
         pub const SYMBOL_ID: u32 = 1;
         pub const SYMBOL_OVERRIDES: u32 = 2;
         pub const UNIFORM_SCALE_FACTOR: u32 = 3;
     }
     pub mod guid_path_mapping {
-        pub const DEFINITION: u32 = 102;
         pub const ID: u32 = 1;
         pub const PATH: u32 = 2;
     }
     pub mod derived_breakpoint_data {
-        pub const DEFINITION: u32 = 103;
         pub const OVERRIDES: u32 = 1;
     }
     pub mod node_generation_data {
-        pub const DEFINITION: u32 = 104;
         pub const OVERRIDES: u32 = 1;
         pub const USE_FINE_GRAINED_SYNCING: u32 = 2;
         pub const DIFF_ONLY_REMOVALS: u32 = 3;
     }
     pub mod derived_immutable_frame_data {
-        pub const DEFINITION: u32 = 105;
         pub const OVERRIDES: u32 = 1;
         pub const VERSION: u32 = 2;
     }
     pub mod jsx_data {
-        pub const DEFINITION: u32 = 106;
         pub const OVERRIDES: u32 = 1;
     }
     pub mod derived_jsx_data {
-        pub const DEFINITION: u32 = 107;
         pub const OVERRIDES: u32 = 1;
     }
     pub mod asset_id_map {
-        pub const DEFINITION: u32 = 108;
         pub const ENTRIES: u32 = 1;
     }
     pub mod asset_id_entry {
-        pub const DEFINITION: u32 = 109;
         pub const ASSET_KEY: u32 = 1;
         pub const ASSET_ID: u32 = 2;
     }
     pub mod asset_ref {
-        pub const DEFINITION: u32 = 110;
         pub const KEY: u32 = 1;
         pub const VERSION: u32 = 2;
     }
     pub mod asset_id {
-        pub const DEFINITION: u32 = 111;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
         pub const STATE_GROUP_ID: u32 = 3;
@@ -35260,83 +36485,69 @@ pub mod kiwi_records {
         pub const VARIABLE_SET_ID: u32 = 7;
     }
     pub mod state_group_id {
-        pub const DEFINITION: u32 = 112;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod style_id {
-        pub const DEFINITION: u32 = 113;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod symbol_id {
-        pub const DEFINITION: u32 = 114;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod variable_id {
-        pub const DEFINITION: u32 = 115;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod variable_override_id {
-        pub const DEFINITION: u32 = 116;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod variable_set_id {
-        pub const DEFINITION: u32 = 117;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod theme_id {
-        pub const DEFINITION: u32 = 118;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod code_library_id {
-        pub const DEFINITION: u32 = 119;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod code_file_id {
-        pub const DEFINITION: u32 = 120;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod code_component_id {
-        pub const DEFINITION: u32 = 121;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod canvas_node_id {
-        pub const DEFINITION: u32 = 122;
         pub const GUID: u32 = 1;
         pub const SYMBOL_ID: u32 = 2;
         pub const STATE_GROUP_ID: u32 = 3;
     }
     pub mod index_range {
-        pub const DEFINITION: u32 = 123;
         pub const START_INDEX: u32 = 1;
         pub const END_INDEX_EXCLUSIVE: u32 = 2;
     }
     pub mod collaborative_text_op_id {
-        pub const DEFINITION: u32 = 124;
         pub const SESSION_ID: u32 = 1;
         pub const COUNTER_ID: u32 = 2;
     }
     pub mod collaborative_text_op_type {
-        pub const DEFINITION: u32 = 125;
+        pub const INSERT: u32 = 0;
+        pub const DELETE: u32 = 1;
     }
     pub mod collaborative_text_stripped_op_run_with_i_ds {
-        pub const DEFINITION: u32 = 126;
         pub const FIRST_ID: u32 = 1;
         pub const RUN_LENGTH: u32 = 2;
         pub const PARENT_IDS: u32 = 3;
         pub const REBASED_ON_OP_IDS: u32 = 4;
     }
     pub mod collaborative_text_stripped_op_run_with_loc {
-        pub const DEFINITION: u32 = 127;
         pub const TYPE: u32 = 1;
         pub const RANGE: u32 = 2;
         pub const RANGE_SHOULD_BE_ITERATED_IN_REVERSE: u32 = 3;
@@ -35344,7 +36555,6 @@ pub mod kiwi_records {
         pub const REBASED_RANGE: u32 = 5;
     }
     pub mod collaborative_text_op_run {
-        pub const DEFINITION: u32 = 128;
         pub const ID: u32 = 1;
         pub const PARENT_IDS: u32 = 2;
         pub const TYPE: u32 = 3;
@@ -35355,14 +36565,12 @@ pub mod kiwi_records {
         pub const REBASED_RANGE: u32 = 8;
     }
     pub mod collaborative_plain_text {
-        pub const DEFINITION: u32 = 129;
         pub const HISTORY_OPS_WITH_IDS: u32 = 1;
         pub const HISTORY_OPS_WITH_LOC: u32 = 2;
         pub const HISTORY_STRING_CONTENT_BUFFER: u32 = 3;
         pub const CHANGES_TO_APPEND: u32 = 4;
     }
     pub mod collaborative_text_selection {
-        pub const DEFINITION: u32 = 130;
         pub const NODE: u32 = 1;
         pub const FIELD: u32 = 2;
         pub const SELECTED_RANGE: u32 = 3;
@@ -35370,7 +36578,6 @@ pub mod kiwi_records {
         pub const TEXT_VERSION: u32 = 5;
     }
     pub mod responsive_text_style_variant {
-        pub const DEFINITION: u32 = 131;
         pub const MIN_WIDTH: u32 = 1;
         pub const FIELDS: u32 = 2;
         pub const VARIABLE_FONT_SIZE: u32 = 3;
@@ -35380,10 +36587,13 @@ pub mod kiwi_records {
         pub const NAME: u32 = 7;
     }
     pub mod flapp_type {
-        pub const DEFINITION: u32 = 132;
+        pub const POLL: u32 = 0;
+        pub const EMBED: u32 = 1;
+        pub const FACEPILE: u32 = 2;
+        pub const ALIGNMENT: u32 = 3;
+        pub const YOUTUBE: u32 = 4;
     }
     pub mod slide_theme_props {
-        pub const DEFINITION: u32 = 133;
         pub const THEME_VERSION: u32 = 1;
         pub const VARIABLE_SET_ID: u32 = 2;
         pub const TEXT_STYLE_IDS: u32 = 3;
@@ -35394,16 +36604,13 @@ pub mod kiwi_records {
         pub const IS_GENERATED_FROM_DESIGN: u32 = 8;
     }
     pub mod slide_theme_map {
-        pub const DEFINITION: u32 = 134;
         pub const ENTRIES: u32 = 1;
     }
     pub mod slide_theme_map_entry {
-        pub const DEFINITION: u32 = 135;
         pub const THEME_ID: u32 = 1;
         pub const THEME_PROPS: u32 = 2;
     }
     pub mod shared_symbol_reference {
-        pub const DEFINITION: u32 = 136;
         pub const FILE_KEY: u32 = 1;
         pub const SYMBOL_ID: u32 = 2;
         pub const VERSION_HASH: u32 = 3;
@@ -35415,48 +36622,48 @@ pub mod kiwi_records {
         pub const IS_UNFLATTENED: u32 = 9;
     }
     pub mod shared_component_master_data {
-        pub const DEFINITION: u32 = 137;
         pub const COMPONENT_KEY: u32 = 1;
         pub const PUBLISHING_GUID_PATH_TO_TEAM_LIBRARY_GUID: u32 = 2;
         pub const IS_UNFLATTENED: u32 = 3;
     }
     pub mod instance_override_stash {
-        pub const DEFINITION: u32 = 138;
         pub const OVERRIDE_PATH_OF_SWAPPED_INSTANCE: u32 = 1;
         pub const COMPONENT_KEY: u32 = 2;
         pub const OVERRIDES: u32 = 3;
     }
     pub mod instance_override_stash_v2 {
-        pub const DEFINITION: u32 = 139;
         pub const OVERRIDE_PATH_OF_SWAPPED_INSTANCE: u32 = 1;
         pub const LOCAL_SYMBOL_ID: u32 = 2;
         pub const OVERRIDES: u32 = 3;
     }
     pub mod imported_code_file_entry {
-        pub const DEFINITION: u32 = 140;
         pub const CODE_FILE_ID: u32 = 1;
     }
     pub mod imported_code_files {
-        pub const DEFINITION: u32 = 141;
         pub const ENTRIES: u32 = 1;
     }
     pub mod blur_op_type {
-        pub const DEFINITION: u32 = 142;
+        pub const NORMAL: u32 = 0;
+        pub const PROGRESSIVE: u32 = 1;
     }
     pub mod repeat_type {
-        pub const DEFINITION: u32 = 143;
+        pub const LINEAR: u32 = 0;
+        pub const RADIAL: u32 = 1;
     }
     pub mod unit_type {
-        pub const DEFINITION: u32 = 144;
+        pub const PIXELS: u32 = 0;
+        pub const RELATIVE: u32 = 1;
     }
     pub mod repeat_order {
-        pub const DEFINITION: u32 = 145;
+        pub const FORWARD: u32 = 0;
+        pub const REVERSE: u32 = 1;
     }
     pub mod effect_axis {
-        pub const DEFINITION: u32 = 146;
+        pub const X: u32 = 0;
+        pub const Y: u32 = 1;
+        pub const X_AND_Y: u32 = 2;
     }
     pub mod effect {
-        pub const DEFINITION: u32 = 147;
         pub const TYPE: u32 = 1;
         pub const COLOR: u32 = 2;
         pub const OFFSET: u32 = 3;
@@ -35514,10 +36721,11 @@ pub mod kiwi_records {
         pub const ID: u32 = 55;
     }
     pub mod transform_modifier_type {
-        pub const DEFINITION: u32 = 148;
+        pub const REPEAT: u32 = 0;
+        pub const SYMMETRY: u32 = 1;
+        pub const SKEW: u32 = 2;
     }
     pub mod transform_modifier {
-        pub const DEFINITION: u32 = 149;
         pub const TYPE: u32 = 1;
         pub const OFFSET: u32 = 2;
         pub const VISIBLE: u32 = 3;
@@ -35530,10 +36738,11 @@ pub mod kiwi_records {
         pub const SKEW_Y: u32 = 10;
     }
     pub mod transform_schema_type {
-        pub const DEFINITION: u32 = 150;
+        pub const NONE: u32 = 0;
+        pub const FIXED_ORDER: u32 = 1;
+        pub const FREEFORM: u32 = 2;
     }
     pub mod matrix4f {
-        pub const DEFINITION: u32 = 151;
         pub const M00: u32 = 1;
         pub const M01: u32 = 2;
         pub const M02: u32 = 3;
@@ -35552,7 +36761,6 @@ pub mod kiwi_records {
         pub const M33: u32 = 16;
     }
     pub mod fixed_order_transform3d {
-        pub const DEFINITION: u32 = 152;
         pub const PERSPECTIVE: u32 = 1;
         pub const TRANSLATE_Z: u32 = 2;
         pub const ROTATE_X: u32 = 3;
@@ -35560,90 +36768,107 @@ pub mod kiwi_records {
         pub const ROTATE_Z: u32 = 5;
     }
     pub mod transform_fn_type {
-        pub const DEFINITION: u32 = 153;
+        pub const NONE: u32 = 0;
+        pub const MATRIX_3_D: u32 = 1;
+        pub const PERSPECTIVE: u32 = 2;
+        pub const TRANSLATE_Z: u32 = 3;
+        pub const ROTATE_X: u32 = 4;
+        pub const ROTATE_Y: u32 = 5;
+        pub const ROTATE_Z: u32 = 6;
     }
     pub mod transform_fn_value {
-        pub const DEFINITION: u32 = 154;
         pub const MATRIX3D: u32 = 1;
         pub const PERSPECTIVE: u32 = 2;
         pub const ROTATE_ANGLE: u32 = 3;
         pub const TRANSLATE_VALUE: u32 = 4;
     }
     pub mod transform_fn {
-        pub const DEFINITION: u32 = 155;
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod transform_schema_value {
-        pub const DEFINITION: u32 = 156;
         pub const FIXED_ORDER_TRANSFORM3D: u32 = 1;
         pub const TRANSFORM_FUNCTIONS: u32 = 2;
     }
     pub mod transform3d {
-        pub const DEFINITION: u32 = 157;
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
         pub const BACKFACE_HIDDEN: u32 = 3;
     }
     pub mod number_vector2_d {
-        pub const DEFINITION: u32 = 158;
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
     }
     pub mod scene3d {
-        pub const DEFINITION: u32 = 159;
         pub const PERSPECTIVE: u32 = 1;
         pub const PERSPECTIVE_ORIGIN: u32 = 2;
         pub const PRESERVE3D: u32 = 3;
     }
     pub mod transform_origin {
-        pub const DEFINITION: u32 = 160;
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
     }
     pub mod transition_info {
-        pub const DEFINITION: u32 = 161;
         pub const TYPE: u32 = 1;
         pub const DURATION: u32 = 2;
     }
     pub mod prototype_device_type {
-        pub const DEFINITION: u32 = 162;
+        pub const NONE: u32 = 0;
+        pub const PRESET: u32 = 1;
+        pub const CUSTOM: u32 = 2;
+        pub const PRESENTATION: u32 = 3;
     }
     pub mod device_rotation {
-        pub const DEFINITION: u32 = 163;
+        pub const NONE: u32 = 0;
+        pub const CCW_90: u32 = 1;
     }
     pub mod prototype_device {
-        pub const DEFINITION: u32 = 164;
         pub const TYPE: u32 = 1;
         pub const SIZE: u32 = 2;
         pub const PRESET_IDENTIFIER: u32 = 3;
         pub const ROTATION: u32 = 4;
     }
     pub mod overlay_position_type {
-        pub const DEFINITION: u32 = 165;
+        pub const CENTER: u32 = 0;
+        pub const TOP_LEFT: u32 = 1;
+        pub const TOP_CENTER: u32 = 2;
+        pub const TOP_RIGHT: u32 = 3;
+        pub const BOTTOM_LEFT: u32 = 4;
+        pub const BOTTOM_CENTER: u32 = 5;
+        pub const BOTTOM_RIGHT: u32 = 6;
+        pub const MANUAL: u32 = 7;
     }
     pub mod overlay_background_interaction {
-        pub const DEFINITION: u32 = 166;
+        pub const NONE: u32 = 0;
+        pub const CLOSE_ON_CLICK_OUTSIDE: u32 = 1;
     }
     pub mod overlay_background_type {
-        pub const DEFINITION: u32 = 167;
+        pub const NONE: u32 = 0;
+        pub const SOLID_COLOR: u32 = 1;
     }
     pub mod overlay_background_appearance {
-        pub const DEFINITION: u32 = 168;
         pub const BACKGROUND_TYPE: u32 = 1;
         pub const BACKGROUND_COLOR: u32 = 2;
     }
     pub mod navigation_type {
-        pub const DEFINITION: u32 = 169;
+        pub const NAVIGATE: u32 = 0;
+        pub const OVERLAY: u32 = 1;
+        pub const SWAP: u32 = 2;
+        pub const SWAP_STATE: u32 = 3;
+        pub const SCROLL_TO: u32 = 4;
     }
     pub mod export_color_profile {
-        pub const DEFINITION: u32 = 170;
+        pub const DOCUMENT: u32 = 0;
+        pub const SRGB: u32 = 1;
+        pub const DISPLAY_P3_V4: u32 = 2;
+        pub const CMYK: u32 = 3;
     }
     pub mod export_background_type {
-        pub const DEFINITION: u32 = 171;
+        pub const SOLID: u32 = 0;
+        pub const TRANSPARENT: u32 = 1;
+        pub const GRID: u32 = 2;
     }
     pub mod export_settings {
-        pub const DEFINITION: u32 = 172;
         pub const SUFFIX: u32 = 1;
         pub const IMAGE_TYPE: u32 = 2;
         pub const CONSTRAINT: u32 = 3;
@@ -35661,10 +36886,10 @@ pub mod kiwi_records {
         pub const BACKGROUND_TYPE: u32 = 15;
     }
     pub mod export_svgid_mode {
-        pub const DEFINITION: u32 = 173;
+        pub const IF_NEEDED: u32 = 0;
+        pub const ALWAYS: u32 = 1;
     }
     pub mod layout_grid {
-        pub const DEFINITION: u32 = 174;
         pub const TYPE: u32 = 1;
         pub const AXIS: u32 = 2;
         pub const VISIBLE: u32 = 3;
@@ -35680,34 +36905,39 @@ pub mod kiwi_records {
         pub const GUTTER_SIZE_VAR: u32 = 13;
     }
     pub mod guide {
-        pub const DEFINITION: u32 = 175;
         pub const AXIS: u32 = 1;
         pub const OFFSET: u32 = 2;
         pub const GUID: u32 = 3;
     }
     pub mod path {
-        pub const DEFINITION: u32 = 176;
         pub const WINDING_RULE: u32 = 1;
         pub const COMMANDS_BLOB: u32 = 2;
         pub const STYLE_ID: u32 = 3;
     }
     pub mod style_type {
-        pub const DEFINITION: u32 = 177;
+        pub const NONE: u32 = 0;
+        pub const FILL: u32 = 1;
+        pub const STROKE: u32 = 2;
+        pub const TEXT: u32 = 3;
+        pub const EFFECT: u32 = 4;
+        pub const EXPORT: u32 = 5;
+        pub const GRID: u32 = 6;
+        pub const ANIMATION: u32 = 7;
     }
     pub mod brush_orientation {
-        pub const DEFINITION: u32 = 178;
+        pub const FORWARD: u32 = 0;
+        pub const REVERSE: u32 = 1;
     }
     pub mod brush_type {
-        pub const DEFINITION: u32 = 179;
+        pub const STRETCH: u32 = 0;
+        pub const SCATTER: u32 = 1;
     }
     pub mod dynamic_stroke_settings {
-        pub const DEFINITION: u32 = 180;
         pub const FREQUENCY: u32 = 1;
         pub const WIGGLE: u32 = 2;
         pub const SMOOTHEN: u32 = 3;
     }
     pub mod scatter_stroke_settings {
-        pub const DEFINITION: u32 = 181;
         pub const GAP: u32 = 1;
         pub const WIGGLE: u32 = 2;
         pub const ANGULAR_JITTER: u32 = 3;
@@ -35715,16 +36945,13 @@ pub mod kiwi_records {
         pub const SIZE_JITTER: u32 = 5;
     }
     pub mod stretch_stroke_settings {
-        pub const DEFINITION: u32 = 182;
         pub const ORIENTATION: u32 = 1;
     }
     pub mod stroke_data {
-        pub const DEFINITION: u32 = 183;
         pub const STROKES: u32 = 1;
         pub const VERSION: u32 = 2;
     }
     pub mod stroke {
-        pub const DEFINITION: u32 = 184;
         pub const STROKE_ID: u32 = 1;
         pub const STROKE_WEIGHT: u32 = 2;
         pub const STROKE_WEIGHT_VAR: u32 = 3;
@@ -35741,46 +36968,41 @@ pub mod kiwi_records {
         pub const IS_DELETED: u32 = 14;
     }
     pub mod variable_width_point {
-        pub const DEFINITION: u32 = 185;
         pub const POSITION: u32 = 1;
         pub const ASCENT: u32 = 2;
         pub const DESCENT: u32 = 3;
         pub const SEGMENT_ID: u32 = 4;
     }
     pub mod shared_style_reference {
-        pub const DEFINITION: u32 = 186;
         pub const STYLE_KEY: u32 = 1;
         pub const VERSION_HASH: u32 = 2;
     }
     pub mod shared_style_master_data {
-        pub const DEFINITION: u32 = 187;
         pub const STYLE_KEY: u32 = 1;
         pub const SORT_POSITION: u32 = 2;
         pub const FILE_KEY: u32 = 3;
     }
     pub mod scroll_behavior {
-        pub const DEFINITION: u32 = 188;
+        pub const SCROLLS: u32 = 0;
+        pub const FIXED_WHEN_CHILD_OF_SCROLLING_FRAME: u32 = 1;
+        pub const STICKY_SCROLLS: u32 = 2;
     }
     pub mod arc_data {
-        pub const DEFINITION: u32 = 189;
         pub const STARTING_ANGLE: u32 = 1;
         pub const ENDING_ANGLE: u32 = 2;
         pub const INNER_RADIUS: u32 = 3;
     }
     pub mod symbol_link {
-        pub const DEFINITION: u32 = 190;
         pub const URI: u32 = 1;
         pub const DISPLAY_NAME: u32 = 2;
         pub const DISPLAY_TEXT: u32 = 3;
     }
     pub mod plugin_data {
-        pub const DEFINITION: u32 = 191;
         pub const PLUGIN_ID: u32 = 1;
         pub const VALUE: u32 = 2;
         pub const KEY: u32 = 3;
     }
     pub mod plugin_relaunch_data {
-        pub const DEFINITION: u32 = 192;
         pub const PLUGIN_ID: u32 = 1;
         pub const MESSAGE: u32 = 2;
         pub const COMMAND: u32 = 3;
@@ -35788,85 +37010,137 @@ pub mod kiwi_records {
         pub const CUSTOM_TOOL_ID: u32 = 5;
     }
     pub mod multiplayer_field_version {
-        pub const DEFINITION: u32 = 193;
         pub const COUNTER: u32 = 1;
         pub const SESSION_ID: u32 = 2;
     }
     pub mod connector_magnet {
-        pub const DEFINITION: u32 = 194;
+        pub const NONE: u32 = 0;
+        pub const AUTO: u32 = 1;
+        pub const TOP: u32 = 2;
+        pub const LEFT: u32 = 3;
+        pub const BOTTOM: u32 = 4;
+        pub const RIGHT: u32 = 5;
+        pub const CENTER: u32 = 6;
+        pub const AUTO_HORIZONTAL: u32 = 7;
+        pub const EDGE: u32 = 8;
+        pub const ABSOLUTE: u32 = 9;
     }
     pub mod connector_endpoint {
-        pub const DEFINITION: u32 = 195;
         pub const ENDPOINT_NODE_ID: u32 = 1;
         pub const POSITION: u32 = 2;
         pub const MAGNET: u32 = 3;
         pub const RELATIVE_POSITION: u32 = 4;
     }
     pub mod connector_control_point {
-        pub const DEFINITION: u32 = 196;
         pub const POSITION: u32 = 1;
         pub const AXIS: u32 = 2;
     }
     pub mod connector_text_section {
-        pub const DEFINITION: u32 = 197;
+        pub const MIDDLE_TO_START: u32 = 0;
+        pub const MIDDLE_TO_END: u32 = 1;
     }
     pub mod connector_off_axis_offset {
-        pub const DEFINITION: u32 = 198;
+        pub const NONE: u32 = 0;
+        pub const ABOVE: u32 = 1;
+        pub const BELOW: u32 = 2;
     }
     pub mod connector_text_midpoint {
-        pub const DEFINITION: u32 = 199;
         pub const SECTION: u32 = 1;
         pub const OFFSET: u32 = 2;
         pub const OFF_AXIS_OFFSET: u32 = 3;
     }
     pub mod connector_line_style {
-        pub const DEFINITION: u32 = 200;
+        pub const ELBOWED: u32 = 0;
+        pub const STRAIGHT: u32 = 1;
+        pub const CURVED: u32 = 2;
     }
     pub mod connector_type {
-        pub const DEFINITION: u32 = 201;
+        pub const MANUAL: u32 = 0;
+        pub const DIAGRAM: u32 = 1;
     }
     pub mod annotation_property_type {
-        pub const DEFINITION: u32 = 202;
+        pub const FILL: u32 = 0;
+        pub const STROKE: u32 = 1;
+        pub const WIDTH: u32 = 2;
+        pub const HEIGHT: u32 = 3;
+        pub const MIN_WIDTH: u32 = 4;
+        pub const MIN_HEIGHT: u32 = 5;
+        pub const MAX_WIDTH: u32 = 6;
+        pub const MAX_HEIGHT: u32 = 7;
+        pub const STROKE_WIDTH: u32 = 8;
+        pub const CORNER_RADIUS: u32 = 9;
+        pub const EFFECT: u32 = 10;
+        pub const TEXT_STYLE: u32 = 11;
+        pub const TEXT_ALIGN_HORIZONTAL: u32 = 12;
+        pub const FONT_FAMILY: u32 = 13;
+        pub const FONT_SIZE: u32 = 14;
+        pub const FONT_WEIGHT: u32 = 15;
+        pub const LINE_HEIGHT: u32 = 16;
+        pub const LETTER_SPACING: u32 = 17;
+        pub const STACK_SPACING: u32 = 18;
+        pub const STACK_PADDING: u32 = 19;
+        pub const STACK_MODE: u32 = 20;
+        pub const STACK_ALIGNMENT: u32 = 21;
+        pub const OPACITY: u32 = 22;
+        pub const COMPONENT: u32 = 23;
+        pub const FONT_STYLE: u32 = 24;
+        pub const GRID_ROW_GAP: u32 = 25;
+        pub const GRID_COLUMN_GAP: u32 = 26;
+        pub const GRID_ROW_COUNT: u32 = 27;
+        pub const GRID_COLUMN_COUNT: u32 = 28;
+        pub const GRID_ROW_ANCHOR_INDEX: u32 = 29;
+        pub const GRID_COLUMN_ANCHOR_INDEX: u32 = 30;
+        pub const GRID_ROW_SPAN: u32 = 31;
+        pub const GRID_COLUMN_SPAN: u32 = 32;
     }
     pub mod annotation_property {
-        pub const DEFINITION: u32 = 203;
         pub const TYPE: u32 = 1;
     }
     pub mod annotation_category_preset {
-        pub const DEFINITION: u32 = 204;
+        pub const NONE: u32 = 0;
+        pub const ACCESSIBILITY: u32 = 1;
+        pub const BEHAVIOR: u32 = 2;
+        pub const CONTENT: u32 = 3;
+        pub const DEVELOPMENT: u32 = 4;
+        pub const INTERACTION: u32 = 5;
     }
     pub mod annotation_category_color {
-        pub const DEFINITION: u32 = 205;
+        pub const YELLOW: u32 = 0;
+        pub const ORANGE: u32 = 1;
+        pub const RED: u32 = 2;
+        pub const PINK: u32 = 3;
+        pub const VIOLET: u32 = 4;
+        pub const BLUE: u32 = 5;
+        pub const TEAL: u32 = 6;
+        pub const GREEN: u32 = 7;
     }
     pub mod annotation_category_custom {
-        pub const DEFINITION: u32 = 206;
         pub const COLOR: u32 = 1;
         pub const CUSTOM_COLOR: u32 = 2;
         pub const LABEL: u32 = 3;
     }
     pub mod annotation_category {
-        pub const DEFINITION: u32 = 207;
         pub const ID: u32 = 1;
         pub const PRESET: u32 = 2;
         pub const CUSTOM: u32 = 3;
     }
     pub mod annotation_categories {
-        pub const DEFINITION: u32 = 208;
         pub const VERSION: u32 = 1;
         pub const ITEMS: u32 = 2;
     }
     pub mod annotation {
-        pub const DEFINITION: u32 = 209;
         pub const LABEL: u32 = 1;
         pub const PROPERTIES: u32 = 2;
         pub const LABEL_V2: u32 = 3;
         pub const CATEGORY_ID: u32 = 4;
     }
     pub mod annotation_measurement_node_side {
-        pub const DEFINITION: u32 = 210;
+        pub const TOP: u32 = 0;
+        pub const BOTTOM: u32 = 1;
+        pub const LEFT: u32 = 2;
+        pub const RIGHT: u32 = 3;
     }
     pub mod annotation_measurement {
-        pub const DEFINITION: u32 = 211;
         pub const ID: u32 = 1;
         pub const FROM_NODE: u32 = 2;
         pub const TO_NODE: u32 = 3;
@@ -35878,47 +37152,55 @@ pub mod kiwi_records {
         pub const FREE_TEXT: u32 = 9;
     }
     pub mod library_move_info {
-        pub const DEFINITION: u32 = 212;
         pub const OLD_KEY: u32 = 1;
         pub const PASTE_FILE_KEY: u32 = 2;
     }
     pub mod library_move_history_item {
-        pub const DEFINITION: u32 = 213;
         pub const SOURCE_NODE_ID: u32 = 1;
         pub const SOURCE_COMPONENT_KEY: u32 = 2;
     }
     pub mod developer_related_link {
-        pub const DEFINITION: u32 = 214;
         pub const NODE_ID: u32 = 1;
         pub const FILE_KEY: u32 = 2;
         pub const LINK_NAME: u32 = 3;
         pub const LINK_URL: u32 = 4;
     }
     pub mod widget_pointer {
-        pub const DEFINITION: u32 = 215;
         pub const NODE_ID: u32 = 1;
     }
     pub mod edit_info {
-        pub const DEFINITION: u32 = 216;
         pub const TIMESTAMP_ISO8601: u32 = 1;
         pub const USER_ID: u32 = 2;
         pub const LAST_EDITED_AT: u32 = 3;
         pub const CREATED_AT: u32 = 4;
     }
     pub mod editor_type {
-        pub const DEFINITION: u32 = 217;
+        pub const DESIGN: u32 = 0;
+        pub const WHITEBOARD: u32 = 1;
+        pub const SLIDES: u32 = 2;
+        pub const DEV_HANDOFF: u32 = 3;
+        pub const SITES: u32 = 4;
+        pub const COOPER: u32 = 5;
+        pub const ILLUSTRATION: u32 = 6;
+        pub const FIGMAKE: u32 = 7;
+        pub const FIGSPEC: u32 = 8;
     }
     pub mod mask_type {
-        pub const DEFINITION: u32 = 218;
+        pub const ALPHA: u32 = 0;
+        pub const OUTLINE: u32 = 1;
+        pub const LUMINANCE: u32 = 2;
     }
     pub mod module_type {
-        pub const DEFINITION: u32 = 219;
+        pub const NONE: u32 = 0;
+        pub const SINGLE_NODE: u32 = 1;
+        pub const MULTI_NODE: u32 = 2;
     }
     pub mod section_status {
-        pub const DEFINITION: u32 = 220;
+        pub const NONE: u32 = 0;
+        pub const BUILD: u32 = 1;
+        pub const COMPLETED: u32 = 2;
     }
     pub mod section_status_info {
-        pub const DEFINITION: u32 = 221;
         pub const STATUS: u32 = 1;
         pub const LAST_UPDATE_UNIX_TIMESTAMP: u32 = 2;
         pub const DESCRIPTION: u32 = 3;
@@ -35926,7 +37208,6 @@ pub mod kiwi_records {
         pub const PREV_STATUS: u32 = 5;
     }
     pub mod buzz_approval_request_info {
-        pub const DEFINITION: u32 = 222;
         pub const REQUEST_ID: u32 = 1;
         pub const REQUESTER_USER_ID: u32 = 2;
         pub const REQUESTED_AT: u32 = 3;
@@ -35936,20 +37217,20 @@ pub mod kiwi_records {
         pub const ASSETS_IN_REQUEST: u32 = 7;
     }
     pub mod buzz_approval_requests {
-        pub const DEFINITION: u32 = 223;
         pub const REQUESTS: u32 = 1;
     }
     pub mod buzz_approval_node_status {
-        pub const DEFINITION: u32 = 224;
+        pub const NONE: u32 = 0;
+        pub const IN_REVIEW: u32 = 1;
+        pub const APPROVED: u32 = 2;
+        pub const CHANGES_REQUESTED: u32 = 3;
     }
     pub mod buzz_approval_node_status_info {
-        pub const DEFINITION: u32 = 225;
         pub const CURRENT_STATUS: u32 = 1;
         pub const WAS_PREVIOUSLY_APPROVED: u32 = 2;
         pub const APPROVAL_REVOKED_AT_HISTORY: u32 = 3;
     }
     pub mod code_embed_info {
-        pub const DEFINITION: u32 = 226;
         pub const URL: u32 = 1;
         pub const SRC_URL: u32 = 2;
         pub const TITLE: u32 = 3;
@@ -35957,10 +37238,10 @@ pub mod kiwi_records {
         pub const IS_PUBLISHED_SITE: u32 = 5;
     }
     pub mod variable_timing_display_unit {
-        pub const DEFINITION: u32 = 227;
+        pub const MILLISECONDS: u32 = 0;
+        pub const SECONDS: u32 = 1;
     }
     pub mod node_change {
-        pub const DEFINITION: u32 = 228;
         pub const GUID: u32 = 1;
         pub const PHASE: u32 = 2;
         pub const PARENT_INDEX: u32 = 3;
@@ -36553,21 +37834,20 @@ pub mod kiwi_records {
         pub const SPEC_EMBED_URL: u32 = 590;
     }
     pub mod git_repo_ref_provider {
-        pub const DEFINITION: u32 = 229;
+        pub const UGIT: u32 = 0;
+        pub const GITHUB: u32 = 1;
+        pub const OTHER: u32 = 2;
     }
     pub mod git_repo_ref {
-        pub const DEFINITION: u32 = 230;
         pub const PROVIDER: u32 = 1;
         pub const GIT_REPO: u32 = 2;
         pub const GIT_REF: u32 = 3;
     }
     pub mod source_control_config {
-        pub const DEFINITION: u32 = 231;
         pub const ORIGIN: u32 = 1;
         pub const UPSTREAM: u32 = 2;
     }
     pub mod code_snapshot {
-        pub const DEFINITION: u32 = 232;
         pub const PAINTS: u32 = 1;
         pub const OFFSET: u32 = 2;
         pub const LAYOUT_SIZE: u32 = 3;
@@ -36577,17 +37857,14 @@ pub mod kiwi_records {
         pub const INVALIDATED_AT: u32 = 7;
     }
     pub mod code_output_layer {
-        pub const DEFINITION: u32 = 233;
         pub const NODE: u32 = 1;
     }
     pub mod code_snapshot_layers {
-        pub const DEFINITION: u32 = 234;
         pub const STATE: u32 = 1;
         pub const INVALIDATED_AT: u32 = 2;
         pub const LAYERS: u32 = 3;
     }
     pub mod code_behavior_data {
-        pub const DEFINITION: u32 = 235;
         pub const NAME: u32 = 1;
         pub const ICON: u32 = 2;
         pub const NODE_TYPES: u32 = 3;
@@ -36595,16 +37872,13 @@ pub mod kiwi_records {
         pub const API_VERSION: u32 = 5;
     }
     pub mod code_example {
-        pub const DEFINITION: u32 = 236;
         pub const EXAMPLE_NAME: u32 = 1;
         pub const CODE_EXPORT_NAME: u32 = 2;
     }
     pub mod used_make_library {
-        pub const DEFINITION: u32 = 237;
         pub const MAKE_LIBRARY_ID: u32 = 1;
     }
     pub mod cookie_banner_text {
-        pub const DEFINITION: u32 = 238;
         pub const BANNER_HEADER: u32 = 1;
         pub const BANNER_DISCLAIMER_EXPLICIT: u32 = 2;
         pub const BANNER_DISCLAIMER_IMPLICIT: u32 = 3;
@@ -36625,7 +37899,6 @@ pub mod kiwi_records {
         pub const TRIGGER_LABEL: u32 = 18;
     }
     pub mod cookie_banner_settings {
-        pub const DEFINITION: u32 = 239;
         pub const ENABLED: u32 = 1;
         pub const COMPONENT_TYPE: u32 = 2;
         pub const X_ALIGNMENT: u32 = 3;
@@ -36639,19 +37912,24 @@ pub mod kiwi_records {
         pub const LOCALE: u32 = 11;
     }
     pub mod cookie_banner_component_type {
-        pub const DEFINITION: u32 = 240;
+        pub const BANNER: u32 = 0;
+        pub const MODAL: u32 = 1;
     }
     pub mod trigger_component_type {
-        pub const DEFINITION: u32 = 241;
+        pub const BANNER: u32 = 0;
+        pub const TAG: u32 = 1;
     }
     pub mod cookie_x_alignment {
-        pub const DEFINITION: u32 = 242;
+        pub const LEFT: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const RIGHT: u32 = 2;
     }
     pub mod cookie_y_alignment {
-        pub const DEFINITION: u32 = 243;
+        pub const TOP: u32 = 0;
+        pub const CENTER: u32 = 1;
+        pub const BOTTOM: u32 = 2;
     }
     pub mod responsive_set_settings {
-        pub const DEFINITION: u32 = 244;
         pub const TITLE: u32 = 1;
         pub const DESCRIPTION: u32 = 2;
         pub const SCALING_MODE: u32 = 3;
@@ -36675,101 +37953,96 @@ pub mod kiwi_records {
         pub const COOKIE_BANNER: u32 = 21;
     }
     pub mod responsive_scaling_mode {
-        pub const DEFINITION: u32 = 245;
+        pub const REFLOW: u32 = 0;
+        pub const SCALE: u32 = 1;
     }
     pub mod cms_selector {
-        pub const DEFINITION: u32 = 246;
         pub const CMS_COLLECTION_ID: u32 = 1;
         pub const FILTER_CRITERIA: u32 = 2;
         pub const SORTS: u32 = 3;
         pub const LIMIT: u32 = 4;
     }
     pub mod cms_filter_critera {
-        pub const DEFINITION: u32 = 247;
         pub const MATCH_TYPE: u32 = 1;
         pub const FILTERS: u32 = 2;
     }
     pub mod cms_filter_criteria_match_type {
-        pub const DEFINITION: u32 = 248;
+        pub const MATCH_ALL: u32 = 0;
+        pub const MATCH_ANY: u32 = 1;
     }
     pub mod cms_selector_filter {
-        pub const DEFINITION: u32 = 249;
         pub const CMS_FIELD_ID: u32 = 1;
         pub const OP: u32 = 2;
         pub const COMPARISON_VALUE: u32 = 3;
     }
     pub mod cms_selector_filter_operator {
-        pub const DEFINITION: u32 = 250;
+        pub const EQUALS: u32 = 0;
     }
     pub mod cms_selector_sort {
-        pub const DEFINITION: u32 = 251;
         pub const CMS_FIELD_ID: u32 = 1;
         pub const ORDER_BY: u32 = 2;
     }
     pub mod cms_field_order_by {
-        pub const DEFINITION: u32 = 252;
+        pub const ASCENDING: u32 = 0;
+        pub const DESCENDING: u32 = 1;
     }
     pub mod cms_consumption_map {
-        pub const DEFINITION: u32 = 253;
         pub const ENTRIES: u32 = 1;
     }
     pub mod cms_consumption_map_entry {
-        pub const DEFINITION: u32 = 254;
         pub const CONSUMPTION_FIELD: u32 = 1;
         pub const CMS_FIELD_ID: u32 = 2;
     }
     pub mod cms_consumption_field {
-        pub const DEFINITION: u32 = 255;
+        pub const MISSING: u32 = 0;
+        pub const TEXT_DATA: u32 = 1;
     }
     pub mod cms_rich_text_style_map {
-        pub const DEFINITION: u32 = 256;
         pub const ENTRIES: u32 = 1;
     }
     pub mod cms_rich_text_style_entry {
-        pub const DEFINITION: u32 = 257;
         pub const STYLE_CLASS: u32 = 1;
         pub const TEXT_DESCRIPTOR: u32 = 2;
     }
     pub mod cms_rich_text_style_class {
-        pub const DEFINITION: u32 = 258;
+        pub const HEADING1: u32 = 0;
+        pub const HEADING2: u32 = 1;
+        pub const HEADING3: u32 = 2;
+        pub const HEADING4: u32 = 3;
+        pub const HEADING5: u32 = 4;
+        pub const HEADING6: u32 = 5;
+        pub const PARAGRAPH: u32 = 6;
+        pub const LINK: u32 = 7;
+        pub const BLOCKQUOTE: u32 = 8;
     }
     pub mod cms_rich_text_descriptor {
-        pub const DEFINITION: u32 = 259;
         pub const TEXT_STYLE_ID: u32 = 1;
         pub const FONT_NAME_VARIANTS: u32 = 2;
     }
     pub mod repeater_cms_override_data {
-        pub const DEFINITION: u32 = 260;
         pub const OVERRIDES: u32 = 1;
     }
     pub mod repeater_override_data {
-        pub const DEFINITION: u32 = 261;
         pub const PARENT_INDEX_OVERRIDES: u32 = 1;
     }
     pub mod repeater_symbol_override_data {
-        pub const DEFINITION: u32 = 262;
         pub const OVERRIDES_BY_POSITION: u32 = 1;
     }
     pub mod repeater_position_overrides {
-        pub const DEFINITION: u32 = 263;
         pub const POSITION: u32 = 1;
         pub const OVERRIDES: u32 = 2;
     }
     pub mod inherited_variables_data {
-        pub const DEFINITION: u32 = 264;
         pub const VARIABLE_IDS: u32 = 1;
     }
     pub mod inherited_variable_entry {
-        pub const DEFINITION: u32 = 265;
         pub const VARIABLE_ID: u32 = 1;
     }
     pub mod hub_file_attribution {
-        pub const DEFINITION: u32 = 266;
         pub const HUB_FILE_ID: u32 = 1;
         pub const HUB_FILE_NAME: u32 = 2;
     }
     pub mod managed_string_data {
-        pub const DEFINITION: u32 = 267;
         pub const KEY: u32 = 1;
         pub const CONTEXT: u32 = 2;
         pub const LOCALE: u32 = 3;
@@ -36777,13 +38050,15 @@ pub mod kiwi_records {
         pub const CONTENT_SCHEMA: u32 = 5;
     }
     pub mod managed_string_content_schema {
-        pub const DEFINITION: u32 = 268;
+        pub const V0: u32 = 0;
     }
     pub mod managed_string_node_type {
-        pub const DEFINITION: u32 = 269;
+        pub const TEXT: u32 = 0;
+        pub const CONCATENATE: u32 = 1;
+        pub const PLURAL: u32 = 2;
+        pub const PLACEHOLDER: u32 = 3;
     }
     pub mod managed_string_node {
-        pub const DEFINITION: u32 = 270;
         pub const TYPE: u32 = 1;
         pub const TEXT_NODE_DATA: u32 = 2;
         pub const CONCATENATE_NODE_DATA: u32 = 3;
@@ -36791,41 +38066,42 @@ pub mod kiwi_records {
         pub const PLACEHOLDER_NODE_DATA: u32 = 5;
     }
     pub mod managed_string_text_node_data {
-        pub const DEFINITION: u32 = 271;
         pub const VALUE: u32 = 1;
     }
     pub mod managed_string_concatenate_ast_node_data {
-        pub const DEFINITION: u32 = 272;
         pub const VALUES: u32 = 1;
     }
     pub mod managed_string_plural_type {
-        pub const DEFINITION: u32 = 273;
+        pub const ZERO: u32 = 0;
+        pub const ONE: u32 = 1;
+        pub const TWO: u32 = 2;
+        pub const FEW: u32 = 3;
+        pub const MANY: u32 = 4;
+        pub const OTHER: u32 = 5;
     }
     pub mod managed_string_plural_ast_node_data {
-        pub const DEFINITION: u32 = 274;
         pub const IDENTIFIER: u32 = 1;
         pub const CONDITIONS: u32 = 2;
     }
     pub mod managed_string_plural_type_map_entry {
-        pub const DEFINITION: u32 = 275;
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod managed_string_format_type {
-        pub const DEFINITION: u32 = 276;
+        pub const TEXT: u32 = 0;
+        pub const DATE: u32 = 1;
+        pub const TIME: u32 = 2;
+        pub const NUMBER: u32 = 3;
     }
     pub mod managed_string_placeholder_ast_node_data {
-        pub const DEFINITION: u32 = 277;
         pub const IDENTIFIER: u32 = 1;
         pub const FORMAT_TYPE: u32 = 2;
         pub const FORMAT_PATTERN: u32 = 3;
     }
     pub mod cooper_revert_data {
-        pub const DEFINITION: u32 = 278;
         pub const ORIGINAL_VALUES: u32 = 1;
     }
     pub mod video_playback {
-        pub const DEFINITION: u32 = 279;
         pub const AUTOPLAY: u32 = 1;
         pub const MEDIA_LOOP: u32 = 2;
         pub const MUTED: u32 = 3;
@@ -36834,13 +38110,24 @@ pub mod kiwi_records {
         pub const END_TIME_MS: u32 = 6;
     }
     pub mod media_action {
-        pub const DEFINITION: u32 = 280;
+        pub const PLAY: u32 = 0;
+        pub const PAUSE: u32 = 1;
+        pub const TOGGLE_PLAY_PAUSE: u32 = 2;
+        pub const MUTE: u32 = 3;
+        pub const UNMUTE: u32 = 4;
+        pub const TOGGLE_MUTE_UNMUTE: u32 = 5;
+        pub const SKIP_FORWARD: u32 = 6;
+        pub const SKIP_BACKWARD: u32 = 7;
+        pub const SKIP_TO: u32 = 8;
+        pub const SET_PLAYBACK_RATE: u32 = 9;
     }
     pub mod animation_timeline_action {
-        pub const DEFINITION: u32 = 281;
+        pub const PLAY: u32 = 0;
+        pub const PAUSE: u32 = 1;
+        pub const TOGGLE_PLAY_PAUSE: u32 = 2;
+        pub const SET_PLAYHEAD: u32 = 3;
     }
     pub mod widget_hover_style {
-        pub const DEFINITION: u32 = 282;
         pub const FILL_PAINTS: u32 = 1;
         pub const STROKE_PAINTS: u32 = 2;
         pub const OPACITY: u32 = 3;
@@ -36849,143 +38136,183 @@ pub mod kiwi_records {
         pub const IS_OPACITY_SET: u32 = 6;
     }
     pub mod widget_derived_subtree_cursor {
-        pub const DEFINITION: u32 = 283;
         pub const SESSION_ID: u32 = 1;
         pub const COUNTER: u32 = 2;
     }
     pub mod multiplayer_map {
-        pub const DEFINITION: u32 = 284;
         pub const ENTRIES: u32 = 1;
     }
     pub mod multiplayer_map_entry {
-        pub const DEFINITION: u32 = 285;
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod variable_data_map {
-        pub const DEFINITION: u32 = 286;
         pub const ENTRIES: u32 = 1;
     }
     pub mod variable_data_map_entry {
-        pub const DEFINITION: u32 = 287;
         pub const NODE_FIELD: u32 = 1;
         pub const VARIABLE_DATA: u32 = 2;
         pub const VARIABLE_FIELD: u32 = 3;
     }
     pub mod variable_field {
-        pub const DEFINITION: u32 = 288;
+        pub const MISSING: u32 = 0;
+        pub const CORNER_RADIUS: u32 = 1;
+        pub const PARAGRAPH_SPACING: u32 = 2;
+        pub const PARAGRAPH_INDENT: u32 = 3;
+        pub const STROKE_WEIGHT: u32 = 4;
+        pub const STACK_SPACING: u32 = 5;
+        pub const STACK_PADDING_LEFT: u32 = 6;
+        pub const STACK_PADDING_TOP: u32 = 7;
+        pub const STACK_PADDING_RIGHT: u32 = 8;
+        pub const STACK_PADDING_BOTTOM: u32 = 9;
+        pub const VISIBLE: u32 = 10;
+        pub const TEXT_DATA: u32 = 11;
+        pub const WIDTH: u32 = 12;
+        pub const HEIGHT: u32 = 13;
+        pub const RECTANGLE_TOP_LEFT_CORNER_RADIUS: u32 = 14;
+        pub const RECTANGLE_TOP_RIGHT_CORNER_RADIUS: u32 = 15;
+        pub const RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS: u32 = 16;
+        pub const RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS: u32 = 17;
+        pub const BORDER_TOP_WEIGHT: u32 = 18;
+        pub const BORDER_BOTTOM_WEIGHT: u32 = 19;
+        pub const BORDER_LEFT_WEIGHT: u32 = 20;
+        pub const BORDER_RIGHT_WEIGHT: u32 = 21;
+        pub const VARIANT_PROPERTIES: u32 = 22;
+        pub const STACK_COUNTER_SPACING: u32 = 23;
+        pub const MIN_WIDTH: u32 = 24;
+        pub const MAX_WIDTH: u32 = 25;
+        pub const MIN_HEIGHT: u32 = 26;
+        pub const MAX_HEIGHT: u32 = 27;
+        pub const FONT_FAMILY: u32 = 28;
+        pub const FONT_STYLE: u32 = 29;
+        pub const FONT_VARIATIONS: u32 = 30;
+        pub const OPACITY: u32 = 31;
+        pub const FONT_SIZE: u32 = 32;
+        pub const LETTER_SPACING: u32 = 34;
+        pub const LINE_HEIGHT: u32 = 36;
+        pub const OVERRIDDEN_SYMBOL_ID: u32 = 37;
+        pub const HYPERLINK: u32 = 38;
+        pub const CMS_SERIALIZED_RICH_TEXT_DATA: u32 = 39;
+        pub const SLOT_CONTENT_ID: u32 = 40;
+        pub const GRID_ROW_GAP: u32 = 41;
+        pub const GRID_COLUMN_GAP: u32 = 42;
+        pub const X_POSITION: u32 = 43;
+        pub const Y_POSITION: u32 = 44;
+        pub const ROTATION: u32 = 45;
+        pub const MOTION_TRANSLATION_X: u32 = 46;
+        pub const MOTION_TRANSLATION_Y: u32 = 47;
+        pub const MOTION_ROTATION: u32 = 48;
+        pub const MOTION_SCALE_X: u32 = 49;
+        pub const MOTION_SCALE_Y: u32 = 50;
+        pub const MOTION_SHEAR: u32 = 51;
+        pub const SCROLL_OFFSET_X: u32 = 52;
+        pub const SCROLL_OFFSET_Y: u32 = 53;
+        pub const PATH_TRIM_START: u32 = 54;
+        pub const PATH_TRIM_END: u32 = 55;
+        pub const DISSOLVE_PROGRESS: u32 = 56;
+        pub const EASING_DATA: u32 = 57;
+        pub const MEDIA_CURRENT_TIME: u32 = 58;
+        pub const TRANSFORM_3_D_PERSPECTIVE: u32 = 59;
+        pub const TRANSFORM_3_D_TRANSLATION_Z: u32 = 60;
+        pub const TRANSFORM_3_D_ROTATION_X: u32 = 61;
+        pub const TRANSFORM_3_D_ROTATION_Y: u32 = 62;
+        pub const TRANSFORM_3_D_ROTATION_Z: u32 = 63;
+        pub const POLYGON_COUNT: u32 = 64;
+        pub const ARC_DATA_STARTING_ANGLE: u32 = 65;
+        pub const ARC_DATA_ENDING_ANGLE: u32 = 66;
+        pub const ARC_DATA_INNER_RADIUS: u32 = 67;
     }
     pub mod variable_mode_by_set_map {
-        pub const DEFINITION: u32 = 289;
         pub const ENTRIES: u32 = 1;
     }
     pub mod variable_mode_by_set_map_entry {
-        pub const DEFINITION: u32 = 290;
         pub const VARIABLE_SET_ID: u32 = 1;
         pub const VARIABLE_MODE_ID: u32 = 2;
         pub const VARIABLE_SET_EXTENSION_ID: u32 = 3;
     }
     pub mod code_syntax_map {
-        pub const DEFINITION: u32 = 291;
         pub const ENTRIES: u32 = 1;
     }
     pub mod code_syntax_map_entry {
-        pub const DEFINITION: u32 = 292;
         pub const PLATFORM: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod table_merged_cell_map {
-        pub const DEFINITION: u32 = 293;
         pub const ENTRIES: u32 = 1;
     }
     pub mod table_merged_cell_map_entry {
-        pub const DEFINITION: u32 = 294;
         pub const ROW_ID: u32 = 1;
         pub const COL_ID: u32 = 2;
         pub const ROW_SPAN: u32 = 3;
         pub const COL_SPAN: u32 = 4;
     }
     pub mod table_row_column_position_map {
-        pub const DEFINITION: u32 = 295;
         pub const ENTRIES: u32 = 1;
     }
     pub mod table_row_column_position_map_entry {
-        pub const DEFINITION: u32 = 296;
         pub const ID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
     pub mod guid_position_map {
-        pub const DEFINITION: u32 = 297;
         pub const ENTRIES: u32 = 1;
     }
     pub mod guid_position_map_entry {
-        pub const DEFINITION: u32 = 298;
         pub const ID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
     pub mod guid_grid_track_size_map {
-        pub const DEFINITION: u32 = 299;
         pub const ENTRIES: u32 = 1;
     }
     pub mod guid_grid_track_size_map_entry {
-        pub const DEFINITION: u32 = 300;
         pub const ID: u32 = 1;
         pub const TRACK_SIZE: u32 = 2;
     }
     pub mod object_animation_list {
-        pub const DEFINITION: u32 = 301;
         pub const ENTRIES: u32 = 1;
     }
     pub mod object_animation_list_item {
-        pub const DEFINITION: u32 = 302;
         pub const TARGET_NODE_ID: u32 = 1;
         pub const ANIMATION: u32 = 2;
     }
     pub mod grid_track_size {
-        pub const DEFINITION: u32 = 303;
         pub const MIN_SIZING: u32 = 1;
         pub const MAX_SIZING: u32 = 2;
     }
     pub mod grid_track_sizing_function {
-        pub const DEFINITION: u32 = 304;
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod grid_track_sizing_type {
-        pub const DEFINITION: u32 = 305;
+        pub const FLEX: u32 = 0;
+        pub const FIXED: u32 = 1;
+        pub const HUG: u32 = 2;
     }
     pub mod table_row_column_size_map {
-        pub const DEFINITION: u32 = 306;
         pub const ENTRIES: u32 = 1;
     }
     pub mod table_row_column_size_map_entry {
-        pub const DEFINITION: u32 = 307;
         pub const ID: u32 = 1;
         pub const SIZE: u32 = 2;
     }
     pub mod agenda_position_map {
-        pub const DEFINITION: u32 = 308;
         pub const ENTRIES: u32 = 1;
     }
     pub mod agenda_position_map_entry {
-        pub const DEFINITION: u32 = 309;
         pub const ID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
     pub mod agenda_item_type {
-        pub const DEFINITION: u32 = 310;
+        pub const NODE: u32 = 0;
+        pub const BLOCK: u32 = 1;
     }
     pub mod agenda_metadata_map {
-        pub const DEFINITION: u32 = 311;
         pub const ENTRIES: u32 = 1;
     }
     pub mod agenda_metadata_map_entry {
-        pub const DEFINITION: u32 = 312;
         pub const ID: u32 = 1;
         pub const DATA: u32 = 2;
     }
     pub mod agenda_metadata {
-        pub const DEFINITION: u32 = 313;
         pub const NAME: u32 = 1;
         pub const TYPE: u32 = 2;
         pub const TARGET_NODE_ID: u32 = 3;
@@ -36994,31 +38321,28 @@ pub mod kiwi_records {
         pub const MUSIC_INFO: u32 = 6;
     }
     pub mod agenda_timer_info {
-        pub const DEFINITION: u32 = 314;
         pub const TIMER_LENGTH: u32 = 1;
     }
     pub mod agenda_vote_info {
-        pub const DEFINITION: u32 = 315;
         pub const VOTE_COUNT: u32 = 1;
     }
     pub mod agenda_music_info {
-        pub const DEFINITION: u32 = 316;
         pub const SONG_ID: u32 = 1;
         pub const START_TIME_MS: u32 = 2;
     }
     pub mod diagram_layout_rule_type {
-        pub const DEFINITION: u32 = 317;
+        pub const NONE: u32 = 0;
+        pub const TREE: u32 = 1;
     }
     pub mod diagram_parent_index {
-        pub const DEFINITION: u32 = 318;
         pub const GUID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
     pub mod diagram_layout_paused {
-        pub const DEFINITION: u32 = 319;
+        pub const NO: u32 = 0;
+        pub const YES: u32 = 1;
     }
     pub mod component_prop_ref {
-        pub const DEFINITION: u32 = 320;
         pub const NODE_FIELD: u32 = 1;
         pub const DEF_ID: u32 = 2;
         pub const ZOMBIE_FALLBACK_NAME: u32 = 3;
@@ -37026,17 +38350,19 @@ pub mod kiwi_records {
         pub const IS_DELETED: u32 = 5;
     }
     pub mod component_prop_node_field {
-        pub const DEFINITION: u32 = 321;
+        pub const VISIBLE: u32 = 0;
+        pub const TEXT_DATA: u32 = 1;
+        pub const OVERRIDDEN_SYMBOL_ID: u32 = 2;
+        pub const INHERIT_FILL_STYLE_ID: u32 = 3;
+        pub const SLOT_CONTENT_ID: u32 = 4;
     }
     pub mod component_prop_assignment {
-        pub const DEFINITION: u32 = 322;
         pub const DEF_ID: u32 = 1;
         pub const VALUE: u32 = 2;
         pub const VAR_VALUE: u32 = 3;
         pub const LEGACY_DERIVED_TEXT_DATA: u32 = 4;
     }
     pub mod component_prop_def {
-        pub const DEFINITION: u32 = 323;
         pub const ID: u32 = 1;
         pub const NAME: u32 = 2;
         pub const INITIAL_VALUE: u32 = 3;
@@ -37052,7 +38378,6 @@ pub mod kiwi_records {
         pub const COLOR_ARRAY_CONFIG: u32 = 13;
     }
     pub mod component_prop_value {
-        pub const DEFINITION: u32 = 324;
         pub const BOOL_VALUE: u32 = 1;
         pub const TEXT_VALUE: u32 = 2;
         pub const GUID_VALUE: u32 = 3;
@@ -37067,50 +38392,57 @@ pub mod kiwi_records {
         pub const COLOR_POINT_VALUE: u32 = 12;
     }
     pub mod timeline_data {
-        pub const DEFINITION: u32 = 325;
         pub const DURATION_US: u32 = 1;
         pub const DEFAULT_TIMELINE: u32 = 2;
         pub const PARENT_TIMELINE_DEF_ID: u32 = 3;
         pub const PLAYBACK_STYLE: u32 = 4;
     }
     pub mod timeline_definitions_map {
-        pub const DEFINITION: u32 = 326;
         pub const ENTRIES: u32 = 1;
     }
     pub mod timeline_definitions_map_entry {
-        pub const DEFINITION: u32 = 327;
         pub const ID: u32 = 1;
         pub const DATA: u32 = 2;
     }
     pub mod timeline_assignment_key {
-        pub const DEFINITION: u32 = 328;
         pub const ASSIGNED_TIMELINE_ID: u32 = 1;
         pub const CONTAINING_TIMELINE_ID: u32 = 2;
     }
     pub mod timeline_binding_data {
-        pub const DEFINITION: u32 = 329;
         pub const OFFSET_US: u32 = 1;
         pub const DISABLED: u32 = 2;
     }
     pub mod timeline_assignments_map {
-        pub const DEFINITION: u32 = 330;
         pub const ENTRIES: u32 = 1;
     }
     pub mod timeline_assignments_map_entry {
-        pub const DEFINITION: u32 = 331;
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod component_prop_type {
-        pub const DEFINITION: u32 = 332;
+        pub const BOOL: u32 = 0;
+        pub const TEXT: u32 = 1;
+        pub const COLOR: u32 = 2;
+        pub const INSTANCE_SWAP: u32 = 3;
+        pub const VARIANT: u32 = 4;
+        pub const NUMBER: u32 = 5;
+        pub const IMAGE: u32 = 6;
+        pub const SLOT: u32 = 7;
+        pub const EASING: u32 = 8;
+        pub const COLOR_ARRAY: u32 = 9;
+        pub const VECTOR: u32 = 10;
+        pub const LINE: u32 = 11;
+        pub const CIRCLE: u32 = 12;
+        pub const ROTATION_3_D: u32 = 13;
+        pub const CIRCLE_POINT: u32 = 14;
+        pub const GRADIENT: u32 = 15;
+        pub const COLOR_POINT: u32 = 16;
     }
     pub mod component_prop_preferred_values {
-        pub const DEFINITION: u32 = 333;
         pub const STRING_VALUES: u32 = 1;
         pub const INSTANCE_SWAP_VALUES: u32 = 2;
     }
     pub mod parameter_config {
-        pub const DEFINITION: u32 = 334;
         pub const NUMBER_PROP_CONFIG: u32 = 1;
         pub const CONTROL: u32 = 2;
         pub const SLIDER_CONFIG: u32 = 3;
@@ -37126,46 +38458,44 @@ pub mod kiwi_records {
         pub const SHOW_DIVIDER_ABOVE: u32 = 13;
     }
     pub mod parameter_config_control {
-        pub const DEFINITION: u32 = 335;
+        pub const DEFAULT: u32 = 0;
+        pub const SLIDER: u32 = 1;
+        pub const INPUT: u32 = 2;
+        pub const SELECT: u32 = 3;
     }
     pub mod input_config {
-        pub const DEFINITION: u32 = 336;
         pub const UNIT: u32 = 1;
         pub const MIN: u32 = 2;
         pub const MAX: u32 = 3;
     }
     pub mod slider_config {
-        pub const DEFINITION: u32 = 337;
         pub const MIN: u32 = 1;
         pub const MAX: u32 = 2;
         pub const STEP: u32 = 3;
         pub const UNIT: u32 = 4;
     }
     pub mod point_mode {
-        pub const DEFINITION: u32 = 338;
+        pub const CANVAS_AND_UI: u32 = 0;
+        pub const CANVAS: u32 = 1;
+        pub const UI: u32 = 2;
     }
     pub mod point_config {
-        pub const DEFINITION: u32 = 339;
         pub const MODE: u32 = 1;
         pub const UNIT: u32 = 2;
     }
     pub mod line {
-        pub const DEFINITION: u32 = 340;
         pub const A: u32 = 1;
         pub const B: u32 = 2;
     }
     pub mod line_config {
-        pub const DEFINITION: u32 = 341;
         pub const MODE: u32 = 1;
         pub const UNIT: u32 = 2;
     }
     pub mod circle {
-        pub const DEFINITION: u32 = 342;
         pub const CENTER: u32 = 1;
         pub const RADIUS: u32 = 2;
     }
     pub mod point_radius_config {
-        pub const DEFINITION: u32 = 343;
         pub const MODE: u32 = 1;
         pub const POSITION_UNIT: u32 = 2;
         pub const RADIUS_UNIT: u32 = 3;
@@ -37173,24 +38503,20 @@ pub mod kiwi_records {
         pub const MAX_RADIUS: u32 = 5;
     }
     pub mod rotation3_d {
-        pub const DEFINITION: u32 = 344;
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
         pub const Z: u32 = 3;
         pub const TRANSLATE_Z: u32 = 4;
     }
     pub mod rotation3_d_config {
-        pub const DEFINITION: u32 = 345;
         pub const MODE: u32 = 1;
     }
     pub mod circle_point {
-        pub const DEFINITION: u32 = 346;
         pub const CENTER: u32 = 1;
         pub const RADIUS: u32 = 2;
         pub const ANGLE: u32 = 3;
     }
     pub mod circle_point_config {
-        pub const DEFINITION: u32 = 347;
         pub const MODE: u32 = 1;
         pub const POSITION_UNIT: u32 = 2;
         pub const RADIUS_UNIT: u32 = 3;
@@ -37198,40 +38524,32 @@ pub mod kiwi_records {
         pub const MAX_RADIUS: u32 = 5;
     }
     pub mod color_point {
-        pub const DEFINITION: u32 = 348;
         pub const POINT: u32 = 1;
         pub const COLOR: u32 = 2;
     }
     pub mod color_point_config {
-        pub const DEFINITION: u32 = 349;
         pub const MODE: u32 = 1;
         pub const UNIT: u32 = 2;
     }
     pub mod gradient {
-        pub const DEFINITION: u32 = 350;
         pub const STOPS: u32 = 1;
     }
     pub mod gradient_stop {
-        pub const DEFINITION: u32 = 351;
         pub const POSITION: u32 = 1;
         pub const COLOR: u32 = 2;
     }
     pub mod select_option {
-        pub const DEFINITION: u32 = 352;
         pub const VALUE: u32 = 1;
         pub const LABEL: u32 = 2;
     }
     pub mod select_config {
-        pub const DEFINITION: u32 = 353;
         pub const OPTIONS: u32 = 1;
     }
     pub mod color_array_config {
-        pub const DEFINITION: u32 = 354;
         pub const MIN_LENGTH: u32 = 1;
         pub const MAX_LENGTH: u32 = 2;
     }
     pub mod slot_prop_config {
-        pub const DEFINITION: u32 = 355;
         pub const STRETCH_CHILD_ON_INSERT: u32 = 1;
         pub const DISPLAY_BY_DEFAULT: u32 = 2;
         pub const MIN_CHILDREN: u32 = 3;
@@ -37239,28 +38557,32 @@ pub mod kiwi_records {
         pub const ALLOW_PREFERRED_VALUES_ONLY: u32 = 5;
     }
     pub mod number_prop_config {
-        pub const DEFINITION: u32 = 356;
         pub const CONTROL: u32 = 1;
         pub const MIN: u32 = 2;
         pub const MAX: u32 = 3;
         pub const STEP: u32 = 4;
     }
     pub mod instance_swap_preferred_value {
-        pub const DEFINITION: u32 = 357;
         pub const TYPE: u32 = 1;
         pub const KEY: u32 = 2;
     }
     pub mod instance_swap_preferred_value_type {
-        pub const DEFINITION: u32 = 358;
+        pub const COMPONENT: u32 = 0;
+        pub const STATE_GROUP: u32 = 1;
     }
     pub mod widget_event {
-        pub const DEFINITION: u32 = 359;
+        pub const MOUSE_DOWN: u32 = 0;
+        pub const CLICK: u32 = 1;
+        pub const TEXT_EDIT_END: u32 = 2;
+        pub const ATTACHED_STICKABLES_CHANGED: u32 = 3;
+        pub const STUCK_STATUS_CHANGED: u32 = 4;
     }
     pub mod widget_input_behavior {
-        pub const DEFINITION: u32 = 360;
+        pub const WRAP: u32 = 0;
+        pub const TRUNCATE: u32 = 1;
+        pub const MULTILINE: u32 = 2;
     }
     pub mod widget_metadata {
-        pub const DEFINITION: u32 = 361;
         pub const PLUGIN_ID: u32 = 1;
         pub const PLUGIN_VERSION_ID: u32 = 2;
         pub const WIDGET_NAME: u32 = 3;
@@ -37268,18 +38590,23 @@ pub mod kiwi_records {
         pub const IS_ROTATABLE: u32 = 5;
     }
     pub mod widget_property_menu_item_type {
-        pub const DEFINITION: u32 = 362;
+        pub const ACTION: u32 = 0;
+        pub const SEPARATOR: u32 = 1;
+        pub const COLOR: u32 = 2;
+        pub const DROPDOWN: u32 = 3;
+        pub const COLOR_SELECTOR: u32 = 4;
+        pub const TOGGLE: u32 = 5;
+        pub const LINK: u32 = 6;
     }
     pub mod widget_property_menu_selector_option {
-        pub const DEFINITION: u32 = 363;
         pub const OPTION: u32 = 1;
         pub const TOOLTIP: u32 = 2;
     }
     pub mod widget_input_text_node_type {
-        pub const DEFINITION: u32 = 364;
+        pub const WIDGET_CONTROLLED: u32 = 0;
+        pub const RICH_TEXT: u32 = 1;
     }
     pub mod widget_property_menu_item {
-        pub const DEFINITION: u32 = 365;
         pub const PROPERTY_NAME: u32 = 1;
         pub const TOOLTIP: u32 = 2;
         pub const ITEM_TYPE: u32 = 3;
@@ -37291,52 +38618,94 @@ pub mod kiwi_records {
         pub const ALLOW_CUSTOM_COLOR: u32 = 9;
     }
     pub mod code_block_language {
-        pub const DEFINITION: u32 = 366;
+        pub const TYPESCRIPT: u32 = 0;
+        pub const CPP: u32 = 1;
+        pub const RUBY: u32 = 2;
+        pub const CSS: u32 = 3;
+        pub const JAVASCRIPT: u32 = 4;
+        pub const HTML: u32 = 5;
+        pub const JSON: u32 = 6;
+        pub const GRAPHQL: u32 = 7;
+        pub const PYTHON: u32 = 8;
+        pub const GO: u32 = 9;
+        pub const SQL: u32 = 10;
+        pub const SWIFT: u32 = 11;
+        pub const KOTLIN: u32 = 12;
+        pub const RUST: u32 = 13;
+        pub const BASH: u32 = 14;
+        pub const PLAINTEXT: u32 = 15;
+        pub const MARKDOWN: u32 = 16;
     }
     pub mod code_block_theme {
-        pub const DEFINITION: u32 = 367;
+        pub const FIGJAM_DARK: u32 = 0;
+        pub const DRACULA: u32 = 1;
+        pub const DUOTONE_SEA: u32 = 2;
+        pub const DUOTONE_SPACE: u32 = 3;
+        pub const DUOTONE_EARTH: u32 = 4;
+        pub const DUOTONE_FOREST: u32 = 5;
+        pub const DUOTONE_LIGHT: u32 = 6;
     }
     pub mod spec_block_type {
-        pub const DEFINITION: u32 = 368;
+        pub const DEFAULT: u32 = 0;
+        pub const PARAGRAPH: u32 = 1;
+        pub const HEADING_1: u32 = 2;
+        pub const HEADING_2: u32 = 3;
+        pub const HEADING_3: u32 = 4;
+        pub const HEADING_4: u32 = 5;
+        pub const HEADING_5: u32 = 6;
+        pub const HEADING_6: u32 = 7;
+        pub const CODE_BLOCK: u32 = 8;
+        pub const BLOCK_QUOTE: u32 = 9;
+        pub const HORIZONTAL_RULE: u32 = 10;
+        pub const ORDERED_LIST_ITEM: u32 = 11;
+        pub const UNORDERED_LIST_ITEM: u32 = 12;
+        pub const DOCUMENT: u32 = 13;
+        pub const TABLE: u32 = 14;
+        pub const TABLE_ROW: u32 = 15;
+        pub const TABLE_CELL: u32 = 16;
+        pub const TODO_LIST_ITEM_UNCHECKED: u32 = 17;
+        pub const TODO_LIST_ITEM_CHECKED: u32 = 18;
+        pub const IMAGE: u32 = 19;
+        pub const EMBED: u32 = 20;
     }
     pub mod internal_enum_for_test {
-        pub const DEFINITION: u32 = 369;
+        pub const OLD: u32 = 1;
     }
     pub mod internal_data_for_test {
-        pub const DEFINITION: u32 = 370;
         pub const TEST_FIELD_A: u32 = 1;
     }
     pub mod state_group_property_value_order {
-        pub const DEFINITION: u32 = 371;
         pub const PROPERTY: u32 = 1;
         pub const VALUES: u32 = 2;
     }
     pub mod backfill_error {
-        pub const DEFINITION: u32 = 372;
+        pub const NONE: u32 = 0;
+        pub const TRANSIENT_RETRYING: u32 = 1;
+        pub const PERMANENTLY_FAILED: u32 = 2;
+        pub const PASTE_FAILED: u32 = 3;
     }
     pub mod partial_paste_annotation {
-        pub const DEFINITION: u32 = 373;
         pub const IS_PARTIAL: u32 = 1;
         pub const ANNOTATED_AT: u32 = 2;
         pub const ERROR_STATE: u32 = 3;
     }
     pub mod variant_prop_spec {
-        pub const DEFINITION: u32 = 374;
         pub const PROP_DEF_ID: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod text_list_data {
-        pub const DEFINITION: u32 = 375;
         pub const LIST_ID: u32 = 1;
         pub const BULLET_TYPE: u32 = 2;
         pub const INDENTATION_LEVEL: u32 = 3;
         pub const LINE_NUMBER: u32 = 4;
     }
     pub mod bullet_type {
-        pub const DEFINITION: u32 = 376;
+        pub const ORDERED: u32 = 0;
+        pub const UNORDERED: u32 = 1;
+        pub const INDENT: u32 = 2;
+        pub const NO_LIST: u32 = 3;
     }
     pub mod text_line_data {
-        pub const DEFINITION: u32 = 377;
         pub const LINE_TYPE: u32 = 1;
         pub const INDENTATION_LEVEL: u32 = 2;
         pub const DIRECTIONALITY: u32 = 3;
@@ -37349,23 +38718,29 @@ pub mod kiwi_records {
         pub const STYLE_ID: u32 = 10;
     }
     pub mod derived_text_line_data {
-        pub const DEFINITION: u32 = 378;
         pub const DIRECTIONALITY: u32 = 1;
     }
     pub mod line_type {
-        pub const DEFINITION: u32 = 379;
+        pub const PLAIN: u32 = 0;
+        pub const ORDERED_LIST: u32 = 1;
+        pub const UNORDERED_LIST: u32 = 2;
+        pub const BLOCKQUOTE: u32 = 3;
+        pub const HEADER: u32 = 4;
     }
     pub mod source_directionality {
-        pub const DEFINITION: u32 = 380;
+        pub const AUTO: u32 = 0;
+        pub const LTR: u32 = 1;
+        pub const RTL: u32 = 2;
     }
     pub mod directionality {
-        pub const DEFINITION: u32 = 381;
+        pub const LTR: u32 = 0;
+        pub const RTL: u32 = 1;
     }
     pub mod directionality_intent {
-        pub const DEFINITION: u32 = 382;
+        pub const IMPLICIT: u32 = 0;
+        pub const EXPLICIT: u32 = 1;
     }
     pub mod prototype_interaction {
-        pub const DEFINITION: u32 = 383;
         pub const ID: u32 = 1;
         pub const EVENT: u32 = 2;
         pub const ACTIONS: u32 = 3;
@@ -37373,7 +38748,6 @@ pub mod kiwi_records {
         pub const STATE_MANAGEMENT_VERSION: u32 = 5;
     }
     pub mod prototype_event {
-        pub const DEFINITION: u32 = 384;
         pub const INTERACTION_TYPE: u32 = 1;
         pub const INTERACTION_MAINTAINED: u32 = 2;
         pub const INTERACTION_DURATION: u32 = 3;
@@ -37383,17 +38757,14 @@ pub mod kiwi_records {
         pub const MEDIA_HIT_TIME: u32 = 7;
     }
     pub mod prototype_variable_target {
-        pub const DEFINITION: u32 = 385;
         pub const ID: u32 = 1;
         pub const NODE_FIELD_ALIAS: u32 = 2;
     }
     pub mod conditional_actions {
-        pub const DEFINITION: u32 = 386;
         pub const ACTIONS: u32 = 1;
         pub const CONDITION: u32 = 2;
     }
     pub mod prototype_action {
-        pub const DEFINITION: u32 = 387;
         pub const TRANSITION_NODE_ID: u32 = 1;
         pub const TRANSITION_TYPE: u32 = 2;
         pub const TRANSITION_DURATION: u32 = 3;
@@ -37438,48 +38809,54 @@ pub mod kiwi_records {
         pub const TRANSITION_OVERRIDES_ENABLED: u32 = 42;
     }
     pub mod animation_phase {
-        pub const DEFINITION: u32 = 388;
+        pub const IN: u32 = 0;
+        pub const OUT: u32 = 1;
     }
     pub mod animation_type {
-        pub const DEFINITION: u32 = 389;
+        pub const NONE: u32 = 0;
+        pub const FADE: u32 = 1;
+        pub const SLIDE_FROM_LEFT: u32 = 2;
+        pub const SLIDE_FROM_RIGHT: u32 = 3;
+        pub const SLIDE_FROM_TOP: u32 = 4;
+        pub const SLIDE_FROM_BOTTOM: u32 = 5;
     }
     pub mod animation_state {
-        pub const DEFINITION: u32 = 390;
         pub const OPACITY: u32 = 1;
         pub const TRANSFORM: u32 = 2;
     }
     pub mod prototype_starting_point {
-        pub const DEFINITION: u32 = 391;
         pub const NAME: u32 = 1;
         pub const DESCRIPTION: u32 = 2;
         pub const POSITION: u32 = 3;
     }
     pub mod trigger_device {
-        pub const DEFINITION: u32 = 392;
+        pub const KEYBOARD: u32 = 0;
+        pub const UNKNOWN_CONTROLLER: u32 = 1;
+        pub const XBOX_ONE: u32 = 2;
+        pub const PS4: u32 = 3;
+        pub const SWITCH_PRO: u32 = 4;
     }
     pub mod key_trigger {
-        pub const DEFINITION: u32 = 393;
         pub const KEY_CODES: u32 = 1;
         pub const TRIGGER_DEVICE: u32 = 2;
     }
     pub mod hyperlink {
-        pub const DEFINITION: u32 = 394;
         pub const URL: u32 = 1;
         pub const GUID: u32 = 2;
         pub const OPEN_IN_NEW_TAB: u32 = 3;
         pub const CMS_TARGET: u32 = 4;
     }
     pub mod cms_item_page_target {
-        pub const DEFINITION: u32 = 395;
         pub const NODE_ID: u32 = 1;
         pub const CMS_ITEM_ID: u32 = 2;
         pub const FIELD_SCHEMA_ID: u32 = 3;
     }
     pub mod mention_source {
-        pub const DEFINITION: u32 = 396;
+        pub const DEFAULT: u32 = 0;
+        pub const COPY_DUPLICATE: u32 = 1;
+        pub const SILENT_INSERT: u32 = 2;
     }
     pub mod mention {
-        pub const DEFINITION: u32 = 397;
         pub const ID: u32 = 1;
         pub const MENTIONED_USER_ID: u32 = 2;
         pub const MENTIONED_BY_USER_ID: u32 = 3;
@@ -37490,7 +38867,6 @@ pub mod kiwi_records {
         pub const MENTIONED_USER_GROUP_ID: u32 = 8;
     }
     pub mod embed_data {
-        pub const DEFINITION: u32 = 398;
         pub const URL: u32 = 1;
         pub const SRC_URL: u32 = 2;
         pub const TITLE: u32 = 3;
@@ -37507,13 +38883,11 @@ pub mod kiwi_records {
         pub const IS_PUBLISHED_SITE: u32 = 14;
     }
     pub mod stamp_data {
-        pub const DEFINITION: u32 = 399;
         pub const USER_ID: u32 = 1;
         pub const VOTING_SESSION_ID: u32 = 2;
         pub const STAMPED_BY_USER_ID: u32 = 3;
     }
     pub mod link_preview_data {
-        pub const DEFINITION: u32 = 400;
         pub const URL: u32 = 1;
         pub const TITLE: u32 = 2;
         pub const PROVIDER: u32 = 3;
@@ -37524,14 +38898,12 @@ pub mod kiwi_records {
         pub const THUMBNAIL_IMAGE_HEIGHT: u32 = 8;
     }
     pub mod viewport {
-        pub const DEFINITION: u32 = 401;
         pub const CANVAS_SPACE_BOUNDS: u32 = 1;
         pub const PIXEL_PREVIEW: u32 = 2;
         pub const PIXEL_DENSITY: u32 = 3;
         pub const CANVAS_GUID: u32 = 4;
     }
     pub mod mouse {
-        pub const DEFINITION: u32 = 402;
         pub const CURSOR: u32 = 1;
         pub const CANVAS_SPACE_LOCATION: u32 = 2;
         pub const CANVAS_SPACE_SELECTION_BOX: u32 = 3;
@@ -37539,23 +38911,19 @@ pub mod kiwi_records {
         pub const CURSOR_HIDDEN_REASON: u32 = 5;
     }
     pub mod click {
-        pub const DEFINITION: u32 = 403;
         pub const ID: u32 = 1;
         pub const POINT: u32 = 2;
     }
     pub mod scroll_position {
-        pub const DEFINITION: u32 = 404;
         pub const NODE: u32 = 1;
         pub const SCROLL_OFFSET: u32 = 2;
     }
     pub mod triggered_overlay {
-        pub const DEFINITION: u32 = 405;
         pub const OVERLAY_GUID: u32 = 1;
         pub const HOTSPOT_GUID: u32 = 2;
         pub const SWAP_GUID: u32 = 3;
     }
     pub mod triggered_overlay_data {
-        pub const DEFINITION: u32 = 406;
         pub const OVERLAY_GUID: u32 = 1;
         pub const HOTSPOT_GUID: u32 = 2;
         pub const SWAP_GUID: u32 = 3;
@@ -37563,21 +38931,18 @@ pub mod kiwi_records {
         pub const HOTSPOT_BLUEPRINT_ID: u32 = 5;
     }
     pub mod triggered_set_variable_action_data {
-        pub const DEFINITION: u32 = 407;
         pub const NODE_FOR_FINDING_TOPMOST_SCREEN_ID: u32 = 1;
         pub const TARGET_VARIABLE_ID: u32 = 2;
         pub const TARGET_VARIABLE_DATA: u32 = 3;
         pub const RESOLVED_VARIABLE_MODES: u32 = 4;
     }
     pub mod triggered_set_variable_mode_action_data {
-        pub const DEFINITION: u32 = 408;
         pub const NODE_FOR_FINDING_TOPMOST_SCREEN_ID: u32 = 1;
         pub const TARGET_VARIABLE_SET_KEY: u32 = 2;
         pub const TARGET_VARIABLE_MODE_ID: u32 = 3;
         pub const TARGET_VARIABLE_SET_ID: u32 = 4;
     }
     pub mod video_state_change_data {
-        pub const DEFINITION: u32 = 409;
         pub const TARGET_NODE_ID: u32 = 1;
         pub const IS_PLAYING: u32 = 2;
         pub const IS_PLAYING_SOUND: u32 = 3;
@@ -37585,20 +38950,18 @@ pub mod kiwi_records {
         pub const ACTION_TAKEN_TIMESTAMP: u32 = 5;
     }
     pub mod embedded_prototype_data {
-        pub const DEFINITION: u32 = 410;
         pub const NODE_ID: u32 = 1;
         pub const SESSION_ID: u32 = 2;
     }
     pub mod presented_state {
-        pub const DEFINITION: u32 = 411;
         pub const BASE_SCREEN_ID: u32 = 1;
         pub const OVERLAYS: u32 = 2;
     }
     pub mod transition_direction {
-        pub const DEFINITION: u32 = 412;
+        pub const FORWARD: u32 = 0;
+        pub const REVERSE: u32 = 1;
     }
     pub mod top_level_playback_change {
-        pub const DEFINITION: u32 = 413;
         pub const OLD_STATE: u32 = 1;
         pub const NEW_STATE: u32 = 2;
         pub const HOTSPOT_BLUEPRINT_ID: u32 = 3;
@@ -37608,7 +38971,6 @@ pub mod kiwi_records {
         pub const INSTANCE_STABLE_PATH: u32 = 7;
     }
     pub mod instance_state_change {
-        pub const DEFINITION: u32 = 414;
         pub const STATE_ID: u32 = 1;
         pub const INTERACTION_ID: u32 = 2;
         pub const HOTSPOT_STABLE_PATH: u32 = 3;
@@ -37616,13 +38978,11 @@ pub mod kiwi_records {
         pub const PHASE: u32 = 5;
     }
     pub mod text_cursor {
-        pub const DEFINITION: u32 = 415;
         pub const SELECTION_BOX: u32 = 1;
         pub const CANVAS_GUID: u32 = 2;
         pub const TEXT_NODE_GUID: u32 = 3;
     }
     pub mod text_selection {
-        pub const DEFINITION: u32 = 416;
         pub const SELECTION_BOXES: u32 = 1;
         pub const CANVAS_GUID: u32 = 2;
         pub const TEXT_NODE_GUID: u32 = 3;
@@ -37632,29 +38992,27 @@ pub mod kiwi_records {
         pub const TABLE_CELL_COL_ID: u32 = 7;
     }
     pub mod playback_change_phase {
-        pub const DEFINITION: u32 = 417;
+        pub const INITIATED: u32 = 0;
+        pub const ABORTED: u32 = 1;
+        pub const COMMITTED: u32 = 2;
     }
     pub mod playback_change_keyframe {
-        pub const DEFINITION: u32 = 418;
         pub const PHASE: u32 = 1;
         pub const PROGRESS: u32 = 2;
         pub const TIMESTAMP: u32 = 3;
     }
     pub mod state_mapping {
-        pub const DEFINITION: u32 = 419;
         pub const STABLE_PATH: u32 = 1;
         pub const LAST_TOP_LEVEL_CHANGE: u32 = 2;
         pub const LAST_TOP_LEVEL_CHANGE_STATUS: u32 = 3;
         pub const TIMESTAMP: u32 = 4;
     }
     pub mod scroll_mapping {
-        pub const DEFINITION: u32 = 420;
         pub const BLUEPRINT_ID: u32 = 1;
         pub const OVERLAY_INDEX: u32 = 2;
         pub const SCROLL_OFFSET: u32 = 3;
     }
     pub mod playback_update {
-        pub const DEFINITION: u32 = 421;
         pub const LAST_TOP_LEVEL_CHANGE: u32 = 1;
         pub const LAST_TOP_LEVEL_CHANGE_STATUS: u32 = 2;
         pub const SCROLL_MAPPINGS: u32 = 3;
@@ -37664,41 +39022,43 @@ pub mod kiwi_records {
         pub const STATE_MAPPINGS: u32 = 7;
     }
     pub mod chat_message {
-        pub const DEFINITION: u32 = 422;
         pub const TEXT: u32 = 1;
         pub const PREVIOUS_TEXT: u32 = 2;
     }
     pub mod voice_metadata {
-        pub const DEFINITION: u32 = 423;
         pub const CONNECTED_CALL_ID: u32 = 1;
     }
     pub mod april_fun_cursor {
-        pub const DEFINITION: u32 = 424;
         pub const ID: u32 = 1;
         pub const TRAIL_ENABLED: u32 = 2;
     }
     pub mod april_fun_fig_pal {
-        pub const DEFINITION: u32 = 425;
         pub const CUSTOMIZATION: u32 = 1;
         pub const NAME: u32 = 2;
     }
     pub mod heartbeat {
-        pub const DEFINITION: u32 = 426;
+        pub const FOREGROUND: u32 = 0;
+        pub const BACKGROUND: u32 = 1;
     }
     pub mod sites_view_state {
-        pub const DEFINITION: u32 = 427;
+        pub const FILE: u32 = 0;
+        pub const CODE: u32 = 1;
+        pub const DAKOTA: u32 = 2;
+        pub const SETTINGS: u32 = 3;
+        pub const INSERT: u32 = 4;
+        pub const VARIABLES: u32 = 5;
     }
     pub mod design_full_page_view_state {
-        pub const DEFINITION: u32 = 428;
+        pub const NONE: u32 = 0;
+        pub const DESIGN_SYSTEM: u32 = 1;
+        pub const VARIABLES: u32 = 2;
     }
     pub mod agent_info {
-        pub const DEFINITION: u32 = 429;
         pub const NAME: u32 = 1;
         pub const LOGO: u32 = 2;
         pub const OAUTH_CLIENT_ID: u32 = 3;
     }
     pub mod user_change {
-        pub const DEFINITION: u32 = 430;
         pub const SESSION_ID: u32 = 1;
         pub const CONNECTED: u32 = 2;
         pub const NAME: u32 = 3;
@@ -37747,50 +39107,45 @@ pub mod kiwi_records {
         pub const AGENT_INFO: u32 = 46;
     }
     pub mod interactive_slide_element_change {
-        pub const DEFINITION: u32 = 431;
         pub const USER_ID: u32 = 1;
         pub const ANONYMOUS_USER_ID: u32 = 2;
         pub const NODE_ID: u32 = 3;
         pub const RESPONSE_DATA: u32 = 4;
     }
     pub mod node_status_change {
-        pub const DEFINITION: u32 = 432;
         pub const NODE_IDS: u32 = 1;
         pub const STATUS_INFO: u32 = 2;
     }
     pub mod buzz_approval_asset_entry {
-        pub const DEFINITION: u32 = 433;
         pub const ASSET_NODE_ID: u32 = 1;
         pub const APPROVED: u32 = 2;
     }
     pub mod buzz_approval_change {
-        pub const DEFINITION: u32 = 434;
         pub const ASSET_ENTRIES: u32 = 1;
         pub const CANVAS_GRID_NODE_ID: u32 = 2;
         pub const REQUEST_ID: u32 = 3;
     }
     pub mod scene_graph_query_behavior {
-        pub const DEFINITION: u32 = 435;
+        pub const DEFAULT: u32 = 0;
+        pub const CONTAINING_PAGE: u32 = 1;
+        pub const PLUGIN: u32 = 2;
     }
     pub mod scene_graph_query_mode {
-        pub const DEFINITION: u32 = 436;
+        pub const ADD: u32 = 0;
+        pub const SET: u32 = 1;
     }
     pub mod scene_graph_query {
-        pub const DEFINITION: u32 = 437;
         pub const STARTING_NODE: u32 = 1;
         pub const DEPTH: u32 = 2;
         pub const BEHAVIOR: u32 = 3;
     }
     pub mod node_changes_metadata {
-        pub const DEFINITION: u32 = 438;
         pub const BLOBS_FIELD_OFFSET: u32 = 1;
     }
     pub mod cursor_reaction {
-        pub const DEFINITION: u32 = 439;
         pub const IMAGE_URL: u32 = 1;
     }
     pub mod timer_info {
-        pub const DEFINITION: u32 = 440;
         pub const IS_PAUSED: u32 = 1;
         pub const TIME_REMAINING_MS: u32 = 2;
         pub const TOTAL_TIME_MS: u32 = 3;
@@ -37801,7 +39156,6 @@ pub mod kiwi_records {
         pub const SONG_UUID: u32 = 8;
     }
     pub mod music_info {
-        pub const DEFINITION: u32 = 441;
         pub const IS_PAUSED: u32 = 1;
         pub const MESSAGE_ID: u32 = 2;
         pub const SONG_ID: u32 = 3;
@@ -37809,18 +39163,15 @@ pub mod kiwi_records {
         pub const IS_STOPPED: u32 = 5;
     }
     pub mod presenter_nomination {
-        pub const DEFINITION: u32 = 442;
         pub const SESSION_ID: u32 = 1;
         pub const IS_CANCELLED: u32 = 2;
     }
     pub mod presenter_info {
-        pub const DEFINITION: u32 = 443;
         pub const SESSION_ID: u32 = 1;
         pub const NOMINATION: u32 = 2;
         pub const IS_RECONNECTED: u32 = 3;
     }
     pub mod client_broadcast {
-        pub const DEFINITION: u32 = 444;
         pub const SESSION_ID: u32 = 1;
         pub const CURSOR_REACTION: u32 = 2;
         pub const TIMER: u32 = 3;
@@ -37829,10 +39180,14 @@ pub mod kiwi_records {
         pub const MUSIC: u32 = 6;
     }
     pub mod paste_asset_type {
-        pub const DEFINITION: u32 = 445;
+        pub const UNKNOWN: u32 = 0;
+        pub const VARIABLE: u32 = 1;
+        pub const STYLE_PROPERTIES: u32 = 2;
+        pub const STYLE_PROPERTIES_FILL: u32 = 3;
+        pub const STYLE_PROPERTIES_STROKE: u32 = 4;
+        pub const STYLE_PROPERTIES_EFFECT: u32 = 5;
     }
     pub mod message {
-        pub const DEFINITION: u32 = 446;
         pub const TYPE: u32 = 1;
         pub const SESSION_ID: u32 = 2;
         pub const ACK_ID: u32 = 3;
@@ -37880,33 +39235,84 @@ pub mod kiwi_records {
         pub const SCENE_GRAPH_QUERY_MODE: u32 = 45;
     }
     pub mod encoded_offsets_index {
-        pub const DEFINITION: u32 = 447;
         pub const NODE_CHANGES_FIELD_OFFSET: u32 = 1;
         pub const NODE_CHANGES_FIELD_LENGTH: u32 = 2;
         pub const BLOBS_FIELD_OFFSET: u32 = 3;
         pub const NODE_CHANGE_OFFSETS: u32 = 4;
     }
     pub mod guid_and_encoded_offset {
-        pub const DEFINITION: u32 = 448;
         pub const GUID: u32 = 1;
         pub const OFFSET: u32 = 2;
     }
     pub mod rich_media_type {
-        pub const DEFINITION: u32 = 449;
+        pub const ANIMATED_IMAGE: u32 = 0;
+        pub const VIDEO: u32 = 1;
     }
     pub mod rich_media_data {
-        pub const DEFINITION: u32 = 450;
         pub const MEDIA_HASH: u32 = 1;
         pub const RICH_MEDIA_TYPE: u32 = 2;
     }
     pub mod variable_data_type {
-        pub const DEFINITION: u32 = 451;
+        pub const BOOLEAN: u32 = 0;
+        pub const FLOAT: u32 = 1;
+        pub const STRING: u32 = 2;
+        pub const ALIAS: u32 = 3;
+        pub const COLOR: u32 = 4;
+        pub const EXPRESSION: u32 = 5;
+        pub const MAP: u32 = 6;
+        pub const SYMBOL_ID: u32 = 7;
+        pub const FONT_STYLE: u32 = 8;
+        pub const TEXT_DATA: u32 = 9;
+        pub const INVALID: u32 = 10;
+        pub const NODE_FIELD_ALIAS: u32 = 11;
+        pub const CMS_ALIAS: u32 = 12;
+        pub const PROP_REF: u32 = 13;
+        pub const IMAGE: u32 = 14;
+        pub const MANAGED_STRING_ALIAS: u32 = 15;
+        pub const LINK: u32 = 16;
+        pub const JS_RUNTIME_ALIAS: u32 = 17;
+        pub const SLOT_CONTENT_ID: u32 = 18;
+        pub const DATE: u32 = 19;
+        pub const KEYFRAME_TRACK_ID: u32 = 20;
+        pub const KEYFRAME_TRACK_PARAMETER_DATA: u32 = 21;
+        pub const EASING: u32 = 22;
+        pub const TIMING: u32 = 23;
+        pub const VECTOR: u32 = 24;
+        pub const COLOR_ARRAY: u32 = 25;
+        pub const LINE: u32 = 26;
+        pub const CIRCLE: u32 = 27;
+        pub const ROTATION_3_D: u32 = 28;
+        pub const CIRCLE_POINT: u32 = 29;
+        pub const GRADIENT: u32 = 30;
+        pub const COLOR_POINT: u32 = 31;
     }
     pub mod variable_resolved_data_type {
-        pub const DEFINITION: u32 = 452;
+        pub const BOOLEAN: u32 = 0;
+        pub const FLOAT: u32 = 1;
+        pub const STRING: u32 = 2;
+        pub const COLOR: u32 = 4;
+        pub const MAP: u32 = 5;
+        pub const SYMBOL_ID: u32 = 6;
+        pub const FONT_STYLE: u32 = 7;
+        pub const TEXT_DATA: u32 = 8;
+        pub const IMAGE: u32 = 9;
+        pub const LINK: u32 = 10;
+        pub const JS_RUNTIME_ALIAS: u32 = 11;
+        pub const SLOT_CONTENT_ID: u32 = 12;
+        pub const KEYFRAME_TRACK_ID: u32 = 13;
+        pub const KEYFRAME_TRACK_PARAMETER_DATA: u32 = 14;
+        pub const EASING: u32 = 15;
+        pub const TIMING: u32 = 16;
+        pub const VECTOR: u32 = 17;
+        pub const COLOR_ARRAY: u32 = 18;
+        pub const LINE: u32 = 19;
+        pub const CIRCLE: u32 = 20;
+        pub const ROTATION_3_D: u32 = 21;
+        pub const CIRCLE_POINT: u32 = 22;
+        pub const GRADIENT: u32 = 23;
+        pub const COLOR_POINT: u32 = 24;
     }
     pub mod variable_any_value {
-        pub const DEFINITION: u32 = 453;
         pub const BOOL_VALUE: u32 = 1;
         pub const TEXT_VALUE: u32 = 2;
         pub const FLOAT_VALUE: u32 = 3;
@@ -37938,35 +39344,49 @@ pub mod kiwi_records {
         pub const COLOR_POINT_VALUE: u32 = 29;
     }
     pub mod expression_function {
-        pub const DEFINITION: u32 = 454;
+        pub const ADDITION: u32 = 0;
+        pub const SUBTRACTION: u32 = 1;
+        pub const RESOLVE_VARIANT: u32 = 2;
+        pub const MULTIPLY: u32 = 3;
+        pub const DIVIDE: u32 = 4;
+        pub const EQUALS: u32 = 5;
+        pub const NOT_EQUAL: u32 = 6;
+        pub const LESS_THAN: u32 = 7;
+        pub const LESS_THAN_OR_EQUAL: u32 = 8;
+        pub const GREATER_THAN: u32 = 9;
+        pub const GREATER_THAN_OR_EQUAL: u32 = 10;
+        pub const AND: u32 = 11;
+        pub const OR: u32 = 12;
+        pub const NOT: u32 = 13;
+        pub const STRINGIFY: u32 = 14;
+        pub const TERNARY: u32 = 15;
+        pub const VAR_MODE_LOOKUP: u32 = 16;
+        pub const NEGATE: u32 = 17;
+        pub const IS_TRUTHY: u32 = 18;
+        pub const KEYFRAME: u32 = 19;
+        pub const COMPOSE_COLOR: u32 = 20;
     }
     pub mod expression {
-        pub const DEFINITION: u32 = 455;
         pub const EXPRESSION_FUNCTION: u32 = 1;
         pub const EXPRESSION_ARGUMENTS: u32 = 2;
     }
     pub mod variable_map_value {
-        pub const DEFINITION: u32 = 456;
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
         pub const GUID_KEY: u32 = 3;
     }
     pub mod variable_map {
-        pub const DEFINITION: u32 = 457;
         pub const VALUES: u32 = 1;
     }
     pub mod color_array {
-        pub const DEFINITION: u32 = 458;
         pub const COLORS: u32 = 1;
     }
     pub mod variable_font_style {
-        pub const DEFINITION: u32 = 459;
         pub const AS_STRING: u32 = 1;
         pub const AS_FLOAT: u32 = 2;
         pub const AS_VARIATIONS: u32 = 3;
     }
     pub mod image_parameter_value {
-        pub const DEFINITION: u32 = 460;
         pub const IMAGE: u32 = 1;
         pub const IMAGE_THUMBNAIL: u32 = 2;
         pub const ALT_TEXT: u32 = 3;
@@ -37976,94 +39396,78 @@ pub mod kiwi_records {
         pub const ANIMATION_FRAME: u32 = 7;
     }
     pub mod thumbnail_info {
-        pub const DEFINITION: u32 = 461;
         pub const NODE_ID: u32 = 1;
         pub const THUMBNAIL_VERSION: u32 = 2;
     }
     pub mod ai_canvas_prompt {
-        pub const DEFINITION: u32 = 462;
         pub const USER_PROMPT: u32 = 1;
         pub const AUTHOR_ID: u32 = 2;
         pub const PARENT_NODE_IDS: u32 = 3;
     }
     pub mod node_field_alias {
-        pub const DEFINITION: u32 = 463;
         pub const STABLE_PATH_TO_NODE: u32 = 1;
         pub const NODE_FIELD: u32 = 2;
         pub const INDEX_OR_KEY: u32 = 3;
     }
     pub mod node_field_alias_type {
-        pub const DEFINITION: u32 = 464;
+        pub const MISSING: u32 = 0;
+        pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 1;
     }
     pub mod cms_alias {
-        pub const DEFINITION: u32 = 465;
         pub const COLLECTION_ID: u32 = 1;
         pub const ITEM_ID: u32 = 2;
         pub const FIELD_ID: u32 = 3;
         pub const TYPE: u32 = 4;
     }
     pub mod js_runtime_alias {
-        pub const DEFINITION: u32 = 466;
         pub const LOOKUP_KEY: u32 = 1;
     }
     pub mod prop_ref_value {
-        pub const DEFINITION: u32 = 467;
         pub const DEF_ID: u32 = 1;
     }
     pub mod managed_string_id {
-        pub const DEFINITION: u32 = 468;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod managed_string_placeholder_map_entry {
-        pub const DEFINITION: u32 = 469;
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod slot_content_id {
-        pub const DEFINITION: u32 = 470;
         pub const GUID: u32 = 1;
     }
     pub mod managed_string_alias {
-        pub const DEFINITION: u32 = 471;
         pub const MANAGED_STRING_ID: u32 = 1;
         pub const PLACEHOLDER_VALUES: u32 = 2;
     }
     pub mod keyframe_track_id {
-        pub const DEFINITION: u32 = 472;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod animation_preset_id {
-        pub const DEFINITION: u32 = 473;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod tool_id {
-        pub const DEFINITION: u32 = 474;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod custom_effect_id {
-        pub const DEFINITION: u32 = 475;
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
     pub mod trss_transform2_d {
-        pub const DEFINITION: u32 = 476;
         pub const TRANSLATION: u32 = 1;
         pub const ROTATION: u32 = 2;
         pub const SCALE: u32 = 3;
         pub const SHEAR_X: u32 = 4;
     }
     pub mod variable_data {
-        pub const DEFINITION: u32 = 477;
         pub const VALUE: u32 = 1;
         pub const DATA_TYPE: u32 = 2;
         pub const RESOLVED_DATA_TYPE: u32 = 3;
     }
     pub mod variable_set_mode {
-        pub const DEFINITION: u32 = 478;
         pub const ID: u32 = 1;
         pub const NAME: u32 = 2;
         pub const SORT_POSITION: u32 = 3;
@@ -38071,117 +39475,124 @@ pub mod kiwi_records {
         pub const PARENT_MODE_ID: u32 = 5;
     }
     pub mod variable_data_values {
-        pub const DEFINITION: u32 = 479;
         pub const ENTRIES: u32 = 1;
     }
     pub mod variable_data_values_entry {
-        pub const DEFINITION: u32 = 480;
         pub const MODE_ID: u32 = 1;
         pub const VARIABLE_DATA: u32 = 2;
     }
     pub mod variable_scope {
-        pub const DEFINITION: u32 = 481;
+        pub const ALL_SCOPES: u32 = 0;
+        pub const TEXT_CONTENT: u32 = 1;
+        pub const CORNER_RADIUS: u32 = 2;
+        pub const WIDTH_HEIGHT: u32 = 3;
+        pub const GAP: u32 = 4;
+        pub const ALL_FILLS: u32 = 5;
+        pub const FRAME_FILL: u32 = 6;
+        pub const SHAPE_FILL: u32 = 7;
+        pub const TEXT_FILL: u32 = 8;
+        pub const STROKE: u32 = 9;
+        pub const STROKE_FLOAT: u32 = 10;
+        pub const EFFECT_FLOAT: u32 = 11;
+        pub const EFFECT_COLOR: u32 = 12;
+        pub const OPACITY: u32 = 13;
+        pub const FONT_STYLE: u32 = 14;
+        pub const FONT_FAMILY: u32 = 15;
+        pub const FONT_SIZE: u32 = 16;
+        pub const LINE_HEIGHT: u32 = 17;
+        pub const LETTER_SPACING: u32 = 18;
+        pub const PARAGRAPH_SPACING: u32 = 19;
+        pub const PARAGRAPH_INDENT: u32 = 20;
+        pub const FONT_VARIATIONS: u32 = 21;
+        pub const TRANSFORM: u32 = 22;
     }
     pub mod keyframe_any_value {
-        pub const DEFINITION: u32 = 482;
         pub const FLOAT_VALUE: u32 = 1;
         pub const COLOR_VALUE: u32 = 2;
         pub const TEXT_DATA_VALUE: u32 = 3;
         pub const VECTOR_VALUE: u32 = 4;
     }
     pub mod keyframe_value_type {
-        pub const DEFINITION: u32 = 483;
+        pub const FLOAT: u32 = 0;
+        pub const INVALID: u32 = 1;
+        pub const COLOR: u32 = 2;
+        pub const TEXT_DATA: u32 = 3;
+        pub const VECTOR: u32 = 4;
     }
     pub mod keyframe_value_data {
-        pub const DEFINITION: u32 = 484;
         pub const VALUE: u32 = 1;
         pub const VALUE_TYPE: u32 = 2;
     }
     pub mod keyframe_track_parameter_type {
-        pub const DEFINITION: u32 = 485;
+        pub const INVALID: u32 = 0;
+        pub const MANUAL: u32 = 1;
+        pub const ANIMATION_PRESET: u32 = 2;
     }
     pub mod manual_keyframe_track_parameter {
-        pub const DEFINITION: u32 = 486;
         pub const KEYFRAME_TRACK_ID: u32 = 1;
         pub const TIMELINE_DEF_ID: u32 = 2;
     }
     pub mod animation_preset_keyframe_track_parameter {
-        pub const DEFINITION: u32 = 487;
         pub const ANIMATION_PRESET_ID: u32 = 1;
         pub const KEYFRAME_TRACK_ID: u32 = 2;
         pub const TIMELINE_DEF_ID: u32 = 3;
     }
     pub mod keyframe_track_any_parameter {
-        pub const DEFINITION: u32 = 488;
         pub const MANUAL: u32 = 1;
         pub const ANIMATION_PRESET: u32 = 2;
         pub const ANIMATION_STYLE_BINDING_ID: u32 = 3;
     }
     pub mod keyframe_track_parameter {
-        pub const DEFINITION: u32 = 489;
         pub const VALUE: u32 = 1;
         pub const TYPE: u32 = 2;
     }
     pub mod keyframe_track_parameter_value {
-        pub const DEFINITION: u32 = 490;
         pub const PARAMETERS: u32 = 1;
     }
     pub mod animation_presets {
-        pub const DEFINITION: u32 = 491;
         pub const PRESETS: u32 = 1;
     }
     pub mod animation_preset_data {
-        pub const DEFINITION: u32 = 492;
         pub const ANIMATION_PRESET_ID: u32 = 1;
         pub const TIMELINE_DEF_ID: u32 = 2;
     }
     pub mod style_animation {
-        pub const DEFINITION: u32 = 493;
         pub const ANIMATION_PRESET_ID: u32 = 1;
     }
     pub mod style_id_for_animation {
-        pub const DEFINITION: u32 = 494;
         pub const ID: u32 = 1;
         pub const TIMELINE_DEF_ID: u32 = 2;
         pub const ANIMATION_STYLE_ID: u32 = 3;
         pub const TIMELINE_OFFSET: u32 = 4;
     }
     pub mod tools {
-        pub const DEFINITION: u32 = 495;
         pub const TOOLS: u32 = 1;
     }
     pub mod tool_data {
-        pub const DEFINITION: u32 = 496;
         pub const TOOL_ID: u32 = 1;
         pub const BACKING_CODE_COMPONENT_ID: u32 = 2;
         pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 3;
     }
     pub mod custom_effects {
-        pub const DEFINITION: u32 = 497;
         pub const CUSTOM_EFFECTS: u32 = 1;
     }
     pub mod custom_effect_data {
-        pub const DEFINITION: u32 = 498;
         pub const CUSTOM_EFFECT_ID: u32 = 1;
     }
     pub mod spring_params {
-        pub const DEFINITION: u32 = 499;
         pub const STIFFNESS: u32 = 1;
         pub const DAMPING: u32 = 2;
         pub const MASS: u32 = 3;
     }
     pub mod transition_easing_any_value {
-        pub const DEFINITION: u32 = 500;
         pub const SPRING_EASING: u32 = 1;
         pub const BEZIER_EASING: u32 = 2;
     }
     pub mod easing_data {
-        pub const DEFINITION: u32 = 501;
         pub const EASING_TYPE: u32 = 1;
         pub const EASING_VALUE: u32 = 2;
     }
     pub mod transition_override {
-        pub const DEFINITION: u32 = 502;
         pub const ID: u32 = 1;
         pub const DURATION: u32 = 2;
         pub const DURATION_VAR: u32 = 3;
@@ -38194,72 +39605,271 @@ pub mod kiwi_records {
         pub const DISABLED: u32 = 10;
     }
     pub mod transition_override_data {
-        pub const DEFINITION: u32 = 503;
         pub const ALL: u32 = 1;
         pub const PROPERTY_OVERRIDES: u32 = 2;
     }
     pub mod transition_override_prop {
-        pub const DEFINITION: u32 = 504;
+        pub const ALL: u32 = 0;
+        pub const OPACITY: u32 = 1;
+        pub const TRANSLATION: u32 = 2;
+        pub const ROTATION: u32 = 3;
+        pub const SCALE: u32 = 4;
     }
     pub mod transition_override_binding_top_level_field {
-        pub const DEFINITION: u32 = 505;
+        pub const MISSING: u32 = 0;
+        pub const PARAMETER_CONSUMPTION_MAP: u32 = 1;
+        pub const EFFECT_DATA: u32 = 2;
+        pub const FILL_PAINT_DATA: u32 = 3;
+        pub const STROKE_PAINT_DATA: u32 = 4;
     }
     pub mod transition_override_binding_location {
-        pub const DEFINITION: u32 = 506;
         pub const TOP_LEVEL_FIELD: u32 = 1;
         pub const PARAMETER_FIELD_VALUE: u32 = 2;
         pub const INDEX: u32 = 3;
         pub const EFFECT_PARAMETRIZED_FIELD_VALUE: u32 = 4;
     }
     pub mod keyframe_binding_effect_parametrized_field {
-        pub const DEFINITION: u32 = 507;
+        pub const MISSING: u32 = 0;
+        pub const OFFSET_X: u32 = 1;
+        pub const OFFSET_Y: u32 = 2;
+        pub const RADIUS: u32 = 3;
+        pub const SPREAD: u32 = 4;
+        pub const COLOR: u32 = 5;
+        pub const REFRACTION_RADIUS: u32 = 6;
+        pub const SPECULAR_ANGLE: u32 = 7;
+        pub const SPECULAR_INTENSITY: u32 = 8;
+        pub const CHROMATIC_ABERRATION: u32 = 9;
+        pub const SPLAY: u32 = 10;
+        pub const REFRACTION_INTENSITY: u32 = 11;
+        pub const START_RADIUS: u32 = 12;
+        pub const START_OFFSET_X: u32 = 13;
+        pub const START_OFFSET_Y: u32 = 14;
+        pub const END_OFFSET_X: u32 = 15;
+        pub const END_OFFSET_Y: u32 = 16;
+        pub const NOISE_SIZE_X: u32 = 17;
+        pub const NOISE_SIZE_Y: u32 = 18;
+        pub const DENSITY: u32 = 19;
+        pub const EFFECT_OPACITY: u32 = 20;
+        pub const SECONDARY_COLOR: u32 = 21;
     }
     pub mod node_contents_keyframe_binding_location {
-        pub const DEFINITION: u32 = 508;
         pub const TOP_LEVEL_FIELD: u32 = 1;
         pub const PARAMETER_FIELD_VALUE: u32 = 2;
         pub const INDEX: u32 = 3;
         pub const EFFECT_PARAMETRIZED_FIELD_VALUE: u32 = 4;
     }
     pub mod transition_override_prop_map {
-        pub const DEFINITION: u32 = 509;
         pub const ENTRIES: u32 = 1;
     }
     pub mod transition_override_prop_map_entry {
-        pub const DEFINITION: u32 = 510;
         pub const PROP: u32 = 1;
         pub const OVERRIDES: u32 = 2;
         pub const BINDING_LOCATION: u32 = 3;
         pub const NODE_CONTENTS_BINDING_LOCATION: u32 = 4;
     }
     pub mod code_syntax_platform {
-        pub const DEFINITION: u32 = 511;
+        pub const WEB: u32 = 0;
+        pub const ANDROID: u32 = 1;
+        pub const I_OS: u32 = 2;
     }
     pub mod optional_vector {
-        pub const DEFINITION: u32 = 512;
         pub const VALUE: u32 = 1;
     }
     pub mod html_tag {
-        pub const DEFINITION: u32 = 513;
+        pub const AUTO: u32 = 0;
+        pub const ARTICLE: u32 = 1;
+        pub const SECTION: u32 = 2;
+        pub const NAV: u32 = 3;
+        pub const ASIDE: u32 = 4;
+        pub const H1: u32 = 5;
+        pub const H2: u32 = 6;
+        pub const H3: u32 = 7;
+        pub const H4: u32 = 8;
+        pub const H5: u32 = 9;
+        pub const H6: u32 = 10;
+        pub const HGROUP: u32 = 11;
+        pub const HEADER: u32 = 12;
+        pub const FOOTER: u32 = 13;
+        pub const ADDRESS: u32 = 14;
+        pub const P: u32 = 15;
+        pub const HR: u32 = 16;
+        pub const PRE: u32 = 17;
+        pub const BLOCKQUOTE: u32 = 18;
+        pub const OL: u32 = 19;
+        pub const UL: u32 = 20;
+        pub const MENU: u32 = 21;
+        pub const LI: u32 = 22;
+        pub const DL: u32 = 23;
+        pub const DT: u32 = 24;
+        pub const DD: u32 = 25;
+        pub const FIGURE: u32 = 26;
+        pub const FIGCAPTION: u32 = 27;
+        pub const MAIN: u32 = 28;
+        pub const DIV: u32 = 29;
+        pub const A: u32 = 30;
+        pub const EM: u32 = 31;
+        pub const STRONG: u32 = 32;
+        pub const SMALL: u32 = 33;
+        pub const S: u32 = 34;
+        pub const CITE: u32 = 35;
+        pub const Q: u32 = 36;
+        pub const DFN: u32 = 37;
+        pub const ABBR: u32 = 38;
+        pub const RUBY: u32 = 39;
+        pub const RT: u32 = 40;
+        pub const RP: u32 = 41;
+        pub const DATA: u32 = 42;
+        pub const TIME: u32 = 43;
+        pub const CODE: u32 = 44;
+        pub const VAR: u32 = 45;
+        pub const SAMP: u32 = 46;
+        pub const KBD: u32 = 47;
+        pub const SUB: u32 = 48;
+        pub const SUP: u32 = 49;
+        pub const I: u32 = 50;
+        pub const B: u32 = 51;
+        pub const U: u32 = 52;
+        pub const MARK: u32 = 53;
+        pub const BDI: u32 = 54;
+        pub const BDO: u32 = 55;
+        pub const SPAN: u32 = 56;
+        pub const BR: u32 = 57;
+        pub const WBR: u32 = 58;
+        pub const PICTURE: u32 = 59;
+        pub const SOURCE: u32 = 60;
+        pub const IMG: u32 = 61;
+        pub const FORM: u32 = 62;
+        pub const LABEL: u32 = 63;
+        pub const INPUT: u32 = 64;
+        pub const BUTTON: u32 = 65;
+        pub const SELECT: u32 = 66;
+        pub const DATALIST: u32 = 67;
+        pub const OPTGROUP: u32 = 68;
+        pub const OPTION: u32 = 69;
+        pub const TEXTAREA: u32 = 70;
+        pub const OUTPUT: u32 = 71;
+        pub const PROGRESS: u32 = 72;
+        pub const METER: u32 = 73;
+        pub const FIELDSET: u32 = 74;
+        pub const LEGEND: u32 = 75;
+        pub const VIDEO: u32 = 76;
     }
     pub mod aria_role {
-        pub const DEFINITION: u32 = 514;
+        pub const AUTO: u32 = 0;
+        pub const BUTTON: u32 = 1;
+        pub const CHECKBOX: u32 = 2;
+        pub const GRIDCELL: u32 = 3;
+        pub const LINK: u32 = 4;
+        pub const MENUITEM: u32 = 5;
+        pub const MENUITEMCHECKBOX: u32 = 6;
+        pub const MENUITEMRADIO: u32 = 7;
+        pub const OPTION: u32 = 8;
+        pub const PROGRESSBAR: u32 = 9;
+        pub const RADIO: u32 = 10;
+        pub const SCROLLBAR: u32 = 11;
+        pub const SEARCHBOX: u32 = 12;
+        pub const SEPARATOR: u32 = 13;
+        pub const SLIDER: u32 = 14;
+        pub const SPINBUTTON: u32 = 15;
+        pub const SWITCH: u32 = 16;
+        pub const TAB: u32 = 17;
+        pub const TABPANEL: u32 = 18;
+        pub const TEXTBOX: u32 = 19;
+        pub const TREEITEM: u32 = 20;
+        pub const COMBOBOX: u32 = 21;
+        pub const GRID: u32 = 22;
+        pub const LISTBOX: u32 = 23;
+        pub const MENU: u32 = 24;
+        pub const MENUBAR: u32 = 25;
+        pub const RADIOGROUP: u32 = 26;
+        pub const TABLIST: u32 = 27;
+        pub const TREE: u32 = 28;
+        pub const TREEGRID: u32 = 29;
+        pub const APPLICATION: u32 = 30;
+        pub const ARTICLE: u32 = 31;
+        pub const BLOCKQUOTE: u32 = 32;
+        pub const CAPTION: u32 = 33;
+        pub const CELL: u32 = 34;
+        pub const COLUMNHEADER: u32 = 35;
+        pub const DEFINITION: u32 = 36;
+        pub const DELETION: u32 = 37;
+        pub const DIRECTORY: u32 = 38;
+        pub const DOCUMENT: u32 = 39;
+        pub const EMPHASIS: u32 = 40;
+        pub const FEED: u32 = 41;
+        pub const FIGURE: u32 = 42;
+        pub const GENERIC: u32 = 43;
+        pub const GROUP: u32 = 44;
+        pub const HEADING: u32 = 45;
+        pub const IMG: u32 = 46;
+        pub const INSERTION: u32 = 47;
+        pub const LIST: u32 = 48;
+        pub const LISTITEM: u32 = 49;
+        pub const MATH: u32 = 50;
+        pub const METER: u32 = 51;
+        pub const NONE: u32 = 52;
+        pub const NOTE: u32 = 53;
+        pub const PARAGRAPH: u32 = 54;
+        pub const PRESENTATION: u32 = 55;
+        pub const ROW: u32 = 56;
+        pub const ROWGROUP: u32 = 57;
+        pub const ROWHEADER: u32 = 58;
+        pub const STRONG: u32 = 59;
+        pub const SUBSCRIPT: u32 = 60;
+        pub const SUPERSCRIPT: u32 = 61;
+        pub const TABLE: u32 = 62;
+        pub const TERM: u32 = 63;
+        pub const TIME: u32 = 64;
+        pub const TOOLBAR: u32 = 65;
+        pub const TOOLTIP: u32 = 66;
+        pub const BANNER: u32 = 67;
+        pub const COMPLEMENTARY: u32 = 68;
+        pub const CONTENTINFO: u32 = 69;
+        pub const FORM: u32 = 70;
+        pub const MAIN: u32 = 71;
+        pub const NAVIGATION: u32 = 72;
+        pub const REGION: u32 = 73;
+        pub const SEARCH: u32 = 74;
+        pub const ALERT: u32 = 75;
+        pub const LOG: u32 = 76;
+        pub const MARQUEE: u32 = 77;
+        pub const STATUS: u32 = 78;
+        pub const TIMER: u32 = 79;
+        pub const ALERTDIALOG: u32 = 80;
+        pub const DIALOG: u32 = 81;
+        pub const IMAGE: u32 = 82;
+        pub const HEADING_1: u32 = 83;
+        pub const HEADING_2: u32 = 84;
+        pub const HEADING_3: u32 = 85;
+        pub const HEADING_4: u32 = 86;
+        pub const HEADING_5: u32 = 87;
+        pub const HEADING_6: u32 = 88;
+        pub const HEADER: u32 = 89;
+        pub const FOOTER: u32 = 90;
+        pub const SIDEBAR: u32 = 91;
+        pub const SECTION: u32 = 92;
+        pub const MAINCONTENT: u32 = 93;
+        pub const TABLE_CELL: u32 = 94;
+        pub const WIDGET: u32 = 95;
     }
     pub mod migration_status {
-        pub const DEFINITION: u32 = 515;
         pub const DSD_CLEANUP: u32 = 1;
     }
     pub mod color_profile {
-        pub const DEFINITION: u32 = 516;
+        pub const SRGB: u32 = 0;
+        pub const DISPLAY_P3: u32 = 1;
     }
     pub mod document_color_profile {
-        pub const DEFINITION: u32 = 517;
+        pub const LEGACY: u32 = 0;
+        pub const SRGB: u32 = 1;
+        pub const DISPLAY_P3: u32 = 2;
     }
     pub mod child_reading_direction {
-        pub const DEFINITION: u32 = 518;
+        pub const NONE: u32 = 0;
+        pub const LEFT_TO_RIGHT: u32 = 1;
+        pub const RIGHT_TO_LEFT: u32 = 2;
     }
     pub mod aria_attribute_any_value {
-        pub const DEFINITION: u32 = 519;
         pub const BOOL_VALUE: u32 = 1;
         pub const STRING_VALUE: u32 = 2;
         pub const FLOAT_VALUE: u32 = 3;
@@ -38267,72 +39877,77 @@ pub mod kiwi_records {
         pub const STRING_ARRAY_VALUE: u32 = 5;
     }
     pub mod aria_attribute_data_type {
-        pub const DEFINITION: u32 = 520;
+        pub const BOOLEAN: u32 = 0;
+        pub const STRING: u32 = 1;
+        pub const FLOAT: u32 = 2;
+        pub const INT: u32 = 3;
+        pub const STRING_LIST: u32 = 4;
     }
     pub mod aria_attribute_data {
-        pub const DEFINITION: u32 = 521;
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod aria_attributes_map {
-        pub const DEFINITION: u32 = 522;
         pub const ENTRIES: u32 = 1;
     }
     pub mod aria_attributes_map_entry {
-        pub const DEFINITION: u32 = 523;
         pub const ATTRIBUTE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod handoff_status_map_entry {
-        pub const DEFINITION: u32 = 524;
         pub const GUID: u32 = 1;
         pub const HANDOFF_STATUS: u32 = 2;
     }
     pub mod handoff_status_map {
-        pub const DEFINITION: u32 = 525;
         pub const ENTRIES: u32 = 1;
     }
     pub mod edit_scope_info {
-        pub const DEFINITION: u32 = 526;
         pub const EDIT_SCOPE_STACKS: u32 = 1;
         pub const SNAPSHOTS: u32 = 2;
     }
     pub mod edit_scope_snapshot {
-        pub const DEFINITION: u32 = 527;
         pub const FRAMES: u32 = 1;
         pub const NODE_CHANGE_FIELD_NUMBERS: u32 = 2;
     }
     pub mod edit_scope_stack {
-        pub const DEFINITION: u32 = 528;
         pub const STACK: u32 = 1;
     }
     pub mod edit_scope {
-        pub const DEFINITION: u32 = 529;
         pub const TYPE: u32 = 1;
         pub const LABEL: u32 = 2;
         pub const EDITOR_TYPE: u32 = 3;
     }
     pub mod edit_scope_type {
-        pub const DEFINITION: u32 = 530;
+        pub const INVALID: u32 = 0;
+        pub const TEST_SETUP: u32 = 1;
+        pub const USER: u32 = 2;
+        pub const PLUGIN: u32 = 3;
+        pub const SYSTEM: u32 = 4;
+        pub const REST_API: u32 = 5;
+        pub const ONBOARDING: u32 = 6;
+        pub const AUTOSAVE: u32 = 7;
+        pub const AI: u32 = 8;
     }
     pub mod section_preset_state {
-        pub const DEFINITION: u32 = 531;
+        pub const INSERTED: u32 = 0;
+        pub const USER_EDITED: u32 = 1;
     }
     pub mod emoji_image_set {
-        pub const DEFINITION: u32 = 532;
+        pub const APPLE: u32 = 0;
+        pub const NOTO: u32 = 1;
     }
     pub mod selection_region_focus_type {
-        pub const DEFINITION: u32 = 533;
+        pub const NONE: u32 = 0;
+        pub const PRIMARY: u32 = 1;
+        pub const SECONDARY: u32 = 2;
     }
     pub mod section_preset_info {
-        pub const DEFINITION: u32 = 534;
         pub const SHELF_ID: u32 = 1;
         pub const TEMPLATE_ID: u32 = 2;
         pub const TEMPLATE_NAME: u32 = 3;
         pub const STATE: u32 = 4;
     }
     pub mod clipboard_selection_region {
-        pub const DEFINITION: u32 = 535;
         pub const PARENT: u32 = 1;
         pub const NODES: u32 = 2;
         pub const ENCLOSING_FRAME_OFFSET: u32 = 3;
@@ -38340,44 +39955,47 @@ pub mod kiwi_records {
         pub const FOCUS_TYPE: u32 = 5;
     }
     pub mod first_draft_kit_type {
-        pub const DEFINITION: u32 = 536;
+        pub const LOCAL: u32 = 0;
+        pub const LIBRARY: u32 = 1;
+        pub const NONE: u32 = 2;
     }
     pub mod first_draft_kit {
-        pub const DEFINITION: u32 = 537;
         pub const KEY: u32 = 1;
         pub const TYPE: u32 = 2;
     }
     pub mod first_draft_data {
-        pub const DEFINITION: u32 = 538;
         pub const GENERATION_ID: u32 = 1;
         pub const KIT: u32 = 2;
     }
     pub mod first_draft_kit_element_type {
-        pub const DEFINITION: u32 = 539;
+        pub const NONE: u32 = 0;
+        pub const BUILDING_BLOCK: u32 = 1;
+        pub const GROUPED_COMPONENT: u32 = 2;
     }
     pub mod first_draft_kit_element_data {
-        pub const DEFINITION: u32 = 540;
         pub const TYPE: u32 = 1;
     }
     pub mod platform_shape_property {
-        pub const DEFINITION: u32 = 541;
+        pub const FILL: u32 = 0;
+        pub const STROKE: u32 = 1;
+        pub const TEXT: u32 = 2;
+        pub const STROKE_COLOR: u32 = 3;
     }
     pub mod platform_shape_behavior_type {
-        pub const DEFINITION: u32 = 542;
+        pub const SHAPE: u32 = 0;
+        pub const CONTAINER: u32 = 1;
+        pub const ADVANCED_CONTAINER: u32 = 2;
     }
     pub mod platform_shape_property_map_entry {
-        pub const DEFINITION: u32 = 543;
         pub const PROPERTY: u32 = 1;
         pub const NODE_PATHS: u32 = 2;
     }
     pub mod platform_shape_definition {
-        pub const DEFINITION: u32 = 544;
         pub const PROPERTY_MAP_ENTRIES: u32 = 1;
         pub const BEHAVIOR_TYPE: u32 = 2;
         pub const THUMBNAIL_NODE: u32 = 3;
     }
     pub mod node_behaviors {
-        pub const DEFINITION: u32 = 545;
         pub const LINK: u32 = 1;
         pub const APPEAR: u32 = 2;
         pub const HOVER: u32 = 3;
@@ -38390,7 +40008,6 @@ pub mod kiwi_records {
         pub const CODE: u32 = 10;
     }
     pub mod behavior_transition {
-        pub const DEFINITION: u32 = 546;
         pub const EASING_TYPE: u32 = 1;
         pub const EASING_FUNCTION: u32 = 2;
         pub const TRANSITION_DURATION: u32 = 3;
@@ -38399,13 +40016,18 @@ pub mod kiwi_records {
         pub const DELAY_VAR: u32 = 6;
     }
     pub mod appear_behavior_trigger {
-        pub const DEFINITION: u32 = 547;
+        pub const PAGE_LOAD: u32 = 1;
+        pub const THIS_LAYER_IN_VIEW: u32 = 2;
+        pub const OTHER_LAYER_IN_VIEW: u32 = 3;
+        pub const SCROLL_DIRECTION: u32 = 4;
     }
     pub mod relative_direction {
-        pub const DEFINITION: u32 = 548;
+        pub const UP: u32 = 1;
+        pub const DOWN: u32 = 2;
+        pub const LEFT: u32 = 3;
+        pub const RIGHT: u32 = 4;
     }
     pub mod appear_behavior {
-        pub const DEFINITION: u32 = 549;
         pub const TRIGGER: u32 = 1;
         pub const DIRECTION: u32 = 2;
         pub const OTHER_LAYER: u32 = 3;
@@ -38418,25 +40040,21 @@ pub mod kiwi_records {
         pub const IS_DELETED: u32 = 10;
     }
     pub mod hover_behavior {
-        pub const DEFINITION: u32 = 550;
         pub const TRANSITION: u32 = 1;
         pub const STATE: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
     pub mod press_behavior {
-        pub const DEFINITION: u32 = 551;
         pub const TRANSITION: u32 = 1;
         pub const STATE: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
     pub mod focus_behavior {
-        pub const DEFINITION: u32 = 552;
         pub const TRANSITION: u32 = 1;
         pub const STATE: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
     pub mod scroll_parallax_behavior {
-        pub const DEFINITION: u32 = 553;
         pub const AXIS: u32 = 1;
         pub const SPEED: u32 = 2;
         pub const RELATIVE_TO_PAGE: u32 = 3;
@@ -38444,10 +40062,11 @@ pub mod kiwi_records {
         pub const IS_DELETED: u32 = 5;
     }
     pub mod scroll_transform_behavior_trigger {
-        pub const DEFINITION: u32 = 554;
+        pub const PAGE_HEIGHT: u32 = 1;
+        pub const THIS_LAYER_IN_VIEW: u32 = 2;
+        pub const OTHER_LAYER_IN_VIEW: u32 = 3;
     }
     pub mod scroll_transform_behavior {
-        pub const DEFINITION: u32 = 555;
         pub const TRIGGER: u32 = 1;
         pub const OTHER_LAYER: u32 = 2;
         pub const TRANSITION: u32 = 3;
@@ -38459,14 +40078,12 @@ pub mod kiwi_records {
         pub const IS_DELETED: u32 = 9;
     }
     pub mod cursor_behavior {
-        pub const DEFINITION: u32 = 556;
         pub const HOTSPOT_X: u32 = 1;
         pub const HOTSPOT_Y: u32 = 2;
         pub const CURSOR_GUID: u32 = 3;
         pub const IS_DELETED: u32 = 4;
     }
     pub mod marquee_behavior {
-        pub const DEFINITION: u32 = 557;
         pub const DIRECTION: u32 = 1;
         pub const SPEED: u32 = 2;
         pub const SHOULD_LOOP_INFINITELY: u32 = 3;
@@ -38476,46 +40093,49 @@ pub mod kiwi_records {
         pub const IS_DELETED: u32 = 7;
     }
     pub mod code_behavior {
-        pub const DEFINITION: u32 = 558;
         pub const CODE_COMPONENT_ID: u32 = 1;
         pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
     pub mod client_rendered_metadata {
-        pub const DEFINITION: u32 = 559;
         pub const LOAD_ID: u32 = 1;
         pub const TRACKING_SESSION_ID: u32 = 2;
         pub const TRACKING_SESSION_SEQUENCE_ID: u32 = 3;
         pub const RECONNECT_ID: u32 = 4;
     }
     pub mod link_behavior_type {
-        pub const DEFINITION: u32 = 560;
+        pub const URL: u32 = 1;
+        pub const PAGE: u32 = 2;
     }
     pub mod link_behavior {
-        pub const DEFINITION: u32 = 561;
         pub const TYPE: u32 = 1;
         pub const URL: u32 = 2;
         pub const PAGE: u32 = 3;
         pub const OPEN_IN_NEW_WINDOW: u32 = 4;
     }
     pub mod variable_id_or_variable_override_id {
-        pub const DEFINITION: u32 = 562;
         pub const VARIABLE_ID: u32 = 1;
         pub const VARIABLE_OVERRIDE_ID: u32 = 2;
     }
     pub mod slide_theme_data {
-        pub const DEFINITION: u32 = 563;
         pub const THEME_ID: u32 = 1;
         pub const VERSION: u32 = 2;
     }
     pub mod slide_number {
-        pub const DEFINITION: u32 = 564;
+        pub const NONE: u32 = 0;
+        pub const SLIDE: u32 = 1;
+        pub const SECTION: u32 = 2;
+        pub const SUBSECTION: u32 = 3;
+        pub const TOTAL_WITHIN_DECK: u32 = 4;
+        pub const TOTAL_WITHIN_SECTION: u32 = 5;
     }
     pub mod node_chat_message_type {
-        pub const DEFINITION: u32 = 565;
+        pub const USER_MESSAGE: u32 = 0;
+        pub const ASSISTANT_MESSAGE: u32 = 1;
+        pub const TOOL_MESSAGE: u32 = 2;
+        pub const SYSTEM_MESSAGE: u32 = 3;
     }
     pub mod node_chat_message {
-        pub const DEFINITION: u32 = 566;
         pub const ID: u32 = 1;
         pub const TYPE: u32 = 2;
         pub const USER_ID: u32 = 3;
@@ -38526,53 +40146,50 @@ pub mod kiwi_records {
         pub const SENT_AT64: u32 = 8;
     }
     pub mod node_chat_tool_call {
-        pub const DEFINITION: u32 = 567;
         pub const TOOL_CALL_ID: u32 = 1;
         pub const TOOL_NAME: u32 = 2;
         pub const ARGS_JSON: u32 = 3;
     }
     pub mod node_chat_tool_result {
-        pub const DEFINITION: u32 = 568;
         pub const TOOL_CALL_ID: u32 = 1;
         pub const TOOL_NAME: u32 = 2;
         pub const RESULT_JSON: u32 = 3;
     }
     pub mod node_chat_exchange {
-        pub const DEFINITION: u32 = 569;
         pub const NODE: u32 = 1;
         pub const MESSAGES: u32 = 2;
         pub const IS_TYPING: u32 = 3;
         pub const FILE_UPDATES: u32 = 4;
     }
     pub mod node_chat_compression_state {
-        pub const DEFINITION: u32 = 570;
         pub const START_INDEX: u32 = 1;
         pub const SUMMARY: u32 = 2;
     }
     pub mod file_update {
-        pub const DEFINITION: u32 = 571;
         pub const NAME: u32 = 1;
         pub const CONTENTS: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
     pub mod ai_chat_content_part {
-        pub const DEFINITION: u32 = 572;
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
     pub mod ai_chat_content_part_type {
-        pub const DEFINITION: u32 = 573;
+        pub const INVALID: u32 = 0;
+        pub const TEXT: u32 = 1;
+        pub const SELECTED_NODE_IDS: u32 = 2;
     }
     pub mod ai_chat_content_part_any_value {
-        pub const DEFINITION: u32 = 574;
         pub const TEXT_VALUE: u32 = 1;
         pub const SELECTED_NODE_IDS: u32 = 2;
     }
     pub mod ai_chat_message_role {
-        pub const DEFINITION: u32 = 575;
+        pub const USER: u32 = 0;
+        pub const ASSISTANT: u32 = 1;
+        pub const TOOL: u32 = 2;
+        pub const SYSTEM: u32 = 3;
     }
     pub mod ai_chat_message {
-        pub const DEFINITION: u32 = 576;
         pub const CREATED_AT_MS: u32 = 1;
         pub const ROLE: u32 = 2;
         pub const CONTENT: u32 = 3;
@@ -38580,43 +40197,109 @@ pub mod kiwi_records {
         pub const CREATED_AT_MS64: u32 = 5;
     }
     pub mod ai_chat_thread {
-        pub const DEFINITION: u32 = 577;
         pub const MESSAGES: u32 = 1;
     }
     pub mod cooper_template_type {
-        pub const DEFINITION: u32 = 578;
+        pub const CUSTOM: u32 = 0;
+        pub const TWITTER_POST: u32 = 1;
+        pub const LINKEDIN_POST: u32 = 2;
+        pub const INSTA_POST_SQUARE: u32 = 3;
+        pub const INSTA_POST_PORTRAIT: u32 = 4;
+        pub const INSTA_STORY: u32 = 5;
+        pub const INSTA_AD: u32 = 6;
+        pub const FACEBOOK_POST: u32 = 7;
+        pub const FACEBOOK_COVER_PHOTO: u32 = 8;
+        pub const FACEBOOK_EVENT_COVER: u32 = 9;
+        pub const FACEBOOK_AD_PORTRAIT: u32 = 10;
+        pub const FACEBOOK_AD_SQUARE: u32 = 11;
+        pub const PINTEREST_AD_PIN: u32 = 12;
+        pub const TWITTER_BANNER: u32 = 13;
+        pub const LINKEDIN_POST_SQUARE: u32 = 15;
+        pub const LINKEDIN_POST_PORTRAIT: u32 = 16;
+        pub const LINKEDIN_POST_LANDSCAPE: u32 = 17;
+        pub const LINKEDIN_PROFILE_BANNER: u32 = 18;
+        pub const LINKEDIN_ARTICLE_BANNER: u32 = 19;
+        pub const LINKEDIN_AD_LANDSCAPE: u32 = 20;
+        pub const LINKEDIN_AD_SQUARE: u32 = 21;
+        pub const LINKEDIN_AD_VERTICAL: u32 = 22;
+        pub const YOUTUBE_THUMBNAIL: u32 = 23;
+        pub const YOUTUBE_BANNER: u32 = 24;
+        pub const YOUTUBE_AD: u32 = 25;
+        pub const TWITCH_BANNER: u32 = 26;
+        pub const GOOGLE_LEADERBOARD_AD: u32 = 27;
+        pub const GOOGLE_LARGE_AD: u32 = 28;
+        pub const GOOGLE_MED_AD: u32 = 29;
+        pub const GOOGLE_MOBILE_BANNER_AD: u32 = 30;
+        pub const GOOGLE_SKYSCRAPER_AD: u32 = 31;
+        pub const CARD_HORIZONTAL: u32 = 32;
+        pub const CARD_VERTICAL: u32 = 33;
+        pub const PRINT_US_LETTER: u32 = 34;
+        pub const POSTER: u32 = 35;
+        pub const BANNER_STANDARD: u32 = 36;
+        pub const BANNER_WIDE: u32 = 37;
+        pub const BANNER_ULTRAWIDE: u32 = 38;
+        pub const NAME_TAG_PORTRAIT: u32 = 39;
+        pub const NAME_TAG_LANDSCAPE: u32 = 40;
+        pub const INSTA_REEL_COVER: u32 = 41;
+        pub const ZOOM_BACKGROUND: u32 = 42;
+        pub const TIKTOK_POST: u32 = 43;
+        pub const INSTA_AD_PORTRAIT: u32 = 44;
+        pub const INSTA_POST_TALL_PORTRAIT: u32 = 45;
+        pub const TWITTER_POST_SQUARE: u32 = 46;
+        pub const FACEBOOK_POST_SQUARE: u32 = 47;
+        pub const FACEBOOK_POST_PORTRAIT: u32 = 48;
+        pub const FACEBOOK_STORY: u32 = 49;
+        pub const GOOGLE_SQUARE_AD: u32 = 50;
+        pub const GOOGLE_SMALL_SQUARE_AD: u32 = 51;
+        pub const GOOGLE_NARROW_SKYSCRAPER_AD: u32 = 52;
+        pub const GOOGLE_HALF_PAGE_AD: u32 = 53;
+        pub const GOOGLE_LARGE_LEADERBOARD_AD: u32 = 54;
+        pub const GOOGLE_BILLBOARD_AD: u32 = 55;
+        pub const GOOGLE_BANNER_LEADERBOARD_AD: u32 = 56;
+        pub const GOOGLE_TOP_BANNER_AD: u32 = 57;
+        pub const GOOGLE_MOBILE_LEADERBOARD_BANNER_AD: u32 = 58;
+        pub const GOOGLE_LARGE_MOBILE_BANNER_AD: u32 = 59;
+        pub const GOOGLE_MOBILE_INTERSTITIAL_AD: u32 = 60;
+        pub const GOOGLE_MOBILE_MED_RECTANGLE_AD: u32 = 61;
+        pub const PINTEREST_PIN_STANDARD: u32 = 62;
+        pub const PINTEREST_PIN_SQUARE: u32 = 63;
+        pub const PINTEREST_AD_SQUARE: u32 = 64;
+        pub const PRINT_A4: u32 = 65;
     }
     pub mod cooper_template_data {
-        pub const DEFINITION: u32 = 579;
         pub const TYPE: u32 = 1;
     }
     pub mod image_import_map {
-        pub const DEFINITION: u32 = 580;
         pub const IMPORTS: u32 = 1;
     }
     pub mod image_import {
-        pub const DEFINITION: u32 = 581;
         pub const NAME: u32 = 1;
         pub const IMAGE: u32 = 2;
     }
     pub mod interpolation_type {
-        pub const DEFINITION: u32 = 582;
+        pub const HOLD: u32 = 0;
+        pub const BEZIER: u32 = 1;
+        pub const SPRING: u32 = 2;
     }
     pub mod bezier_handles {
-        pub const DEFINITION: u32 = 583;
         pub const P1X: u32 = 1;
         pub const P1Y: u32 = 2;
         pub const P2X: u32 = 3;
         pub const P2Y: u32 = 4;
     }
     pub mod keyframe_operation {
-        pub const DEFINITION: u32 = 584;
+        pub const SET: u32 = 0;
+        pub const SCALE: u32 = 1;
+        pub const OFFSET: u32 = 2;
     }
     pub mod timeline_position_type {
-        pub const DEFINITION: u32 = 585;
+        pub const ABSOLUTE: u32 = 0;
+        pub const RELATIVE: u32 = 1;
     }
     pub mod playback_style {
-        pub const DEFINITION: u32 = 586;
+        pub const ONCE: u32 = 0;
+        pub const LOOP: u32 = 1;
+        pub const BOOMERANG: u32 = 2;
     }
 }
 
@@ -41899,6 +43582,166 @@ fn decode_scene_node_change_from_decoder(
     }
     Ok(())
 }
+/// The native occurrence interpreter: source records and the effective graph built from them.
+#[allow(clippy::match_single_binding)]
+pub mod graph {
+    use super::*;
+    use std::collections::{HashMap, HashSet};
+    pub type Children = HashMap<GuidKey, Vec<GuidKey>>;
+    pub type GuidKey = (u32, u32);
+    #[derive(Clone, Debug)]
+    pub struct SourceIndex {
+        pub sources: Sources,
+        pub children: Children,
+    }
+    pub type Sources = HashMap<GuidKey, KiwiRecord>;
+    fn guid_key(guid: Option<&KiwiRecord>) -> Option<GuidKey> {
+        match guid {
+            Some(guid) => {
+                match guid.uint(kiwi_records::guid::SESSION_ID) {
+                    Some(session) => {
+                        match guid.uint(kiwi_records::guid::LOCAL_ID) {
+                            Some(local) => Some((session, local)),
+                            __rustq_with_value => {
+                                match __rustq_with_value {
+                                    _ => None,
+                                }
+                            }
+                        }
+                    }
+                    __rustq_with_value => {
+                        match __rustq_with_value {
+                            _ => None,
+                        }
+                    }
+                }
+            }
+            __rustq_with_value => {
+                match __rustq_with_value {
+                    _ => None,
+                }
+            }
+        }
+    }
+    fn record_id(record: &KiwiRecord) -> Option<GuidKey> {
+        guid_key(record.record(kiwi_records::node_change::GUID))
+    }
+    fn parent_id(record: &KiwiRecord) -> Option<GuidKey> {
+        match record.record(kiwi_records::node_change::PARENT_INDEX) {
+            Some(parent) => guid_key(parent.record(kiwi_records::parent_index::GUID)),
+            None => None,
+        }
+    }
+    fn position(record: &KiwiRecord) -> &str {
+        match record.record(kiwi_records::node_change::PARENT_INDEX) {
+            Some(parent) => {
+                parent.str(kiwi_records::parent_index::POSITION).unwrap_or("")
+            }
+            None => "",
+        }
+    }
+    fn live_record(record: &KiwiRecord) -> bool {
+        record.enum_value(kiwi_records::node_change::PHASE)
+            != Some(kiwi_records::node_phase::REMOVED)
+    }
+    fn source_index(message: &KiwiRecord) -> NifResult<SourceIndex> {
+        let live = live_records(message);
+        if duplicate_ids(&live) {
+            Err(rustler::Error::BadArg)
+        } else {
+            Ok(SourceIndex {
+                sources: sources(&live),
+                children: children(&live),
+            })
+        }
+    }
+    fn duplicate_ids(records: &[&KiwiRecord]) -> bool {
+        let ids = record_ids(records);
+        ids.len() != id_set(&ids).len()
+    }
+    fn sources(records: &[&KiwiRecord]) -> Sources {
+        records
+            .iter()
+            .filter_map(|record| record_id(record).map(|id| (id, (*record).clone())))
+            .collect()
+    }
+    fn children(records: &[&KiwiRecord]) -> Children {
+        let mut children = no_children();
+        for (parent, id) in child_pairs(records) {
+            push_child(&mut children, parent, id);
+        }
+        children
+    }
+    fn live_records(message: &KiwiRecord) -> Vec<&KiwiRecord> {
+        message
+            .records(kiwi_records::message::NODE_CHANGES)
+            .into_iter()
+            .filter(|record| live_record(record))
+            .collect()
+    }
+    fn record_ids(records: &[&KiwiRecord]) -> Vec<GuidKey> {
+        records.iter().filter_map(|record| record_id(record)).collect()
+    }
+    fn id_set(ids: &[GuidKey]) -> HashSet<GuidKey> {
+        ids.iter().copied().collect()
+    }
+    fn no_children() -> Children {
+        HashMap::new()
+    }
+    fn child_pairs(records: &[&KiwiRecord]) -> Vec<(GuidKey, GuidKey)> {
+        let mut ordered = records.to_vec();
+        ordered.sort_by_key(|record| position(record));
+        ordered
+            .iter()
+            .filter_map(|record| match record_id(record) {
+                Some(id) => {
+                    match parent_id(record) {
+                        Some(parent) => Some((parent, id)),
+                        __rustq_with_value => {
+                            match __rustq_with_value {
+                                _ => None,
+                            }
+                        }
+                    }
+                }
+                __rustq_with_value => {
+                    match __rustq_with_value {
+                        _ => None,
+                    }
+                }
+            })
+            .collect()
+    }
+    fn push_child(children: &mut Children, parent: GuidKey, id: GuidKey) {
+        children.entry(parent).or_default().push(id)
+    }
+    /// Encodes the source index of `message` as Elixir's `SourceIndex` holds it: records by
+    /// GUID tuple, and each parent's child GUIDs in saved order.
+    pub fn encode_source_index<'a>(
+        env: Env<'a>,
+        message: &KiwiRecord,
+    ) -> NifResult<Term<'a>> {
+        let index = source_index(message)?;
+        let mut source_keys = Vec::with_capacity(index.sources.len());
+        let mut source_values = Vec::with_capacity(index.sources.len());
+        for (id, record) in &index.sources {
+            source_keys.push(id.encode(env));
+            source_values.push(kiwi_encode_record(env, record)?);
+        }
+        let (child_keys, child_values): (Vec<_>, Vec<_>) = index
+            .children
+            .iter()
+            .map(|(parent, ids)| (parent.encode(env), ids.encode(env)))
+            .unzip();
+        Ok(
+            (
+                Term::map_from_term_arrays(env, &source_keys, &source_values)?,
+                Term::map_from_term_arrays(env, &child_keys, &child_values)?,
+            )
+                .encode(env),
+        )
+    }
+}
 use crate::runtime::runtime_schema;
 pub fn decode_sparse_message_impl<'a>(
     env: Env<'a>,
@@ -41920,9 +43763,21 @@ pub fn decode_record_message_impl<'a>(
 ) -> NifResult<Term<'a>> {
     let schema = runtime_schema(&schema)?;
     let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
-    let record = kiwi_decode_record(&mut decoder, kiwi_records::message::DEFINITION)?;
+    let record = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
     decoder.finish()?;
     kiwi_encode_record(env, &record)
+}
+/// The source index the native interpreter builds, encoded for comparison with Elixir's.
+pub fn graph_source_index_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    graph::encode_source_index(env, &message)
 }
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
@@ -42092,6 +43947,14 @@ pub fn decode_record_message<'a>(
     schema: Binary<'a>,
 ) -> NifResult<Term<'a>> {
     decode_record_message_impl(env, bytes, schema)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn graph_source_index<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    graph_source_index_impl(env, bytes, schema)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_graph_focused_sparse_message<'a>(

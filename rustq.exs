@@ -27,6 +27,8 @@ for {module, file} <- [
       {Figler.Codegen.Native.Scene.Decode, "codegen/figler/codegen/native/scene/decode.ex"},
       {Figler.Codegen.Native.Scene.Record, "codegen/figler/codegen/native/scene/record.ex"},
       {Figler.Codegen.Native.Scene, "codegen/figler/codegen/native/scene.ex"},
+      {Figler.Codegen.Native.Graph.SourceIndex,
+       "codegen/figler/codegen/native/graph/source_index.ex"},
       {Figler.Codegen.Native, "codegen/figler/codegen/native.ex"}
     ],
     not Code.ensure_loaded?(module),

@@ -22,9 +22,22 @@ pub fn decode_record_message_impl<'a>(
 ) -> NifResult<Term<'a>> {
     let schema = runtime_schema(&schema)?;
     let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
-    let record = kiwi_decode_record(&mut decoder, kiwi_records::message::DEFINITION)?;
+    let record = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
     decoder.finish()?;
     kiwi_encode_record(env, &record)
+}
+
+/// The source index the native interpreter builds, encoded for comparison with Elixir's.
+pub fn graph_source_index_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    graph::encode_source_index(env, &message)
 }
 
 pub fn decode_graph_focused_sparse_message_impl<'a>(

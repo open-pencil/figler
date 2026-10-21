@@ -6,6 +6,7 @@ defmodule Figler.Codegen.Native do
 
   alias Figler.Codegen.Native.SupportFunction
   alias Figler.Codegen.Native.Focus
+  alias Figler.Codegen.Native.Graph
   alias Figler.Codegen.Native.Scene
   alias KiwiCodec.RustlerGenerator.Skip
   alias KiwiCodec.Schema
@@ -19,6 +20,7 @@ defmodule Figler.Codegen.Native do
 
     [
       graph_focus_helpers: SupportFunction.focus_helper_items(),
+      graph_source_index: Graph.SourceIndex.items(),
       node_type_name_arms: node_type_name_arms(definition_map),
       graph_focus_decoders:
         Focus.render(definition_map, &Skip.message_arm/2, &Scene.render_template/2)
@@ -39,6 +41,7 @@ defmodule Figler.Codegen.Native do
       __rq_include!("templates/render_projection_decoders.rs");
       __rq_include!("templates/scene_xpath_runtime.rs");
       __rq_include!("templates/scene_summary_decoders.rs");
+      __rq_include!("templates/graph.rs");
       __rq_include!("templates/scene_nifs.rs");
       """,
       "native/src/generated.scene.rs",
