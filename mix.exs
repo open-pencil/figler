@@ -175,8 +175,16 @@ defmodule Figler.MixProject do
     ]
   end
 
+  # Runtime-schema decoding is unreleased; KIWI_CODEC_PATH points at a local checkout instead.
   defp kiwi_codec_dep do
-    {:kiwi_codec, path: "../kiwi_codec", override: true}
+    case System.get_env("KIWI_CODEC_PATH") do
+      nil ->
+        {:kiwi_codec,
+         github: "dannote/kiwi_codec", branch: "runtime-schema-unknown-fields", override: true}
+
+      path ->
+        {:kiwi_codec, path: path, override: true}
+    end
   end
 
   defp rustq_dep do
